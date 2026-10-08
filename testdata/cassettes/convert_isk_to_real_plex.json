@@ -1,0 +1,25 @@
+{
+  "get /markets/19000001/orders?order_type=sell&type_id=44992|e3b0c44298fc1c14": {
+    "status": 200,
+    "headers": {
+      "content-type": "application/json; charset=UTF-8",
+      "x-pages": "1"
+    },
+    "body": "[{\"duration\":90,\"is_buy_order\":false,\"issued\":\"2026-09-12T20:16:04Z\",\"location_id\":60003760,\"min_volume\":1,\"order_id\":7421235942,\"price\":5034000.0,\"range\":\"region\",\"system_id\":30000142,\"type_id\":44992,\"volume_remain\":16872,\"volume_total\":19182},{\"duration\":3,\"is_buy_order\":false,\"issued\":\"2026-10-06T19:42:14Z\",\"location_id\":60010873,\"min_volume\":1,\"order_id\":7438351345,\"price\":499800000.0,\"range\":\"region\",\"system_id\":30005304,\"type_id\":44992,\"volume_remain\":1,\"volume_total\":1},{\"duration\":90,\"is_buy_order\":false,\"issued\":\"2026-10-07T06:28:13Z\",\"location_id\":60011866,\"min_volume\":1,\"order_id\":7438670529,\"price\":4911000.0,\"range\":\"region\",\"system_id\":30002659,\"type_id\":44992,\"volume_remain\":76,\"volume_total\":255},{\"duration\":90,\"is_buy_order\":false,\"issued\":\"2026-10-07T05:31:48Z\",\"location_id\":60008494,\"min_volume\":1,\"order_id\":7438647633,\"price\":4973000.0,\"range\":\"region\",\"system_id\":30002187,\"type_id\":44992,\"volume_remain\":1010,\"volume_total\":1010},{\"duration\":1,\"is_buy_order\":false,\"issued\":\"2026-10-07T05:43:11Z\",\"location_id\":60002212,\"min_volume\":1,\"order_id\":7438652388,\"price\":4912000.0,\"range\":\"region\",\"system_id\":30005038,\"type_id\":44992,\"volume_remain\":545,\"volume_total\":3000},{\"duration\":3,\"is_buy_order\":false,\"issued\":\"2026-10-07T05:32:38Z\",\"location_id\":60012133,\"min_volume\":1,\"order_id\":7438648060,\"price\":4970000.0,\"range\":\"region\",\"system_id\":30000107,\"type_id\":44992,\"volume_remain\":2900,\"volume_total\":2900}]"
+  },
+  "get /markets/10000002/orders?order_type=sell&type_id=44992|e3b0c44298fc1c14": {
+    "status": 200,
+    "headers": {
+      "content-type": "application/json; charset=UTF-8",
+      "x-pages": "1"
+    },
+    "body": "[]"
+  },
+  "get /v2/rate/USD/EUR|e3b0c44298fc1c14": {
+    "status": 200,
+    "headers": {
+      "content-type": "application/json; charset=utf-8"
+    },
+    "body": "{\"date\":\"2026-10-07\",\"base\":\"USD\",\"quote\":\"EUR\",\"rate\":0.88971}"
+  }
+}

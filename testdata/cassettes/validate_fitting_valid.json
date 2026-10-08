@@ -1,0 +1,9 @@
+{
+  "post /universe/ids|36aaa444b5a0d3e8": {
+    "body": "{}",
+    "headers": {
+      "content-type": "application/json; charset=UTF-8"
+    },
+    "status": 200
+  }
+}

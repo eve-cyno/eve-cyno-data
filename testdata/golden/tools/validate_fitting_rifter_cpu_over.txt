@@ -1,0 +1,13 @@
+STATUS: INVALID (2 violation(s)) — Rifter
+
+CPU: 236.0 / 162.5 tf
+PG:  722.7 / 51.2 MW
+Hi slots:  3/3 [FULL]
+Mid slots: 3/3 [FULL]
+Low slots: 3/4
+Rigs:      3/3 [FULL]
+
+VIOLATIONS:
+• CPU over by 73.5 tf (236.0/162.5 tf). Top consumers: '100MN Afterburner II' (50.0 tf), 'Warp Scrambler II' (36.0 tf), 'Damage Control II' (30.0 tf). Remove or downgrade one of these.
+• PG over by 671.5 MW (722.7/51.2 MW). Top consumers: '100MN Afterburner II' (688.0 MW), '280mm Howitzer Artillery II' (9.9 MW), '280mm Howitzer Artillery II' (9.9 MW). Remove or downgrade one of these.
+Note: skill profile = Power Grid Management V + CPU Management V (+25% PG/CPU), Weapon Upgrades V (-25% turret/launcher CPU), Advanced Weapon Upgrades V (-10% turret/launcher PG), Energy Grid Upgrades V (-25% power-core CPU). Implants and faction-specific bonuses NOT modelled. Data: SDE.

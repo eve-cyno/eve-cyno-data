@@ -1,0 +1,261 @@
+# CI for eve-cyno-data. Needs no secrets, so it is safe for pull requests from forks.
+#
+# Jobs: sde (build + cache the real SDE), test (build, vet, race tests), lint, govulncheck,
+# gitleaks, licenses, generate (go generate drift), docker-build (no push). `ci-pass` is the
+# single check to require in the branch ruleset.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # The real SDE, built once per Fuzzwork build id (+ the builder's source hash) and cached.
+  sde:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    outputs:
+      key: ${{ steps.key.outputs.key }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: cache key (Fuzzwork build id + builder hash)
+        id: key
+        run: |
+          build=$(curl -fsSL --retry 3 -A "eve-cyno-data-CI (+https://github.com/eve-cyno/eve-cyno-data)" \
+            https://www.fuzzwork.co.uk/dump/latest/ \
+            | grep -oE '[0-9]+_[0-9]{8}_[0-9]{6}\.(db\.gz|sql\.gz|bak|pgdump)' | head -1 \
+            | sed -E 's/_[0-9]{6}\..*$//') || true
+          if [ -z "$build" ]; then
+            build="week-$(date -u +%G-W%V)"
+            echo "::warning::could not read the Fuzzwork build id; keying the SDE cache by ISO week ($build)"
+          fi
+          echo "key=sde-${{ runner.os }}-${build}-${{ hashFiles('sde/build/*.go', 'sde/required.go', '!**/*_test.go') }}" >> "$GITHUB_OUTPUT"
+
+      - name: restore SDE cache
+        id: cache
+        uses: actions/cache@v6
+        with:
+          path: data/sde/sde.sqlite
+          key: ${{ steps.key.outputs.key }}
+
+      - uses: actions/setup-go@v7
+        if: steps.cache.outputs.cache-hit != 'true'
+        with:
+          go-version: '1.27'
+          cache: true
+          cache-dependency-path: go.sum
+
+      - name: build SDE (cache miss only)
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: go run ./cmd/sde -out data/sde/sde.sqlite
+
+      - name: SDE sanity
+        run: |
+          size=$(stat -c %s data/sde/sde.sqlite)
+          echo "data/sde/sde.sqlite: $size bytes"
+          test "$size" -gt 300000000
+
+  # Build, vet and test with the real SDE. EVE_REQUIRE_SDE=1 makes every SDE-gated test FAIL
+  # instead of skip when the file is missing or unusable. Tests that need Ollama or Qdrant skip
+  # themselves with a reason: the live-stack paths stay local.
+  test:
+    needs: sde
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      EVE_REQUIRE_SDE: '1'
+      # SQLite-bound packages that run WITHOUT -race (an extended regexp over import paths).
+      # modernc.org/sqlite (pure-Go SQLite, the SDE driver) is memory-access all the way down,
+      # so -race adds minutes (tools: 18 s plain / 196 s -race) and no signal for those
+      # sequential rule suites. The concurrent code lives in packages that keep -race, and the
+      # few concurrency tests of the excluded package still run under -race below.
+      NORACE: '/data/tools$'
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version: '1.27'
+          cache: true
+          cache-dependency-path: go.sum
+
+      - run: go mod download
+
+      - name: restore SDE (built by the sde job)
+        uses: actions/cache/restore@v6
+        with:
+          path: data/sde/sde.sqlite
+          key: ${{ needs.sde.outputs.key }}
+          fail-on-cache-miss: true
+
+      - run: go build ./...
+      - run: go vet ./...
+
+      - name: go test -race (all but the SQLite-bound packages)
+        run: |
+          PKGS=$(go list ./...)
+          RACE=$(printf '%s\n' "$PKGS" | grep -Ev "$NORACE" || true)
+          # shellcheck disable=SC2086
+          go test -race -timeout 600s $RACE
+
+      - name: go test (the SQLite-bound packages, no -race)
+        run: |
+          PLAIN=$(go list ./... | grep -E "$NORACE" || true)
+          if [ -n "$PLAIN" ]; then
+            # shellcheck disable=SC2086
+            go test -timeout 300s $PLAIN
+            # The few tests in these packages that exercise concurrency still run under -race.
+            # shellcheck disable=SC2086
+            go test -race -timeout 300s -run 'Concurrent|Shared|Race|Parallel' $PLAIN
+          fi
+
+  # golangci-lint, config in .golangci.yml. Built with `go install` at a pinned version so the
+  # binary is compiled by the job's Go. `|` (not `,`): fall back to the origin on ANY proxy error.
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GOLANGCI_LINT_VERSION: v2.14.0
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version: '1.27'
+          cache: true
+          cache-dependency-path: go.sum
+
+      - name: install golangci-lint (pinned)
+        run: GOPROXY='https://proxy.golang.org|direct' GOBIN="$RUNNER_TEMP/bin" go install "github.com/golangci/golangci-lint/v2/cmd/golangci-lint@${GOLANGCI_LINT_VERSION}"
+
+      - name: golangci-lint
+        run: $RUNNER_TEMP/bin/golangci-lint run ./...
+
+  # Reachable-vulnerability gate. @latest on purpose: the vuln DB is the moving part. A red run
+  # after an unrelated change means a fresh advisory landed: bump the dependency, don't mute it.
+  govulncheck:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version: '1.27'
+          cache-dependency-path: go.sum
+
+      - run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+
+  # Secret scan: pinned gitleaks release binary, sha256-verified, over the full history.
+  gitleaks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GITLEAKS_VERSION: '8.30.1'
+      GITLEAKS_SHA256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: install gitleaks (pinned, checksum-verified)
+        run: |
+          url="https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          curl -sSfL --retry 3 -o "$RUNNER_TEMP/gitleaks.tar.gz" "$url"
+          echo "${GITLEAKS_SHA256}  $RUNNER_TEMP/gitleaks.tar.gz" | sha256sum --check --strict
+          tar -xzf "$RUNNER_TEMP/gitleaks.tar.gz" -C "$RUNNER_TEMP" gitleaks
+
+      - name: gitleaks scan
+        run: |
+          "$RUNNER_TEMP/gitleaks" git . --redact --no-banner --verbose
+
+  # Licence gate: every dependency must be under a permissive licence; GPL/AGPL/LGPL (anything
+  # not on the list) fails. THIRD_PARTY.md is the human-readable list.
+  licenses:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GO_LICENSES_VERSION: v2.0.1
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version: '1.27'
+          cache-dependency-path: go.sum
+
+      - name: go-licenses check
+        run: |
+          GOBIN="$RUNNER_TEMP/bin" go install "github.com/google/go-licenses/v2@${GO_LICENSES_VERSION}"
+          "$RUNNER_TEMP/bin/go-licenses" check ./... \
+            --allowed_licenses=MIT,BSD-2-Clause,BSD-3-Clause,Apache-2.0,ISC,MPL-2.0
+
+  # Generated files (api/openapi.yaml, llms.txt, llms-full.txt, tool_schemas.json) must be
+  # committed in sync with the tool catalog.
+  generate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version: '1.27'
+          cache: true
+          cache-dependency-path: go.sum
+
+      - name: go generate drift check
+        run: |
+          go generate ./...
+          if [ -n "$(git status --porcelain)" ]; then
+            git status --short
+            git diff --stat
+            echo "::error::go generate changed tracked files; run 'go generate ./...' and commit the result"
+            exit 1
+          fi
+
+  # Image build check: builds the Dockerfile WITHOUT pushing, so a broken COPY or base-image
+  # change fails the PR instead of the next release.
+  docker-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: docker/setup-buildx-action@v4
+
+      - uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: Dockerfile
+          push: false
+          cache-from: type=gha,scope=docker
+          cache-to: type=gha,mode=max,scope=docker
+
+  # Single required check for the branch ruleset.
+  ci-pass:
+    if: always()
+    needs: [sde, test, lint, govulncheck, gitleaks, licenses, generate, docker-build]
+    runs-on: ubuntu-latest
+    steps:
+      - name: all jobs succeeded
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "results: $RESULTS"
+          for r in $RESULTS; do
+            if [ "$r" != "success" ]; then
+              echo "::error::a required job did not succeed ($r)"
+              exit 1
+            fi
+          done

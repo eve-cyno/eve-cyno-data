@@ -1,0 +1,38 @@
+NPC stations in **Jita** (18 total):
+
+  • Jita 2 - Sebiestor Tribe Trade Embassy
+    Services: Courier Missions, Reprocessing Plant, Market, Repair Facilities, Fitting, News
+  • Jita 3 - Moon 1 - Tash-Murkon Family Trade Embassy
+    Services: Courier Missions, Reprocessing Plant, Market, Repair Facilities, Fitting, News
+  • Jita 4 - Caldari Business Tribunal Information Center
+    Services: Bounty Missions, Courier Missions, Interbus, Reprocessing Plant, Market, Stock Exchange
+  • Jita 4 - Moon 10 - Caldari Business Tribunal Law School
+    Services: Bounty Missions, Courier Missions, Reprocessing Plant, Market, Stock Exchange, Cloning
+  • Jita 4 - Moon 10 - Caldari Constructions Production Plant
+    Services: Bounty Missions, Courier Missions, Reprocessing Plant, Market, Repair Facilities, Factory
+  • Jita 4 - Moon 11 - Expert Housing Production Plant
+    Services: Bounty Missions, Courier Missions, Reprocessing Plant, Market, Repair Facilities, Factory
+  • Jita 4 - Moon 4 - Caldari Business Tribunal Bureau Offices
+    Services: Bounty Missions, Courier Missions, Interbus, Reprocessing Plant, Market, Stock Exchange
+  • Jita 4 - Moon 4 - Caldari Navy Assembly Plant
+    Services: Bounty Missions, Courier Missions, Reprocessing Plant, Market, Cloning, Repair Facilities
+  • Jita 4 - Moon 5 - Caldari Navy Assembly Plant
+    Services: Bounty Missions, Courier Missions, Reprocessing Plant, Market, Cloning, Repair Facilities
+  • Jita 4 - Moon 6 - Caldari Provisions School
+    Services: Bounty Missions, Courier Missions, Reprocessing Plant, Market, Cloning, Repair Facilities
+  • Jita 4 - Moon 6 - Hyasyoda Corporation Refinery
+    Services: Bounty Missions, Courier Missions, Reprocessing Plant, Refinery, Market, Repair Facilities
+  • Jita 4 - Moon 6 - Ytiri Storage
+    Services: Courier Missions, Reprocessing Plant, Market, Repair Facilities, Fitting, News
+  • Jita 5 - Moon 14 - Ytiri Storage
+    Services: Courier Missions, Reprocessing Plant, Market, Repair Facilities, Fitting, News
+  • Jita 5 - Moon 17 - Caldari Constructions Production Plant
+    Services: Bounty Missions, Courier Missions, Reprocessing Plant, Market, Repair Facilities, Factory
+  • Jita 6 - Hyasyoda Corporation Refinery
+    Services: Bounty Missions, Courier Missions, Reprocessing Plant, Refinery, Market, Repair Facilities
+  • Jita 6 - Paragon Fulfillment Center
+    Services: Market, Cloning, Repair Facilities, Fitting, Paintshop, Storage
+  • Jita 7 - Moon 2 - Caldari Business Tribunal Law School
+    Services: Bounty Missions, Courier Missions, Reprocessing Plant, Market, Stock Exchange, Cloning
+  • Jita 8 - Quafe Company Trade Embassy
+    Services: Courier Missions, Reprocessing Plant, Market, Repair Facilities, Fitting, News

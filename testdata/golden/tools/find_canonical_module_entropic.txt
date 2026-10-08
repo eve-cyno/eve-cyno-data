@@ -1,0 +1,9 @@
+## Canonical Entropic Radiation Sink variants
+- Entropic Radiation Sink I
+- Entropic Radiation Sink II
+- Veles Entropic Radiation Sink
+- Compact Entropic Radiation Sink
+- Abyssal Entropic Radiation Sink
+- Zorya's Entropic Radiation Sink
+
+Source: data/sde/sde.sqlite (Fuzzwork latest dump)

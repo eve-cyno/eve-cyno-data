@@ -1,0 +1,15 @@
+## Rifter (typeID=587) — Dogma Stats
+
+  Armor HP                       450
+  CPU                            130
+  Cargo                          140
+  Drone Bay                      0
+  Hi Slots                       3
+  Launcher Hardpoints            2
+  Low Slots                      4
+  Mid Slots                      3
+  Power Grid                     41
+  Rig Slots                      3
+  Shield HP                      450
+  Turret Hardpoints              3
+  Velocity                       350

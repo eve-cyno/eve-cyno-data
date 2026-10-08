@@ -1,0 +1,62 @@
+[
+  {
+    "name": "rifter-turret",
+    "eft": "[Rifter, Rifter turret oracle]\n\nDamage Control II\n\n200mm AutoCannon II, Barrage S\n200mm AutoCannon II, Barrage S\n200mm AutoCannon II, Barrage S\n\n\n\n\n\n\n",
+    "alpha": false
+  },
+  {
+    "name": "caracal-missile",
+    "eft": "[Caracal, Caracal missile oracle]\n\nDamage Control II\nBallistic Control System II\nBallistic Control System II\n\nLarge Shield Extender II\nLarge Shield Extender II\n\nHeavy Missile Launcher II, Scourge Heavy Missile\nHeavy Missile Launcher II, Scourge Heavy Missile\nHeavy Missile Launcher II, Scourge Heavy Missile\nHeavy Missile Launcher II, Scourge Heavy Missile\n\n\n\n",
+    "alpha": false
+  },
+  {
+    "name": "maller-armor",
+    "eft": "[Maller, Maller armor oracle]\n\nDamage Control II\nMedium Armor Repairer II\nMultispectrum Energized Membrane II\nThermal Armor Hardener II\nEM Armor Hardener II\n\nCap Recharger II\nCap Recharger II\n\n\n\n\n\n\n",
+    "alpha": false
+  },
+  {
+    "name": "vexor-drone",
+    "eft": "[Vexor, Vexor drone oracle]\n\nDamage Control II\nDrone Damage Amplifier II\nDrone Damage Amplifier II\n\nMedium Shield Extender II\n1MN Afterburner II\n\n\n\n\n\n\nHobgoblin II x5\n",
+    "alpha": false
+  },
+  {
+    "name": "firetail-mwd",
+    "eft": "[Republic Fleet Firetail, Firetail MWD oracle]\n\nDamage Control II\nNanofiber Internal Structure II\n\n5MN Microwarpdrive II\nWarp Disruptor II\n\n200mm AutoCannon II, Barrage S\n200mm AutoCannon II, Barrage S\n\n\n\n\n\n\n",
+    "alpha": false
+  },
+  {
+    "name": "maller-cap-heavy",
+    "eft": "[Maller, Maller cap heavy oracle]\n\nDamage Control II\nLarge Armor Repairer II\nMultispectrum Energized Membrane II\nThermal Armor Hardener II\nEM Armor Hardener II\n\nCap Recharger II\nMedium Capacitor Booster II, Cap Booster 800\n\n\n\n\n\n\n",
+    "alpha": false
+  },
+  {
+    "name": "harbinger-laser",
+    "eft": "[Harbinger, Harbinger laser oracle]\n\nDamage Control II\nHeat Sink II\nHeat Sink II\nMedium Armor Repairer II\nMultispectrum Energized Membrane II\n\nMedium Capacitor Booster II, Cap Booster 400\nCap Recharger II\n\nHeavy Pulse Laser II, Multifrequency M\nHeavy Pulse Laser II, Multifrequency M\nHeavy Pulse Laser II, Multifrequency M\nHeavy Pulse Laser II, Multifrequency M\nHeavy Pulse Laser II, Multifrequency M\nHeavy Pulse Laser II, Multifrequency M\n\nMedium Trimark Armor Pump I\nMedium Trimark Armor Pump I\nMedium Core Defense Field Extender I\n",
+    "alpha": false
+  },
+  {
+    "name": "thorax-blaster",
+    "eft": "[Thorax, Thorax blaster oracle]\n\nDamage Control II\nMagnetic Field Stabilizer II\nMagnetic Field Stabilizer II\n\nMedium Shield Extender II\n10MN Afterburner II\nWarp Disruptor II\n\nNeutron Blaster Cannon II, Antimatter Charge M\nNeutron Blaster Cannon II, Antimatter Charge M\nNeutron Blaster Cannon II, Antimatter Charge M\nNeutron Blaster Cannon II, Antimatter Charge M\n\nMedium Core Defense Field Extender I\nMedium Core Defense Field Extender I\nMedium Core Defense Field Extender I\n",
+    "alpha": false
+  },
+  {
+    "name": "raven-cruise",
+    "eft": "[Raven, Raven cruise oracle]\n\nDamage Control II\nBallistic Control System II\nBallistic Control System II\nPower Diagnostic System II\n\nLarge Shield Extender II\nLarge Shield Extender II\nCap Recharger II\nCap Recharger II\n\nCruise Missile Launcher II, Scourge Cruise Missile\nCruise Missile Launcher II, Scourge Cruise Missile\nCruise Missile Launcher II, Scourge Cruise Missile\nCruise Missile Launcher II, Scourge Cruise Missile\nCruise Missile Launcher II, Scourge Cruise Missile\nCruise Missile Launcher II, Scourge Cruise Missile\n\nLarge Core Defense Field Extender I\nLarge Core Defense Field Extender I\nLarge Trimark Armor Pump I\n",
+    "alpha": false
+  },
+  {
+    "name": "tengu-t3",
+    "eft": "[Tengu, Tengu T3 oracle]\n\nBallistic Control System II\nBallistic Control System II\n\nLarge Shield Extender II\nLarge Shield Extender II\nCap Recharger II\nCap Recharger II\nCap Recharger II\n\nHeavy Missile Launcher II, Scourge Heavy Missile\nHeavy Missile Launcher II, Scourge Heavy Missile\nHeavy Missile Launcher II, Scourge Heavy Missile\nHeavy Missile Launcher II, Scourge Heavy Missile\nHeavy Missile Launcher II, Scourge Heavy Missile\n\n\n\nTengu Core - Augmented Graviton Reactor\nTengu Defensive - Amplification Node\nTengu Offensive - Accelerated Ejection Bay\nTengu Propulsion - Fuel Catalyst\n",
+    "alpha": false
+  },
+  {
+    "name": "ishtar-sentry",
+    "eft": "[Ishtar, Ishtar sentry oracle]\n\nDamage Control II\nDrone Damage Amplifier II\nDrone Damage Amplifier II\nDrone Damage Amplifier II\n\nMedium Shield Extender II\nMedium Shield Extender II\n10MN Afterburner II\n\n\n\n\nMedium Core Defense Field Extender I\nMedium Core Defense Field Extender I\nMedium Core Defense Field Extender I\n\nGarde II x5\n",
+    "alpha": false
+  },
+  {
+    "name": "drake-active-shield",
+    "eft": "[Drake, Drake active shield oracle]\n\nBallistic Control System II\nBallistic Control System II\nPower Diagnostic System II\n\nLarge Shield Extender II\nMedium Shield Booster II\nCap Recharger II\nCap Recharger II\nCap Recharger II\n\nHeavy Missile Launcher II, Scourge Heavy Missile\nHeavy Missile Launcher II, Scourge Heavy Missile\nHeavy Missile Launcher II, Scourge Heavy Missile\nHeavy Missile Launcher II, Scourge Heavy Missile\nHeavy Missile Launcher II, Scourge Heavy Missile\nHeavy Missile Launcher II, Scourge Heavy Missile\n\nMedium Core Defense Field Extender I\nMedium Core Defense Field Extender I\nMedium Core Defense Field Extender I\n",
+    "alpha": false
+  }
+]

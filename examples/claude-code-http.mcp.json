@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "eve-cyno": {
+      "type": "http",
+      "url": "http://localhost:8092/v1/mcp",
+      "headers": {
+        "Authorization": "Bearer ${EVE_CYNO_API_KEY}"
+      }
+    }
+  }
+}

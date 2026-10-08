@@ -1,0 +1,18 @@
+STATUS: VALID — Rifter
+
+CPU: 65.2 / 162.5 tf
+PG:  22.8 / 51.2 MW
+Hi slots:  3/3 [FULL]
+Mid slots: 1/3
+Low slots: 1/4
+Rigs:      0/3
+Note: skill profile = Power Grid Management V + CPU Management V (+25% PG/CPU), Weapon Upgrades V (-25% turret/launcher CPU), Advanced Weapon Upgrades V (-10% turret/launcher PG), Energy Grid Upgrades V (-25% power-core CPU). Implants and faction-specific bonuses NOT modelled. Data: SDE.
+
+Fit stats: Rifter (all-V)
+DPS 107 · volley 181
+  3x 200mm AutoCannon II [Barrage S]: 107 DPS
+EHP 2955 (shield 887, armor 980, hull 1088)
+Resists EM/Th/Kin/Exp %: shield 12/56/48/30 · armor 66/24/36/45 · hull 60/60/60/60
+Speed 1193 m/s (prop on) · align 4.7s · signature 35 m
+Cap: stable · 312 GJ
+Basis: no implants or boosters; theoretical DPS (no reload); EHP at a uniform 25/25/25/25 damage profile.

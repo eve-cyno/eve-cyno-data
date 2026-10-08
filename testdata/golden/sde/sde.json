@@ -1,0 +1,957 @@
+{
+  "find_canonical_module": {
+    "drone_damage_amplifier": [
+      {
+        "name": "Drone Damage Amplifier I",
+        "type_id": 4393
+      },
+      {
+        "name": "Drone Damage Amplifier II",
+        "type_id": 4405
+      },
+      {
+        "name": "Mutated Drone Damage Amplifier",
+        "type_id": 60482
+      },
+      {
+        "name": "Sentient Drone Damage Amplifier",
+        "type_id": 33848
+      },
+      {
+        "name": "AE-K Compact Drone Damage Amplifier",
+        "type_id": 41034
+      },
+      {
+        "name": "Imperial Navy Drone Damage Amplifier",
+        "type_id": 33844
+      },
+      {
+        "name": "Dread Guristas Drone Damage Amplifier",
+        "type_id": 33846
+      },
+      {
+        "name": "Federation Navy Drone Damage Amplifier",
+        "type_id": 33842
+      }
+    ],
+    "entropic_disintegrator": [
+      {
+        "name": "Supratidal Entropic Disintegrator I",
+        "type_id": 47274
+      },
+      {
+        "name": "Supratidal Entropic Disintegrator II",
+        "type_id": 47922
+      },
+      {
+        "name": "Veles Supratidal Entropic Disintegrator",
+        "type_id": 47923
+      },
+      {
+        "name": "Supratidal Scoped Entropic Disintegrator",
+        "type_id": 47921
+      },
+      {
+        "name": "Supratidal Compact Entropic Disintegrator",
+        "type_id": 47920
+      },
+      {
+        "name": "Zorya's Supratidal Entropic Disintegrator",
+        "type_id": 52240
+      }
+    ]
+  },
+  "fuzzy_match": {
+    "Armagedon": [
+      [
+        643,
+        "Armageddon"
+      ],
+      [
+        36282,
+        "Armageddon EoM SKIN"
+      ],
+      [
+        997,
+        "Armageddon Blueprint"
+      ],
+      [
+        32305,
+        "Armageddon Navy Issue"
+      ],
+      [
+        34625,
+        "Armageddon Kador SKIN"
+      ]
+    ],
+    "Rifter": [
+      [
+        587,
+        "Rifter"
+      ],
+      [
+        21464,
+        "Rifles"
+      ]
+    ]
+  },
+  "get_blueprint_for_product": {
+    "Rifter_587": 691
+  },
+  "get_blueprint_materials": {
+    "Rifter_bp": [
+      [
+        34,
+        32000
+      ],
+      [
+        35,
+        6000
+      ],
+      [
+        36,
+        2500
+      ],
+      [
+        37,
+        500
+      ]
+    ]
+  },
+  "get_blueprint_skills": {
+    "Rifter_bp": [
+      [
+        3380,
+        1
+      ]
+    ]
+  },
+  "get_category_id": {
+    "2048": 7,
+    "2456": 18,
+    "587": 6
+  },
+  "get_dogma": {
+    "587_attr_count": 93,
+    "587_power": 41.0
+  },
+  "get_group_id": {
+    "11567": 30,
+    "2048": 60,
+    "24698": 419,
+    "587": 25
+  },
+  "get_hull_facts": {
+    "Gila": {
+      "bonused_modules": [
+        {
+          "canonical": [
+            "Ballistic Control System I",
+            "Ballistic Control System II",
+            "Abyssal Ballistic Control System",
+            "Standup Ballistic Control System I",
+            "Domination Ballistic Control System"
+          ],
+          "family": "Ballistic Control System",
+          "size": null,
+          "trigger": "missile damage"
+        },
+        {
+          "canonical": [
+            "Drone Damage Amplifier I",
+            "Drone Damage Amplifier II",
+            "Mutated Drone Damage Amplifier",
+            "Sentient Drone Damage Amplifier",
+            "AE-K Compact Drone Damage Amplifier"
+          ],
+          "family": "Drone Damage Amplifier",
+          "size": null,
+          "trigger": "drone damage"
+        }
+      ],
+      "category": "Ship",
+      "compatible_weapons": [],
+      "drone_bay": {
+        "bandwidth_mbit": 20.0,
+        "capacity_m3": 100.0
+      },
+      "group": "Cruiser",
+      "hardpoints": {
+        "launcher": 4,
+        "turret": 0
+      },
+      "hull_class": "cruiser",
+      "role_bonuses": [
+        {
+          "bonus": 10.0,
+          "skill_id": 3332,
+          "skill_name": "Gallente Cruiser",
+          "text": "bonus to kinetic and thermal missile damage",
+          "unit_id": 105
+        },
+        {
+          "bonus": 4.0,
+          "skill_id": 3334,
+          "skill_name": "Caldari Cruiser",
+          "text": "bonus to all shield resistances",
+          "unit_id": 105
+        },
+        {
+          "bonus": 250.0,
+          "skill_id": null,
+          "skill_name": null,
+          "text": "bonus to Medium Combat Drone hitpoints",
+          "unit_id": 105
+        },
+        {
+          "bonus": 500.0,
+          "skill_id": null,
+          "skill_name": null,
+          "text": "bonus to Medium Combat Drone damage",
+          "unit_id": 105
+        }
+      ],
+      "ship_id": 17715,
+      "ship_name": "Gila",
+      "slots": {
+        "hi": 5,
+        "low": 3,
+        "mid": 6,
+        "rig": 3
+      }
+    },
+    "Hecate": {
+      "bonused_modules": [
+        {
+          "canonical": [
+            "Magnetic Field Stabilizer I",
+            "Magnetic Field Stabilizer II",
+            "'Basic' Magnetic Field Stabilizer",
+            "Abyssal Magnetic Field Stabilizer",
+            "'Monopoly' Magnetic Field Stabilizer"
+          ],
+          "family": "Magnetic Field Stabilizer",
+          "size": null,
+          "trigger": "hybrid turret damage"
+        },
+        {
+          "canonical": [
+            "Tracking Enhancer I",
+            "Tracking Enhancer II",
+            "'Basic' Tracking Enhancer",
+            "Domination Tracking Enhancer",
+            "Republic Fleet Tracking Enhancer"
+          ],
+          "family": "Tracking Enhancer",
+          "size": null,
+          "trigger": "hybrid turret tracking"
+        },
+        {
+          "canonical": [
+            "Tracking Computer I",
+            "Tracking Computer II",
+            "Remote Tracking Computer I",
+            "Remote Tracking Computer II",
+            "'Marketeer' Tracking Computer"
+          ],
+          "family": "Tracking Computer",
+          "size": null,
+          "trigger": "hybrid turret optimal"
+        },
+        {
+          "canonical": [
+            "Small Armor Repairer I",
+            "Small Armor Repairer II",
+            "Small Abyssal Armor Repairer",
+            "Small Remote Armor Repairer I",
+            "Small Remote Armor Repairer II"
+          ],
+          "family": "Armor Repairer",
+          "size": "Small",
+          "trigger": "armor repairer"
+        },
+        {
+          "canonical": [
+            "Signal Amplifier I",
+            "Signal Amplifier II",
+            "'Basic' Signal Amplifier",
+            "Sentient Signal Amplifier",
+            "Standup Signal Amplifier I"
+          ],
+          "family": "Signal Amplifier",
+          "size": null,
+          "trigger": "sensor strength"
+        },
+        {
+          "canonical": [
+            "Sensor Booster I",
+            "Sensor Booster II",
+            "'Shady' Sensor Booster",
+            "Remote Sensor Booster I",
+            "Sentient Sensor Booster"
+          ],
+          "family": "Sensor Booster",
+          "size": null,
+          "trigger": "targeting range"
+        }
+      ],
+      "category": "Ship",
+      "compatible_weapons": [],
+      "drone_bay": {
+        "bandwidth_mbit": 0.0,
+        "capacity_m3": 0.0
+      },
+      "group": "Tactical Destroyer",
+      "hardpoints": {
+        "launcher": 0,
+        "turret": 5
+      },
+      "hull_class": "destroyer",
+      "role_bonuses": [
+        {
+          "bonus": 3.0,
+          "skill_id": 35685,
+          "skill_name": "Gallente Tactical Destroyer",
+          "text": "bonus to Small Hybrid Turret rate of fire",
+          "unit_id": 105
+        },
+        {
+          "bonus": 5.0,
+          "skill_id": 35685,
+          "skill_name": "Gallente Tactical Destroyer",
+          "text": "reduction in module heat damage amount taken",
+          "unit_id": 105
+        },
+        {
+          "bonus": 7.5,
+          "skill_id": 35685,
+          "skill_name": "Gallente Tactical Destroyer",
+          "text": "bonus to Small Hybrid Turret tracking speed",
+          "unit_id": 105
+        },
+        {
+          "bonus": null,
+          "skill_id": null,
+          "skill_name": null,
+          "text": "Additional bonuses are available while one of three Tactical Destroyer Modes are active. Modes may be switched no more than once every 10 seconds.",
+          "unit_id": null
+        },
+        {
+          "bonus": null,
+          "skill_id": null,
+          "skill_name": null,
+          "text": "Defense Mode",
+          "unit_id": null
+        },
+        {
+          "bonus": null,
+          "skill_id": null,
+          "skill_name": null,
+          "text": "Propulsion Mode",
+          "unit_id": null
+        },
+        {
+          "bonus": null,
+          "skill_id": null,
+          "skill_name": null,
+          "text": "Sharpshooter Mode",
+          "unit_id": null
+        },
+        {
+          "bonus": 33.0,
+          "skill_id": null,
+          "skill_name": null,
+          "text": "bonus to Small Hybrid Turret damage",
+          "unit_id": 105
+        },
+        {
+          "bonus": 33.3,
+          "skill_id": null,
+          "skill_name": null,
+          "text": "bonus to all armor and hull resistances while Defense Mode is enabled",
+          "unit_id": 105
+        },
+        {
+          "bonus": 33.3,
+          "skill_id": null,
+          "skill_name": null,
+          "text": "reduction to armor repairer duration while Defense Mode is active",
+          "unit_id": 105
+        },
+        {
+          "bonus": 33.3,
+          "skill_id": null,
+          "skill_name": null,
+          "text": "bonus to Small Hybrid Turret damage while Sharpshooter Mode is enabled",
+          "unit_id": 105
+        },
+        {
+          "bonus": 66.6,
+          "skill_id": null,
+          "skill_name": null,
+          "text": "bonus to Microwarpdrive speed boost and reduction in Microwarpdrive capacitor use while Propulsion Mode is enabled",
+          "unit_id": 105
+        },
+        {
+          "bonus": 66.6,
+          "skill_id": null,
+          "skill_name": null,
+          "text": "bonus to ship inertia modifier while Propulsion Mode is enabled",
+          "unit_id": 105
+        },
+        {
+          "bonus": 66.6,
+          "skill_id": null,
+          "skill_name": null,
+          "text": "bonus to Small Hybrid Turret optimal range while Sharpshooter Mode is enabled",
+          "unit_id": 105
+        },
+        {
+          "bonus": 66.6,
+          "skill_id": null,
+          "skill_name": null,
+          "text": "increased resistances against hostile Sensor Dampeners and Weapon Disruptors while Sharpshooter Mode is enabled",
+          "unit_id": 105
+        },
+        {
+          "bonus": 95.0,
+          "skill_id": null,
+          "skill_name": null,
+          "text": "reduction in Scan Probe Launcher and Survey Probe Launcher CPU requirements",
+          "unit_id": 105
+        },
+        {
+          "bonus": 100.0,
+          "skill_id": null,
+          "skill_name": null,
+          "text": "bonus to sensor strength and targeting range while Sharpshooter Mode is enabled",
+          "unit_id": 105
+        }
+      ],
+      "ship_id": 35683,
+      "ship_name": "Hecate",
+      "slots": {
+        "hi": 6,
+        "low": 4,
+        "mid": 4,
+        "rig": 3
+      }
+    },
+    "Leshak": {
+      "bonused_modules": [
+        {
+          "canonical": [
+            "Entropic Radiation Sink I",
+            "Entropic Radiation Sink II",
+            "Veles Entropic Radiation Sink",
+            "Compact Entropic Radiation Sink",
+            "Abyssal Entropic Radiation Sink"
+          ],
+          "family": "Entropic Radiation Sink",
+          "size": null,
+          "trigger": "entropic disintegrator damage"
+        },
+        {
+          "canonical": [
+            "1600mm Steel Plates I",
+            "1600mm Steel Plates II",
+            "'Bailey' 1600mm Steel Plates",
+            "Syndicate 1600mm Steel Plates",
+            "Imperial Navy 1600mm Steel Plates"
+          ],
+          "family": "Steel Plates",
+          "size": "Large",
+          "trigger": "armor plate hitpoints"
+        },
+        {
+          "canonical": [
+            "Large Armor Repairer I",
+            "Large Armor Repairer II",
+            "Large Abyssal Armor Repairer",
+            "Large Remote Armor Repairer I",
+            "Large Remote Armor Repairer II"
+          ],
+          "family": "Armor Repairer",
+          "size": "Large",
+          "trigger": "armor repairer"
+        },
+        {
+          "canonical": [
+            "Large Shield Extender I",
+            "Large Shield Extender II",
+            "Thukker Large Shield Extender",
+            "Large Abyssal Shield Extender",
+            "Large 'Sheriff' Shield Extender"
+          ],
+          "family": "Shield Extender",
+          "size": "Large",
+          "trigger": "shield extender hitpoints"
+        },
+        {
+          "canonical": [
+            "Large Remote Armor Repairer I",
+            "Large Remote Armor Repairer II",
+            "'Peace' Large Remote Armor Repairer",
+            "Large Ancillary Remote Armor Repairer",
+            "Large I-ax Enduring Remote Armor Repairer"
+          ],
+          "family": "Remote Armor Repairer",
+          "size": "Large",
+          "trigger": "remote armor repairer"
+        }
+      ],
+      "category": "Ship",
+      "compatible_weapons": [
+        {
+          "name": "Supratidal Entropic Disintegrator I",
+          "type_id": 47274
+        },
+        {
+          "name": "Supratidal Entropic Disintegrator II",
+          "type_id": 47922
+        },
+        {
+          "name": "Veles Supratidal Entropic Disintegrator",
+          "type_id": 47923
+        },
+        {
+          "name": "Supratidal Scoped Entropic Disintegrator",
+          "type_id": 47921
+        },
+        {
+          "name": "Supratidal Compact Entropic Disintegrator",
+          "type_id": 47920
+        },
+        {
+          "name": "Zorya's Supratidal Entropic Disintegrator",
+          "type_id": 52240
+        }
+      ],
+      "drone_bay": {
+        "bandwidth_mbit": 100.0,
+        "capacity_m3": 250.0
+      },
+      "group": "Battleship",
+      "hardpoints": {
+        "launcher": 0,
+        "turret": 1
+      },
+      "hull_class": "battleship",
+      "role_bonuses": [
+        {
+          "bonus": 5.0,
+          "skill_id": 47869,
+          "skill_name": "Precursor Battleship",
+          "text": "bonus to Supratidal Entropic Disintegrator damage",
+          "unit_id": 105
+        },
+        {
+          "bonus": 5.0,
+          "skill_id": 47869,
+          "skill_name": "Precursor Battleship",
+          "text": "bonus to Supratidal Entropic Disintegrator rate of fire",
+          "unit_id": 105
+        },
+        {
+          "bonus": 5.0,
+          "skill_id": null,
+          "skill_name": null,
+          "text": "additional bonus to Reinforced Bulkhead hitpoints",
+          "unit_id": 105
+        },
+        {
+          "bonus": 50.0,
+          "skill_id": null,
+          "skill_name": null,
+          "text": "reduced Energy Neutralizer capacitor need",
+          "unit_id": 105
+        },
+        {
+          "bonus": 50.0,
+          "skill_id": null,
+          "skill_name": null,
+          "text": "reduced Remote Armor Repairer capacitor need",
+          "unit_id": 105
+        },
+        {
+          "bonus": 50.0,
+          "skill_id": null,
+          "skill_name": null,
+          "text": "reduced Smart Bomb capacitor need",
+          "unit_id": 105
+        },
+        {
+          "bonus": 50.0,
+          "skill_id": null,
+          "skill_name": null,
+          "text": "bonus to Armor Plate hitpoints",
+          "unit_id": 105
+        },
+        {
+          "bonus": 100.0,
+          "skill_id": null,
+          "skill_name": null,
+          "text": "bonus to Remote Armor Repairer range",
+          "unit_id": 105
+        },
+        {
+          "bonus": 100.0,
+          "skill_id": null,
+          "skill_name": null,
+          "text": "bonus to Shield Extender hitpoints",
+          "unit_id": 105
+        }
+      ],
+      "ship_id": 47271,
+      "ship_name": "Leshak",
+      "slots": {
+        "hi": 5,
+        "low": 8,
+        "mid": 4,
+        "rig": 3
+      }
+    }
+  },
+  "get_item_meta_tier": {
+    "11563": "Tech I",
+    "2048": "Tech II",
+    "3186": "Tech II"
+  },
+  "get_jumps_path": {
+    "Jita->Amarr_any": {
+      "constraint_ok": true,
+      "path": [
+        30000142,
+        30000138,
+        30000132,
+        30000134,
+        30005196,
+        30005192,
+        30004083,
+        30004078,
+        30004079,
+        30004080,
+        30002282,
+        30002187
+      ]
+    },
+    "Jita->Amarr_highsec": {
+      "constraint_ok": true,
+      "path": [
+        30000142,
+        30000144,
+        30000139,
+        30002791,
+        30002805,
+        30002803,
+        30002768,
+        30002765,
+        30002764,
+        30002761,
+        30004972,
+        30004970,
+        30002633,
+        30002634,
+        30002641,
+        30002681,
+        30002682,
+        30002048,
+        30002049,
+        30002053,
+        30002543,
+        30002544,
+        30002568,
+        30002529,
+        30002526,
+        30002510,
+        30002509,
+        30000004,
+        30000005,
+        30000002,
+        30002973,
+        30002969,
+        30002974,
+        30002972,
+        30002971,
+        30002970,
+        30002963,
+        30002964,
+        30002991,
+        30002994,
+        30003545,
+        30003548,
+        30003525,
+        30003523,
+        30003522,
+        30002187
+      ]
+    }
+  },
+  "get_module_slot": {
+    "12058": "mid",
+    "1877": "high",
+    "2048": "low",
+    "31716": "rig"
+  },
+  "get_npc_stations": {
+    "Jita_count": 18,
+    "first": {
+      "corporation_id": 1000033,
+      "operation_id": 44,
+      "station_id": 60003469,
+      "station_name": "Jita IV - Caldari Business Tribunal Information Center",
+      "system_id": 30000142
+    }
+  },
+  "get_reprocessing_yield": {
+    "Veldspar_1230": [
+      [
+        34,
+        200
+      ]
+    ]
+  },
+  "get_required_skills_from_dogma": {
+    "Rifter_587": [
+      [
+        3329,
+        1
+      ]
+    ]
+  },
+  "get_ship_class": {
+    "11567": null,
+    "24698": "battlecruiser",
+    "47271": "battleship",
+    "587": "frigate"
+  },
+  "get_ship_traits": {
+    "Leshak": [
+      {
+        "bonus": 5.0,
+        "skill_id": 47869,
+        "skill_name": "Precursor Battleship",
+        "text": "bonus to Supratidal Entropic Disintegrator damage",
+        "unit_id": 105
+      },
+      {
+        "bonus": 5.0,
+        "skill_id": 47869,
+        "skill_name": "Precursor Battleship",
+        "text": "bonus to Supratidal Entropic Disintegrator rate of fire",
+        "unit_id": 105
+      },
+      {
+        "bonus": 5.0,
+        "skill_id": null,
+        "skill_name": null,
+        "text": "additional bonus to Reinforced Bulkhead hitpoints",
+        "unit_id": 105
+      },
+      {
+        "bonus": 50.0,
+        "skill_id": null,
+        "skill_name": null,
+        "text": "reduced Energy Neutralizer capacitor need",
+        "unit_id": 105
+      },
+      {
+        "bonus": 50.0,
+        "skill_id": null,
+        "skill_name": null,
+        "text": "reduced Remote Armor Repairer capacitor need",
+        "unit_id": 105
+      },
+      {
+        "bonus": 50.0,
+        "skill_id": null,
+        "skill_name": null,
+        "text": "reduced Smart Bomb capacitor need",
+        "unit_id": 105
+      },
+      {
+        "bonus": 50.0,
+        "skill_id": null,
+        "skill_name": null,
+        "text": "bonus to Armor Plate hitpoints",
+        "unit_id": 105
+      },
+      {
+        "bonus": 100.0,
+        "skill_id": null,
+        "skill_name": null,
+        "text": "bonus to Remote Armor Repairer range",
+        "unit_id": 105
+      },
+      {
+        "bonus": 100.0,
+        "skill_id": null,
+        "skill_name": null,
+        "text": "bonus to Shield Extender hitpoints",
+        "unit_id": 105
+      }
+    ],
+    "Rifter": [
+      {
+        "bonus": 7.5,
+        "skill_id": 3329,
+        "skill_name": "Minmatar Frigate",
+        "text": "bonus to Small Projectile Turret rate of fire",
+        "unit_id": 105
+      },
+      {
+        "bonus": 10.0,
+        "skill_id": 3329,
+        "skill_name": "Minmatar Frigate",
+        "text": "bonus to Small Projectile Turret falloff",
+        "unit_id": 105
+      }
+    ]
+  },
+  "get_system_metadata": {
+    "Jita": {
+      "constellation_id": 20000020,
+      "constellation_name": "Kimotoro",
+      "faction_id": 500001,
+      "region_id": 10000002,
+      "region_name": "The Forge",
+      "security": 0.9459131167,
+      "security_class": "B",
+      "system_id": 30000142,
+      "system_name": "Jita"
+    }
+  },
+  "get_systems_in_region": {
+    "The_Forge_count": 88,
+    "first": {
+      "name": "Kisogo",
+      "security": 1.0,
+      "system_id": 30000141
+    }
+  },
+  "get_type_name": {
+    "11567": "Avatar",
+    "12058": "10MN Afterburner II",
+    "16229": "Brutix",
+    "2048": "Damage Control II",
+    "24698": "Drake",
+    "47271": "Leshak",
+    "587": "Rifter"
+  },
+  "get_type_names": {
+    "11567": "Avatar",
+    "12058": "10MN Afterburner II",
+    "16229": "Brutix",
+    "2048": "Damage Control II",
+    "24698": "Drake",
+    "47271": "Leshak",
+    "587": "Rifter"
+  },
+  "is_charge": {
+    "2456": false,
+    "34": false,
+    "587": false
+  },
+  "is_drone": {
+    "2048": false,
+    "2456": true,
+    "587": false
+  },
+  "resolve_name_loose": {
+    "Avatar titan": [
+      "Avatar",
+      11567
+    ],
+    "Nyx supercarrier": [
+      "Nyx",
+      23913
+    ],
+    "Rifter frigate": [
+      "Rifter",
+      587
+    ],
+    "Vexor Navy Issue": [
+      "Vexor Navy Issue",
+      17843
+    ],
+    "fakeship 99": null
+  },
+  "resolve_names": {
+    "Damage Control II": 2048,
+    "Leshak": 47271,
+    "Rifter": 587
+  },
+  "resolve_system_name": {
+    "Amarr": 30002187,
+    "Dodixie": 30002659,
+    "Jita": 30000142
+  },
+  "suggest_canonical": {
+    "Drone Augmentor": [
+      [
+        23527,
+        "Drone Link Augmentor I"
+      ],
+      [
+        24427,
+        "Drone Link Augmentor II"
+      ],
+      [
+        20700,
+        "Michi's Excavation Augmentor"
+      ],
+      [
+        97245,
+        "Mutated Drone Link Augmentor"
+      ],
+      [
+        25914,
+        "Large Drone Speed Augmentor I"
+      ]
+    ],
+    "Large Armor Plate II": [
+      [
+        25605,
+        "Armor Plates"
+      ],
+      [
+        25624,
+        "Intact Armor Plates"
+      ],
+      [
+        21017,
+        "Capital Armor Plates"
+      ],
+      [
+        81066,
+        "Metaprismatic Armor Plate"
+      ],
+      [
+        47812,
+        "Small Abyssal Armor Plates"
+      ]
+    ],
+    "Praetor Heavy Drone": [
+      [
+        57728,
+        "Heavy Drones Skill Accelerator"
+      ],
+      [
+        60464,
+        "Exigent Heavy Drone Firepower Mutaplasmid"
+      ],
+      [
+        60463,
+        "Exigent Heavy Drone Navigation Mutaplasmid"
+      ],
+      [
+        60465,
+        "Exigent Heavy Drone Durability Mutaplasmid"
+      ],
+      [
+        60466,
+        "Exigent Heavy Drone Projection Mutaplasmid"
+      ]
+    ]
+  }
+}

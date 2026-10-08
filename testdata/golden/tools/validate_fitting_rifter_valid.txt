@@ -1,0 +1,16 @@
+STATUS: INVALID (1 violation(s)) — Rifter
+
+CPU: 170.0 / 162.5 tf
+PG:  18.0 / 51.2 MW
+Hi slots:  3/3 [FULL]
+Mid slots: 3/3 [FULL]
+Low slots: 3/4
+Rigs:      3/3 [FULL]
+
+WARNINGS:
+• CPU over by 7.5 tf (170.0/162.5 tf), within the 5 % implant allowance: fits with a 5 % CPU implant (EE-605). Top consumers: 'Warp Scrambler II' (36.0 tf), 'Damage Control II' (30.0 tf), 'Gyrostabilizer II' (30.0 tf).
+
+VIOLATIONS:
+• unknown module(s) (not in SDE/ESI — likely fabricated): Small Autocannon II, Small Autocannon II, Small Autocannon II
+Unresolved modules (not counted): Small Autocannon II, Small Autocannon II, Small Autocannon II
+Note: skill profile = Power Grid Management V + CPU Management V (+25% PG/CPU), Weapon Upgrades V (-25% turret/launcher CPU), Advanced Weapon Upgrades V (-10% turret/launcher PG), Energy Grid Upgrades V (-25% power-core CPU). Implants and faction-specific bonuses NOT modelled. Data: SDE.

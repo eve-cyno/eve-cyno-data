@@ -1,0 +1,14 @@
+Route from **Jita** to **Amarr** (11 jumps):
+
+  ► Jita                     (+0.9, highsec)
+  → Ikuchi                   (+0.9, highsec)
+  → Ansila                   (+0.9, highsec)
+  → Hykkota                  (+0.8, highsec)
+  → Ahbazon                  (+0.4, lowsec)
+  → Shera                    (+0.6, highsec)
+  → Gensela                  (+0.7, highsec)
+  → Dresi                    (+0.6, highsec)
+  → Aphend                   (+0.6, highsec)
+  → Romi                     (+0.7, highsec)
+  → Bhizheba                 (+0.9, highsec)
+  ◄ Amarr                    (+0.9, highsec)

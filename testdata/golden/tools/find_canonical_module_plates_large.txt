@@ -1,0 +1,9 @@
+## Canonical Steel Plates variants (Large)
+- 1600mm Steel Plates I
+- 1600mm Steel Plates II
+- 'Bailey' 1600mm Steel Plates
+- Syndicate 1600mm Steel Plates
+- Imperial Navy 1600mm Steel Plates
+- Federation Navy 1600mm Steel Plates
+
+Source: data/sde/sde.sqlite (Fuzzwork latest dump)

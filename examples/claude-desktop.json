@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "eve-cyno": {
+      "command": "/absolute/path/to/eve-cyno-mcp",
+      "args": [],
+      "env": {
+        "EVE_CORE_SDE_PATH": "/absolute/path/to/sde.sqlite"
+      }
+    }
+  }
+}

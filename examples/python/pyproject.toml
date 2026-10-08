@@ -1,0 +1,12 @@
+[project]
+name = "eve-cyno-examples"
+version = "0.0.0"
+description = "Examples that call the EVE-Cyno data API (REST and MCP) from Python"
+requires-python = ">=3.11"
+dependencies = [
+    "httpx>=0.28.1",
+    "mcp>=2.3.0",
+]
+
+[tool.uv]
+package = false

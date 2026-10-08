@@ -1,0 +1,5 @@
+Name: Rifter
+Volume: 27289.0 m³
+Mass: 1067000.0 kg
+Group ID: 25
+Description: The Rifter is a very powerful combat frigate and can easily tackle the best frigates out there. It has gone through many radical design phases since its inauguration during the Minmatar Rebellion. The Rifter has a wide variety of offensive capabilities, making it an unpredictable and deadly adversary.

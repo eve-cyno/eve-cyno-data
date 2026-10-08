@@ -1,0 +1,576 @@
+[
+  {
+    "type": "function",
+    "function": {
+      "name": "get_market_price",
+      "description": "Get current market prices for an EVE Online item in The Forge region (Jita hub). Returns best sell price, best buy price, and order counts.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "type_id": {
+            "type": "integer",
+            "description": "The EVE type ID of the item (e.g. 34 for Tritanium, 44992 for PLEX)"
+          },
+          "type_name": {
+            "type": "string",
+            "description": "Human-readable item name, for display only"
+          }
+        },
+        "required": [
+          "type_id"
+        ]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "get_type_info",
+      "description": "Get information about an EVE Online item: name, description, volume, mass, group.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "type_id": {
+            "type": "integer",
+            "description": "The EVE type ID"
+          }
+        },
+        "required": [
+          "type_id"
+        ]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "search_item_by_name",
+      "description": "Resolve one or more EVE Online item, ship, or module names to their type_id. Call this BEFORE get_market_price or get_type_info when you only have a name, not a type_id.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "names": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "List of item/ship/module names to resolve, e.g. ['Stabber', 'PLEX', 'Gila']"
+          }
+        },
+        "required": [
+          "names"
+        ]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "get_ship_stats",
+      "description": "Get slot layout, hardpoints, and resource limits for an EVE Online ship. Call this BEFORE generating a fit to know exact hi/mid/low/rig slot counts, turret and launcher hardpoints, CPU capacity (tf), and powergrid capacity (MW). Using these values prevents generating fits that exceed slot or resource limits.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "ship_name": {
+            "type": "string",
+            "description": "The ship type name, e.g. 'Vexor', 'Rifter', 'Stabber', 'Gila'"
+          }
+        },
+        "required": [
+          "ship_name"
+        ]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "get_ship_bonuses",
+      "description": "Get hull bonuses for an EVE Online ship — per-skill-level bonuses + role bonuses + ship class. Call this BEFORE generating a fit so you pick the bonused weapon system (Caldari hybrid vs missile, Gallente drone vs hybrid, Minmatar projectile vs missile, Amarr laser; pirate hulls have specific role bonuses like web range or ECM). The response names every per-skill bonus and any role bonus from the ship's ESI description — use those to decide weapons, modules, and tank type.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "ship_name": {
+            "type": "string",
+            "description": "Ship type name, e.g. 'Hawk', 'Stabber Fleet Issue', 'Daredevil', 'Gila'"
+          }
+        },
+        "required": [
+          "ship_name"
+        ]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "find_canonical_module",
+      "description": "Look up canonical SDE typeNames for a module family (e.g. 'Steel Plates', 'Entropic Radiation Sink', 'Shield Extender', 'Heat Sink', 'Magnetic Field Stabilizer', 'Ballistic Control System', 'Stasis Webifier', 'Microwarpdrive', 'Remote Armor Repairer'). Call this when you are about to write a module that isn't in the `compatible_weapons` or `bonused_modules` of get_hull_facts and you are not 100% sure of the canonical name. Optional `size` narrows to a class prefix — 'Small' for frigates / destroyers, 'Medium' for cruisers / battlecruisers, 'Large' for battleships and capitals. Returns a short list of real published items (no SKINs / Blueprints / Specializations).",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "family": {
+            "type": "string",
+            "description": "Module family substring, e.g. 'Steel Plates', 'Entropic Radiation Sink', 'Tracking Enhancer'"
+          },
+          "size": {
+            "type": "string",
+            "description": "Optional size class — 'Small', 'Medium', or 'Large'"
+          }
+        },
+        "required": [
+          "family"
+        ]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "get_hull_facts",
+      "description": "Authoritative SDE snapshot of a hull's fitting envelope — slot/hardpoint counts, drone bay, role/skill bonuses, AND the canonical list of weapons that hull is restricted to fit (when EVE encodes a per-hull weapon lock). Call this BEFORE writing an EFT block on any unfamiliar / specialist hull (Triglavian battleships Leshak / Drekavac → Supratidal Entropic Disintegrators; Triglavian frigates → Light variants; Triglavian cruisers → Heavy variants; pirate / faction hulls). When `compatible_weapons` is non-empty, USE ONLY those typeNames — anything else will be rejected by validate_fitting. When `compatible_weapons` is empty there is no per-hull lock; rely on `role_bonuses` (which carry the bonused weapon family like 'Small Hybrid Turret' or 'Light Missile') and standard hardpoint sizing.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "ship_name": {
+            "type": "string",
+            "description": "Ship type name, e.g. 'Leshak', 'Hecate', 'Vedmak', 'Damavik'"
+          }
+        },
+        "required": [
+          "ship_name"
+        ]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "get_fits",
+      "description": "Retrieve community ship fits VERBATIM from the indexed fit database (EVE Workbench + Abysstracker + gustavmannfred.streamlit.app + caldarijoans.streamlit.app, ~8150 fits). Use this FIRST whenever the user asks for popular / community / top / proven / 'most-used' / meta / 'best' / Gustav's / CaldariJoans' fits — never invent a fit when this tool can answer. Returns the raw EFT text (header + modules + drones + ammo) and the source URL for each match. Filter by ship_name (exact), activity (pvp / pve / hauler / exploration / mining / logistics), context (wh, abyss, abyss-electrical / firestorm / exotic / gamma / dark, abyss-t1..t6, ratting, solo), cost_class (cheap < 50M / mid 50-500M / blingy > 500M ISK), alpha_clone (true for Alpha-skill-friendly), combat_role (solo / fleet / elite-flown — zKillboard only). If 0 matches, returns 'NO FITS FOUND' — follow the STEP decision tree: try ONE retry with the most restrictive filter dropped, then proceed to STEP 2 and generate a theorycrafted fit from game knowledge. NEVER tell the user this tool returned empty.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "ship_name": {
+            "type": "string",
+            "description": "Exact EVE ship name. Examples: 'Tengu', 'Gila', 'Hurricane Fleet Issue', 'Vexor Navy Issue'. Leave empty to search across all ships matching the other filters."
+          },
+          "activity": {
+            "type": "string",
+            "enum": [
+              "pvp",
+              "pve",
+              "hauler",
+              "exploration",
+              "mining",
+              "logistics"
+            ],
+            "description": "Activity the fit is meant for."
+          },
+          "context": {
+            "type": "string",
+            "description": "Subcontext tag. Examples: 'wh' (wormhole), 'abyss' (any abyss), 'abyss-electrical', 'abyss-firestorm', 'abyss-exotic', 'abyss-gamma', 'abyss-dark', 'abyss-t1', 'abyss-t2', 'abyss-t3', 'abyss-t4', 'abyss-t5', 'abyss-t6', 'ratting', 'solo'."
+          },
+          "cost_class": {
+            "type": "string",
+            "enum": [
+              "cheap",
+              "mid",
+              "blingy"
+            ],
+            "description": "cheap (< 50M ISK), mid (50-500M), blingy (> 500M)."
+          },
+          "alpha_clone": {
+            "type": "boolean",
+            "description": "If true, only return fits flyable on Alpha skills."
+          },
+          "combat_role": {
+            "type": "string",
+            "enum": [
+              "solo",
+              "fleet"
+            ],
+            "description": "Workbench-derived role tag for PvP fits."
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "workbench",
+              "abysstracker",
+              "gustavmannfred",
+              "caldarijoans"
+            ],
+            "description": "Restrict to one source. Leave empty to search all sources. Use 'gustavmannfred' for Gustav's abyss fits (gustavmannfred.streamlit.app), 'caldarijoans' for CaldariJoans' abyss fits (caldarijoans.streamlit.app). Pass this when the user explicitly asks for a specific author's fit."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Max number of fits to return (default 5, hard max 10)."
+          }
+        }
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "list_fits",
+      "description": "LIST / enumerate community fits from the indexed fit database by exact payload filters (NOT semantic search). Use when the user wants to SEE WHAT FITS EXIST — 'list all fits for X', 'what Gila fits do you have', 'how many workbench fits', 'show every abyss-t5 fit' — rather than one fit to copy. Returns a compact numbered list (ship — fit name | tags | source URL) plus the TOTAL match count. Filter by source, ship_name (exact), tag (a fit_tags value like 'pve' / 'pvp' / 'abyss-t5' / 'cheap' / 'alpha-clone'), and filament_type. Use get_fits instead when the user wants the actual modules to copy.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "source": {
+            "type": "string",
+            "enum": [
+              "workbench",
+              "abysstracker",
+              "zkillboard_meta",
+              "gustavmannfred",
+              "caldarijoans"
+            ],
+            "description": "Restrict to one fit source. Empty = all fit sources."
+          },
+          "ship_name": {
+            "type": "string",
+            "description": "Exact EVE ship name to filter by (e.g. 'Gila'). Empty = all ships."
+          },
+          "tag": {
+            "type": "string",
+            "description": "A fit_tags value to filter by: pvp / pve / abyss / abyss-t1..t6 / wh / cheap / blingy / alpha-clone / solo / fleet, etc."
+          },
+          "filament_type": {
+            "type": "string",
+            "description": "Abysstracker filament: electrical / firestorm / exotic / gamma / dark."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Max rows to list (default 24, hard max 24: the list is capped, not exportable)."
+          }
+        }
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "analyze_battle",
+      "description": "Analyze a battle report from zKillboard, WarBeacon, or br.evetools.org. Call this when the user pastes a zKillboard URL containing '/related/' or '/br/', a WarBeacon URL containing '/br/report/', or a br.evetools.org URL containing '/br/{24-hex-id}'. Returns kills, ISK destroyed, ship composition, and duration. Pass detail='full' to additionally include a per-weapon damage breakdown and a per-slot list of destroyed modules — use this on the user's follow-up when they ask for damage / weapons / modules / components / what killed.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "battle_url": {
+            "type": "string",
+            "description": "Full battle URL. Supported formats: https://zkillboard.com/related/30003067/202501071700/ or https://zkillboard.com/br/4885/ or https://warbeacon.net/br/report/78f57bba-34b0-4e0b-b0e6-53119ab32fbc or https://br.evetools.org/br/69f7d88dcbe9de00126eb5a5"
+          },
+          "detail": {
+            "type": "string",
+            "enum": [
+              "summary",
+              "full"
+            ],
+            "description": "Output level. 'summary' (default) — high-level battle report only. 'full' — also includes top-10 damage by weapon type per side and top-10 destroyed modules per slot per side. Slower (~5-15 s) since it fan-outs ESI killmail fetches; the result is cached for 30 min so a follow-up turn is fast."
+          }
+        },
+        "required": [
+          "battle_url"
+        ]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "validate_fitting",
+      "description": "Validate an EVE Online ship fitting in EFT format. Checks CPU, powergrid, and slot counts against ship attributes assuming Engineering V (+25% PG) and Electronics V (+25% CPU) — the realistic baseline every PvP / abyss capable character has. Call this after generating a fit to confirm it is valid before presenting it to the user.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "eft_text": {
+            "type": "string",
+            "description": "Full fitting in EFT format, starting with [Ship Name, Fit Name]"
+          }
+        },
+        "required": [
+          "eft_text"
+        ]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "compute_fit_stats",
+      "description": "Compute the real stats of an EVE Online fit from its EFT text with the dogma engine (all-V skills, no implants): DPS per weapon group with the charge used, volley, EHP per layer with resists, max speed (propulsion on), align time, capacitor stability and CPU/PG load. Call this whenever the user asks for a fit's DPS, EHP, tank, speed, align or cap stability - never estimate these by hand. Weapons with no charge on their EFT line get a default T1 ammo (Scourge missiles; Phased Plasma / Antimatter / Multifrequency for turrets), which the output labels.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "eft_text": {
+            "type": "string",
+            "description": "Full fitting in EFT format, starting with [Ship Name, Fit Name]. Loaded ammo may be given as 'Module, Charge' lines."
+          },
+          "charges": {
+            "type": "object",
+            "description": "Optional ammo to use instead of the default, as {module name: charge name}, e.g. {\"Rocket Launcher II\": \"Mjolnir Rocket\"}. Only for weapons with no charge on their EFT line.",
+            "additionalProperties": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "eft_text"
+        ]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "appraise_items",
+      "description": "Appraise a list of EVE Online items using Janice. Returns total buy/sell/split values in ISK and a link to the full appraisal.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "string",
+            "description": "Items in multi-buy or EFT format, one per line with quantity, e.g. 'Tritanium x1000'"
+          }
+        },
+        "required": [
+          "items"
+        ]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "get_production_chain",
+      "description": "Compute the full material breakdown to manufacture an EVE Online item, recursively expanding sub-components down to base minerals and PI commodities. Use this for 'how many minerals to build X' or 'production chain for X' questions. Optional advanced params let the user model a specific structure rig + system cost index (e.g., 'in 1DQ1-A with Minmatar manufacturing rig 4 and 5% cost index').",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "item_name": {
+            "type": "string",
+            "description": "Item or ship name to build, e.g. 'Revelation', 'Avatar', 'Rifter'"
+          },
+          "runs": {
+            "type": "integer",
+            "description": "Number of runs (default 1)"
+          },
+          "me_level": {
+            "type": "integer",
+            "description": "Material Efficiency level 0-10 (default 10 — fully researched BPO)"
+          },
+          "station_rig_level": {
+            "type": "integer",
+            "description": "Structure rig material-savings level 0-5 (default 0). M-Set Manufacturing Material Efficiency rig at level 5 = 10% material savings. Use only when the user explicitly mentions a structure or its rigs."
+          },
+          "system_cost_index": {
+            "type": "number",
+            "description": "System manufacturing cost index 0.0-0.20 (default 0.0). Drives the install fee: fee = index × ISK-value-of-inputs × 1.04 (4% NPC tax). Set to the user's quoted system index when they ask for a fee estimate."
+          },
+          "industry_skills": {
+            "type": "object",
+            "description": "Optional industry skills dict. Currently honoured: 'production_efficiency' (0-5) for legacy ME-savings adjustment. Modern EVE folded most industry skills into ME research; this is the remaining axis worth modelling explicitly."
+          }
+        },
+        "required": [
+          "item_name"
+        ]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "get_jumps_between",
+      "description": "Compute the number of jumps and the route between two EVE solar systems. Default route is shortest (any security). Set prefer_high_sec=true to prefer highsec-only paths (longer but safer).",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "from_system": {
+            "type": "string",
+            "description": "Origin solar system name, e.g. 'Jita'"
+          },
+          "to_system": {
+            "type": "string",
+            "description": "Destination solar system name, e.g. 'Amarr'"
+          },
+          "prefer_high_sec": {
+            "type": "boolean",
+            "description": "If true, route via highsec only (default false)"
+          }
+        },
+        "required": [
+          "from_system",
+          "to_system"
+        ]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "get_systems_in_region",
+      "description": "List solar systems in an EVE region filtered by security band. Use for 'which lowsec systems in X' or 'highsec in Y' questions.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "region_name": {
+            "type": "string",
+            "description": "Region name, e.g. 'Black Rise', 'The Forge'"
+          },
+          "sec_min": {
+            "type": "number",
+            "description": "Minimum security (default -1.0)"
+          },
+          "sec_max": {
+            "type": "number",
+            "description": "Maximum security (default 1.0)"
+          }
+        },
+        "required": [
+          "region_name"
+        ]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "get_npc_stations",
+      "description": "List NPC stations in a solar system, including their owning corporation and operation type. Use for 'stations in X' or 'where can I dock' questions.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "system_name": {
+            "type": "string",
+            "description": "Solar system name, e.g. 'Hek', 'Jita'"
+          }
+        },
+        "required": [
+          "system_name"
+        ]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "get_reprocessing_yield",
+      "description": "Compute the materials produced by reprocessing an EVE item (ore, ice, salvage, modules). Use for 'how many minerals from X Veldspar' or 'reprocessing yield' questions.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "item_name": {
+            "type": "string",
+            "description": "Item name, e.g. 'Veldspar', 'Mexallon'"
+          },
+          "quantity": {
+            "type": "integer",
+            "description": "Number of units to reprocess (default 1)"
+          },
+          "refining_efficiency_pct": {
+            "type": "number",
+            "description": "Combined skill+facility yield 0-100 (default 50)"
+          }
+        },
+        "required": [
+          "item_name"
+        ]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "get_required_skills",
+      "description": "List the skills required to fly a ship or build an item. Use for 'what skills to fly X' or 'what skills to build Y' questions.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "item_name": {
+            "type": "string",
+            "description": "Ship or blueprint name, e.g. 'Avatar', 'Nyx', 'Revelation', 'Damage Control II'"
+          },
+          "purpose": {
+            "type": "string",
+            "enum": [
+              "fly",
+              "build"
+            ],
+            "description": "'fly' for ship/module skills (default), 'build' for blueprint manufacturing skills"
+          }
+        },
+        "required": [
+          "item_name"
+        ]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "get_sovereignty",
+      "description": "Get the alliance / corporation holding sovereignty over an EVE solar system. Live data from ESI. Use for 'who controls X' or 'sov holder of Y' questions.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "system_name": {
+            "type": "string",
+            "description": "Solar system name, e.g. 'Saranen'"
+          }
+        },
+        "required": [
+          "system_name"
+        ]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "get_system_activity",
+      "description": "Get recent killmail count and jump count for a solar system from ESI. Use for 'how many kills in X recently', 'is system Y active', 'is it safe to undock'.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "system_name": {
+            "type": "string",
+            "description": "Solar system name, e.g. 'Tama'"
+          }
+        },
+        "required": [
+          "system_name"
+        ]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "convert_isk_to_real",
+      "description": "Convert an ISK amount to real-world USD/EUR via the PLEX exchange rate. Returns the indicative real-money value with disclaimers (Fenris Creations forbids RMT — for context only). Use for 'how much USD is X ISK', 'real-money cost of Y battle', 'is this Titan worth IRL'.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "isk_amount": {
+            "type": "number",
+            "description": "Amount in ISK to convert (e.g. 95_000_000_000 for 95 B ISK)"
+          },
+          "currency": {
+            "type": "string",
+            "enum": [
+              "USD",
+              "EUR",
+              "BOTH"
+            ],
+            "description": "Currency to return (default BOTH)"
+          }
+        },
+        "required": [
+          "isk_amount"
+        ]
+      }
+    }
+  }
+]

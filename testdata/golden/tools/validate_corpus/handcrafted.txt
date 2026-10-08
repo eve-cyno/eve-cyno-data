@@ -1,0 +1,515 @@
+=== hc_rifter_valid_clean | alpha=false | env=sde
+[Rifter, clean]
+200mm AutoCannon II
+200mm AutoCannon II
+
+1MN Afterburner II
+Warp Scrambler II
+
+Damage Control II
+Gyrostabilizer II
+
+Small Core Defense Field Extender I
+=== hc_rifter_hi_overflow | alpha=false | env=sde
+[Rifter, hi overflow]
+200mm AutoCannon II
+200mm AutoCannon II
+200mm AutoCannon II
+200mm AutoCannon II
+200mm AutoCannon II
+
+1MN Afterburner II
+
+Gyrostabilizer II
+=== hc_rifter_mid_overflow | alpha=false | env=sde
+[Rifter, mid overflow]
+200mm AutoCannon II
+
+1MN Afterburner II
+Warp Scrambler II
+Small Shield Booster II
+Small Capacitor Booster II
+Stasis Webifier II
+
+Gyrostabilizer II
+=== hc_rifter_low_overflow | alpha=false | env=sde
+[Rifter, low overflow]
+200mm AutoCannon II
+
+1MN Afterburner II
+
+Gyrostabilizer II
+Gyrostabilizer II
+Gyrostabilizer II
+Gyrostabilizer II
+Gyrostabilizer II
+Heat Sink II
+=== hc_rifter_rig_overflow | alpha=false | env=sde
+[Rifter, rig overflow]
+200mm AutoCannon II
+
+1MN Afterburner II
+
+Gyrostabilizer II
+
+Small Core Defense Field Extender I
+Small Core Defense Field Extender I
+Small Core Defense Field Extender I
+Small Core Defense Field Extender I
+Small Core Defense Field Extender I
+=== hc_rifter_all_overflow | alpha=false | env=sde
+[Rifter, all overflow]
+200mm AutoCannon II
+200mm AutoCannon II
+200mm AutoCannon II
+200mm AutoCannon II
+
+1MN Afterburner II
+Warp Scrambler II
+Small Shield Booster II
+Small Capacitor Booster II
+
+Gyrostabilizer II
+Gyrostabilizer II
+Gyrostabilizer II
+Heat Sink II
+Magnetic Field Stabilizer II
+
+Small Core Defense Field Extender I
+Small Core Defense Field Extender I
+Small Core Defense Field Extender I
+Small Core Defense Field Extender I
+=== hc_rifter_cpu_pg_over | alpha=false | env=sde
+[Rifter, cpu and pg over]
+280mm Howitzer Artillery II
+280mm Howitzer Artillery II
+280mm Howitzer Artillery II
+
+100MN Afterburner II
+Target Painter II
+Warp Scrambler II
+
+Damage Control II
+Gyrostabilizer II
+Gyrostabilizer II
+Heat Sink II
+=== hc_rifter_group_limit_dcu | alpha=false | env=sde
+[Rifter, double damage control]
+200mm AutoCannon II
+
+1MN Afterburner II
+
+Damage Control II
+Damage Control II
+Gyrostabilizer II
+=== hc_unknown_modules_hi_mid_low | alpha=false | env=sde
+[Rifter, fabricated]
+Fabricated Autocannon 9000
+200mm AutoCannon II
+
+Imaginary Afterburner X
+Warp Scrambler II
+
+Phantom Plating Z
+Gyrostabilizer II
+
+Imaginary Rig Q
+=== hc_unknown_pushes_slot_over | alpha=false | env=sde
+[Rifter, unknown counts toward slots]
+200mm AutoCannon II
+200mm AutoCannon II
+Fabricated Autocannon 9000
+Fabricated Autocannon 9001
+=== hc_unresolvable_hull | alpha=false | env=sde
+[Totally Fake Hull, nope]
+200mm AutoCannon II
+=== hc_no_header | alpha=false | env=sde
+200mm AutoCannon II
+Warp Scrambler II
+=== hc_empty_input | alpha=false | env=sde
+=== hc_header_only | alpha=false | env=sde
+[Rifter, nothing fitted]
+=== hc_hull_alias_case | alpha=false | env=sde
+[rifter, lowercase hull]
+200MM AUTOCANNON II
+
+1mn afterburner ii
+=== hc_empty_slot_markers | alpha=false | env=sde
+[Rifter, with empty markers]
+200mm AutoCannon II
+[Empty High slot]
+[Empty High slot]
+
+1MN Afterburner II
+[Empty Med slot]
+[Empty Med slot]
+
+Gyrostabilizer II
+[Empty Low slot]
+[Empty Low slot]
+[Empty Low slot]
+
+[Empty Rig slot]
+[Empty Rig slot]
+[Empty Rig slot]
+=== hc_other_bracket_lines | alpha=false | env=sde
+[Rifter, other bracket lines]
+[Section: weapons]
+200mm AutoCannon II
+
+1MN Afterburner II
+=== hc_mutated_marker | alpha=false | env=sde
+[Rifter, mutated]
+200mm AutoCannon II
+Gyrostabilizer II [MUTATED]
+
+1MN Afterburner II
+
+Damage Control II
+=== hc_state_markers | alpha=false | env=sde
+[Rifter, module states]
+200mm AutoCannon II /OFFLINE
+200mm AutoCannon II /OVERHEAT
+
+1MN Afterburner II /OFFLINE
+Warp Scrambler II
+
+Damage Control II
+Gyrostabilizer II /OFFLINE
+=== hc_charges_drones_cargo | alpha=false | env=sde
+[Rifter, ammo and drones]
+200mm AutoCannon II, Hail S
+200mm AutoCannon II, Hail S
+
+1MN Afterburner II
+
+Damage Control II
+
+Small Core Defense Field Extender I
+
+
+Hobgoblin II x5
+Hobgoblin I x2
+
+
+Hail S x1000
+Nanite Repair Paste x50
+Cap Booster 25 x10
+=== hc_booster_implants_cargo | alpha=false | env=sde
+[Rifter, boosters in cargo]
+200mm AutoCannon II
+
+1MN Afterburner II
+
+Damage Control II
+
+
+
+Synth Blue Pill Booster x3
+Standard Cerebral Accelerator
+=== hc_ship_name_as_module | alpha=false | env=sde
+[Rifter, ship as module]
+Rifter
+200mm AutoCannon II
+
+1MN Afterburner II
+=== hc_qty_suffix_variants | alpha=false | env=sde
+[Rifter, qty forms]
+200mm AutoCannon II x2
+200mm AutoCannon II, x1
+
+1MN Afterburner II  x1
+=== hc_markdown_fence | alpha=false | env=sde
+```
+[Rifter, in a fence]
+200mm AutoCannon II
+200mm AutoCannon II
+
+1MN Afterburner II
+
+Damage Control II
+```
+=== hc_comment_and_text_before_header | alpha=false | env=sde
+Here is the fit you asked for:
+// a comment
+[Rifter, commented]
+// weapons
+200mm AutoCannon II
+
+1MN Afterburner II
+=== hc_many_blank_sections | alpha=false | env=sde
+[Rifter, many sections]
+200mm AutoCannon II
+
+1MN Afterburner II
+
+Damage Control II
+
+Small Core Defense Field Extender I
+
+Hobgoblin II x3
+
+Fabricated Subsystem Q
+
+Fabricated Tail Z
+=== hc_charge_only_lines_unknown_charge | alpha=false | env=sde
+[Rifter, unknown charge]
+200mm AutoCannon II, Fabricated Ammo Z
+200mm AutoCannon II, Hail S
+=== hc_thorax_valid | alpha=false | env=sde
+[Thorax, valid blaster]
+Light Neutron Blaster II
+Light Neutron Blaster II
+Light Neutron Blaster II
+Light Neutron Blaster II
+Light Neutron Blaster II
+
+10MN Afterburner II
+Warp Scrambler II
+
+Damage Control II
+Magnetic Field Stabilizer II
+Magnetic Field Stabilizer II
+=== hc_tengu_subsystems | alpha=false | env=sde
+[Tengu, subsystems]
+Heavy Assault Missile Launcher II
+Heavy Assault Missile Launcher II
+Heavy Assault Missile Launcher II
+
+Medium Shield Extender II
+Warp Scrambler II
+
+Damage Control II
+
+Tengu Core - Electronic Efficiency Gate
+Tengu Defensive - Covert Reconfiguration
+Tengu Offensive - Accelerated Ejection Bay
+Tengu Propulsion - Interdiction Nullifier
+=== hc_tengu_six_subsystems | alpha=false | env=sde
+[Tengu, six subsystems]
+Heavy Assault Missile Launcher II
+
+Medium Shield Extender II
+
+Damage Control II
+
+Tengu Core - Electronic Efficiency Gate
+Tengu Core - Augmented Graviton Reactor
+Tengu Defensive - Covert Reconfiguration
+Tengu Offensive - Accelerated Ejection Bay
+Tengu Propulsion - Interdiction Nullifier
+Tengu Propulsion - Interdiction Nullifier
+=== hc_subsystem_on_non_t3 | alpha=false | env=sde
+[Rifter, subsystem on a frigate]
+200mm AutoCannon II
+
+1MN Afterburner II
+
+Damage Control II
+
+Tengu Core - Electronic Efficiency Gate
+=== hc_alpha_clean_t1 | alpha=true | env=sde
+[Rifter, alpha clean]
+200mm AutoCannon I
+200mm AutoCannon I
+
+1MN Afterburner I
+Small Shield Booster I
+
+Gyrostabilizer I
+Heat Sink I
+
+Small Core Defense Field Extender I
+=== hc_alpha_t2_suffix | alpha=true | env=sde
+[Rifter, alpha t2]
+200mm AutoCannon II
+200mm AutoCannon II
+
+1MN Afterburner II
+Warp Scrambler II
+
+Damage Control II
+Gyrostabilizer II
+=== hc_alpha_t2_suffix_not_alpha | alpha=false | env=sde
+[Rifter, alpha t2 but not alpha clone]
+200mm AutoCannon II
+200mm AutoCannon II
+
+1MN Afterburner II
+Warp Scrambler II
+
+Damage Control II
+Gyrostabilizer II
+=== hc_alpha_navy_factions | alpha=true | env=sde
+[Rifter, faction names]
+Republic Fleet Phased Plasma S
+Federation Navy Stasis Webifier
+
+Caldari Navy Ballistic Control System
+Imperial Navy Multispectrum Energized Membrane
+Khanid Navy Torpedo Launcher
+Ammatar Navy Medium Shield Booster
+Mordu's Legion Heavy Assault Missile Launcher
+Concord Warp Scrambler
+=== hc_alpha_pirate_named | alpha=true | env=sde
+[Rifter, pirate and named]
+Dread Guristas Stasis Webifier
+Gistum A-Type Medium Shield Amplifier
+Pithum B-Type Shield Amplifier
+Centii C-Type Armor Hardener
+Corelii A-Type Armor Hardener
+Ashimmu Heavy Drone
+Khanid Imperial Ballistic Control System
+Estamel's Modified Invulnerability Field
+Tobias' Alloyed Plate
+Mizuro's Basic Booster
+Hakim's Standard Cap Recharger
+Setele's Hybrid Link
+Vepas' Passive Targeter
+=== hc_alpha_quoted_named | alpha=true | env=sde
+[Rifter, quoted names]
+'Augmented' Hobgoblin x3
+'Integrated' Hammerhead x2
+
+200mm AutoCannon I
+
+Gyrostabilizer I
+=== hc_alpha_type_letter | alpha=true | env=sde
+[Rifter, type letters]
+Centum A-Type Medium Armor Repairer
+Corelum B-Type Multispectrum Energized Membrane
+Thukker Large Cap Battery
+Fake C-Type Thing
+Fake X-Type Thing
+=== hc_alpha_drones_and_charges | alpha=true | env=sde
+[Rifter, alpha drones]
+200mm AutoCannon I, Hail S
+
+1MN Afterburner I
+
+Gyrostabilizer I
+
+
+Hobgoblin II x5
+Hobgoblin I x2
+Warrior II x2
+=== hc_alpha_duplicates_sorted | alpha=true | env=sde
+[Rifter, duplicates]
+200mm AutoCannon II
+200mm AutoCannon II
+200mm AutoCannon II
+
+Warp Scrambler II
+1MN Afterburner II
+
+Gyrostabilizer II
+Gyrostabilizer II
+Damage Control II
+=== hc_alpha_with_other_violations | alpha=true | env=sde
+[Rifter, alpha plus overflow plus unknown]
+200mm AutoCannon II
+200mm AutoCannon II
+200mm AutoCannon II
+200mm AutoCannon II
+Fabricated Autocannon 9000
+
+1MN Afterburner II
+
+Damage Control II
+Damage Control II
+=== hc_alpha_unknown_alpha_name | alpha=true | env=sde
+[Rifter, unknown but alpha name]
+Imperial Navy Fabricated Autocannon
+200mm AutoCannon I
+
+Pithum A-Type Fake Booster
+=== hc_alpha_mutated_ii | alpha=true | env=sde
+[Rifter, mutated II]
+200mm AutoCannon I
+Gyrostabilizer II [MUTATED]
+
+1MN Afterburner I
+=== hc_alpha_empty_markers | alpha=true | env=sde
+[Rifter, empties under alpha]
+200mm AutoCannon I
+[Empty High slot]
+
+1MN Afterburner I
+[Empty Med slot]
+=== hc_alpha_hull_t2 | alpha=true | env=sde
+[Sabre, t2 hull under alpha]
+Light Neutron Blaster I
+
+1MN Afterburner I
+=== hc_alpha_t2_charge_names | alpha=true | env=sde
+[Rifter, charges with faction names]
+200mm AutoCannon I, Republic Fleet Phased Plasma S
+200mm AutoCannon I, Hail S
+=== hc_esi_extra_renamed_item | alpha=false | env=esi-extra
+[Rifter, esi renamed item]
+Zorgon Quantum Cannon II
+Zorgon Quantum Cannon II
+
+1MN Afterburner II
+
+Damage Control II
+=== hc_esi_extra_unslotted_item | alpha=false | env=esi-extra
+[Rifter, esi unslotted item]
+200mm AutoCannon II
+Phantom Item I
+
+1MN Afterburner II
+
+Damage Control II
+=== hc_esi_extra_alpha | alpha=true | env=esi-extra
+[Rifter, esi alpha]
+Zorgon Quantum Cannon II
+200mm AutoCannon I
+Phantom Item I
+
+1MN Afterburner I
+=== hc_esi_only_valid | alpha=false | env=esi-only
+[Fake Hull, esi only valid]
+Fake Gun I
+Fake Gun I
+
+Fake Prop I
+
+Fake Plate I
+=== hc_esi_only_overflow_and_cpu | alpha=false | env=esi-only
+[Fake Hull, esi only over]
+Fake Gun I
+Fake Gun I
+Fake Gun I
+Fake Gun I
+
+Fake Prop I
+Fake Prop I
+Fake Prop I
+
+Fake Plate I
+Fake Plate I
+Fake Plate I
+Fake Plate I
+=== hc_esi_only_unknown | alpha=false | env=esi-only
+[Fake Hull, esi only unknown]
+Fake Gun I
+Mystery Gun Z
+
+Mystery Prop Z
+
+Fake Plate I
+=== hc_esi_only_unresolvable_hull | alpha=false | env=esi-only
+[Mystery Hull, esi only]
+Fake Gun I
+=== hc_esi_only_alpha | alpha=true | env=esi-only
+[Fake Hull, esi only alpha]
+Fake Gun II
+Fake Gun I
+
+Fake Prop I
+
+Fake Plate I
+=== hc_no_sde_no_esi | alpha=false | env=none
+[Rifter, nothing available]
+200mm AutoCannon II

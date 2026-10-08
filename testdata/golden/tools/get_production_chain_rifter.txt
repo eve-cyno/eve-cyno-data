@@ -1,0 +1,12 @@
+Production chain for **Rifter** (1 run, ME 10):
+
+Material                                        Quantity
+--------------------------------------------------------
+Tritanium                                         28,800
+Pyerite                                            5,400
+Mexallon                                           2,250
+Isogen                                               450
+
+Total unique material types: 4
+
+Note: ME 10 fully-researched BPO; sub-component BPOs assumed at same ME. Rig 0 (~0% material savings).

@@ -1,0 +1,40 @@
+## Hull facts — Leshak
+Type ID: 47271 | Class: battleship | Group: Battleship | Category: Ship
+
+**Slots & hardpoints (hard caps):**
+- hi=5, mid=4, low=8, rig=3
+- turret hardpoints=1, launcher hardpoints=0
+- drone bay: 250 m³, 100 Mbit bandwidth
+
+**Role & skill bonuses (from invTraits):**
+- [ROLE] 5.0% — additional bonus to Reinforced Bulkhead hitpoints
+- [ROLE] 50.0% — reduced Energy Neutralizer capacitor need
+- [ROLE] 50.0% — reduced Remote Armor Repairer capacitor need
+- [ROLE] 50.0% — reduced Smart Bomb capacitor need
+- [ROLE] 50.0% — bonus to Armor Plate hitpoints
+- [ROLE] 100.0% — bonus to Remote Armor Repairer range
+- [ROLE] 100.0% — bonus to Shield Extender hitpoints
+- [Precursor Battleship] 5.0% — bonus to Supratidal Entropic Disintegrator damage
+- [Precursor Battleship] 5.0% — bonus to Supratidal Entropic Disintegrator rate of fire
+
+**Compatible weapons (canFitShipType lock — USE ONLY these names):**
+- Supratidal Entropic Disintegrator I
+- Supratidal Entropic Disintegrator II
+- Veles Supratidal Entropic Disintegrator
+- Supratidal Scoped Entropic Disintegrator
+- Supratidal Compact Entropic Disintegrator
+- Zorya's Supratidal Entropic Disintegrator
+
+**Bonused modules (canonical SDE names per role bonus):**
+- Entropic Radiation Sink ← bonus: 'entropic disintegrator damage'
+    `Entropic Radiation Sink I`, `Entropic Radiation Sink II`, `Veles Entropic Radiation Sink`, `Compact Entropic Radiation Sink`, `Abyssal Entropic Radiation Sink`
+- Steel Plates (Large) ← bonus: 'armor plate hitpoints'
+    `1600mm Steel Plates I`, `1600mm Steel Plates II`, `'Bailey' 1600mm Steel Plates`, `Syndicate 1600mm Steel Plates`, `Imperial Navy 1600mm Steel Plates`
+- Armor Repairer (Large) ← bonus: 'armor repairer'
+    `Large Armor Repairer I`, `Large Armor Repairer II`, `Large Abyssal Armor Repairer`, `Large Remote Armor Repairer I`, `Large Remote Armor Repairer II`
+- Shield Extender (Large) ← bonus: 'shield extender hitpoints'
+    `Large Shield Extender I`, `Large Shield Extender II`, `Thukker Large Shield Extender`, `Large Abyssal Shield Extender`, `Large 'Sheriff' Shield Extender`
+- Remote Armor Repairer (Large) ← bonus: 'remote armor repairer'
+    `Large Remote Armor Repairer I`, `Large Remote Armor Repairer II`, `'Peace' Large Remote Armor Repairer`, `Large Abyssal Remote Armor Repairer`, `Large Ancillary Remote Armor Repairer`
+
+Source: data/sde/sde.sqlite (Fuzzwork latest dump)

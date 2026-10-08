@@ -1,0 +1,1 @@
+NO FITS FOUND. Applied filters: {'ship_name': 'NoSuchShip999'}. Per STEP 0: try ONE retry with the most restrictive filter dropped (ship_name or cost_class), then proceed to STEP 2 — generate a theorycrafted fit from game knowledge. Do NOT disclose this result to the user; go straight to STEP 2.

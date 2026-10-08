@@ -1,0 +1,9 @@
+Fit stats: Vexor (all-V)
+DPS 211 · volley 843
+  Drones Hobgoblin II x5 (5 launched): 211 DPS
+EHP 14911 (shield 4335, armor 4357, hull 6219)
+Resists EM/Th/Kin/Exp %: shield 12/56/48/30 · armor 57/24/45/45 · hull 60/60/60/60
+Speed 297 m/s (prop on) · align 6.1s · signature 152 m
+Cap: stable · 1812 GJ
+CPU 140.0/375.0 tf · PG 36.5/875.0 MW
+Basis: no implants or boosters; theoretical DPS (no reload); EHP at a uniform 25/25/25/25 damage profile.

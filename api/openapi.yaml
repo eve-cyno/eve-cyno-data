@@ -1,0 +1,3074 @@
+openapi: 3.1.0
+info:
+  title: EVE-Cyno Data API
+  summary: Deterministic EVE Online data, fit calculations and tools. No language model in the loop.
+  description: |-
+    Deterministic EVE Online data and calculations: community-fit search, fit breakdown and statistics (the Gofa dogma engine), SDE item search, and the tool layer behind the EVE-Cyno assistant, also reachable over MCP. Nothing here calls a language model; the same inputs give the same answers.
+
+    ## Conventions
+
+    - Errors are JSON, always: `{"error":{"code":"...","message":"..."}}`. The codes are stable (see `ErrorDetail`).
+    - Every response carries `X-Request-ID`: your value when it is a token of 1-64 characters from `[A-Za-z0-9._-]`, otherwise a generated one.
+    - Requests are rate limited per caller (a sliding window; the budget is stated on each operation): per API key when one is sent, otherwise per client IP. A refused request is `429` with `Retry-After`.
+    - Request bodies are capped (256 KiB on the fit routes, 64 KiB on tools and MCP); an oversize body is `413`.
+    - Tool tiers: each tool is *public* (no key), *keyed* (an API key), *byo-key* (your own Janice key) or *disabled*. Public: `search_item_by_name`, `get_ship_stats`, `get_ship_bonuses`, `find_canonical_module`, `get_hull_facts`, `validate_fitting`, `compute_fit_stats`, `get_production_chain`, `get_jumps_between`, `get_systems_in_region`, `get_npc_stations`, `get_reprocessing_yield`, `get_required_skills`. Keyed (send the key as `Authorization: Bearer <key>` or `X-API-Key`; `401 api_key_required` without one, `401 invalid_api_key` for a key that is not valid, on every tool): `get_market_price`, `get_type_info`, `get_fits`, `list_fits`, `analyze_battle`, `get_sovereignty`, `get_system_activity`. Byo-key (the `X-Janice-Key` request header, used for that request only and never logged or stored; `400 janice_key_required` without it): `appraise_items`. Disabled tools are not offered on this service (`403 tool_disabled` over REST, absent from the MCP tool list).
+
+    ## Attribution and licences
+
+    © 2014 Fenris Creations hf. All rights reserved. 'EVE', 'EVE Online', 'Fenris Creations', and all related logos and images are trademarks or registered trademarks of Fenris Creations hf. This material is used with limited permission of Fenris Creations. No official affiliation or endorsement by Fenris Creations is stated or implied. Created under the EVE Developer License Agreement.
+
+    This service is non-commercial. Every tool answer names its upstream sources in `attribution`. Text derived from the EVE University Wiki (https://wiki.eveuniversity.org/) is licensed CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/).
+  version: 0.1.0
+servers:
+  - url: /v1
+    description: Paths in this document are relative to this URL.
+tags:
+  - name: fits
+    description: Community-fit search and the deterministic fit breakdown, statistics and suggestions.
+  - name: items
+    description: SDE item search.
+  - name: tools
+    description: The deterministic tool layer behind the EVE-Cyno assistant, one operation per tool.
+  - name: mcp
+    description: The same tools over the Model Context Protocol.
+  - name: meta
+    description: Service health and the descriptions of this API.
+paths:
+  /fits/search:
+    get:
+      tags:
+        - fits
+      summary: Search community fits
+      description: |-
+        Searches the community-fit corpus (EVE Workbench, Abysstracker and other sources named in each hit). The facet parameters filter the corpus; with `q` a filtered vector search ranks the hits. When the facets match nothing they are relaxed one at a time, last first: `relaxed` is then true and `dropped` names what was removed. `ship` may be a loose hull name (`megath` finds Megathron). No language model is involved. Every hit carries an `attribution` object (`source`, `source_url`, `author` when known, `license`, `credit` and `license_url` when the terms require them); show it wherever you show the fit. The fits are community data served ranked and capped, not for bulk export.
+
+        Rate limit: 120 requests per minute per caller (per API key when one is sent, otherwise per client IP).
+      operationId: searchFits
+      parameters:
+        - $ref: '#/components/parameters/RequestID'
+        - name: ship
+          in: query
+          required: false
+          description: Hull name; a partial or loose name is resolved against the SDE.
+          schema:
+            type: string
+        - name: activity
+          in: query
+          required: false
+          description: Activity tag, e.g. `pve` or `pvp`.
+          schema:
+            type: string
+        - name: tag
+          in: query
+          required: false
+          description: Extra tag, e.g. `abyss` or `ratting`.
+          schema:
+            type: string
+        - name: filament
+          in: query
+          required: false
+          description: Abyssal filament type.
+          schema:
+            type: string
+        - name: cost
+          in: query
+          required: false
+          description: Cost class tag, e.g. `cheap`.
+          schema:
+            type: string
+        - name: source
+          in: query
+          required: false
+          description: Restrict to one corpus source; empty searches the default source set.
+          schema:
+            type: string
+        - name: clone
+          in: query
+          required: false
+          description: '`alpha` keeps only alpha-clone fits, `omega` only omega-only fits; empty keeps both.'
+          schema:
+            type: string
+            enum:
+              - alpha
+              - omega
+        - name: q
+          in: query
+          required: false
+          description: Free-text query; empty lists by the facets alone.
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: false
+          description: 'Maximum hits, clamped to 1-24 (the response `limit` and `note` say so). There is no offset, page or cursor: one query reaches one ranked page, and a request carrying such a parameter is refused with `invalid_request`.'
+          schema:
+            type: integer
+            default: 24
+      responses:
+        "200":
+          description: The ranked fits.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FitSearchResult'
+          headers:
+            X-Request-ID:
+              $ref: '#/components/headers/RequestID'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "429":
+          $ref: '#/components/responses/RateLimited'
+        "502":
+          $ref: '#/components/responses/UpstreamError'
+        "503":
+          $ref: '#/components/responses/Unavailable'
+  /fits/detail:
+    post:
+      tags:
+        - fits
+      summary: Describe a fit
+      description: |-
+        Parses an EFT block and returns its slots, CPU / powergrid / calibration use and ship class. Deterministic; DPS and EHP are not part of this view (see `/fit/stats`).
+
+        Rate limit: 60 requests per minute per caller (per API key when one is sent, otherwise per client IP).
+      operationId: fitDetail
+      parameters:
+        - $ref: '#/components/parameters/RequestID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FitDetailRequest'
+      responses:
+        "200":
+          description: The fit breakdown.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FitDetail'
+          headers:
+            X-Request-ID:
+              $ref: '#/components/headers/RequestID'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "413":
+          $ref: '#/components/responses/PayloadTooLarge'
+        "429":
+          $ref: '#/components/responses/RateLimited'
+        "502":
+          $ref: '#/components/responses/UpstreamError'
+        "503":
+          $ref: '#/components/responses/Unavailable'
+  /fit/stats:
+    post:
+      tags:
+        - fits
+      summary: Compute fit statistics
+      description: |-
+        Parses an EFT block and returns the Gofa engine's DPS, tank, capacitor, navigation, targeting and drone numbers. Deterministic; the same engine produces the numbers of the `compute_fit_stats` tool.
+
+        Rate limit: 60 requests per minute per caller (per API key when one is sent, otherwise per client IP).
+      operationId: fitStats
+      parameters:
+        - $ref: '#/components/parameters/RequestID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FitStatsRequest'
+      responses:
+        "200":
+          description: The computed statistics.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FitStats'
+          headers:
+            X-Request-ID:
+              $ref: '#/components/headers/RequestID'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "413":
+          $ref: '#/components/responses/PayloadTooLarge'
+        "429":
+          $ref: '#/components/responses/RateLimited'
+        "502":
+          $ref: '#/components/responses/UpstreamError'
+        "503":
+          $ref: '#/components/responses/Unavailable'
+  /fit/suggest:
+    post:
+      tags:
+        - fits
+      summary: Suggest modules for an empty slot
+      description: |-
+        Ranks the modules that can fill a slot tier of the given fit: how often similar community fits carry them (when the corpus is up), their meta tier, and whether they fit the remaining CPU and powergrid. Without the corpus the ranking falls back to the SDE alone.
+
+        Rate limit: 60 requests per minute per caller (per API key when one is sent, otherwise per client IP).
+      operationId: fitSuggest
+      parameters:
+        - $ref: '#/components/parameters/RequestID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FitSuggestRequest'
+      responses:
+        "200":
+          description: At most 12 ranked suggestions.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Suggestion'
+          headers:
+            X-Request-ID:
+              $ref: '#/components/headers/RequestID'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "413":
+          $ref: '#/components/responses/PayloadTooLarge'
+        "429":
+          $ref: '#/components/responses/RateLimited'
+        "503":
+          $ref: '#/components/responses/Unavailable'
+  /items/search:
+    get:
+      tags:
+        - items
+      summary: Search modules, charges and drones
+      description: |-
+        Name search over the SDE's fittable modules, charges or drones (the fitting palette's search).
+
+        Rate limit: 120 requests per minute per caller (per API key when one is sent, otherwise per client IP).
+      operationId: searchItems
+      parameters:
+        - $ref: '#/components/parameters/RequestID'
+        - name: q
+          in: query
+          required: true
+          description: Name fragment; at least 2 characters.
+          schema:
+            type: string
+            minLength: 2
+        - name: kind
+          in: query
+          required: false
+          description: What to search.
+          schema:
+            type: string
+            enum:
+              - module
+              - charge
+              - drone
+            default: module
+        - name: slot
+          in: query
+          required: false
+          description: 'For modules: restrict to one slot tier.'
+          schema:
+            type: string
+            enum:
+              - high
+              - mid
+              - low
+              - rig
+        - name: limit
+          in: query
+          required: false
+          description: Maximum hits.
+          schema:
+            type: integer
+            default: 30
+      responses:
+        "200":
+          description: The matching items.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ModuleHit'
+          headers:
+            X-Request-ID:
+              $ref: '#/components/headers/RequestID'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "429":
+          $ref: '#/components/responses/RateLimited'
+        "503":
+          $ref: '#/components/responses/Unavailable'
+  /tool/get_market_price:
+    post:
+      tags:
+        - tools
+      summary: Get current market prices for an EVE Online item in The Forge region (Jita hub).
+      description: |-
+        Get current market prices for an EVE Online item in The Forge region (Jita hub). Returns best sell price, best buy price, and order counts.
+
+        Sources: ESI (EVE Swagger Interface). `result.data` is a `MarketPrice` object when the call succeeds.
+
+        Access tier: **keyed**. Send an API key (`Authorization: Bearer <key>` or `X-API-Key`); without one the answer is `401 api_key_required`.
+
+        Rate limit: 30 requests per minute per caller (per API key when one is sent, otherwise per client IP).
+      operationId: get_market_price
+      parameters:
+        - $ref: '#/components/parameters/RequestID'
+      security:
+        - bearerAuth: []
+        - apiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                type_id:
+                  type: integer
+                  description: The EVE type ID of the item (e.g. 34 for Tritanium, 44992 for PLEX)
+                type_name:
+                  type: string
+                  description: Human-readable item name, for display only
+              required:
+                - type_id
+      responses:
+        "200":
+          description: The tool's answer.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MarketPriceToolResponse'
+          headers:
+            X-Request-ID:
+              $ref: '#/components/headers/RequestID'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "413":
+          $ref: '#/components/responses/PayloadTooLarge'
+        "429":
+          $ref: '#/components/responses/RateLimited'
+        "500":
+          $ref: '#/components/responses/InternalError'
+        "503":
+          $ref: '#/components/responses/Unavailable'
+        "504":
+          $ref: '#/components/responses/Timeout'
+  /tool/get_type_info:
+    post:
+      tags:
+        - tools
+      summary: 'Get information about an EVE Online item: name, description, volume, mass, group.'
+      description: |-
+        Get information about an EVE Online item: name, description, volume, mass, group.
+
+        Sources: ESI (EVE Swagger Interface). `result.data` is a `TypeInfo` object when the call succeeds.
+
+        Access tier: **keyed**. Send an API key (`Authorization: Bearer <key>` or `X-API-Key`); without one the answer is `401 api_key_required`.
+
+        Rate limit: 30 requests per minute per caller (per API key when one is sent, otherwise per client IP).
+      operationId: get_type_info
+      parameters:
+        - $ref: '#/components/parameters/RequestID'
+      security:
+        - bearerAuth: []
+        - apiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                type_id:
+                  type: integer
+                  description: The EVE type ID
+              required:
+                - type_id
+      responses:
+        "200":
+          description: The tool's answer.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TypeInfoToolResponse'
+          headers:
+            X-Request-ID:
+              $ref: '#/components/headers/RequestID'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "413":
+          $ref: '#/components/responses/PayloadTooLarge'
+        "429":
+          $ref: '#/components/responses/RateLimited'
+        "500":
+          $ref: '#/components/responses/InternalError'
+        "503":
+          $ref: '#/components/responses/Unavailable'
+        "504":
+          $ref: '#/components/responses/Timeout'
+  /tool/search_item_by_name:
+    post:
+      tags:
+        - tools
+      summary: Resolve one or more EVE Online item, ship, or module names to their type_id.
+      description: |-
+        Resolve one or more EVE Online item, ship, or module names to their type_id. Call this BEFORE get_market_price or get_type_info when you only have a name, not a type_id.
+
+        Sources: EVE Static Data Export (via Fuzzwork).
+
+        Access tier: **public**. No key needed.
+
+        Rate limit: 30 requests per minute per caller (per API key when one is sent, otherwise per client IP).
+      operationId: search_item_by_name
+      parameters:
+        - $ref: '#/components/parameters/RequestID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                names:
+                  type: array
+                  description: List of item/ship/module names to resolve, e.g. ['Stabber', 'PLEX', 'Gila']
+                  items:
+                    type: string
+              required:
+                - names
+      responses:
+        "200":
+          description: The tool's answer.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ToolResponse'
+          headers:
+            X-Request-ID:
+              $ref: '#/components/headers/RequestID'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "413":
+          $ref: '#/components/responses/PayloadTooLarge'
+        "429":
+          $ref: '#/components/responses/RateLimited'
+        "500":
+          $ref: '#/components/responses/InternalError'
+        "503":
+          $ref: '#/components/responses/Unavailable'
+        "504":
+          $ref: '#/components/responses/Timeout'
+  /tool/get_ship_stats:
+    post:
+      tags:
+        - tools
+      summary: Get slot layout, hardpoints, and resource limits for an EVE Online ship.
+      description: |-
+        Get slot layout, hardpoints, and resource limits for an EVE Online ship. Call this BEFORE generating a fit to know exact hi/mid/low/rig slot counts, turret and launcher hardpoints, CPU capacity (tf), and powergrid capacity (MW). Using these values prevents generating fits that exceed slot or resource limits.
+
+        Sources: EVE Static Data Export (via Fuzzwork). `result.data` is a `ShipStats` object when the call succeeds.
+
+        Access tier: **public**. No key needed.
+
+        Rate limit: 30 requests per minute per caller (per API key when one is sent, otherwise per client IP).
+      operationId: get_ship_stats
+      parameters:
+        - $ref: '#/components/parameters/RequestID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                ship_name:
+                  type: string
+                  description: The ship type name, e.g. 'Vexor', 'Rifter', 'Stabber', 'Gila'
+              required:
+                - ship_name
+      responses:
+        "200":
+          description: The tool's answer.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShipStatsToolResponse'
+          headers:
+            X-Request-ID:
+              $ref: '#/components/headers/RequestID'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "413":
+          $ref: '#/components/responses/PayloadTooLarge'
+        "429":
+          $ref: '#/components/responses/RateLimited'
+        "500":
+          $ref: '#/components/responses/InternalError'
+        "503":
+          $ref: '#/components/responses/Unavailable'
+        "504":
+          $ref: '#/components/responses/Timeout'
+  /tool/get_ship_bonuses:
+    post:
+      tags:
+        - tools
+      summary: Get hull bonuses for an EVE Online ship — per-skill-level bonuses + role bonuses + ship class.
+      description: |-
+        Get hull bonuses for an EVE Online ship — per-skill-level bonuses + role bonuses + ship class. Call this BEFORE generating a fit so you pick the bonused weapon system (Caldari hybrid vs missile, Gallente drone vs hybrid, Minmatar projectile vs missile, Amarr laser; pirate hulls have specific role bonuses like web range or ECM). The response names every per-skill bonus and any role bonus from the ship's ESI description — use those to decide weapons, modules, and tank type.
+
+        Sources: EVE Static Data Export (via Fuzzwork); EVE Workbench.
+
+        Access tier: **public**. No key needed.
+
+        Rate limit: 30 requests per minute per caller (per API key when one is sent, otherwise per client IP).
+      operationId: get_ship_bonuses
+      parameters:
+        - $ref: '#/components/parameters/RequestID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                ship_name:
+                  type: string
+                  description: Ship type name, e.g. 'Hawk', 'Stabber Fleet Issue', 'Daredevil', 'Gila'
+              required:
+                - ship_name
+      responses:
+        "200":
+          description: The tool's answer.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ToolResponse'
+          headers:
+            X-Request-ID:
+              $ref: '#/components/headers/RequestID'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "413":
+          $ref: '#/components/responses/PayloadTooLarge'
+        "429":
+          $ref: '#/components/responses/RateLimited'
+        "500":
+          $ref: '#/components/responses/InternalError'
+        "503":
+          $ref: '#/components/responses/Unavailable'
+        "504":
+          $ref: '#/components/responses/Timeout'
+  /tool/find_canonical_module:
+    post:
+      tags:
+        - tools
+      summary: Look up canonical SDE typeNames for a module family (e.g. 'Steel Plates', 'Entropic Radiation Sink', 'Shield Extender'…
+      description: |-
+        Look up canonical SDE typeNames for a module family (e.g. 'Steel Plates', 'Entropic Radiation Sink', 'Shield Extender', 'Heat Sink', 'Magnetic Field Stabilizer', 'Ballistic Control System', 'Stasis Webifier', 'Microwarpdrive', 'Remote Armor Repairer'). Call this when you are about to write a module that isn't in the `compatible_weapons` or `bonused_modules` of get_hull_facts and you are not 100% sure of the canonical name. Optional `size` narrows to a class prefix — 'Small' for frigates / destroyers, 'Medium' for cruisers / battlecruisers, 'Large' for battleships and capitals. Returns a short list of real published items (no SKINs / Blueprints / Specializations).
+
+        Sources: EVE Static Data Export (via Fuzzwork).
+
+        Access tier: **public**. No key needed.
+
+        Rate limit: 30 requests per minute per caller (per API key when one is sent, otherwise per client IP).
+      operationId: find_canonical_module
+      parameters:
+        - $ref: '#/components/parameters/RequestID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                family:
+                  type: string
+                  description: Module family substring, e.g. 'Steel Plates', 'Entropic Radiation Sink', 'Tracking Enhancer'
+                size:
+                  type: string
+                  description: Optional size class — 'Small', 'Medium', or 'Large'
+              required:
+                - family
+      responses:
+        "200":
+          description: The tool's answer.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ToolResponse'
+          headers:
+            X-Request-ID:
+              $ref: '#/components/headers/RequestID'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "413":
+          $ref: '#/components/responses/PayloadTooLarge'
+        "429":
+          $ref: '#/components/responses/RateLimited'
+        "500":
+          $ref: '#/components/responses/InternalError'
+        "503":
+          $ref: '#/components/responses/Unavailable'
+        "504":
+          $ref: '#/components/responses/Timeout'
+  /tool/get_hull_facts:
+    post:
+      tags:
+        - tools
+      summary: Authoritative SDE snapshot of a hull's fitting envelope — slot/hardpoint counts, drone bay, role/skill bonuses, AND the…
+      description: |-
+        Authoritative SDE snapshot of a hull's fitting envelope — slot/hardpoint counts, drone bay, role/skill bonuses, AND the canonical list of weapons that hull is restricted to fit (when EVE encodes a per-hull weapon lock). Call this BEFORE writing an EFT block on any unfamiliar / specialist hull (Triglavian battleships Leshak / Drekavac → Supratidal Entropic Disintegrators; Triglavian frigates → Light variants; Triglavian cruisers → Heavy variants; pirate / faction hulls). When `compatible_weapons` is non-empty, USE ONLY those typeNames — anything else will be rejected by validate_fitting. When `compatible_weapons` is empty there is no per-hull lock; rely on `role_bonuses` (which carry the bonused weapon family like 'Small Hybrid Turret' or 'Light Missile') and standard hardpoint sizing.
+
+        Sources: EVE Static Data Export (via Fuzzwork); EVE Workbench.
+
+        Access tier: **public**. No key needed.
+
+        Rate limit: 30 requests per minute per caller (per API key when one is sent, otherwise per client IP).
+      operationId: get_hull_facts
+      parameters:
+        - $ref: '#/components/parameters/RequestID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                ship_name:
+                  type: string
+                  description: Ship type name, e.g. 'Leshak', 'Hecate', 'Vedmak', 'Damavik'
+              required:
+                - ship_name
+      responses:
+        "200":
+          description: The tool's answer.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ToolResponse'
+          headers:
+            X-Request-ID:
+              $ref: '#/components/headers/RequestID'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "413":
+          $ref: '#/components/responses/PayloadTooLarge'
+        "429":
+          $ref: '#/components/responses/RateLimited'
+        "500":
+          $ref: '#/components/responses/InternalError'
+        "503":
+          $ref: '#/components/responses/Unavailable'
+        "504":
+          $ref: '#/components/responses/Timeout'
+  /tool/get_fits:
+    post:
+      tags:
+        - tools
+      summary: Retrieve community ship fits VERBATIM from the indexed fit database (EVE Workbench + Abysstracker +…
+      description: |-
+        Retrieve community ship fits VERBATIM from the indexed fit database (EVE Workbench + Abysstracker + gustavmannfred.streamlit.app + caldarijoans.streamlit.app, ~8150 fits). Use this FIRST whenever the user asks for popular / community / top / proven / 'most-used' / meta / 'best' / Gustav's / CaldariJoans' fits — never invent a fit when this tool can answer. Returns the raw EFT text (header + modules + drones + ammo) and the source URL for each match. Filter by ship_name (exact), activity (pvp / pve / hauler / exploration / mining / logistics), context (wh, abyss, abyss-electrical / firestorm / exotic / gamma / dark, abyss-t1..t6, ratting, solo), cost_class (cheap < 50M / mid 50-500M / blingy > 500M ISK), alpha_clone (true for Alpha-skill-friendly), combat_role (solo / fleet / elite-flown — zKillboard only). If 0 matches, returns 'NO FITS FOUND' — follow the STEP decision tree: try ONE retry with the most restrictive filter dropped, then proceed to STEP 2 and generate a theorycrafted fit from game knowledge. NEVER tell the user this tool returned empty.
+
+        Sources: EVE Workbench; Abysstracker; gustavmannfred (abyss fits); caldarijoans (abyss fits); zKillboard. `result.data` is a `CommunityFits` object when the call succeeds.
+
+        Access tier: **keyed**. Send an API key (`Authorization: Bearer <key>` or `X-API-Key`); without one the answer is `401 api_key_required`.
+
+        Rate limit: 30 requests per minute per caller (per API key when one is sent, otherwise per client IP).
+      operationId: get_fits
+      parameters:
+        - $ref: '#/components/parameters/RequestID'
+      security:
+        - bearerAuth: []
+        - apiKeyAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                activity:
+                  type: string
+                  description: Activity the fit is meant for.
+                  enum:
+                    - pvp
+                    - pve
+                    - hauler
+                    - exploration
+                    - mining
+                    - logistics
+                alpha_clone:
+                  type: boolean
+                  description: If true, only return fits flyable on Alpha skills.
+                combat_role:
+                  type: string
+                  description: Workbench-derived role tag for PvP fits.
+                  enum:
+                    - solo
+                    - fleet
+                context:
+                  type: string
+                  description: 'Subcontext tag. Examples: ''wh'' (wormhole), ''abyss'' (any abyss), ''abyss-electrical'', ''abyss-firestorm'', ''abyss-exotic'', ''abyss-gamma'', ''abyss-dark'', ''abyss-t1'', ''abyss-t2'', ''abyss-t3'', ''abyss-t4'', ''abyss-t5'', ''abyss-t6'', ''ratting'', ''solo''.'
+                cost_class:
+                  type: string
+                  description: cheap (< 50M ISK), mid (50-500M), blingy (> 500M).
+                  enum:
+                    - cheap
+                    - mid
+                    - blingy
+                limit:
+                  type: integer
+                  description: Max number of fits to return (default 5, hard max 10).
+                ship_name:
+                  type: string
+                  description: 'Exact EVE ship name. Examples: ''Tengu'', ''Gila'', ''Hurricane Fleet Issue'', ''Vexor Navy Issue''. Leave empty to search across all ships matching the other filters.'
+                source:
+                  type: string
+                  description: Restrict to one source. Leave empty to search all sources. Use 'gustavmannfred' for Gustav's abyss fits (gustavmannfred.streamlit.app), 'caldarijoans' for CaldariJoans' abyss fits (caldarijoans.streamlit.app). Pass this when the user explicitly asks for a specific author's fit.
+                  enum:
+                    - workbench
+                    - abysstracker
+                    - gustavmannfred
+                    - caldarijoans
+      responses:
+        "200":
+          description: The tool's answer.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommunityFitsToolResponse'
+          headers:
+            X-Request-ID:
+              $ref: '#/components/headers/RequestID'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "413":
+          $ref: '#/components/responses/PayloadTooLarge'
+        "429":
+          $ref: '#/components/responses/RateLimited'
+        "500":
+          $ref: '#/components/responses/InternalError'
+        "503":
+          $ref: '#/components/responses/Unavailable'
+        "504":
+          $ref: '#/components/responses/Timeout'
+  /tool/list_fits:
+    post:
+      tags:
+        - tools
+      summary: LIST / enumerate community fits from the indexed fit database by exact payload filters (NOT semantic search).
+      description: |-
+        LIST / enumerate community fits from the indexed fit database by exact payload filters (NOT semantic search). Use when the user wants to SEE WHAT FITS EXIST — 'list all fits for X', 'what Gila fits do you have', 'how many workbench fits', 'show every abyss-t5 fit' — rather than one fit to copy. Returns a compact numbered list (ship — fit name | tags | source URL) plus the TOTAL match count. Filter by source, ship_name (exact), tag (a fit_tags value like 'pve' / 'pvp' / 'abyss-t5' / 'cheap' / 'alpha-clone'), and filament_type. Use get_fits instead when the user wants the actual modules to copy.
+
+        Sources: EVE Workbench; Abysstracker; gustavmannfred (abyss fits); caldarijoans (abyss fits); zKillboard. `result.data` is a `FitListing` object when the call succeeds.
+
+        Access tier: **keyed**. Send an API key (`Authorization: Bearer <key>` or `X-API-Key`); without one the answer is `401 api_key_required`.
+
+        Rate limit: 30 requests per minute per caller (per API key when one is sent, otherwise per client IP).
+      operationId: list_fits
+      parameters:
+        - $ref: '#/components/parameters/RequestID'
+      security:
+        - bearerAuth: []
+        - apiKeyAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                filament_type:
+                  type: string
+                  description: 'Abysstracker filament: electrical / firestorm / exotic / gamma / dark.'
+                limit:
+                  type: integer
+                  description: 'Max rows to list (default 24, hard max 24: the list is capped, not exportable).'
+                ship_name:
+                  type: string
+                  description: Exact EVE ship name to filter by (e.g. 'Gila'). Empty = all ships.
+                source:
+                  type: string
+                  description: Restrict to one fit source. Empty = all fit sources.
+                  enum:
+                    - workbench
+                    - abysstracker
+                    - zkillboard_meta
+                    - gustavmannfred
+                    - caldarijoans
+                tag:
+                  type: string
+                  description: 'A fit_tags value to filter by: pvp / pve / abyss / abyss-t1..t6 / wh / cheap / blingy / alpha-clone / solo / fleet, etc.'
+      responses:
+        "200":
+          description: The tool's answer.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FitListingToolResponse'
+          headers:
+            X-Request-ID:
+              $ref: '#/components/headers/RequestID'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "413":
+          $ref: '#/components/responses/PayloadTooLarge'
+        "429":
+          $ref: '#/components/responses/RateLimited'
+        "500":
+          $ref: '#/components/responses/InternalError'
+        "503":
+          $ref: '#/components/responses/Unavailable'
+        "504":
+          $ref: '#/components/responses/Timeout'
+  /tool/analyze_battle:
+    post:
+      tags:
+        - tools
+      summary: Analyze a battle report from zKillboard, WarBeacon, or br.evetools.org.
+      description: |-
+        Analyze a battle report from zKillboard, WarBeacon, or br.evetools.org. Call this when the user pastes a zKillboard URL containing '/related/' or '/br/', a WarBeacon URL containing '/br/report/', or a br.evetools.org URL containing '/br/{24-hex-id}'. Returns kills, ISK destroyed, ship composition, and duration. Pass detail='full' to additionally include a per-weapon damage breakdown and a per-slot list of destroyed modules — use this on the user's follow-up when they ask for damage / weapons / modules / components / what killed.
+
+        Sources: zKillboard; WarBeacon; br.evetools.org; ESI (EVE Swagger Interface); EVE Static Data Export (via Fuzzwork).
+
+        Access tier: **keyed**. Send an API key (`Authorization: Bearer <key>` or `X-API-Key`); without one the answer is `401 api_key_required`.
+
+        Rate limit: 30 requests per minute per caller (per API key when one is sent, otherwise per client IP).
+      operationId: analyze_battle
+      parameters:
+        - $ref: '#/components/parameters/RequestID'
+      security:
+        - bearerAuth: []
+        - apiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                battle_url:
+                  type: string
+                  description: 'Full battle URL. Supported formats: https://zkillboard.com/related/30003067/202501071700/ or https://zkillboard.com/br/4885/ or https://warbeacon.net/br/report/78f57bba-34b0-4e0b-b0e6-53119ab32fbc or https://br.evetools.org/br/69f7d88dcbe9de00126eb5a5'
+                detail:
+                  type: string
+                  description: Output level. 'summary' (default) — high-level battle report only. 'full' — also includes top-10 damage by weapon type per side and top-10 destroyed modules per slot per side. Slower (~5-15 s) since it fan-outs ESI killmail fetches; the result is cached for 30 min so a follow-up turn is fast.
+                  enum:
+                    - summary
+                    - full
+              required:
+                - battle_url
+      responses:
+        "200":
+          description: The tool's answer.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ToolResponse'
+          headers:
+            X-Request-ID:
+              $ref: '#/components/headers/RequestID'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "413":
+          $ref: '#/components/responses/PayloadTooLarge'
+        "429":
+          $ref: '#/components/responses/RateLimited'
+        "500":
+          $ref: '#/components/responses/InternalError'
+        "503":
+          $ref: '#/components/responses/Unavailable'
+        "504":
+          $ref: '#/components/responses/Timeout'
+  /tool/validate_fitting:
+    post:
+      tags:
+        - tools
+      summary: Validate an EVE Online ship fitting in EFT format.
+      description: |-
+        Validate an EVE Online ship fitting in EFT format. Checks CPU, powergrid, and slot counts against ship attributes assuming Engineering V (+25% PG) and Electronics V (+25% CPU) — the realistic baseline every PvP / abyss capable character has. Call this after generating a fit to confirm it is valid before presenting it to the user.
+
+        Sources: EVE Static Data Export (via Fuzzwork); ESI (EVE Swagger Interface). `result.data` is a `FitValidation` object when the call succeeds.
+
+        Access tier: **public**. No key needed.
+
+        Rate limit: 30 requests per minute per caller (per API key when one is sent, otherwise per client IP).
+      operationId: validate_fitting
+      parameters:
+        - $ref: '#/components/parameters/RequestID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                eft_text:
+                  type: string
+                  description: Full fitting in EFT format, starting with [Ship Name, Fit Name]
+              required:
+                - eft_text
+      responses:
+        "200":
+          description: The tool's answer.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FitValidationToolResponse'
+          headers:
+            X-Request-ID:
+              $ref: '#/components/headers/RequestID'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "413":
+          $ref: '#/components/responses/PayloadTooLarge'
+        "429":
+          $ref: '#/components/responses/RateLimited'
+        "500":
+          $ref: '#/components/responses/InternalError'
+        "503":
+          $ref: '#/components/responses/Unavailable'
+        "504":
+          $ref: '#/components/responses/Timeout'
+  /tool/compute_fit_stats:
+    post:
+      tags:
+        - tools
+      summary: 'Compute the real stats of an EVE Online fit from its EFT text with the dogma engine (all-V skills, no implants): DPS…'
+      description: |-
+        Compute the real stats of an EVE Online fit from its EFT text with the dogma engine (all-V skills, no implants): DPS per weapon group with the charge used, volley, EHP per layer with resists, max speed (propulsion on), align time, capacitor stability and CPU/PG load. Call this whenever the user asks for a fit's DPS, EHP, tank, speed, align or cap stability - never estimate these by hand. Weapons with no charge on their EFT line get a default T1 ammo (Scourge missiles; Phased Plasma / Antimatter / Multifrequency for turrets), which the output labels.
+
+        Sources: EVE Static Data Export (via Fuzzwork). `result.data` is a `FitStatCard` object when the call succeeds.
+
+        Access tier: **public**. No key needed.
+
+        Rate limit: 30 requests per minute per caller (per API key when one is sent, otherwise per client IP).
+      operationId: compute_fit_stats
+      parameters:
+        - $ref: '#/components/parameters/RequestID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                charges:
+                  type: object
+                  description: 'Optional ammo to use instead of the default, as {module name: charge name}, e.g. {"Rocket Launcher II": "Mjolnir Rocket"}. Only for weapons with no charge on their EFT line.'
+                  additionalProperties:
+                    type: string
+                eft_text:
+                  type: string
+                  description: Full fitting in EFT format, starting with [Ship Name, Fit Name]. Loaded ammo may be given as 'Module, Charge' lines.
+              required:
+                - eft_text
+      responses:
+        "200":
+          description: The tool's answer.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FitStatCardToolResponse'
+          headers:
+            X-Request-ID:
+              $ref: '#/components/headers/RequestID'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "413":
+          $ref: '#/components/responses/PayloadTooLarge'
+        "429":
+          $ref: '#/components/responses/RateLimited'
+        "500":
+          $ref: '#/components/responses/InternalError'
+        "503":
+          $ref: '#/components/responses/Unavailable'
+        "504":
+          $ref: '#/components/responses/Timeout'
+  /tool/appraise_items:
+    post:
+      tags:
+        - tools
+      summary: Appraise a list of EVE Online items using Janice.
+      description: |-
+        Appraise a list of EVE Online items using Janice. Returns total buy/sell/split values in ISK and a link to the full appraisal.
+
+        Sources: Janice.
+
+        Access tier: **byo-key**. Runs only with your own Janice API key in the `X-Janice-Key` header (`400 janice_key_required` without it); the key is used for this request only and never logged or stored.
+
+        Rate limit: 30 requests per minute per caller (per API key when one is sent, otherwise per client IP).
+      operationId: appraise_items
+      parameters:
+        - $ref: '#/components/parameters/RequestID'
+        - name: X-Janice-Key
+          in: header
+          required: true
+          description: Your own Janice API key (https://janice.e-351.com/). It is used for this request only, sent to Janice and nowhere else, and is never logged or stored by this service. This service never appraises with its own key.
+          schema:
+            type: string
+            maxLength: 256
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                items:
+                  type: string
+                  description: Items in multi-buy or EFT format, one per line with quantity, e.g. 'Tritanium x1000'
+              required:
+                - items
+      responses:
+        "200":
+          description: The tool's answer.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ToolResponse'
+          headers:
+            X-Request-ID:
+              $ref: '#/components/headers/RequestID'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "413":
+          $ref: '#/components/responses/PayloadTooLarge'
+        "429":
+          $ref: '#/components/responses/RateLimited'
+        "500":
+          $ref: '#/components/responses/InternalError'
+        "503":
+          $ref: '#/components/responses/Unavailable'
+        "504":
+          $ref: '#/components/responses/Timeout'
+  /tool/get_production_chain:
+    post:
+      tags:
+        - tools
+      summary: Compute the full material breakdown to manufacture an EVE Online item, recursively expanding sub-components down to…
+      description: |-
+        Compute the full material breakdown to manufacture an EVE Online item, recursively expanding sub-components down to base minerals and PI commodities. Use this for 'how many minerals to build X' or 'production chain for X' questions. Optional advanced params let the user model a specific structure rig + system cost index (e.g., 'in 1DQ1-A with Minmatar manufacturing rig 4 and 5% cost index').
+
+        Sources: EVE Static Data Export (via Fuzzwork).
+
+        Access tier: **public**. No key needed.
+
+        Rate limit: 30 requests per minute per caller (per API key when one is sent, otherwise per client IP).
+      operationId: get_production_chain
+      parameters:
+        - $ref: '#/components/parameters/RequestID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                industry_skills:
+                  type: object
+                  description: 'Optional industry skills dict. Currently honoured: ''production_efficiency'' (0-5) for legacy ME-savings adjustment. Modern EVE folded most industry skills into ME research; this is the remaining axis worth modelling explicitly.'
+                item_name:
+                  type: string
+                  description: Item or ship name to build, e.g. 'Revelation', 'Avatar', 'Rifter'
+                me_level:
+                  type: integer
+                  description: Material Efficiency level 0-10 (default 10 — fully researched BPO)
+                runs:
+                  type: integer
+                  description: Number of runs (default 1)
+                station_rig_level:
+                  type: integer
+                  description: Structure rig material-savings level 0-5 (default 0). M-Set Manufacturing Material Efficiency rig at level 5 = 10% material savings. Use only when the user explicitly mentions a structure or its rigs.
+                system_cost_index:
+                  type: number
+                  description: 'System manufacturing cost index 0.0-0.20 (default 0.0). Drives the install fee: fee = index × ISK-value-of-inputs × 1.04 (4% NPC tax). Set to the user''s quoted system index when they ask for a fee estimate.'
+              required:
+                - item_name
+      responses:
+        "200":
+          description: The tool's answer.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ToolResponse'
+          headers:
+            X-Request-ID:
+              $ref: '#/components/headers/RequestID'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "413":
+          $ref: '#/components/responses/PayloadTooLarge'
+        "429":
+          $ref: '#/components/responses/RateLimited'
+        "500":
+          $ref: '#/components/responses/InternalError'
+        "503":
+          $ref: '#/components/responses/Unavailable'
+        "504":
+          $ref: '#/components/responses/Timeout'
+  /tool/get_jumps_between:
+    post:
+      tags:
+        - tools
+      summary: Compute the number of jumps and the route between two EVE solar systems.
+      description: |-
+        Compute the number of jumps and the route between two EVE solar systems. Default route is shortest (any security). Set prefer_high_sec=true to prefer highsec-only paths (longer but safer).
+
+        Sources: EVE Static Data Export (via Fuzzwork).
+
+        Access tier: **public**. No key needed.
+
+        Rate limit: 30 requests per minute per caller (per API key when one is sent, otherwise per client IP).
+      operationId: get_jumps_between
+      parameters:
+        - $ref: '#/components/parameters/RequestID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                from_system:
+                  type: string
+                  description: Origin solar system name, e.g. 'Jita'
+                prefer_high_sec:
+                  type: boolean
+                  description: If true, route via highsec only (default false)
+                to_system:
+                  type: string
+                  description: Destination solar system name, e.g. 'Amarr'
+              required:
+                - from_system
+                - to_system
+      responses:
+        "200":
+          description: The tool's answer.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ToolResponse'
+          headers:
+            X-Request-ID:
+              $ref: '#/components/headers/RequestID'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "413":
+          $ref: '#/components/responses/PayloadTooLarge'
+        "429":
+          $ref: '#/components/responses/RateLimited'
+        "500":
+          $ref: '#/components/responses/InternalError'
+        "503":
+          $ref: '#/components/responses/Unavailable'
+        "504":
+          $ref: '#/components/responses/Timeout'
+  /tool/get_systems_in_region:
+    post:
+      tags:
+        - tools
+      summary: List solar systems in an EVE region filtered by security band.
+      description: |-
+        List solar systems in an EVE region filtered by security band. Use for 'which lowsec systems in X' or 'highsec in Y' questions.
+
+        Sources: EVE Static Data Export (via Fuzzwork).
+
+        Access tier: **public**. No key needed.
+
+        Rate limit: 30 requests per minute per caller (per API key when one is sent, otherwise per client IP).
+      operationId: get_systems_in_region
+      parameters:
+        - $ref: '#/components/parameters/RequestID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                region_name:
+                  type: string
+                  description: Region name, e.g. 'Black Rise', 'The Forge'
+                sec_max:
+                  type: number
+                  description: Maximum security (default 1.0)
+                sec_min:
+                  type: number
+                  description: Minimum security (default -1.0)
+              required:
+                - region_name
+      responses:
+        "200":
+          description: The tool's answer.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ToolResponse'
+          headers:
+            X-Request-ID:
+              $ref: '#/components/headers/RequestID'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "413":
+          $ref: '#/components/responses/PayloadTooLarge'
+        "429":
+          $ref: '#/components/responses/RateLimited'
+        "500":
+          $ref: '#/components/responses/InternalError'
+        "503":
+          $ref: '#/components/responses/Unavailable'
+        "504":
+          $ref: '#/components/responses/Timeout'
+  /tool/get_npc_stations:
+    post:
+      tags:
+        - tools
+      summary: List NPC stations in a solar system, including their owning corporation and operation type.
+      description: |-
+        List NPC stations in a solar system, including their owning corporation and operation type. Use for 'stations in X' or 'where can I dock' questions.
+
+        Sources: EVE Static Data Export (via Fuzzwork).
+
+        Access tier: **public**. No key needed.
+
+        Rate limit: 30 requests per minute per caller (per API key when one is sent, otherwise per client IP).
+      operationId: get_npc_stations
+      parameters:
+        - $ref: '#/components/parameters/RequestID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                system_name:
+                  type: string
+                  description: Solar system name, e.g. 'Hek', 'Jita'
+              required:
+                - system_name
+      responses:
+        "200":
+          description: The tool's answer.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ToolResponse'
+          headers:
+            X-Request-ID:
+              $ref: '#/components/headers/RequestID'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "413":
+          $ref: '#/components/responses/PayloadTooLarge'
+        "429":
+          $ref: '#/components/responses/RateLimited'
+        "500":
+          $ref: '#/components/responses/InternalError'
+        "503":
+          $ref: '#/components/responses/Unavailable'
+        "504":
+          $ref: '#/components/responses/Timeout'
+  /tool/get_reprocessing_yield:
+    post:
+      tags:
+        - tools
+      summary: Compute the materials produced by reprocessing an EVE item (ore, ice, salvage, modules).
+      description: |-
+        Compute the materials produced by reprocessing an EVE item (ore, ice, salvage, modules). Use for 'how many minerals from X Veldspar' or 'reprocessing yield' questions.
+
+        Sources: EVE Static Data Export (via Fuzzwork).
+
+        Access tier: **public**. No key needed.
+
+        Rate limit: 30 requests per minute per caller (per API key when one is sent, otherwise per client IP).
+      operationId: get_reprocessing_yield
+      parameters:
+        - $ref: '#/components/parameters/RequestID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                item_name:
+                  type: string
+                  description: Item name, e.g. 'Veldspar', 'Mexallon'
+                quantity:
+                  type: integer
+                  description: Number of units to reprocess (default 1)
+                refining_efficiency_pct:
+                  type: number
+                  description: Combined skill+facility yield 0-100 (default 50)
+              required:
+                - item_name
+      responses:
+        "200":
+          description: The tool's answer.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ToolResponse'
+          headers:
+            X-Request-ID:
+              $ref: '#/components/headers/RequestID'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "413":
+          $ref: '#/components/responses/PayloadTooLarge'
+        "429":
+          $ref: '#/components/responses/RateLimited'
+        "500":
+          $ref: '#/components/responses/InternalError'
+        "503":
+          $ref: '#/components/responses/Unavailable'
+        "504":
+          $ref: '#/components/responses/Timeout'
+  /tool/get_required_skills:
+    post:
+      tags:
+        - tools
+      summary: List the skills required to fly a ship or build an item.
+      description: |-
+        List the skills required to fly a ship or build an item. Use for 'what skills to fly X' or 'what skills to build Y' questions.
+
+        Sources: EVE Static Data Export (via Fuzzwork).
+
+        Access tier: **public**. No key needed.
+
+        Rate limit: 30 requests per minute per caller (per API key when one is sent, otherwise per client IP).
+      operationId: get_required_skills
+      parameters:
+        - $ref: '#/components/parameters/RequestID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                item_name:
+                  type: string
+                  description: Ship or blueprint name, e.g. 'Avatar', 'Nyx', 'Revelation', 'Damage Control II'
+                purpose:
+                  type: string
+                  description: '''fly'' for ship/module skills (default), ''build'' for blueprint manufacturing skills'
+                  enum:
+                    - fly
+                    - build
+              required:
+                - item_name
+      responses:
+        "200":
+          description: The tool's answer.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ToolResponse'
+          headers:
+            X-Request-ID:
+              $ref: '#/components/headers/RequestID'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "413":
+          $ref: '#/components/responses/PayloadTooLarge'
+        "429":
+          $ref: '#/components/responses/RateLimited'
+        "500":
+          $ref: '#/components/responses/InternalError'
+        "503":
+          $ref: '#/components/responses/Unavailable'
+        "504":
+          $ref: '#/components/responses/Timeout'
+  /tool/get_sovereignty:
+    post:
+      tags:
+        - tools
+      summary: Get the alliance / corporation holding sovereignty over an EVE solar system.
+      description: |-
+        Get the alliance / corporation holding sovereignty over an EVE solar system. Live data from ESI. Use for 'who controls X' or 'sov holder of Y' questions.
+
+        Sources: EVE Static Data Export (via Fuzzwork); ESI (EVE Swagger Interface).
+
+        Access tier: **keyed**. Send an API key (`Authorization: Bearer <key>` or `X-API-Key`); without one the answer is `401 api_key_required`.
+
+        Rate limit: 30 requests per minute per caller (per API key when one is sent, otherwise per client IP).
+      operationId: get_sovereignty
+      parameters:
+        - $ref: '#/components/parameters/RequestID'
+      security:
+        - bearerAuth: []
+        - apiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                system_name:
+                  type: string
+                  description: Solar system name, e.g. 'Saranen'
+              required:
+                - system_name
+      responses:
+        "200":
+          description: The tool's answer.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ToolResponse'
+          headers:
+            X-Request-ID:
+              $ref: '#/components/headers/RequestID'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "413":
+          $ref: '#/components/responses/PayloadTooLarge'
+        "429":
+          $ref: '#/components/responses/RateLimited'
+        "500":
+          $ref: '#/components/responses/InternalError'
+        "503":
+          $ref: '#/components/responses/Unavailable'
+        "504":
+          $ref: '#/components/responses/Timeout'
+  /tool/get_system_activity:
+    post:
+      tags:
+        - tools
+      summary: Get recent killmail count and jump count for a solar system from ESI.
+      description: |-
+        Get recent killmail count and jump count for a solar system from ESI. Use for 'how many kills in X recently', 'is system Y active', 'is it safe to undock'.
+
+        Sources: EVE Static Data Export (via Fuzzwork); ESI (EVE Swagger Interface).
+
+        Access tier: **keyed**. Send an API key (`Authorization: Bearer <key>` or `X-API-Key`); without one the answer is `401 api_key_required`.
+
+        Rate limit: 30 requests per minute per caller (per API key when one is sent, otherwise per client IP).
+      operationId: get_system_activity
+      parameters:
+        - $ref: '#/components/parameters/RequestID'
+      security:
+        - bearerAuth: []
+        - apiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                system_name:
+                  type: string
+                  description: Solar system name, e.g. 'Tama'
+              required:
+                - system_name
+      responses:
+        "200":
+          description: The tool's answer.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ToolResponse'
+          headers:
+            X-Request-ID:
+              $ref: '#/components/headers/RequestID'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "413":
+          $ref: '#/components/responses/PayloadTooLarge'
+        "429":
+          $ref: '#/components/responses/RateLimited'
+        "500":
+          $ref: '#/components/responses/InternalError'
+        "503":
+          $ref: '#/components/responses/Unavailable'
+        "504":
+          $ref: '#/components/responses/Timeout'
+  /mcp:
+    post:
+      tags:
+        - mcp
+      summary: Model Context Protocol endpoint
+      description: |-
+        Streamable-HTTP MCP server (stateless, JSON responses): the same tools as `/tool/{name}`, for MCP clients such as Claude Desktop or Claude Code. POST one JSON-RPC 2.0 message per request (`initialize`, `tools/list`, `tools/call`, ...); a notification is answered `202` with no body. `GET` and `DELETE` are not supported in stateless mode (405). Point a client at this URL; it is not meant to be called by hand.
+
+        Rate limit: 60 requests per minute per caller (per API key when one is sent, otherwise per client IP).
+      operationId: mcp
+      parameters:
+        - $ref: '#/components/parameters/RequestID'
+      security:
+        - {}
+        - bearerAuth: []
+        - apiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: A JSON-RPC 2.0 request or notification (see https://modelcontextprotocol.io/specification).
+              properties:
+                jsonrpc:
+                  const: "2.0"
+                id:
+                  type:
+                    - string
+                    - integer
+                method:
+                  type: string
+                  examples:
+                    - tools/list
+                params:
+                  type: object
+              required:
+                - jsonrpc
+                - method
+      responses:
+        "200":
+          description: The JSON-RPC 2.0 response.
+          content:
+            application/json:
+              schema:
+                type: object
+                description: 'A JSON-RPC 2.0 response: `result` on success, `error` otherwise.'
+                properties:
+                  jsonrpc:
+                    const: "2.0"
+                  id:
+                    type:
+                      - string
+                      - integer
+                      - "null"
+                  result:
+                    type: object
+                  error:
+                    type: object
+                required:
+                  - jsonrpc
+          headers:
+            X-Request-ID:
+              $ref: '#/components/headers/RequestID'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "413":
+          $ref: '#/components/responses/PayloadTooLarge'
+        "429":
+          $ref: '#/components/responses/RateLimited'
+  /health:
+    get:
+      tags:
+        - meta
+      summary: Liveness probe
+      description: Always 200 while the process serves; a degraded dependency shows in the body, never in the status. The flags say which dependencies loaded, so a degraded service (no SDE, no fit corpus) can be told from a healthy one. `corpus` is true only when the fit corpus is configured and its backend answered a probe (cached for 30 seconds, 1 second timeout); `corpus_configured` is true when a corpus is wired at all, reachable or not.
+      operationId: health
+      parameters:
+        - $ref: '#/components/parameters/RequestID'
+      responses:
+        "200":
+          description: The service is up.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+          headers:
+            X-Request-ID:
+              $ref: '#/components/headers/RequestID'
+  /openapi.yaml:
+    get:
+      tags:
+        - meta
+      summary: This API description (YAML)
+      description: |-
+        The OpenAPI 3.1 document of this service, generated from its route table and tool registry.
+
+        Rate limit: 60 requests per minute per caller (per API key when one is sent, otherwise per client IP).
+      operationId: openapiYaml
+      parameters:
+        - $ref: '#/components/parameters/RequestID'
+      responses:
+        "200":
+          description: The OpenAPI document.
+          content:
+            application/yaml:
+              schema:
+                type: string
+          headers:
+            X-Request-ID:
+              $ref: '#/components/headers/RequestID'
+        "429":
+          $ref: '#/components/responses/RateLimited'
+  /openapi.json:
+    get:
+      tags:
+        - meta
+      summary: This API description (JSON)
+      description: |-
+        The same OpenAPI 3.1 document as JSON.
+
+        Rate limit: 60 requests per minute per caller (per API key when one is sent, otherwise per client IP).
+      operationId: openapiJson
+      parameters:
+        - $ref: '#/components/parameters/RequestID'
+      responses:
+        "200":
+          description: The OpenAPI document.
+          content:
+            application/json:
+              schema:
+                type: object
+          headers:
+            X-Request-ID:
+              $ref: '#/components/headers/RequestID'
+        "429":
+          $ref: '#/components/responses/RateLimited'
+components:
+  schemas:
+    Attribution:
+      type: object
+      properties:
+        source:
+          type: string
+        source_url:
+          type: string
+        author:
+          type: string
+        license:
+          type: string
+        license_url:
+          type: string
+        credit:
+          type: string
+      required:
+        - source
+        - source_url
+        - license
+    CapCard:
+      type: object
+      properties:
+        capacity_gj:
+          type: number
+        stable:
+          type: boolean
+        summary:
+          type: string
+        charge_fed:
+          type: boolean
+      required:
+        - capacity_gj
+        - stable
+        - summary
+        - charge_fed
+    CapStats:
+      type: object
+      properties:
+        Capacity:
+          type: number
+        RechargeSec:
+          type: number
+        Stable:
+          type: boolean
+        StablePct:
+          type: number
+        SecondsToEmpty:
+          type: number
+      required:
+        - Capacity
+        - RechargeSec
+        - Stable
+        - StablePct
+        - SecondsToEmpty
+    CommunityFit:
+      type: object
+      properties:
+        ship_name:
+          type: string
+        fit_name:
+          type: string
+        source:
+          type: string
+        source_url:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        score:
+          type: number
+        eft:
+          type: string
+        attribution:
+          $ref: '#/components/schemas/Attribution'
+      required:
+        - ship_name
+        - fit_name
+        - source
+        - source_url
+        - tags
+        - score
+        - eft
+        - attribution
+    CommunityFits:
+      type: object
+      properties:
+        found:
+          type: integer
+        relaxed:
+          type: boolean
+        fits:
+          type: array
+          items:
+            $ref: '#/components/schemas/CommunityFit'
+      required:
+        - found
+        - relaxed
+        - fits
+    CommunityFitsToolResponse:
+      type: object
+      properties:
+        tool:
+          type: string
+          description: The tool that ran.
+        version:
+          type: string
+          description: The build version of the service.
+        result:
+          type: object
+          properties:
+            text:
+              type: string
+              description: The answer as the chat assistant reads it.
+            data:
+              description: The typed answer, or null when the tool has none or the call ended in a text-only answer (an unknown id, a parse failure); `text` then says why.
+              oneOf:
+                - $ref: '#/components/schemas/CommunityFits'
+                - type: "null"
+          required:
+            - text
+            - data
+        attribution:
+          type: array
+          description: The upstreams behind the answer; attribution is a condition of several of their licences.
+          items:
+            $ref: '#/components/schemas/Source'
+      required:
+        - tool
+        - version
+        - result
+        - attribution
+    DPSStats:
+      type: object
+      properties:
+        Theoretical:
+          type: number
+        Applied:
+          type: number
+        PerWeapon:
+          type: array
+          items:
+            $ref: '#/components/schemas/WeaponDPS'
+      required:
+        - Theoretical
+        - Applied
+        - PerWeapon
+    DroneFlight:
+      type: object
+      properties:
+        stacks:
+          type: array
+          items:
+            $ref: '#/components/schemas/DroneStack'
+        launched:
+          type: integer
+        dps:
+          type: number
+      required:
+        - stacks
+        - launched
+        - dps
+    DroneStack:
+      type: object
+      properties:
+        name:
+          type: string
+        qty:
+          type: integer
+      required:
+        - name
+        - qty
+    DroneStats:
+      type: object
+      properties:
+        DPS:
+          type: number
+        BandwidthUsed:
+          type: number
+        BandwidthAvail:
+          type: number
+        BayUsed:
+          type: number
+        BayAvail:
+          type: number
+        InBay:
+          type: integer
+        Active:
+          type: integer
+        MaxActive:
+          type: integer
+        ActiveTypeIDs:
+          type: array
+          items:
+            type: integer
+      required:
+        - DPS
+        - BandwidthUsed
+        - BandwidthAvail
+        - BayUsed
+        - BayAvail
+        - InBay
+        - Active
+        - MaxActive
+        - ActiveTypeIDs
+    Error:
+      type: object
+      properties:
+        error:
+          $ref: '#/components/schemas/ErrorDetail'
+          description: Every non-2xx response has exactly this shape.
+      required:
+        - error
+    ErrorDetail:
+      type: object
+      properties:
+        code:
+          type: string
+          description: A stable, machine-readable code.
+          enum:
+            - not_found
+            - method_not_allowed
+            - invalid_request
+            - payload_too_large
+            - rate_limited
+            - unavailable
+            - upstream_error
+            - unknown_tool
+            - tool_disabled
+            - api_key_required
+            - invalid_api_key
+            - key_not_permitted
+            - janice_key_required
+            - timeout
+            - internal_error
+        message:
+          type: string
+          description: A human-readable explanation; do not parse it.
+      required:
+        - code
+        - message
+    FitCell:
+      type: object
+      properties:
+        name:
+          type: string
+        typeID:
+          type: integer
+        tier:
+          type: string
+        empty:
+          type: boolean
+        canLoadCharge:
+          type: boolean
+        canOverheat:
+          type: boolean
+      required:
+        - name
+        - tier
+        - empty
+        - canLoadCharge
+        - canOverheat
+    FitDetail:
+      type: object
+      properties:
+        ship_name:
+          type: string
+        ship_type_id:
+          type: integer
+        ship_class:
+          type: string
+        slots:
+          $ref: '#/components/schemas/FitSlots'
+        resources:
+          $ref: '#/components/schemas/FitRes'
+        drones:
+          type: array
+          items:
+            $ref: '#/components/schemas/FitDroneCell'
+        cost_text:
+          type: string
+        eft:
+          type: string
+        notes:
+          type: array
+          items:
+            type: string
+        valid:
+          type: boolean
+        unresolved:
+          type: array
+          items:
+            type: string
+        violations:
+          type: array
+          items:
+            type: string
+      required:
+        - ship_name
+        - ship_type_id
+        - ship_class
+        - slots
+        - resources
+        - eft
+        - valid
+        - unresolved
+    FitDetailRequest:
+      type: object
+      properties:
+        eft:
+          type: string
+          description: The fit as an EFT block (`[Hull, Name]` header, then one module per line).
+        cost:
+          type: boolean
+          description: Also price the fit when a price source is configured on the server.
+      required:
+        - eft
+    FitDroneCell:
+      type: object
+      properties:
+        name:
+          type: string
+        typeID:
+          type: integer
+        qty:
+          type: integer
+      required:
+        - name
+        - typeID
+        - qty
+    FitListRow:
+      type: object
+      properties:
+        ship_name:
+          type: string
+        fit_name:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        source_url:
+          type: string
+        attribution:
+          $ref: '#/components/schemas/Attribution'
+      required:
+        - ship_name
+        - fit_name
+        - tags
+        - source_url
+        - attribution
+    FitListing:
+      type: object
+      properties:
+        total:
+          type: integer
+        shown:
+          type: integer
+        fits:
+          type: array
+          items:
+            $ref: '#/components/schemas/FitListRow'
+      required:
+        - total
+        - shown
+        - fits
+    FitListingToolResponse:
+      type: object
+      properties:
+        tool:
+          type: string
+          description: The tool that ran.
+        version:
+          type: string
+          description: The build version of the service.
+        result:
+          type: object
+          properties:
+            text:
+              type: string
+              description: The answer as the chat assistant reads it.
+            data:
+              description: The typed answer, or null when the tool has none or the call ended in a text-only answer (an unknown id, a parse failure); `text` then says why.
+              oneOf:
+                - $ref: '#/components/schemas/FitListing'
+                - type: "null"
+          required:
+            - text
+            - data
+        attribution:
+          type: array
+          description: The upstreams behind the answer; attribution is a condition of several of their licences.
+          items:
+            $ref: '#/components/schemas/Source'
+      required:
+        - tool
+        - version
+        - result
+        - attribution
+    FitLoad:
+      type: object
+      properties:
+        cpu:
+          $ref: '#/components/schemas/ResourceUsage'
+        pg:
+          $ref: '#/components/schemas/ResourceUsage'
+      required:
+        - cpu
+        - pg
+    FitRes:
+      type: object
+      properties:
+        cpu_used:
+          type: number
+        cpu_cap:
+          type: number
+        pg_used:
+          type: number
+        pg_cap:
+          type: number
+        calib_used:
+          type: number
+        calib_cap:
+          type: number
+      required:
+        - cpu_used
+        - cpu_cap
+        - pg_used
+        - pg_cap
+        - calib_used
+        - calib_cap
+    FitSearchHit:
+      type: object
+      properties:
+        ship_name:
+          type: string
+        fit_name:
+          type: string
+        source:
+          type: string
+        source_url:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        views:
+          type: integer
+        score:
+          type: number
+        tested:
+          type: boolean
+        video:
+          type: boolean
+        alpha:
+          type: boolean
+        eft:
+          type: string
+        relevance:
+          type: number
+        attribution:
+          $ref: '#/components/schemas/Attribution'
+      required:
+        - ship_name
+        - fit_name
+        - source
+        - source_url
+        - tags
+        - views
+        - score
+        - tested
+        - video
+        - alpha
+        - eft
+        - relevance
+        - attribution
+    FitSearchResult:
+      type: object
+      properties:
+        total:
+          type: integer
+        relaxed:
+          type: boolean
+        dropped:
+          type: array
+          items:
+            type: string
+        hits:
+          type: array
+          items:
+            $ref: '#/components/schemas/FitSearchHit'
+        ship_counts:
+          type: object
+          additionalProperties:
+            type: integer
+        limit:
+          type: integer
+        note:
+          type: string
+      required:
+        - total
+        - relaxed
+        - dropped
+        - hits
+        - limit
+    FitSlots:
+      type: object
+      properties:
+        high:
+          type: array
+          items:
+            $ref: '#/components/schemas/FitCell'
+        mid:
+          type: array
+          items:
+            $ref: '#/components/schemas/FitCell'
+        low:
+          type: array
+          items:
+            $ref: '#/components/schemas/FitCell'
+        rig:
+          type: array
+          items:
+            $ref: '#/components/schemas/FitCell'
+      required:
+        - high
+        - mid
+        - low
+        - rig
+    FitStatCard:
+      type: object
+      properties:
+        hull:
+          type: string
+        basis:
+          type: string
+        dps:
+          type: number
+        weapon_dps:
+          type: number
+        drone_dps:
+          type: number
+        volley:
+          type: number
+        weapons:
+          type: array
+          items:
+            $ref: '#/components/schemas/WeaponGroup'
+        drones:
+          oneOf:
+            - $ref: '#/components/schemas/DroneFlight'
+            - type: "null"
+        tank:
+          $ref: '#/components/schemas/TankCard'
+        speed_ms:
+          type: number
+        prop_on:
+          type: boolean
+        align_s:
+          type: number
+        signature_m:
+          type: number
+        cap:
+          $ref: '#/components/schemas/CapCard'
+        load:
+          oneOf:
+            - $ref: '#/components/schemas/FitLoad'
+            - type: "null"
+        no_ammo:
+          type: array
+          items:
+            type: string
+        unresolved_charges:
+          type: array
+          items:
+            type: string
+        unresolved_modules:
+          type: array
+          items:
+            type: string
+      required:
+        - hull
+        - basis
+        - dps
+        - weapon_dps
+        - drone_dps
+        - volley
+        - weapons
+        - drones
+        - tank
+        - speed_ms
+        - prop_on
+        - align_s
+        - signature_m
+        - cap
+        - load
+        - no_ammo
+        - unresolved_charges
+        - unresolved_modules
+    FitStatCardToolResponse:
+      type: object
+      properties:
+        tool:
+          type: string
+          description: The tool that ran.
+        version:
+          type: string
+          description: The build version of the service.
+        result:
+          type: object
+          properties:
+            text:
+              type: string
+              description: The answer as the chat assistant reads it.
+            data:
+              description: The typed answer, or null when the tool has none or the call ended in a text-only answer (an unknown id, a parse failure); `text` then says why.
+              oneOf:
+                - $ref: '#/components/schemas/FitStatCard'
+                - type: "null"
+          required:
+            - text
+            - data
+        attribution:
+          type: array
+          description: The upstreams behind the answer; attribution is a condition of several of their licences.
+          items:
+            $ref: '#/components/schemas/Source'
+      required:
+        - tool
+        - version
+        - result
+        - attribution
+    FitStats:
+      type: object
+      properties:
+        DPS:
+          $ref: '#/components/schemas/DPSStats'
+        Volley:
+          type: number
+        Tank:
+          $ref: '#/components/schemas/TankStats'
+        Capacitor:
+          $ref: '#/components/schemas/CapStats'
+        Navigation:
+          $ref: '#/components/schemas/NavStats'
+        Range:
+          type: array
+          items:
+            $ref: '#/components/schemas/RangeStats'
+        Targeting:
+          $ref: '#/components/schemas/TargetStats'
+        Drones:
+          $ref: '#/components/schemas/DroneStats'
+        Estimated:
+          type: boolean
+        Unmodelled:
+          type: array
+          items:
+            type: string
+      required:
+        - DPS
+        - Volley
+        - Tank
+        - Capacitor
+        - Navigation
+        - Range
+        - Targeting
+        - Drones
+        - Estimated
+        - Unmodelled
+    FitStatsRequest:
+      type: object
+      properties:
+        eft:
+          type: string
+          description: The fit as an EFT block.
+        activeDrones:
+          type: array
+          description: Type IDs of the drones to launch, in priority order; omitted means automatic.
+          items:
+            type: integer
+      required:
+        - eft
+    FitSuggestRequest:
+      type: object
+      properties:
+        eft:
+          type: string
+          description: The current fit as an EFT block.
+        slot:
+          type: string
+          description: The slot tier to fill.
+          enum:
+            - high
+            - mid
+            - low
+            - rig
+      required:
+        - eft
+        - slot
+    FitValidation:
+      type: object
+      properties:
+        ship:
+          type: string
+        valid:
+          type: boolean
+        cpu:
+          $ref: '#/components/schemas/ResourceUsage'
+        pg:
+          $ref: '#/components/schemas/ResourceUsage'
+        slots:
+          $ref: '#/components/schemas/ValidationSlots'
+        violations:
+          type: array
+          items:
+            type: string
+        warnings:
+          type: array
+          items:
+            type: string
+        unresolved_modules:
+          type: array
+          items:
+            type: string
+        data_source:
+          type: string
+        alpha_unchecked:
+          type: boolean
+        stats:
+          $ref: '#/components/schemas/FitStatCard'
+      required:
+        - ship
+        - valid
+        - cpu
+        - pg
+        - slots
+        - violations
+        - unresolved_modules
+        - data_source
+    FitValidationToolResponse:
+      type: object
+      properties:
+        tool:
+          type: string
+          description: The tool that ran.
+        version:
+          type: string
+          description: The build version of the service.
+        result:
+          type: object
+          properties:
+            text:
+              type: string
+              description: The answer as the chat assistant reads it.
+            data:
+              description: The typed answer, or null when the tool has none or the call ended in a text-only answer (an unknown id, a parse failure); `text` then says why.
+              oneOf:
+                - $ref: '#/components/schemas/FitValidation'
+                - type: "null"
+          required:
+            - text
+            - data
+        attribution:
+          type: array
+          description: The upstreams behind the answer; attribution is a condition of several of their licences.
+          items:
+            $ref: '#/components/schemas/Source'
+      required:
+        - tool
+        - version
+        - result
+        - attribution
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+        sde:
+          type: boolean
+        corpus:
+          type: boolean
+        corpus_configured:
+          type: boolean
+        stats:
+          type: boolean
+      required:
+        - status
+        - sde
+        - corpus
+        - corpus_configured
+        - stats
+    MarketPrice:
+      type: object
+      properties:
+        type_id:
+          type: integer
+        region_id:
+          type: integer
+        market:
+          type: string
+        best_sell_isk:
+          type:
+            - number
+            - "null"
+        sell_orders:
+          type: integer
+        best_buy_isk:
+          type:
+            - number
+            - "null"
+        buy_orders:
+          type: integer
+      required:
+        - type_id
+        - region_id
+        - market
+        - best_sell_isk
+        - sell_orders
+        - best_buy_isk
+        - buy_orders
+    MarketPriceToolResponse:
+      type: object
+      properties:
+        tool:
+          type: string
+          description: The tool that ran.
+        version:
+          type: string
+          description: The build version of the service.
+        result:
+          type: object
+          properties:
+            text:
+              type: string
+              description: The answer as the chat assistant reads it.
+            data:
+              description: The typed answer, or null when the tool has none or the call ended in a text-only answer (an unknown id, a parse failure); `text` then says why.
+              oneOf:
+                - $ref: '#/components/schemas/MarketPrice'
+                - type: "null"
+          required:
+            - text
+            - data
+        attribution:
+          type: array
+          description: The upstreams behind the answer; attribution is a condition of several of their licences.
+          items:
+            $ref: '#/components/schemas/Source'
+      required:
+        - tool
+        - version
+        - result
+        - attribution
+    ModuleHit:
+      type: object
+      properties:
+        typeID:
+          type: integer
+        name:
+          type: string
+        groupID:
+          type: integer
+        slot:
+          type: string
+        metaTier:
+          type: string
+        cpu:
+          type: number
+        pg:
+          type: number
+        canLoadCharge:
+          type: boolean
+        canOverheat:
+          type: boolean
+      required:
+        - typeID
+        - name
+        - groupID
+        - slot
+        - metaTier
+        - cpu
+        - pg
+        - canLoadCharge
+        - canOverheat
+    NavStats:
+      type: object
+      properties:
+        MaxVelocity:
+          type: number
+        AlignTimeSec:
+          type: number
+        SignatureRadius:
+          type: number
+      required:
+        - MaxVelocity
+        - AlignTimeSec
+        - SignatureRadius
+    RangeStats:
+      type: object
+      properties:
+        Weapon:
+          type: string
+        OptimalM:
+          type: number
+        FalloffM:
+          type: number
+      required:
+        - Weapon
+        - OptimalM
+        - FalloffM
+    ResistProfile:
+      type: object
+      properties:
+        EM:
+          type: number
+        Therm:
+          type: number
+        Kin:
+          type: number
+        Exp:
+          type: number
+      required:
+        - EM
+        - Therm
+        - Kin
+        - Exp
+    Resists:
+      type: object
+      properties:
+        em:
+          type: number
+        thermal:
+          type: number
+        kinetic:
+          type: number
+        explosive:
+          type: number
+      required:
+        - em
+        - thermal
+        - kinetic
+        - explosive
+    ResourceUsage:
+      type: object
+      properties:
+        used:
+          type: number
+        capacity:
+          type: number
+        unit:
+          type: string
+        over:
+          type: string
+      required:
+        - used
+        - capacity
+        - unit
+    ShipAttribute:
+      type: object
+      properties:
+        attribute_id:
+          type: integer
+        name:
+          type: string
+        value:
+          type: number
+      required:
+        - attribute_id
+        - name
+        - value
+    ShipStats:
+      type: object
+      properties:
+        type_id:
+          type: integer
+        name:
+          type: string
+        attributes:
+          type: array
+          items:
+            $ref: '#/components/schemas/ShipAttribute'
+      required:
+        - type_id
+        - name
+        - attributes
+    ShipStatsToolResponse:
+      type: object
+      properties:
+        tool:
+          type: string
+          description: The tool that ran.
+        version:
+          type: string
+          description: The build version of the service.
+        result:
+          type: object
+          properties:
+            text:
+              type: string
+              description: The answer as the chat assistant reads it.
+            data:
+              description: The typed answer, or null when the tool has none or the call ended in a text-only answer (an unknown id, a parse failure); `text` then says why.
+              oneOf:
+                - $ref: '#/components/schemas/ShipStats'
+                - type: "null"
+          required:
+            - text
+            - data
+        attribution:
+          type: array
+          description: The upstreams behind the answer; attribution is a condition of several of their licences.
+          items:
+            $ref: '#/components/schemas/Source'
+      required:
+        - tool
+        - version
+        - result
+        - attribution
+    SlotUsage:
+      type: object
+      properties:
+        used:
+          type: integer
+        capacity:
+          type: integer
+      required:
+        - used
+        - capacity
+    Source:
+      type: object
+      properties:
+        name:
+          type: string
+          description: The upstream's name.
+        url:
+          type: string
+          description: Where the upstream lives.
+        license:
+          type: string
+          description: The terms the data is used under.
+      required:
+        - name
+        - url
+        - license
+    Suggestion:
+      type: object
+      properties:
+        typeID:
+          type: integer
+        name:
+          type: string
+        slot:
+          type: string
+        metaTier:
+          type: string
+        cpu:
+          type: number
+        pg:
+          type: number
+        fits:
+          type: boolean
+        reason:
+          type: string
+      required:
+        - typeID
+        - name
+        - slot
+        - metaTier
+        - cpu
+        - pg
+        - fits
+        - reason
+    TankCard:
+      type: object
+      properties:
+        ehp:
+          type: number
+        shield_ehp:
+          type: number
+        armor_ehp:
+          type: number
+        hull_ehp:
+          type: number
+        active_rep_per_sec:
+          type: number
+        shield_resists:
+          $ref: '#/components/schemas/Resists'
+        armor_resists:
+          $ref: '#/components/schemas/Resists'
+        hull_resists:
+          $ref: '#/components/schemas/Resists'
+      required:
+        - ehp
+        - shield_ehp
+        - armor_ehp
+        - hull_ehp
+        - active_rep_per_sec
+        - shield_resists
+        - armor_resists
+        - hull_resists
+    TankStats:
+      type: object
+      properties:
+        ShieldHP:
+          type: number
+        ArmorHP:
+          type: number
+        HullHP:
+          type: number
+        ShieldResists:
+          $ref: '#/components/schemas/ResistProfile'
+        ArmorResists:
+          $ref: '#/components/schemas/ResistProfile'
+        HullResists:
+          $ref: '#/components/schemas/ResistProfile'
+        TotalEHP:
+          type: number
+        ActiveRepPerSec:
+          type: number
+      required:
+        - ShieldHP
+        - ArmorHP
+        - HullHP
+        - ShieldResists
+        - ArmorResists
+        - HullResists
+        - TotalEHP
+        - ActiveRepPerSec
+    TargetStats:
+      type: object
+      properties:
+        LockRangeM:
+          type: number
+        ScanResolution:
+          type: number
+        MaxLockedTargets:
+          type: integer
+        SensorStrength:
+          type: number
+      required:
+        - LockRangeM
+        - ScanResolution
+        - MaxLockedTargets
+        - SensorStrength
+    ToolResponse:
+      type: object
+      properties:
+        tool:
+          type: string
+          description: The tool that ran.
+        version:
+          type: string
+          description: The build version of the service.
+        result:
+          type: object
+          properties:
+            text:
+              type: string
+              description: The answer as the chat assistant reads it.
+            data:
+              type: "null"
+              description: The typed answer, or null when the tool has none or the call ended in a text-only answer (an unknown id, a parse failure); `text` then says why.
+          required:
+            - text
+            - data
+        attribution:
+          type: array
+          description: The upstreams behind the answer; attribution is a condition of several of their licences.
+          items:
+            $ref: '#/components/schemas/Source'
+      required:
+        - tool
+        - version
+        - result
+        - attribution
+    TypeInfo:
+      type: object
+      properties:
+        type_id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        volume_m3:
+          type: number
+        mass_kg:
+          type: number
+        group_id:
+          type: integer
+      required:
+        - type_id
+        - name
+        - description
+        - volume_m3
+        - mass_kg
+        - group_id
+    TypeInfoToolResponse:
+      type: object
+      properties:
+        tool:
+          type: string
+          description: The tool that ran.
+        version:
+          type: string
+          description: The build version of the service.
+        result:
+          type: object
+          properties:
+            text:
+              type: string
+              description: The answer as the chat assistant reads it.
+            data:
+              description: The typed answer, or null when the tool has none or the call ended in a text-only answer (an unknown id, a parse failure); `text` then says why.
+              oneOf:
+                - $ref: '#/components/schemas/TypeInfo'
+                - type: "null"
+          required:
+            - text
+            - data
+        attribution:
+          type: array
+          description: The upstreams behind the answer; attribution is a condition of several of their licences.
+          items:
+            $ref: '#/components/schemas/Source'
+      required:
+        - tool
+        - version
+        - result
+        - attribution
+    ValidationSlots:
+      type: object
+      properties:
+        high:
+          $ref: '#/components/schemas/SlotUsage'
+        mid:
+          $ref: '#/components/schemas/SlotUsage'
+        low:
+          $ref: '#/components/schemas/SlotUsage'
+        rig:
+          $ref: '#/components/schemas/SlotUsage'
+      required:
+        - high
+        - mid
+        - low
+        - rig
+    WeaponDPS:
+      type: object
+      properties:
+        Weapon:
+          type: string
+        Theoretical:
+          type: number
+        Applied:
+          type: number
+      required:
+        - Weapon
+        - Theoretical
+        - Applied
+    WeaponGroup:
+      type: object
+      properties:
+        label:
+          type: string
+        count:
+          type: integer
+        dps:
+          type: number
+        default_ammo:
+          type: boolean
+      required:
+        - label
+        - count
+        - dps
+        - default_ammo
+  responses:
+    BadRequest:
+      description: 'The request is malformed: invalid JSON, or a missing or invalid parameter or header (`invalid_request`, `janice_key_required`).'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+      headers:
+        X-Request-ID:
+          $ref: '#/components/headers/RequestID'
+    Forbidden:
+      description: The tool is disabled on this service (`tool_disabled`), or the key may not run keyed tools (`key_not_permitted`).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+      headers:
+        X-Request-ID:
+          $ref: '#/components/headers/RequestID'
+    InternalError:
+      description: The operation failed inside the service (`internal_error`).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+      headers:
+        X-Request-ID:
+          $ref: '#/components/headers/RequestID'
+    NotFound:
+      description: No such route or tool (`not_found`, `unknown_tool`).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+      headers:
+        X-Request-ID:
+          $ref: '#/components/headers/RequestID'
+    PayloadTooLarge:
+      description: The request body is over the size cap (`payload_too_large`).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+      headers:
+        X-Request-ID:
+          $ref: '#/components/headers/RequestID'
+    RateLimited:
+      description: The caller is over the rate limit; retry after the number of seconds in `Retry-After` (`rate_limited`).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+      headers:
+        Retry-After:
+          $ref: '#/components/headers/RetryAfter'
+        X-Request-ID:
+          $ref: '#/components/headers/RequestID'
+    Timeout:
+      description: The operation ran past its time budget (`timeout`).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+      headers:
+        X-Request-ID:
+          $ref: '#/components/headers/RequestID'
+    Unauthorized:
+      description: The tool needs an API key and the request has none (`api_key_required`), or the key it sent is not valid (`invalid_api_key`).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+      headers:
+        X-Request-ID:
+          $ref: '#/components/headers/RequestID'
+    Unavailable:
+      description: A dependency this operation needs is not loaded, for example the SDE or the fit corpus (`unavailable`).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+      headers:
+        X-Request-ID:
+          $ref: '#/components/headers/RequestID'
+    UpstreamError:
+      description: An upstream dependency failed (`upstream_error`).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+      headers:
+        X-Request-ID:
+          $ref: '#/components/headers/RequestID'
+  parameters:
+    RequestID:
+      name: X-Request-ID
+      in: header
+      required: false
+      description: An ID to correlate this request with the service's logs; echoed in the response.
+      schema:
+        type: string
+        pattern: ^[A-Za-z0-9._-]{1,64}$
+  headers:
+    RequestID:
+      description: 'The request''s ID: the caller''s `X-Request-ID` when it is a token of 1-64 characters from `[A-Za-z0-9._-]`, otherwise a generated one. Quote it when reporting a problem.'
+      schema:
+        type: string
+    RetryAfter:
+      description: Seconds until the caller's budget has room again.
+      schema:
+        type: integer
+        minimum: 1
+  securitySchemes:
+    apiKeyAuth:
+      type: apiKey
+      description: The same API key in the `X-API-Key` header, for clients that cannot set `Authorization`.
+      in: header
+      name: X-API-Key
+    bearerAuth:
+      type: http
+      description: 'An API key as `Authorization: Bearer <key>`. Keyed tools need one; the other tools ignore it, but a key that is sent and not valid is refused (`401 invalid_api_key`).'
+      scheme: bearer

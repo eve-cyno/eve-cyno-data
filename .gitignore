@@ -1,0 +1,23 @@
+# Data (the SDE is built locally by `go run ./cmd/sde`, never committed)
+data/
+*.sqlite
+*.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
+*.db
+
+# Binaries (build into bin/; the module root holds the dataapi/ and sde/ packages,
+# so never ignore those names at the root)
+*.exe
+*.test
+*.out
+/bin/
+/dist/
+
+# Local environment and editors
+.env
+.env.*
+!.env.example
+.idea/
+.vscode/
+*.log

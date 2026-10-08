@@ -1,0 +1,57 @@
+# EVE-Cyno Data API
+
+> Deterministic EVE Online data and calculation tools over REST (OpenAPI 3.1) and MCP: SDE lookups (items, ships, skills, stations, routes), fit validation and statistics (Gofa dogma engine), market prices, sovereignty and system activity, community-fit search. No language model is in the loop, and every answer names its sources.
+
+EVE Online and its game data are the property of CCP Games / Fenris Creations and are used under the EVE Developer License Agreement. This service is non-commercial and not affiliated with or endorsed by them. The complete notice and the licence of each data source are in llms-full.txt.
+
+## Interfaces
+
+- [OpenAPI 3.1 (YAML)](/v1/openapi.yaml): every operation with its parameters, request bodies and response schemas
+- [OpenAPI 3.1 (JSON)](/v1/openapi.json): the same document as JSON
+- [MCP server, streamable HTTP](/v1/mcp): the tools below for MCP clients (stateless, JSON responses); point the client at this URL
+- [Full reference](/llms-full.txt): endpoints, tool arguments, result types, sources and licences in one file
+
+## Endpoints
+
+- [GET /v1/fits/search](/v1/openapi.yaml): Search community fits
+- [POST /v1/fits/detail](/v1/openapi.yaml): Describe a fit
+- [POST /v1/fit/stats](/v1/openapi.yaml): Compute fit statistics
+- [POST /v1/fit/suggest](/v1/openapi.yaml): Suggest modules for an empty slot
+- [GET /v1/items/search](/v1/openapi.yaml): Search modules, charges and drones
+- [POST /v1/tool/{name}](/llms-full.txt#tools): run one of the tools below; the body is its arguments object
+
+## Tools (public: no key needed)
+
+- [search_item_by_name](/llms-full.txt#search_item_by_name): Resolve one or more EVE Online item, ship, or module names to their type_id.
+- [get_ship_stats](/llms-full.txt#get_ship_stats): Get slot layout, hardpoints, and resource limits for an EVE Online ship.
+- [get_ship_bonuses](/llms-full.txt#get_ship_bonuses): Get hull bonuses for an EVE Online ship — per-skill-level bonuses + role bonuses + ship class.
+- [find_canonical_module](/llms-full.txt#find_canonical_module): Look up canonical SDE typeNames for a module family (e.g. 'Steel Plates', 'Entropic Radiation Sink', 'Shield Extender', 'Heat Sink', 'Magnetic Field…
+- [get_hull_facts](/llms-full.txt#get_hull_facts): Authoritative SDE snapshot of a hull's fitting envelope — slot/hardpoint counts, drone bay, role/skill bonuses, AND the canonical list of weapons that hull is…
+- [validate_fitting](/llms-full.txt#validate_fitting): Validate an EVE Online ship fitting in EFT format.
+- [compute_fit_stats](/llms-full.txt#compute_fit_stats): Compute the real stats of an EVE Online fit from its EFT text with the dogma engine (all-V skills, no implants): DPS per weapon group with the charge used…
+- [get_production_chain](/llms-full.txt#get_production_chain): Compute the full material breakdown to manufacture an EVE Online item, recursively expanding sub-components down to base minerals and PI commodities.
+- [get_jumps_between](/llms-full.txt#get_jumps_between): Compute the number of jumps and the route between two EVE solar systems.
+- [get_systems_in_region](/llms-full.txt#get_systems_in_region): List solar systems in an EVE region filtered by security band.
+- [get_npc_stations](/llms-full.txt#get_npc_stations): List NPC stations in a solar system, including their owning corporation and operation type.
+- [get_reprocessing_yield](/llms-full.txt#get_reprocessing_yield): Compute the materials produced by reprocessing an EVE item (ore, ice, salvage, modules).
+- [get_required_skills](/llms-full.txt#get_required_skills): List the skills required to fly a ship or build an item.
+
+## Tools (keyed: send an API key)
+
+- [get_market_price](/llms-full.txt#get_market_price): Get current market prices for an EVE Online item in The Forge region (Jita hub).
+- [get_type_info](/llms-full.txt#get_type_info): Get information about an EVE Online item: name, description, volume, mass, group.
+- [get_fits](/llms-full.txt#get_fits): Retrieve community ship fits VERBATIM from the indexed fit database (EVE Workbench + Abysstracker + gustavmannfred.streamlit.app + caldarijoans.streamlit.app…
+- [list_fits](/llms-full.txt#list_fits): LIST / enumerate community fits from the indexed fit database by exact payload filters (NOT semantic search).
+- [analyze_battle](/llms-full.txt#analyze_battle): Analyze a battle report from zKillboard, WarBeacon, or br.evetools.org.
+- [get_sovereignty](/llms-full.txt#get_sovereignty): Get the alliance / corporation holding sovereignty over an EVE solar system.
+- [get_system_activity](/llms-full.txt#get_system_activity): Get recent killmail count and jump count for a solar system from ESI.
+
+## Tools (byo-key: send your own Janice key in X-Janice-Key)
+
+- [appraise_items](/llms-full.txt#appraise_items): Appraise a list of EVE Online items using Janice.
+
+## Optional
+
+- [Attribution and licensing](/llms-full.txt#attribution-and-licensing): the EVE Developer License Agreement notice, CC BY-SA text, and the terms of each upstream source
+- [Conventions](/llms-full.txt#conventions): error shape, request IDs, rate limits, body caps
+- [Health](/v1/health): liveness probe and which dependencies loaded

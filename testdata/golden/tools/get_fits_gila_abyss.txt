@@ -1,0 +1,58 @@
+FOUND 3 community fit(s) — copy each EFT block VERBATIM in your response:
+
+--- Fit 1/3 | source=caldarijoans | score=0.50 | tags=['abyss', 'abyss-t2', 'pve'] | url=https://example.invalid/fit/3 ---
+# Gila — Synthetic Gila Abyss C (★ Quality 0.50)
+Source: https://example.invalid/fit/3
+
+[Gila, Synthetic Gila Abyss C]
+Rapid Light Missile Launcher II
+Rapid Light Missile Launcher II
+
+Multispectrum Shield Hardener II
+10MN Afterburner II
+Large Shield Extender II
+
+Damage Control II
+Drone Damage Amplifier II
+
+Medium Core Defense Field Extender II
+
+--- Fit 2/3 | source=abysstracker | score=0.63 | tags=['abyss', 'abyss-exotic', 'abyss-t3', 'alpha-clone', 'pve'] | url=https://example.invalid/fit/1 ---
+# Gila — Synthetic Gila Abyss A (★ Quality 0.63)
+Source: https://example.invalid/fit/1
+Stats: DPS 900 | EHP 0.1k | Cost 400M ISK
+131 abyss runs (exotic)
+
+[Gila, Synthetic Gila Abyss A]
+Rapid Light Missile Launcher II
+Rapid Light Missile Launcher II
+
+Multispectrum Shield Hardener II
+10MN Afterburner II
+Large Shield Extender II
+
+Damage Control II
+Drone Damage Amplifier II
+
+Medium Core Defense Field Extender II
+
+--- Fit 3/3 | source=abysstracker | score=0.51 | tags=['abyss', 'abyss-firestorm', 'abyss-t3', 'pve'] | url=https://example.invalid/fit/2 ---
+# Gila — Synthetic Gila Abyss B (★ Quality 0.51)
+Source: https://example.invalid/fit/2
+Stats: DPS 900 | EHP 0.1k | Cost 400M ISK
+44 abyss runs (firestorm)
+
+[Gila, Synthetic Gila Abyss B]
+Rapid Light Missile Launcher II
+Rapid Light Missile Launcher II
+
+Multispectrum Shield Hardener II
+10MN Afterburner II
+Large Shield Extender II
+
+Damage Control II
+Drone Damage Amplifier II
+
+Medium Core Defense Field Extender II
+
+VERBATIM RULE: reproduce each fit's [Header, Name] line and every module line EXACTLY as shown above — no substitutions, no 'improvements', no module reordering. Cite the source URL from the meta line in your response.

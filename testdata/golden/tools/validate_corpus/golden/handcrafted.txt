@@ -1,0 +1,724 @@
+##### hc_rifter_valid_clean #####
+STATUS: VALID — Rifter
+
+CPU: 124.5 / 162.5 tf
+PG:  21.2 / 51.2 MW
+Hi slots:  2/3
+Mid slots: 2/3
+Low slots: 2/4
+Rigs:      1/3
+Note: skill profile = Power Grid Management V + CPU Management V (+25% PG/CPU), Weapon Upgrades V (-25% turret/launcher CPU), Advanced Weapon Upgrades V (-10% turret/launcher PG), Energy Grid Upgrades V (-25% power-core CPU). Implants and faction-specific bonuses NOT modelled. Data: SDE.
+---- typed ----
+{"ship":"Rifter","valid":true,"cpu":{"used":124.5,"capacity":162.5,"unit":"tf"},"pg":{"used":21.2,"capacity":51.25,"unit":"MW"},"slots":{"high":{"used":2,"capacity":3},"mid":{"used":2,"capacity":3},"low":{"used":2,"capacity":4},"rig":{"used":1,"capacity":3}},"violations":[],"unresolved_modules":[],"data_source":"SDE"}
+##### hc_rifter_hi_overflow #####
+STATUS: INVALID (1 violation(s)) — Rifter
+
+CPU: 78.8 / 162.5 tf
+PG:  30.0 / 51.2 MW
+Hi slots:  5/3 [OVER]
+Mid slots: 1/3
+Low slots: 1/4
+Rigs:      0/3
+
+VIOLATIONS:
+• hi slots over: 5 used, 3 available. Remove: '200mm AutoCannon II', '200mm AutoCannon II'.
+Note: skill profile = Power Grid Management V + CPU Management V (+25% PG/CPU), Weapon Upgrades V (-25% turret/launcher CPU), Advanced Weapon Upgrades V (-10% turret/launcher PG), Energy Grid Upgrades V (-25% power-core CPU). Implants and faction-specific bonuses NOT modelled. Data: SDE.
+---- typed ----
+{"ship":"Rifter","valid":false,"cpu":{"used":78.75,"capacity":162.5,"unit":"tf"},"pg":{"used":30,"capacity":51.25,"unit":"MW"},"slots":{"high":{"used":5,"capacity":3},"mid":{"used":1,"capacity":3},"low":{"used":1,"capacity":4},"rig":{"used":0,"capacity":3}},"violations":["hi slots over: 5 used, 3 available. Remove: '200mm AutoCannon II', '200mm AutoCannon II'."],"unresolved_modules":[],"data_source":"SDE"}
+##### hc_rifter_mid_overflow #####
+STATUS: INVALID (1 violation(s)) — Rifter
+
+CPU: 161.8 / 162.5 tf
+PG:  25.6 / 51.2 MW
+Hi slots:  1/3
+Mid slots: 5/3 [OVER]
+Low slots: 1/4
+Rigs:      0/3
+
+VIOLATIONS:
+• mid slots over: 5 used, 3 available. Remove: 'Small Capacitor Booster II', 'Stasis Webifier II'.
+Note: skill profile = Power Grid Management V + CPU Management V (+25% PG/CPU), Weapon Upgrades V (-25% turret/launcher CPU), Advanced Weapon Upgrades V (-10% turret/launcher PG), Energy Grid Upgrades V (-25% power-core CPU). Implants and faction-specific bonuses NOT modelled. Data: SDE.
+---- typed ----
+{"ship":"Rifter","valid":false,"cpu":{"used":161.75,"capacity":162.5,"unit":"tf"},"pg":{"used":25.6,"capacity":51.25,"unit":"MW"},"slots":{"high":{"used":1,"capacity":3},"mid":{"used":5,"capacity":3},"low":{"used":1,"capacity":4},"rig":{"used":0,"capacity":3}},"violations":["mid slots over: 5 used, 3 available. Remove: 'Small Capacitor Booster II', 'Stasis Webifier II'."],"unresolved_modules":[],"data_source":"SDE"}
+##### hc_rifter_low_overflow #####
+STATUS: INVALID (2 violation(s)) — Rifter
+
+CPU: 201.8 / 162.5 tf
+PG:  20.6 / 51.2 MW
+Hi slots:  1/3
+Mid slots: 1/3
+Low slots: 6/4 [OVER]
+Rigs:      0/3
+
+VIOLATIONS:
+• CPU over by 39.2 tf (201.8/162.5 tf). Top consumers: 'Gyrostabilizer II' (30.0 tf), 'Gyrostabilizer II' (30.0 tf), 'Gyrostabilizer II' (30.0 tf). Remove or downgrade one of these.
+• low slots over: 6 used, 4 available. Remove: 'Gyrostabilizer II', 'Heat Sink II'.
+Note: skill profile = Power Grid Management V + CPU Management V (+25% PG/CPU), Weapon Upgrades V (-25% turret/launcher CPU), Advanced Weapon Upgrades V (-10% turret/launcher PG), Energy Grid Upgrades V (-25% power-core CPU). Implants and faction-specific bonuses NOT modelled. Data: SDE.
+---- typed ----
+{"ship":"Rifter","valid":false,"cpu":{"used":201.75,"capacity":162.5,"unit":"tf"},"pg":{"used":20.6,"capacity":51.25,"unit":"MW"},"slots":{"high":{"used":1,"capacity":3},"mid":{"used":1,"capacity":3},"low":{"used":6,"capacity":4},"rig":{"used":0,"capacity":3}},"violations":["CPU over by 39.2 tf (201.8/162.5 tf). Top consumers: 'Gyrostabilizer II' (30.0 tf), 'Gyrostabilizer II' (30.0 tf), 'Gyrostabilizer II' (30.0 tf). Remove or downgrade one of these.","low slots over: 6 used, 4 available. Remove: 'Gyrostabilizer II', 'Heat Sink II'."],"unresolved_modules":[],"data_source":"SDE"}
+##### hc_rifter_rig_overflow #####
+STATUS: INVALID (1 violation(s)) — Rifter
+
+CPU: 51.8 / 162.5 tf
+PG:  15.6 / 51.2 MW
+Hi slots:  1/3
+Mid slots: 1/3
+Low slots: 1/4
+Rigs:      5/3 [OVER]
+
+VIOLATIONS:
+• rig slots over: 5 used, 3 available. Remove: 'Small Core Defense Field Extender I', 'Small Core Defense Field Extender I'.
+Note: skill profile = Power Grid Management V + CPU Management V (+25% PG/CPU), Weapon Upgrades V (-25% turret/launcher CPU), Advanced Weapon Upgrades V (-10% turret/launcher PG), Energy Grid Upgrades V (-25% power-core CPU). Implants and faction-specific bonuses NOT modelled. Data: SDE.
+---- typed ----
+{"ship":"Rifter","valid":false,"cpu":{"used":51.75,"capacity":162.5,"unit":"tf"},"pg":{"used":15.6,"capacity":51.25,"unit":"MW"},"slots":{"high":{"used":1,"capacity":3},"mid":{"used":1,"capacity":3},"low":{"used":1,"capacity":4},"rig":{"used":5,"capacity":3}},"violations":["rig slots over: 5 used, 3 available. Remove: 'Small Core Defense Field Extender I', 'Small Core Defense Field Extender I'."],"unresolved_modules":[],"data_source":"SDE"}
+##### hc_rifter_all_overflow #####
+STATUS: INVALID (5 violation(s)) — Rifter
+
+CPU: 272.0 / 162.5 tf
+PG:  39.4 / 51.2 MW
+Hi slots:  4/3 [OVER]
+Mid slots: 4/3 [OVER]
+Low slots: 5/4 [OVER]
+Rigs:      4/3 [OVER]
+
+VIOLATIONS:
+• CPU over by 109.5 tf (272.0/162.5 tf). Top consumers: 'Warp Scrambler II' (36.0 tf), 'Gyrostabilizer II' (30.0 tf), 'Gyrostabilizer II' (30.0 tf). Remove or downgrade one of these.
+• hi slots over: 4 used, 3 available. Remove: '200mm AutoCannon II'.
+• mid slots over: 4 used, 3 available. Remove: 'Small Capacitor Booster II'.
+• low slots over: 5 used, 4 available. Remove: 'Magnetic Field Stabilizer II'.
+• rig slots over: 4 used, 3 available. Remove: 'Small Core Defense Field Extender I'.
+Note: skill profile = Power Grid Management V + CPU Management V (+25% PG/CPU), Weapon Upgrades V (-25% turret/launcher CPU), Advanced Weapon Upgrades V (-10% turret/launcher PG), Energy Grid Upgrades V (-25% power-core CPU). Implants and faction-specific bonuses NOT modelled. Data: SDE.
+---- typed ----
+{"ship":"Rifter","valid":false,"cpu":{"used":272,"capacity":162.5,"unit":"tf"},"pg":{"used":39.4,"capacity":51.25,"unit":"MW"},"slots":{"high":{"used":4,"capacity":3},"mid":{"used":4,"capacity":3},"low":{"used":5,"capacity":4},"rig":{"used":4,"capacity":3}},"violations":["CPU over by 109.5 tf (272.0/162.5 tf). Top consumers: 'Warp Scrambler II' (36.0 tf), 'Gyrostabilizer II' (30.0 tf), 'Gyrostabilizer II' (30.0 tf). Remove or downgrade one of these.","hi slots over: 4 used, 3 available. Remove: '200mm AutoCannon II'.","mid slots over: 4 used, 3 available. Remove: 'Small Capacitor Booster II'.","low slots over: 5 used, 4 available. Remove: 'Magnetic Field Stabilizer II'.","rig slots over: 4 used, 3 available. Remove: 'Small Core Defense Field Extender I'."],"unresolved_modules":[],"data_source":"SDE"}
+##### hc_rifter_cpu_pg_over #####
+STATUS: INVALID (2 violation(s)) — Rifter
+
+CPU: 266.0 / 162.5 tf
+PG:  723.7 / 51.2 MW
+Hi slots:  3/3 [FULL]
+Mid slots: 3/3 [FULL]
+Low slots: 4/4 [FULL]
+Rigs:      0/3
+
+VIOLATIONS:
+• CPU over by 103.5 tf (266.0/162.5 tf). Top consumers: '100MN Afterburner II' (50.0 tf), 'Warp Scrambler II' (36.0 tf), 'Damage Control II' (30.0 tf). Remove or downgrade one of these.
+• PG over by 672.5 MW (723.7/51.2 MW). Top consumers: '100MN Afterburner II' (688.0 MW), '280mm Howitzer Artillery II' (9.9 MW), '280mm Howitzer Artillery II' (9.9 MW). Remove or downgrade one of these.
+Note: skill profile = Power Grid Management V + CPU Management V (+25% PG/CPU), Weapon Upgrades V (-25% turret/launcher CPU), Advanced Weapon Upgrades V (-10% turret/launcher PG), Energy Grid Upgrades V (-25% power-core CPU). Implants and faction-specific bonuses NOT modelled. Data: SDE.
+---- typed ----
+{"ship":"Rifter","valid":false,"cpu":{"used":266,"capacity":162.5,"unit":"tf"},"pg":{"used":723.7,"capacity":51.25,"unit":"MW"},"slots":{"high":{"used":3,"capacity":3},"mid":{"used":3,"capacity":3},"low":{"used":4,"capacity":4},"rig":{"used":0,"capacity":3}},"violations":["CPU over by 103.5 tf (266.0/162.5 tf). Top consumers: '100MN Afterburner II' (50.0 tf), 'Warp Scrambler II' (36.0 tf), 'Damage Control II' (30.0 tf). Remove or downgrade one of these.","PG over by 672.5 MW (723.7/51.2 MW). Top consumers: '100MN Afterburner II' (688.0 MW), '280mm Howitzer Artillery II' (9.9 MW), '280mm Howitzer Artillery II' (9.9 MW). Remove or downgrade one of these."],"unresolved_modules":[],"data_source":"SDE"}
+##### hc_rifter_group_limit_dcu #####
+STATUS: INVALID (1 violation(s)) — Rifter
+
+CPU: 111.8 / 162.5 tf
+PG:  17.6 / 51.2 MW
+Hi slots:  1/3
+Mid slots: 1/3
+Low slots: 3/4
+Rigs:      0/3
+
+VIOLATIONS:
+• only 1 module(s) of 'Damage Control II' (or same group) can be fitted; found 2 (Damage Control II, Damage Control II)
+Note: skill profile = Power Grid Management V + CPU Management V (+25% PG/CPU), Weapon Upgrades V (-25% turret/launcher CPU), Advanced Weapon Upgrades V (-10% turret/launcher PG), Energy Grid Upgrades V (-25% power-core CPU). Implants and faction-specific bonuses NOT modelled. Data: SDE.
+---- typed ----
+{"ship":"Rifter","valid":false,"cpu":{"used":111.75,"capacity":162.5,"unit":"tf"},"pg":{"used":17.6,"capacity":51.25,"unit":"MW"},"slots":{"high":{"used":1,"capacity":3},"mid":{"used":1,"capacity":3},"low":{"used":3,"capacity":4},"rig":{"used":0,"capacity":3}},"violations":["only 1 module(s) of 'Damage Control II' (or same group) can be fitted; found 2 (Damage Control II, Damage Control II)"],"unresolved_modules":[],"data_source":"SDE"}
+##### hc_unknown_modules_hi_mid_low #####
+STATUS: INVALID (1 violation(s)) — Rifter
+
+CPU: 72.8 / 162.5 tf
+PG:  5.6 / 51.2 MW
+Hi slots:  2/3
+Mid slots: 2/3
+Low slots: 2/4
+Rigs:      1/3
+
+VIOLATIONS:
+• unknown module(s) (not in SDE/ESI — likely fabricated): Fabricated Autocannon 9000, Imaginary Afterburner X, Phantom Plating Z, Imaginary Rig Q
+Unresolved modules (not counted): Fabricated Autocannon 9000, Imaginary Afterburner X, Phantom Plating Z, Imaginary Rig Q
+Note: skill profile = Power Grid Management V + CPU Management V (+25% PG/CPU), Weapon Upgrades V (-25% turret/launcher CPU), Advanced Weapon Upgrades V (-10% turret/launcher PG), Energy Grid Upgrades V (-25% power-core CPU). Implants and faction-specific bonuses NOT modelled. Data: SDE.
+---- typed ----
+{"ship":"Rifter","valid":false,"cpu":{"used":72.75,"capacity":162.5,"unit":"tf"},"pg":{"used":5.6,"capacity":51.25,"unit":"MW"},"slots":{"high":{"used":2,"capacity":3},"mid":{"used":2,"capacity":3},"low":{"used":2,"capacity":4},"rig":{"used":1,"capacity":3}},"violations":["unknown module(s) (not in SDE/ESI — likely fabricated): Fabricated Autocannon 9000, Imaginary Afterburner X, Phantom Plating Z, Imaginary Rig Q"],"unresolved_modules":["Fabricated Autocannon 9000","Imaginary Afterburner X","Phantom Plating Z","Imaginary Rig Q"],"data_source":"SDE"}
+##### hc_unknown_pushes_slot_over #####
+STATUS: INVALID (2 violation(s)) — Rifter
+
+CPU: 13.5 / 162.5 tf
+PG:  7.2 / 51.2 MW
+Hi slots:  4/3 [OVER]
+Mid slots: 0/3
+Low slots: 0/4
+Rigs:      0/3
+
+VIOLATIONS:
+• hi slots over: 4 used, 3 available. Remove: 'Fabricated Autocannon 9001'.
+• unknown module(s) (not in SDE/ESI — likely fabricated): Fabricated Autocannon 9000, Fabricated Autocannon 9001
+Unresolved modules (not counted): Fabricated Autocannon 9000, Fabricated Autocannon 9001
+Note: skill profile = Power Grid Management V + CPU Management V (+25% PG/CPU), Weapon Upgrades V (-25% turret/launcher CPU), Advanced Weapon Upgrades V (-10% turret/launcher PG), Energy Grid Upgrades V (-25% power-core CPU). Implants and faction-specific bonuses NOT modelled. Data: SDE.
+---- typed ----
+{"ship":"Rifter","valid":false,"cpu":{"used":13.5,"capacity":162.5,"unit":"tf"},"pg":{"used":7.2,"capacity":51.25,"unit":"MW"},"slots":{"high":{"used":4,"capacity":3},"mid":{"used":0,"capacity":3},"low":{"used":0,"capacity":4},"rig":{"used":0,"capacity":3}},"violations":["hi slots over: 4 used, 3 available. Remove: 'Fabricated Autocannon 9001'.","unknown module(s) (not in SDE/ESI — likely fabricated): Fabricated Autocannon 9000, Fabricated Autocannon 9001"],"unresolved_modules":["Fabricated Autocannon 9000","Fabricated Autocannon 9001"],"data_source":"SDE"}
+##### hc_unresolvable_hull #####
+Could not resolve ship 'Totally Fake Hull' to a type_id.
+---- typed ----
+null
+##### hc_no_header #####
+Could not parse EFT: missing header line [Ship Name, Fit Name].
+---- typed ----
+null
+##### hc_empty_input #####
+Could not parse EFT: missing header line [Ship Name, Fit Name].
+---- typed ----
+null
+##### hc_header_only #####
+STATUS: VALID — Rifter
+
+CPU: 0.0 / 162.5 tf
+PG:  0.0 / 51.2 MW
+Hi slots:  0/3
+Mid slots: 0/3
+Low slots: 0/4
+Rigs:      0/3
+Note: skill profile = Power Grid Management V + CPU Management V (+25% PG/CPU), Weapon Upgrades V (-25% turret/launcher CPU), Advanced Weapon Upgrades V (-10% turret/launcher PG), Energy Grid Upgrades V (-25% power-core CPU). Implants and faction-specific bonuses NOT modelled. Data: SDE.
+---- typed ----
+{"ship":"Rifter","valid":true,"cpu":{"used":0,"capacity":162.5,"unit":"tf"},"pg":{"used":0,"capacity":51.25,"unit":"MW"},"slots":{"high":{"used":0,"capacity":3},"mid":{"used":0,"capacity":3},"low":{"used":0,"capacity":4},"rig":{"used":0,"capacity":3}},"violations":[],"unresolved_modules":[],"data_source":"SDE"}
+##### hc_hull_alias_case #####
+STATUS: VALID — rifter
+
+CPU: 21.8 / 162.5 tf
+PG:  14.6 / 51.2 MW
+Hi slots:  1/3
+Mid slots: 1/3
+Low slots: 0/4
+Rigs:      0/3
+Note: skill profile = Power Grid Management V + CPU Management V (+25% PG/CPU), Weapon Upgrades V (-25% turret/launcher CPU), Advanced Weapon Upgrades V (-10% turret/launcher PG), Energy Grid Upgrades V (-25% power-core CPU). Implants and faction-specific bonuses NOT modelled. Data: SDE.
+---- typed ----
+{"ship":"rifter","valid":true,"cpu":{"used":21.75,"capacity":162.5,"unit":"tf"},"pg":{"used":14.6,"capacity":51.25,"unit":"MW"},"slots":{"high":{"used":1,"capacity":3},"mid":{"used":1,"capacity":3},"low":{"used":0,"capacity":4},"rig":{"used":0,"capacity":3}},"violations":[],"unresolved_modules":[],"data_source":"SDE"}
+##### hc_empty_slot_markers #####
+STATUS: VALID — Rifter
+
+CPU: 51.8 / 162.5 tf
+PG:  15.6 / 51.2 MW
+Hi slots:  1/3
+Mid slots: 1/3
+Low slots: 1/4
+Rigs:      0/3
+Note: skill profile = Power Grid Management V + CPU Management V (+25% PG/CPU), Weapon Upgrades V (-25% turret/launcher CPU), Advanced Weapon Upgrades V (-10% turret/launcher PG), Energy Grid Upgrades V (-25% power-core CPU). Implants and faction-specific bonuses NOT modelled. Data: SDE.
+---- typed ----
+{"ship":"Rifter","valid":true,"cpu":{"used":51.75,"capacity":162.5,"unit":"tf"},"pg":{"used":15.6,"capacity":51.25,"unit":"MW"},"slots":{"high":{"used":1,"capacity":3},"mid":{"used":1,"capacity":3},"low":{"used":1,"capacity":4},"rig":{"used":0,"capacity":3}},"violations":[],"unresolved_modules":[],"data_source":"SDE"}
+##### hc_other_bracket_lines #####
+STATUS: VALID — Rifter
+
+CPU: 21.8 / 162.5 tf
+PG:  14.6 / 51.2 MW
+Hi slots:  1/3
+Mid slots: 1/3
+Low slots: 0/4
+Rigs:      0/3
+Note: skill profile = Power Grid Management V + CPU Management V (+25% PG/CPU), Weapon Upgrades V (-25% turret/launcher CPU), Advanced Weapon Upgrades V (-10% turret/launcher PG), Energy Grid Upgrades V (-25% power-core CPU). Implants and faction-specific bonuses NOT modelled. Data: SDE.
+---- typed ----
+{"ship":"Rifter","valid":true,"cpu":{"used":21.75,"capacity":162.5,"unit":"tf"},"pg":{"used":14.6,"capacity":51.25,"unit":"MW"},"slots":{"high":{"used":1,"capacity":3},"mid":{"used":1,"capacity":3},"low":{"used":0,"capacity":4},"rig":{"used":0,"capacity":3}},"violations":[],"unresolved_modules":[],"data_source":"SDE"}
+##### hc_mutated_marker #####
+STATUS: VALID — Rifter
+
+CPU: 81.8 / 162.5 tf
+PG:  16.6 / 51.2 MW
+Hi slots:  1/3
+Mid slots: 1/3
+Low slots: 2/4
+Rigs:      0/3
+Note: skill profile = Power Grid Management V + CPU Management V (+25% PG/CPU), Weapon Upgrades V (-25% turret/launcher CPU), Advanced Weapon Upgrades V (-10% turret/launcher PG), Energy Grid Upgrades V (-25% power-core CPU). Implants and faction-specific bonuses NOT modelled. Data: SDE.
+---- typed ----
+{"ship":"Rifter","valid":true,"cpu":{"used":81.75,"capacity":162.5,"unit":"tf"},"pg":{"used":16.6,"capacity":51.25,"unit":"MW"},"slots":{"high":{"used":1,"capacity":3},"mid":{"used":1,"capacity":3},"low":{"used":2,"capacity":4},"rig":{"used":0,"capacity":3}},"violations":[],"unresolved_modules":[],"data_source":"SDE"}
+##### hc_state_markers #####
+STATUS: VALID — Rifter
+
+CPU: 124.5 / 162.5 tf
+PG:  21.2 / 51.2 MW
+Hi slots:  2/3
+Mid slots: 2/3
+Low slots: 2/4
+Rigs:      0/3
+Note: skill profile = Power Grid Management V + CPU Management V (+25% PG/CPU), Weapon Upgrades V (-25% turret/launcher CPU), Advanced Weapon Upgrades V (-10% turret/launcher PG), Energy Grid Upgrades V (-25% power-core CPU). Implants and faction-specific bonuses NOT modelled. Data: SDE.
+---- typed ----
+{"ship":"Rifter","valid":true,"cpu":{"used":124.5,"capacity":162.5,"unit":"tf"},"pg":{"used":21.2,"capacity":51.25,"unit":"MW"},"slots":{"high":{"used":2,"capacity":3},"mid":{"used":2,"capacity":3},"low":{"used":2,"capacity":4},"rig":{"used":0,"capacity":3}},"violations":[],"unresolved_modules":[],"data_source":"SDE"}
+##### hc_charges_drones_cargo #####
+STATUS: VALID — Rifter
+
+CPU: 58.5 / 162.5 tf
+PG:  19.2 / 51.2 MW
+Hi slots:  2/3
+Mid slots: 1/3
+Low slots: 1/4
+Rigs:      1/3
+Note: skill profile = Power Grid Management V + CPU Management V (+25% PG/CPU), Weapon Upgrades V (-25% turret/launcher CPU), Advanced Weapon Upgrades V (-10% turret/launcher PG), Energy Grid Upgrades V (-25% power-core CPU). Implants and faction-specific bonuses NOT modelled. Data: SDE.
+---- typed ----
+{"ship":"Rifter","valid":true,"cpu":{"used":58.5,"capacity":162.5,"unit":"tf"},"pg":{"used":19.2,"capacity":51.25,"unit":"MW"},"slots":{"high":{"used":2,"capacity":3},"mid":{"used":1,"capacity":3},"low":{"used":1,"capacity":4},"rig":{"used":1,"capacity":3}},"violations":[],"unresolved_modules":[],"data_source":"SDE"}
+##### hc_booster_implants_cargo #####
+STATUS: VALID — Rifter
+
+CPU: 51.8 / 162.5 tf
+PG:  15.6 / 51.2 MW
+Hi slots:  1/3
+Mid slots: 1/3
+Low slots: 1/4
+Rigs:      0/3
+Note: skill profile = Power Grid Management V + CPU Management V (+25% PG/CPU), Weapon Upgrades V (-25% turret/launcher CPU), Advanced Weapon Upgrades V (-10% turret/launcher PG), Energy Grid Upgrades V (-25% power-core CPU). Implants and faction-specific bonuses NOT modelled. Data: SDE.
+---- typed ----
+{"ship":"Rifter","valid":true,"cpu":{"used":51.75,"capacity":162.5,"unit":"tf"},"pg":{"used":15.6,"capacity":51.25,"unit":"MW"},"slots":{"high":{"used":1,"capacity":3},"mid":{"used":1,"capacity":3},"low":{"used":1,"capacity":4},"rig":{"used":0,"capacity":3}},"violations":[],"unresolved_modules":[],"data_source":"SDE"}
+##### hc_ship_name_as_module #####
+STATUS: INVALID (1 violation(s)) — Rifter
+
+CPU: 21.8 / 162.5 tf
+PG:  14.6 / 51.2 MW
+Hi slots:  1/3
+Mid slots: 1/3
+Low slots: 0/4
+Rigs:      0/3
+
+VIOLATIONS:
+• not a fittable module (resolved via SDE/ESI but has no slot and is not a drone or charge): 'Rifter'
+Note: skill profile = Power Grid Management V + CPU Management V (+25% PG/CPU), Weapon Upgrades V (-25% turret/launcher CPU), Advanced Weapon Upgrades V (-10% turret/launcher PG), Energy Grid Upgrades V (-25% power-core CPU). Implants and faction-specific bonuses NOT modelled. Data: SDE.
+---- typed ----
+{"ship":"Rifter","valid":false,"cpu":{"used":21.75,"capacity":162.5,"unit":"tf"},"pg":{"used":14.6,"capacity":51.25,"unit":"MW"},"slots":{"high":{"used":1,"capacity":3},"mid":{"used":1,"capacity":3},"low":{"used":0,"capacity":4},"rig":{"used":0,"capacity":3}},"violations":["not a fittable module (resolved via SDE/ESI but has no slot and is not a drone or charge): 'Rifter'"],"unresolved_modules":[],"data_source":"SDE"}
+##### hc_qty_suffix_variants #####
+STATUS: VALID — Rifter
+
+CPU: 28.5 / 162.5 tf
+PG:  18.2 / 51.2 MW
+Hi slots:  2/3
+Mid slots: 1/3
+Low slots: 0/4
+Rigs:      0/3
+Note: skill profile = Power Grid Management V + CPU Management V (+25% PG/CPU), Weapon Upgrades V (-25% turret/launcher CPU), Advanced Weapon Upgrades V (-10% turret/launcher PG), Energy Grid Upgrades V (-25% power-core CPU). Implants and faction-specific bonuses NOT modelled. Data: SDE.
+---- typed ----
+{"ship":"Rifter","valid":true,"cpu":{"used":28.5,"capacity":162.5,"unit":"tf"},"pg":{"used":18.2,"capacity":51.25,"unit":"MW"},"slots":{"high":{"used":2,"capacity":3},"mid":{"used":1,"capacity":3},"low":{"used":0,"capacity":4},"rig":{"used":0,"capacity":3}},"violations":[],"unresolved_modules":[],"data_source":"SDE"}
+##### hc_markdown_fence #####
+STATUS: VALID — Rifter
+
+CPU: 58.5 / 162.5 tf
+PG:  19.2 / 51.2 MW
+Hi slots:  2/3
+Mid slots: 1/3
+Low slots: 1/4
+Rigs:      0/3
+Note: skill profile = Power Grid Management V + CPU Management V (+25% PG/CPU), Weapon Upgrades V (-25% turret/launcher CPU), Advanced Weapon Upgrades V (-10% turret/launcher PG), Energy Grid Upgrades V (-25% power-core CPU). Implants and faction-specific bonuses NOT modelled. Data: SDE.
+---- typed ----
+{"ship":"Rifter","valid":true,"cpu":{"used":58.5,"capacity":162.5,"unit":"tf"},"pg":{"used":19.2,"capacity":51.25,"unit":"MW"},"slots":{"high":{"used":2,"capacity":3},"mid":{"used":1,"capacity":3},"low":{"used":1,"capacity":4},"rig":{"used":0,"capacity":3}},"violations":[],"unresolved_modules":[],"data_source":"SDE"}
+##### hc_comment_and_text_before_header #####
+STATUS: VALID — Rifter
+
+CPU: 21.8 / 162.5 tf
+PG:  14.6 / 51.2 MW
+Hi slots:  1/3
+Mid slots: 1/3
+Low slots: 0/4
+Rigs:      0/3
+Note: skill profile = Power Grid Management V + CPU Management V (+25% PG/CPU), Weapon Upgrades V (-25% turret/launcher CPU), Advanced Weapon Upgrades V (-10% turret/launcher PG), Energy Grid Upgrades V (-25% power-core CPU). Implants and faction-specific bonuses NOT modelled. Data: SDE.
+---- typed ----
+{"ship":"Rifter","valid":true,"cpu":{"used":21.75,"capacity":162.5,"unit":"tf"},"pg":{"used":14.6,"capacity":51.25,"unit":"MW"},"slots":{"high":{"used":1,"capacity":3},"mid":{"used":1,"capacity":3},"low":{"used":0,"capacity":4},"rig":{"used":0,"capacity":3}},"violations":[],"unresolved_modules":[],"data_source":"SDE"}
+##### hc_many_blank_sections #####
+STATUS: INVALID (1 violation(s)) — Rifter
+
+CPU: 51.8 / 162.5 tf
+PG:  15.6 / 51.2 MW
+Hi slots:  1/3
+Mid slots: 1/3
+Low slots: 1/4
+Rigs:      1/3
+
+VIOLATIONS:
+• unknown module(s) (not in SDE/ESI — likely fabricated): Fabricated Subsystem Q, Fabricated Tail Z
+Unresolved modules (not counted): Fabricated Subsystem Q, Fabricated Tail Z
+Note: skill profile = Power Grid Management V + CPU Management V (+25% PG/CPU), Weapon Upgrades V (-25% turret/launcher CPU), Advanced Weapon Upgrades V (-10% turret/launcher PG), Energy Grid Upgrades V (-25% power-core CPU). Implants and faction-specific bonuses NOT modelled. Data: SDE.
+---- typed ----
+{"ship":"Rifter","valid":false,"cpu":{"used":51.75,"capacity":162.5,"unit":"tf"},"pg":{"used":15.6,"capacity":51.25,"unit":"MW"},"slots":{"high":{"used":1,"capacity":3},"mid":{"used":1,"capacity":3},"low":{"used":1,"capacity":4},"rig":{"used":1,"capacity":3}},"violations":["unknown module(s) (not in SDE/ESI — likely fabricated): Fabricated Subsystem Q, Fabricated Tail Z"],"unresolved_modules":["Fabricated Subsystem Q","Fabricated Tail Z"],"data_source":"SDE"}
+##### hc_charge_only_lines_unknown_charge #####
+STATUS: VALID — Rifter
+
+CPU: 13.5 / 162.5 tf
+PG:  7.2 / 51.2 MW
+Hi slots:  2/3
+Mid slots: 0/3
+Low slots: 0/4
+Rigs:      0/3
+Note: skill profile = Power Grid Management V + CPU Management V (+25% PG/CPU), Weapon Upgrades V (-25% turret/launcher CPU), Advanced Weapon Upgrades V (-10% turret/launcher PG), Energy Grid Upgrades V (-25% power-core CPU). Implants and faction-specific bonuses NOT modelled. Data: SDE.
+---- typed ----
+{"ship":"Rifter","valid":true,"cpu":{"used":13.5,"capacity":162.5,"unit":"tf"},"pg":{"used":7.2,"capacity":51.25,"unit":"MW"},"slots":{"high":{"used":2,"capacity":3},"mid":{"used":0,"capacity":3},"low":{"used":0,"capacity":4},"rig":{"used":0,"capacity":3}},"violations":[],"unresolved_modules":[],"data_source":"SDE"}
+##### hc_thorax_valid #####
+STATUS: VALID — Thorax
+
+CPU: 218.5 / 412.5 tf
+PG:  99.5 / 1075.0 MW
+Hi slots:  5/5 [FULL]
+Mid slots: 2/4
+Low slots: 3/5
+Rigs:      0/3
+Note: skill profile = Power Grid Management V + CPU Management V (+25% PG/CPU), Weapon Upgrades V (-25% turret/launcher CPU), Advanced Weapon Upgrades V (-10% turret/launcher PG), Energy Grid Upgrades V (-25% power-core CPU). Implants and faction-specific bonuses NOT modelled. Data: SDE.
+---- typed ----
+{"ship":"Thorax","valid":true,"cpu":{"used":218.5,"capacity":412.5,"unit":"tf"},"pg":{"used":99.5,"capacity":1075,"unit":"MW"},"slots":{"high":{"used":5,"capacity":5},"mid":{"used":2,"capacity":4},"low":{"used":3,"capacity":5},"rig":{"used":0,"capacity":3}},"violations":[],"unresolved_modules":[],"data_source":"SDE"}
+##### hc_tengu_subsystems #####
+STATUS: VALID — Tengu
+
+CPU: 213.5 / 734.4 tf
+PG:  329.6 / 762.5 MW
+Hi slots:  3/8
+Mid slots: 2/6
+Low slots: 1/2
+Rigs:      0/3
+Note: skill profile = Power Grid Management V + CPU Management V (+25% PG/CPU), Weapon Upgrades V (-25% turret/launcher CPU), Advanced Weapon Upgrades V (-10% turret/launcher PG), Energy Grid Upgrades V (-25% power-core CPU). Implants and faction-specific bonuses NOT modelled. Data: SDE.
+---- typed ----
+{"ship":"Tengu","valid":true,"cpu":{"used":213.5,"capacity":734.375,"unit":"tf"},"pg":{"used":329.6,"capacity":762.5,"unit":"MW"},"slots":{"high":{"used":3,"capacity":8},"mid":{"used":2,"capacity":6},"low":{"used":1,"capacity":2},"rig":{"used":0,"capacity":3}},"violations":[],"unresolved_modules":[],"data_source":"SDE"}
+##### hc_tengu_six_subsystems #####
+STATUS: INVALID (3 violation(s)) — Tengu
+
+CPU: 102.5 / 734.4 tf
+PG:  125.2 / 915.0 MW
+Hi slots:  1/8
+Mid slots: 1/6
+Low slots: 1/2
+Rigs:      0/3
+
+VIOLATIONS:
+• subsystem slots over: 6 used, 4 available. Remove: 'Tengu Propulsion - Interdiction Nullifier', 'Tengu Propulsion - Interdiction Nullifier'.
+• duplicate subsystem group (only one subsystem of each group fits): Tengu Core - Electronic Efficiency Gate, Tengu Core - Augmented Graviton Reactor
+• duplicate subsystem group (only one subsystem of each group fits): Tengu Propulsion - Interdiction Nullifier, Tengu Propulsion - Interdiction Nullifier
+Note: skill profile = Power Grid Management V + CPU Management V (+25% PG/CPU), Weapon Upgrades V (-25% turret/launcher CPU), Advanced Weapon Upgrades V (-10% turret/launcher PG), Energy Grid Upgrades V (-25% power-core CPU). Implants and faction-specific bonuses NOT modelled. Data: SDE.
+---- typed ----
+{"ship":"Tengu","valid":false,"cpu":{"used":102.5,"capacity":734.375,"unit":"tf"},"pg":{"used":125.2,"capacity":915,"unit":"MW"},"slots":{"high":{"used":1,"capacity":8},"mid":{"used":1,"capacity":6},"low":{"used":1,"capacity":2},"rig":{"used":0,"capacity":3}},"violations":["subsystem slots over: 6 used, 4 available. Remove: 'Tengu Propulsion - Interdiction Nullifier', 'Tengu Propulsion - Interdiction Nullifier'.","duplicate subsystem group (only one subsystem of each group fits): Tengu Core - Electronic Efficiency Gate, Tengu Core - Augmented Graviton Reactor","duplicate subsystem group (only one subsystem of each group fits): Tengu Propulsion - Interdiction Nullifier, Tengu Propulsion - Interdiction Nullifier"],"unresolved_modules":[],"data_source":"SDE"}
+##### hc_subsystem_on_non_t3 #####
+STATUS: INVALID (1 violation(s)) — Rifter
+
+CPU: 51.8 / 162.5 tf
+PG:  15.6 / 51.2 MW
+Hi slots:  1/3
+Mid slots: 1/3
+Low slots: 1/4
+Rigs:      0/3
+
+VIOLATIONS:
+• subsystem slots over: 1 used, 0 available. Remove: 'Tengu Core - Electronic Efficiency Gate'.
+Note: skill profile = Power Grid Management V + CPU Management V (+25% PG/CPU), Weapon Upgrades V (-25% turret/launcher CPU), Advanced Weapon Upgrades V (-10% turret/launcher PG), Energy Grid Upgrades V (-25% power-core CPU). Implants and faction-specific bonuses NOT modelled. Data: SDE.
+---- typed ----
+{"ship":"Rifter","valid":false,"cpu":{"used":51.75,"capacity":162.5,"unit":"tf"},"pg":{"used":15.6,"capacity":51.25,"unit":"MW"},"slots":{"high":{"used":1,"capacity":3},"mid":{"used":1,"capacity":3},"low":{"used":1,"capacity":4},"rig":{"used":0,"capacity":3}},"violations":["subsystem slots over: 1 used, 0 available. Remove: 'Tengu Core - Electronic Efficiency Gate'."],"unresolved_modules":[],"data_source":"SDE"}
+##### hc_alpha_clean_t1 #####
+STATUS: VALID — Rifter
+
+CPU: 107.5 / 162.5 tf
+PG:  21.2 / 51.2 MW
+Hi slots:  2/3
+Mid slots: 2/3
+Low slots: 2/4
+Rigs:      1/3
+Note: skill profile = Power Grid Management V + CPU Management V (+25% PG/CPU), Weapon Upgrades V (-25% turret/launcher CPU), Advanced Weapon Upgrades V (-10% turret/launcher PG), Energy Grid Upgrades V (-25% power-core CPU). Implants and faction-specific bonuses NOT modelled. Data: SDE.
+---- typed ----
+{"ship":"Rifter","valid":true,"cpu":{"used":107.5,"capacity":162.5,"unit":"tf"},"pg":{"used":21.2,"capacity":51.25,"unit":"MW"},"slots":{"high":{"used":2,"capacity":3},"mid":{"used":2,"capacity":3},"low":{"used":2,"capacity":4},"rig":{"used":1,"capacity":3}},"violations":[],"unresolved_modules":[],"data_source":"SDE"}
+##### hc_alpha_t2_suffix #####
+STATUS: INVALID (1 violation(s)) — Rifter
+
+CPU: 124.5 / 162.5 tf
+PG:  21.2 / 51.2 MW
+Hi slots:  2/3
+Mid slots: 2/3
+Low slots: 2/4
+Rigs:      0/3
+
+VIOLATIONS:
+• alpha-clone illegal module(s), drone(s) or charge(s) (they need skills an Alpha clone cannot train - Omega required): 1MN Afterburner II
+Note: skill profile = Power Grid Management V + CPU Management V (+25% PG/CPU), Weapon Upgrades V (-25% turret/launcher CPU), Advanced Weapon Upgrades V (-10% turret/launcher PG), Energy Grid Upgrades V (-25% power-core CPU). Implants and faction-specific bonuses NOT modelled. Data: SDE.
+---- typed ----
+{"ship":"Rifter","valid":false,"cpu":{"used":124.5,"capacity":162.5,"unit":"tf"},"pg":{"used":21.2,"capacity":51.25,"unit":"MW"},"slots":{"high":{"used":2,"capacity":3},"mid":{"used":2,"capacity":3},"low":{"used":2,"capacity":4},"rig":{"used":0,"capacity":3}},"violations":["alpha-clone illegal module(s), drone(s) or charge(s) (they need skills an Alpha clone cannot train - Omega required): 1MN Afterburner II"],"unresolved_modules":[],"data_source":"SDE"}
+##### hc_alpha_t2_suffix_not_alpha #####
+STATUS: VALID — Rifter
+
+CPU: 124.5 / 162.5 tf
+PG:  21.2 / 51.2 MW
+Hi slots:  2/3
+Mid slots: 2/3
+Low slots: 2/4
+Rigs:      0/3
+Note: skill profile = Power Grid Management V + CPU Management V (+25% PG/CPU), Weapon Upgrades V (-25% turret/launcher CPU), Advanced Weapon Upgrades V (-10% turret/launcher PG), Energy Grid Upgrades V (-25% power-core CPU). Implants and faction-specific bonuses NOT modelled. Data: SDE.
+---- typed ----
+{"ship":"Rifter","valid":true,"cpu":{"used":124.5,"capacity":162.5,"unit":"tf"},"pg":{"used":21.2,"capacity":51.25,"unit":"MW"},"slots":{"high":{"used":2,"capacity":3},"mid":{"used":2,"capacity":3},"low":{"used":2,"capacity":4},"rig":{"used":0,"capacity":3}},"violations":[],"unresolved_modules":[],"data_source":"SDE"}
+##### hc_alpha_navy_factions #####
+STATUS: INVALID (3 violation(s)) — Rifter
+
+CPU: 140.5 / 162.5 tf
+PG:  1321.5 / 51.2 MW
+Hi slots:  1/3
+Mid slots: 4/3 [OVER]
+Low slots: 2/4
+Rigs:      0/3
+
+VIOLATIONS:
+• PG over by 1270.2 MW (1321.5/51.2 MW). Top consumers: 'Khanid Navy Torpedo Launcher' (1318.5 MW), 'Federation Navy Stasis Webifier' (1.0 MW), 'Caldari Navy Ballistic Control System' (1.0 MW). Remove or downgrade one of these.
+• mid slots over: 4 used, 3 available. Remove: 'Concord Warp Scrambler'.
+• unknown module(s) (not in SDE/ESI — likely fabricated): Ammatar Navy Medium Shield Booster, Mordu's Legion Heavy Assault Missile Launcher, Concord Warp Scrambler
+Unresolved modules (not counted): Ammatar Navy Medium Shield Booster, Mordu's Legion Heavy Assault Missile Launcher, Concord Warp Scrambler
+Note: skill profile = Power Grid Management V + CPU Management V (+25% PG/CPU), Weapon Upgrades V (-25% turret/launcher CPU), Advanced Weapon Upgrades V (-10% turret/launcher PG), Energy Grid Upgrades V (-25% power-core CPU). Implants and faction-specific bonuses NOT modelled. Data: SDE.
+---- typed ----
+{"ship":"Rifter","valid":false,"cpu":{"used":140.5,"capacity":162.5,"unit":"tf"},"pg":{"used":1321.5,"capacity":51.25,"unit":"MW"},"slots":{"high":{"used":1,"capacity":3},"mid":{"used":4,"capacity":3},"low":{"used":2,"capacity":4},"rig":{"used":0,"capacity":3}},"violations":["PG over by 1270.2 MW (1321.5/51.2 MW). Top consumers: 'Khanid Navy Torpedo Launcher' (1318.5 MW), 'Federation Navy Stasis Webifier' (1.0 MW), 'Caldari Navy Ballistic Control System' (1.0 MW). Remove or downgrade one of these.","mid slots over: 4 used, 3 available. Remove: 'Concord Warp Scrambler'.","unknown module(s) (not in SDE/ESI — likely fabricated): Ammatar Navy Medium Shield Booster, Mordu's Legion Heavy Assault Missile Launcher, Concord Warp Scrambler"],"unresolved_modules":["Ammatar Navy Medium Shield Booster","Mordu's Legion Heavy Assault Missile Launcher","Concord Warp Scrambler"],"data_source":"SDE"}
+##### hc_alpha_pirate_named #####
+STATUS: INVALID (2 violation(s)) — Rifter
+
+CPU: 16.0 / 162.5 tf
+PG:  1.0 / 51.2 MW
+Hi slots:  12/3 [OVER]
+Mid slots: 1/3
+Low slots: 0/4
+Rigs:      0/3
+
+VIOLATIONS:
+• hi slots over: 12 used, 3 available. Remove: 'Corelii A-Type Armor Hardener', 'Ashimmu Heavy Drone', 'Khanid Imperial Ballistic Control System', 'Estamel's Modified Invulnerability Field', 'Tobias' Alloyed Plate', 'Mizuro's Basic Booster', 'Hakim's Standard Cap Recharger', 'Setele's Hybrid Link', 'Vepas' Passive Targeter'.
+• unknown module(s) (not in SDE/ESI — likely fabricated): Gistum A-Type Medium Shield Amplifier, Pithum B-Type Shield Amplifier, Centii C-Type Armor Hardener, Corelii A-Type Armor Hardener, Ashimmu Heavy Drone, Khanid Imperial Ballistic Control System, Estamel's Modified Invulnerability Field, Tobias' Alloyed Plate, Mizuro's Basic Booster, Hakim's Standard Cap Recharger, Setele's Hybrid Link, Vepas' Passive Targeter
+Unresolved modules (not counted): Gistum A-Type Medium Shield Amplifier, Pithum B-Type Shield Amplifier, Centii C-Type Armor Hardener, Corelii A-Type Armor Hardener, Ashimmu Heavy Drone, Khanid Imperial Ballistic Control System, Estamel's Modified Invulnerability Field, Tobias' Alloyed Plate, Mizuro's Basic Booster, Hakim's Standard Cap Recharger, Setele's Hybrid Link, Vepas' Passive Targeter
+Note: skill profile = Power Grid Management V + CPU Management V (+25% PG/CPU), Weapon Upgrades V (-25% turret/launcher CPU), Advanced Weapon Upgrades V (-10% turret/launcher PG), Energy Grid Upgrades V (-25% power-core CPU). Implants and faction-specific bonuses NOT modelled. Data: SDE.
+---- typed ----
+{"ship":"Rifter","valid":false,"cpu":{"used":16,"capacity":162.5,"unit":"tf"},"pg":{"used":1,"capacity":51.25,"unit":"MW"},"slots":{"high":{"used":12,"capacity":3},"mid":{"used":1,"capacity":3},"low":{"used":0,"capacity":4},"rig":{"used":0,"capacity":3}},"violations":["hi slots over: 12 used, 3 available. Remove: 'Corelii A-Type Armor Hardener', 'Ashimmu Heavy Drone', 'Khanid Imperial Ballistic Control System', 'Estamel's Modified Invulnerability Field', 'Tobias' Alloyed Plate', 'Mizuro's Basic Booster', 'Hakim's Standard Cap Recharger', 'Setele's Hybrid Link', 'Vepas' Passive Targeter'.","unknown module(s) (not in SDE/ESI — likely fabricated): Gistum A-Type Medium Shield Amplifier, Pithum B-Type Shield Amplifier, Centii C-Type Armor Hardener, Corelii A-Type Armor Hardener, Ashimmu Heavy Drone, Khanid Imperial Ballistic Control System, Estamel's Modified Invulnerability Field, Tobias' Alloyed Plate, Mizuro's Basic Booster, Hakim's Standard Cap Recharger, Setele's Hybrid Link, Vepas' Passive Targeter"],"unresolved_modules":["Gistum A-Type Medium Shield Amplifier","Pithum B-Type Shield Amplifier","Centii C-Type Armor Hardener","Corelii A-Type Armor Hardener","Ashimmu Heavy Drone","Khanid Imperial Ballistic Control System","Estamel's Modified Invulnerability Field","Tobias' Alloyed Plate","Mizuro's Basic Booster","Hakim's Standard Cap Recharger","Setele's Hybrid Link","Vepas' Passive Targeter"],"data_source":"SDE"}
+##### hc_alpha_quoted_named #####
+STATUS: VALID — Rifter
+
+CPU: 33.8 / 162.5 tf
+PG:  4.6 / 51.2 MW
+Hi slots:  1/3
+Mid slots: 0/3
+Low slots: 1/4
+Rigs:      0/3
+Note: skill profile = Power Grid Management V + CPU Management V (+25% PG/CPU), Weapon Upgrades V (-25% turret/launcher CPU), Advanced Weapon Upgrades V (-10% turret/launcher PG), Energy Grid Upgrades V (-25% power-core CPU). Implants and faction-specific bonuses NOT modelled. Data: SDE.
+---- typed ----
+{"ship":"Rifter","valid":true,"cpu":{"used":33.75,"capacity":162.5,"unit":"tf"},"pg":{"used":4.6,"capacity":51.25,"unit":"MW"},"slots":{"high":{"used":1,"capacity":3},"mid":{"used":0,"capacity":3},"low":{"used":1,"capacity":4},"rig":{"used":0,"capacity":3}},"violations":[],"unresolved_modules":[],"data_source":"SDE"}
+##### hc_alpha_type_letter #####
+STATUS: INVALID (2 violation(s)) — Rifter
+
+CPU: 84.5 / 162.5 tf
+PG:  437.0 / 51.2 MW
+Hi slots:  2/3
+Mid slots: 1/3
+Low slots: 2/4
+Rigs:      0/3
+
+VIOLATIONS:
+• PG over by 385.8 MW (437.0/51.2 MW). Top consumers: 'Thukker Large Cap Battery' (280.0 MW), 'Centum A-Type Medium Armor Repairer' (156.0 MW), 'Corelum B-Type Multispectrum Energized Membrane' (1.0 MW). Remove or downgrade one of these.
+• unknown module(s) (not in SDE/ESI — likely fabricated): Fake C-Type Thing, Fake X-Type Thing
+Unresolved modules (not counted): Fake C-Type Thing, Fake X-Type Thing
+Note: skill profile = Power Grid Management V + CPU Management V (+25% PG/CPU), Weapon Upgrades V (-25% turret/launcher CPU), Advanced Weapon Upgrades V (-10% turret/launcher PG), Energy Grid Upgrades V (-25% power-core CPU). Implants and faction-specific bonuses NOT modelled. Data: SDE.
+---- typed ----
+{"ship":"Rifter","valid":false,"cpu":{"used":84.5,"capacity":162.5,"unit":"tf"},"pg":{"used":437,"capacity":51.25,"unit":"MW"},"slots":{"high":{"used":2,"capacity":3},"mid":{"used":1,"capacity":3},"low":{"used":2,"capacity":4},"rig":{"used":0,"capacity":3}},"violations":["PG over by 385.8 MW (437.0/51.2 MW). Top consumers: 'Thukker Large Cap Battery' (280.0 MW), 'Centum A-Type Medium Armor Repairer' (156.0 MW), 'Corelum B-Type Multispectrum Energized Membrane' (1.0 MW). Remove or downgrade one of these.","unknown module(s) (not in SDE/ESI — likely fabricated): Fake C-Type Thing, Fake X-Type Thing"],"unresolved_modules":["Fake C-Type Thing","Fake X-Type Thing"],"data_source":"SDE"}
+##### hc_alpha_drones_and_charges #####
+STATUS: VALID — Rifter
+
+CPU: 48.8 / 162.5 tf
+PG:  14.6 / 51.2 MW
+Hi slots:  1/3
+Mid slots: 1/3
+Low slots: 1/4
+Rigs:      0/3
+Note: skill profile = Power Grid Management V + CPU Management V (+25% PG/CPU), Weapon Upgrades V (-25% turret/launcher CPU), Advanced Weapon Upgrades V (-10% turret/launcher PG), Energy Grid Upgrades V (-25% power-core CPU). Implants and faction-specific bonuses NOT modelled. Data: SDE.
+---- typed ----
+{"ship":"Rifter","valid":true,"cpu":{"used":48.75,"capacity":162.5,"unit":"tf"},"pg":{"used":14.6,"capacity":51.25,"unit":"MW"},"slots":{"high":{"used":1,"capacity":3},"mid":{"used":1,"capacity":3},"low":{"used":1,"capacity":4},"rig":{"used":0,"capacity":3}},"violations":[],"unresolved_modules":[],"data_source":"SDE"}
+##### hc_alpha_duplicates_sorted #####
+STATUS: INVALID (1 violation(s)) — Rifter
+
+CPU: 161.2 / 162.5 tf
+PG:  25.8 / 51.2 MW
+Hi slots:  3/3 [FULL]
+Mid slots: 2/3
+Low slots: 3/4
+Rigs:      0/3
+
+VIOLATIONS:
+• alpha-clone illegal module(s), drone(s) or charge(s) (they need skills an Alpha clone cannot train - Omega required): 1MN Afterburner II
+Note: skill profile = Power Grid Management V + CPU Management V (+25% PG/CPU), Weapon Upgrades V (-25% turret/launcher CPU), Advanced Weapon Upgrades V (-10% turret/launcher PG), Energy Grid Upgrades V (-25% power-core CPU). Implants and faction-specific bonuses NOT modelled. Data: SDE.
+---- typed ----
+{"ship":"Rifter","valid":false,"cpu":{"used":161.25,"capacity":162.5,"unit":"tf"},"pg":{"used":25.8,"capacity":51.25,"unit":"MW"},"slots":{"high":{"used":3,"capacity":3},"mid":{"used":2,"capacity":3},"low":{"used":3,"capacity":4},"rig":{"used":0,"capacity":3}},"violations":["alpha-clone illegal module(s), drone(s) or charge(s) (they need skills an Alpha clone cannot train - Omega required): 1MN Afterburner II"],"unresolved_modules":[],"data_source":"SDE"}
+##### hc_alpha_with_other_violations #####
+STATUS: INVALID (4 violation(s)) — Rifter
+
+CPU: 102.0 / 162.5 tf
+PG:  27.4 / 51.2 MW
+Hi slots:  5/3 [OVER]
+Mid slots: 1/3
+Low slots: 2/4
+Rigs:      0/3
+
+VIOLATIONS:
+• hi slots over: 5 used, 3 available. Remove: '200mm AutoCannon II', 'Fabricated Autocannon 9000'.
+• only 1 module(s) of 'Damage Control II' (or same group) can be fitted; found 2 (Damage Control II, Damage Control II)
+• unknown module(s) (not in SDE/ESI — likely fabricated): Fabricated Autocannon 9000
+• alpha-clone illegal module(s), drone(s) or charge(s) (they need skills an Alpha clone cannot train - Omega required): 1MN Afterburner II
+Unresolved modules (not counted): Fabricated Autocannon 9000
+Note: skill profile = Power Grid Management V + CPU Management V (+25% PG/CPU), Weapon Upgrades V (-25% turret/launcher CPU), Advanced Weapon Upgrades V (-10% turret/launcher PG), Energy Grid Upgrades V (-25% power-core CPU). Implants and faction-specific bonuses NOT modelled. Data: SDE.
+---- typed ----
+{"ship":"Rifter","valid":false,"cpu":{"used":102,"capacity":162.5,"unit":"tf"},"pg":{"used":27.4,"capacity":51.25,"unit":"MW"},"slots":{"high":{"used":5,"capacity":3},"mid":{"used":1,"capacity":3},"low":{"used":2,"capacity":4},"rig":{"used":0,"capacity":3}},"violations":["hi slots over: 5 used, 3 available. Remove: '200mm AutoCannon II', 'Fabricated Autocannon 9000'.","only 1 module(s) of 'Damage Control II' (or same group) can be fitted; found 2 (Damage Control II, Damage Control II)","unknown module(s) (not in SDE/ESI — likely fabricated): Fabricated Autocannon 9000","alpha-clone illegal module(s), drone(s) or charge(s) (they need skills an Alpha clone cannot train - Omega required): 1MN Afterburner II"],"unresolved_modules":["Fabricated Autocannon 9000"],"data_source":"SDE"}
+##### hc_alpha_unknown_alpha_name #####
+STATUS: INVALID (1 violation(s)) — Rifter
+
+CPU: 6.8 / 162.5 tf
+PG:  3.6 / 51.2 MW
+Hi slots:  2/3
+Mid slots: 1/3
+Low slots: 0/4
+Rigs:      0/3
+
+VIOLATIONS:
+• unknown module(s) (not in SDE/ESI — likely fabricated): Imperial Navy Fabricated Autocannon, Pithum A-Type Fake Booster
+Unresolved modules (not counted): Imperial Navy Fabricated Autocannon, Pithum A-Type Fake Booster
+Note: skill profile = Power Grid Management V + CPU Management V (+25% PG/CPU), Weapon Upgrades V (-25% turret/launcher CPU), Advanced Weapon Upgrades V (-10% turret/launcher PG), Energy Grid Upgrades V (-25% power-core CPU). Implants and faction-specific bonuses NOT modelled. Data: SDE.
+---- typed ----
+{"ship":"Rifter","valid":false,"cpu":{"used":6.75,"capacity":162.5,"unit":"tf"},"pg":{"used":3.6,"capacity":51.25,"unit":"MW"},"slots":{"high":{"used":2,"capacity":3},"mid":{"used":1,"capacity":3},"low":{"used":0,"capacity":4},"rig":{"used":0,"capacity":3}},"violations":["unknown module(s) (not in SDE/ESI — likely fabricated): Imperial Navy Fabricated Autocannon, Pithum A-Type Fake Booster"],"unresolved_modules":["Imperial Navy Fabricated Autocannon","Pithum A-Type Fake Booster"],"data_source":"SDE"}
+##### hc_alpha_mutated_ii #####
+STATUS: VALID — Rifter
+
+CPU: 51.8 / 162.5 tf
+PG:  14.6 / 51.2 MW
+Hi slots:  1/3
+Mid slots: 1/3
+Low slots: 1/4
+Rigs:      0/3
+Note: skill profile = Power Grid Management V + CPU Management V (+25% PG/CPU), Weapon Upgrades V (-25% turret/launcher CPU), Advanced Weapon Upgrades V (-10% turret/launcher PG), Energy Grid Upgrades V (-25% power-core CPU). Implants and faction-specific bonuses NOT modelled. Data: SDE.
+---- typed ----
+{"ship":"Rifter","valid":true,"cpu":{"used":51.75,"capacity":162.5,"unit":"tf"},"pg":{"used":14.6,"capacity":51.25,"unit":"MW"},"slots":{"high":{"used":1,"capacity":3},"mid":{"used":1,"capacity":3},"low":{"used":1,"capacity":4},"rig":{"used":0,"capacity":3}},"violations":[],"unresolved_modules":[],"data_source":"SDE"}
+##### hc_alpha_empty_markers #####
+STATUS: VALID — Rifter
+
+CPU: 21.8 / 162.5 tf
+PG:  13.6 / 51.2 MW
+Hi slots:  1/3
+Mid slots: 1/3
+Low slots: 0/4
+Rigs:      0/3
+Note: skill profile = Power Grid Management V + CPU Management V (+25% PG/CPU), Weapon Upgrades V (-25% turret/launcher CPU), Advanced Weapon Upgrades V (-10% turret/launcher PG), Energy Grid Upgrades V (-25% power-core CPU). Implants and faction-specific bonuses NOT modelled. Data: SDE.
+---- typed ----
+{"ship":"Rifter","valid":true,"cpu":{"used":21.75,"capacity":162.5,"unit":"tf"},"pg":{"used":13.6,"capacity":51.25,"unit":"MW"},"slots":{"high":{"used":1,"capacity":3},"mid":{"used":1,"capacity":3},"low":{"used":0,"capacity":4},"rig":{"used":0,"capacity":3}},"violations":[],"unresolved_modules":[],"data_source":"SDE"}
+##### hc_alpha_hull_t2 #####
+STATUS: INVALID (1 violation(s)) — Sabre
+
+CPU: 27.0 / 287.5 tf
+PG:  17.2 / 72.5 MW
+Hi slots:  1/8
+Mid slots: 1/4
+Low slots: 0/2
+Rigs:      0/2
+
+VIOLATIONS:
+• alpha-clone illegal hull (an Alpha clone cannot fly it - Omega required): Sabre
+Note: skill profile = Power Grid Management V + CPU Management V (+25% PG/CPU), Weapon Upgrades V (-25% turret/launcher CPU), Advanced Weapon Upgrades V (-10% turret/launcher PG), Energy Grid Upgrades V (-25% power-core CPU). Implants and faction-specific bonuses NOT modelled. Data: SDE.
+---- typed ----
+{"ship":"Sabre","valid":false,"cpu":{"used":27,"capacity":287.5,"unit":"tf"},"pg":{"used":17.2,"capacity":72.5,"unit":"MW"},"slots":{"high":{"used":1,"capacity":8},"mid":{"used":1,"capacity":4},"low":{"used":0,"capacity":2},"rig":{"used":0,"capacity":2}},"violations":["alpha-clone illegal hull (an Alpha clone cannot fly it - Omega required): Sabre"],"unresolved_modules":[],"data_source":"SDE"}
+##### hc_alpha_t2_charge_names #####
+STATUS: VALID — Rifter
+
+CPU: 13.5 / 162.5 tf
+PG:  7.2 / 51.2 MW
+Hi slots:  2/3
+Mid slots: 0/3
+Low slots: 0/4
+Rigs:      0/3
+Note: skill profile = Power Grid Management V + CPU Management V (+25% PG/CPU), Weapon Upgrades V (-25% turret/launcher CPU), Advanced Weapon Upgrades V (-10% turret/launcher PG), Energy Grid Upgrades V (-25% power-core CPU). Implants and faction-specific bonuses NOT modelled. Data: SDE.
+---- typed ----
+{"ship":"Rifter","valid":true,"cpu":{"used":13.5,"capacity":162.5,"unit":"tf"},"pg":{"used":7.2,"capacity":51.25,"unit":"MW"},"slots":{"high":{"used":2,"capacity":3},"mid":{"used":0,"capacity":3},"low":{"used":0,"capacity":4},"rig":{"used":0,"capacity":3}},"violations":[],"unresolved_modules":[],"data_source":"SDE"}
+##### hc_esi_extra_renamed_item #####
+STATUS: VALID — Rifter
+
+CPU: 58.5 / 162.5 tf
+PG:  19.2 / 51.2 MW
+Hi slots:  2/3
+Mid slots: 1/3
+Low slots: 1/4
+Rigs:      0/3
+Note: skill profile = Power Grid Management V + CPU Management V (+25% PG/CPU), Weapon Upgrades V (-25% turret/launcher CPU), Advanced Weapon Upgrades V (-10% turret/launcher PG), Energy Grid Upgrades V (-25% power-core CPU). Implants and faction-specific bonuses NOT modelled. Data: SDE.
+---- typed ----
+{"ship":"Rifter","valid":true,"cpu":{"used":58.5,"capacity":162.5,"unit":"tf"},"pg":{"used":19.2,"capacity":51.25,"unit":"MW"},"slots":{"high":{"used":2,"capacity":3},"mid":{"used":1,"capacity":3},"low":{"used":1,"capacity":4},"rig":{"used":0,"capacity":3}},"violations":[],"unresolved_modules":[],"data_source":"SDE"}
+##### hc_esi_extra_unslotted_item #####
+STATUS: INVALID (1 violation(s)) — Rifter
+
+CPU: 51.8 / 162.5 tf
+PG:  15.6 / 51.2 MW
+Hi slots:  1/3
+Mid slots: 1/3
+Low slots: 1/4
+Rigs:      0/3
+
+VIOLATIONS:
+• not a fittable module (resolved via SDE/ESI but has no slot and is not a drone or charge): 'Phantom Item I'
+Note: skill profile = Power Grid Management V + CPU Management V (+25% PG/CPU), Weapon Upgrades V (-25% turret/launcher CPU), Advanced Weapon Upgrades V (-10% turret/launcher PG), Energy Grid Upgrades V (-25% power-core CPU). Implants and faction-specific bonuses NOT modelled. Data: SDE.
+---- typed ----
+{"ship":"Rifter","valid":false,"cpu":{"used":51.75,"capacity":162.5,"unit":"tf"},"pg":{"used":15.6,"capacity":51.25,"unit":"MW"},"slots":{"high":{"used":1,"capacity":3},"mid":{"used":1,"capacity":3},"low":{"used":1,"capacity":4},"rig":{"used":0,"capacity":3}},"violations":["not a fittable module (resolved via SDE/ESI but has no slot and is not a drone or charge): 'Phantom Item I'"],"unresolved_modules":[],"data_source":"SDE"}
+##### hc_esi_extra_alpha #####
+STATUS: INVALID (1 violation(s)) — Rifter
+
+CPU: 28.5 / 162.5 tf
+PG:  17.2 / 51.2 MW
+Hi slots:  2/3
+Mid slots: 1/3
+Low slots: 0/4
+Rigs:      0/3
+
+VIOLATIONS:
+• not a fittable module (resolved via SDE/ESI but has no slot and is not a drone or charge): 'Phantom Item I'
+Note: skill profile = Power Grid Management V + CPU Management V (+25% PG/CPU), Weapon Upgrades V (-25% turret/launcher CPU), Advanced Weapon Upgrades V (-10% turret/launcher PG), Energy Grid Upgrades V (-25% power-core CPU). Implants and faction-specific bonuses NOT modelled. Data: SDE.
+---- typed ----
+{"ship":"Rifter","valid":false,"cpu":{"used":28.5,"capacity":162.5,"unit":"tf"},"pg":{"used":17.2,"capacity":51.25,"unit":"MW"},"slots":{"high":{"used":2,"capacity":3},"mid":{"used":1,"capacity":3},"low":{"used":0,"capacity":4},"rig":{"used":0,"capacity":3}},"violations":["not a fittable module (resolved via SDE/ESI but has no slot and is not a drone or charge): 'Phantom Item I'"],"unresolved_modules":[],"data_source":"SDE"}
+##### hc_esi_only_valid #####
+STATUS: VALID — Fake Hull
+
+CPU: 60.0 / 125.0 tf
+PG:  31.0 / 62.5 MW
+Hi slots:  2/3
+Mid slots: 1/3
+Low slots: 1/3
+Rigs:      0/3
+Note: skill profile = Power Grid Management V + CPU Management V (+25% PG/CPU), Weapon Upgrades V (-25% turret/launcher CPU), Advanced Weapon Upgrades V (-10% turret/launcher PG), Energy Grid Upgrades V (-25% power-core CPU). Implants and faction-specific bonuses NOT modelled. Data: ESI.
+---- typed ----
+{"ship":"Fake Hull","valid":true,"cpu":{"used":60,"capacity":125,"unit":"tf"},"pg":{"used":31,"capacity":62.5,"unit":"MW"},"slots":{"high":{"used":2,"capacity":3},"mid":{"used":1,"capacity":3},"low":{"used":1,"capacity":3},"rig":{"used":0,"capacity":3}},"violations":[],"unresolved_modules":[],"data_source":"ESI"}
+##### hc_esi_only_overflow_and_cpu #####
+STATUS: INVALID (4 violation(s)) — Fake Hull
+
+CPU: 145.0 / 125.0 tf
+PG:  76.0 / 62.5 MW
+Hi slots:  4/3 [OVER]
+Mid slots: 3/3 [FULL]
+Low slots: 4/3 [OVER]
+Rigs:      0/3
+
+VIOLATIONS:
+• CPU over by 20.0 tf (145.0/125.0 tf). Top consumers: 'Fake Gun I' (20.0 tf), 'Fake Gun I' (20.0 tf), 'Fake Gun I' (20.0 tf). Remove or downgrade one of these.
+• PG over by 13.5 MW (76.0/62.5 MW). Top consumers: 'Fake Gun I' (10.0 MW), 'Fake Gun I' (10.0 MW), 'Fake Gun I' (10.0 MW). Remove or downgrade one of these.
+• hi slots over: 4 used, 3 available. Remove: 'Fake Gun I'.
+• low slots over: 4 used, 3 available. Remove: 'Fake Plate I'.
+Note: skill profile = Power Grid Management V + CPU Management V (+25% PG/CPU), Weapon Upgrades V (-25% turret/launcher CPU), Advanced Weapon Upgrades V (-10% turret/launcher PG), Energy Grid Upgrades V (-25% power-core CPU). Implants and faction-specific bonuses NOT modelled. Data: ESI.
+---- typed ----
+{"ship":"Fake Hull","valid":false,"cpu":{"used":145,"capacity":125,"unit":"tf"},"pg":{"used":76,"capacity":62.5,"unit":"MW"},"slots":{"high":{"used":4,"capacity":3},"mid":{"used":3,"capacity":3},"low":{"used":4,"capacity":3},"rig":{"used":0,"capacity":3}},"violations":["CPU over by 20.0 tf (145.0/125.0 tf). Top consumers: 'Fake Gun I' (20.0 tf), 'Fake Gun I' (20.0 tf), 'Fake Gun I' (20.0 tf). Remove or downgrade one of these.","PG over by 13.5 MW (76.0/62.5 MW). Top consumers: 'Fake Gun I' (10.0 MW), 'Fake Gun I' (10.0 MW), 'Fake Gun I' (10.0 MW). Remove or downgrade one of these.","hi slots over: 4 used, 3 available. Remove: 'Fake Gun I'.","low slots over: 4 used, 3 available. Remove: 'Fake Plate I'."],"unresolved_modules":[],"data_source":"ESI"}
+##### hc_esi_only_unknown #####
+STATUS: INVALID (1 violation(s)) — Fake Hull
+
+CPU: 25.0 / 125.0 tf
+PG:  13.0 / 62.5 MW
+Hi slots:  2/3
+Mid slots: 1/3
+Low slots: 1/3
+Rigs:      0/3
+
+VIOLATIONS:
+• unknown module(s) (not in SDE/ESI — likely fabricated): Mystery Gun Z, Mystery Prop Z
+Unresolved modules (not counted): Mystery Gun Z, Mystery Prop Z
+Note: skill profile = Power Grid Management V + CPU Management V (+25% PG/CPU), Weapon Upgrades V (-25% turret/launcher CPU), Advanced Weapon Upgrades V (-10% turret/launcher PG), Energy Grid Upgrades V (-25% power-core CPU). Implants and faction-specific bonuses NOT modelled. Data: ESI.
+---- typed ----
+{"ship":"Fake Hull","valid":false,"cpu":{"used":25,"capacity":125,"unit":"tf"},"pg":{"used":13,"capacity":62.5,"unit":"MW"},"slots":{"high":{"used":2,"capacity":3},"mid":{"used":1,"capacity":3},"low":{"used":1,"capacity":3},"rig":{"used":0,"capacity":3}},"violations":["unknown module(s) (not in SDE/ESI — likely fabricated): Mystery Gun Z, Mystery Prop Z"],"unresolved_modules":["Mystery Gun Z","Mystery Prop Z"],"data_source":"ESI"}
+##### hc_esi_only_unresolvable_hull #####
+Could not resolve ship 'Mystery Hull' to a type_id.
+---- typed ----
+null
+##### hc_esi_only_alpha #####
+STATUS: VALID — Fake Hull
+
+CPU: 65.0 / 125.0 tf
+PG:  33.0 / 62.5 MW
+Hi slots:  2/3
+Mid slots: 1/3
+Low slots: 1/3
+Rigs:      0/3
+Note: Alpha clone legality not checked (Alpha skill caps unavailable without the SDE).
+Note: skill profile = Power Grid Management V + CPU Management V (+25% PG/CPU), Weapon Upgrades V (-25% turret/launcher CPU), Advanced Weapon Upgrades V (-10% turret/launcher PG), Energy Grid Upgrades V (-25% power-core CPU). Implants and faction-specific bonuses NOT modelled. Data: ESI.
+---- typed ----
+{"ship":"Fake Hull","valid":true,"cpu":{"used":65,"capacity":125,"unit":"tf"},"pg":{"used":33,"capacity":62.5,"unit":"MW"},"slots":{"high":{"used":2,"capacity":3},"mid":{"used":1,"capacity":3},"low":{"used":1,"capacity":3},"rig":{"used":0,"capacity":3}},"violations":[],"unresolved_modules":[],"data_source":"ESI","alpha_unchecked":true}
+##### hc_no_sde_no_esi #####
+Could not resolve ship 'Rifter' to a type_id.
+---- typed ----
+null

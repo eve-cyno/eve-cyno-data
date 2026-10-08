@@ -1,0 +1,66 @@
+# Release on a version tag (v*): build and push ghcr.io/eve-cyno/eve-cyno-data:<tag> (+ latest) with
+# an SBOM and max-mode provenance attached to the image, then create the GitHub release.
+# Uses only the built-in GITHUB_TOKEN.
+
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+  packages: write
+  id-token: write
+  attestations: write
+
+env:
+  REGISTRY: ghcr.io
+  # GHCR requires lowercase; hardcoded rather than derived from github.repository.
+  IMAGE: ghcr.io/eve-cyno/eve-cyno-data
+
+jobs:
+  image:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: docker/setup-buildx-action@v4
+
+      - uses: docker/login-action@v4
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: Dockerfile
+          push: true
+          build-args: VERSION=${{ github.ref_name }}
+          tags: |
+            ${{ env.IMAGE }}:${{ github.ref_name }}
+            ${{ env.IMAGE }}:latest
+          sbom: true
+          provenance: mode=max
+          cache-from: type=registry,ref=${{ env.IMAGE }}:buildcache
+          cache-to: type=registry,ref=${{ env.IMAGE }}:buildcache,mode=max
+
+  github-release:
+    needs: image
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Create release
+        uses: softprops/action-gh-release@v3
+        with:
+          generate_release_notes: true
+          body: |
+            Container image: `ghcr.io/eve-cyno/eve-cyno-data:${{ github.ref_name }}` (SBOM and provenance attached).
+            Go module: `go get eve-cyno.dev/go/data@${{ github.ref_name }}`
+          draft: false
+          prerelease: ${{ contains(github.ref_name, '-') }}

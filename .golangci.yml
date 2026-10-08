@@ -1,0 +1,54 @@
+# golangci-lint configuration (v2), used by the `lint` job in .github/workflows/ci.yml.
+# Run locally from the repository root:
+#
+#   golangci-lint run ./...
+#
+# The tool version is pinned in ci.yml (GOLANGCI_LINT_VERSION); bump it there.
+#
+# Deliberately conservative: only checks that find bugs or dead code. Style-only and
+# opinionated linters (revive, gocritic, gosec, ...) are not enabled; widen the set
+# one linter at a time once it is clean, not in bulk.
+version: "2"
+
+run:
+  timeout: 10m
+
+linters:
+  default: none
+  enable:
+    - govet         # same analyzers as the `go vet` CI step
+    - staticcheck   # SA bug checks, S simplifications, ST style (minus the repo-wide opt-outs below)
+    - errcheck      # unchecked errors
+    - ineffassign   # assignments whose value is never read
+    - unused        # dead code (tests count as uses)
+
+  settings:
+    staticcheck:
+      # golangci-lint's default set, minus the QF* quick-fix suggestions: those are
+      # refactoring hints (tagged switch, De Morgan, lift into loop condition), not defects.
+      checks:
+        - all
+        - -ST1000   # package comment
+        - -ST1003   # naming (initialisms, underscores)
+        - -ST1016   # receiver name consistency
+        - -ST1020   # doc comment form (exported functions)
+        - -ST1021   # doc comment form (exported types)
+        - -ST1022   # doc comment form (exported vars)
+        - -QF*
+
+  exclusions:
+    generated: lax
+    presets:
+      - std-error-handling      # Close/Flush/Remove/Print* return values are not worth checking
+      - common-false-positives
+    rules:
+      # Tests assert with testify; an ignored error in a fixture helper or a defer is noise.
+      - path: _test\.go
+        linters:
+          - errcheck
+
+issues:
+  # Report everything: the defaults cap identical messages at 3 and per-linter at 50,
+  # which hides how much is left and lets a long list "pass" a page at a time.
+  max-issues-per-linter: 0
+  max-same-issues: 0

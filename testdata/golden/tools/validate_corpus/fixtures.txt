@@ -1,0 +1,852 @@
+=== qc2_hawk_no_coprocessor | alpha=false | env=sde
+[Hawk, qc2-148-no-coprocessor]
+Rocket Launcher II
+Rocket Launcher II
+Rocket Launcher II
+Rocket Launcher II
+Small Gremlin Compact Energy Neutralizer
+
+Medium Ancillary Shield Booster
+Medium Ancillary Shield Booster
+Medium Ancillary Shield Booster
+Fleeting Compact Stasis Webifier
+1MN Afterburner II
+
+Vigor Compact Micro Auxiliary Power Core
+
+Small EM Shield Reinforcer II
+Small EM Shield Reinforcer II
+=== qc2_hawk_no_coprocessor_alpha | alpha=true | env=sde
+[Hawk, qc2-148-no-coprocessor]
+Rocket Launcher II
+Rocket Launcher II
+Rocket Launcher II
+Rocket Launcher II
+Small Gremlin Compact Energy Neutralizer
+
+Medium Ancillary Shield Booster
+Medium Ancillary Shield Booster
+Medium Ancillary Shield Booster
+Fleeting Compact Stasis Webifier
+1MN Afterburner II
+
+Vigor Compact Micro Auxiliary Power Core
+
+Small EM Shield Reinforcer II
+Small EM Shield Reinforcer II
+=== qc2_q131_viator | alpha=false | env=sde
+[Viator, qc2-131]
+Covert Ops Cloaking Device II
+Interdiction Nullifier I
+
+EM Shield Amplifier II
+Large Shield Extender II
+Medium Shield Extender II
+
+Damage Control II
+Type-D Restrained Inertial Stabilizers
+Limited Hyperspatial Accelerator
+
+Medium Polycarbon Engine Housing I
+Medium Hyperspatial Velocity Optimizer II
+=== qc2_q131_viator_alpha | alpha=true | env=sde
+[Viator, qc2-131]
+Covert Ops Cloaking Device II
+Interdiction Nullifier I
+
+EM Shield Amplifier II
+Large Shield Extender II
+Medium Shield Extender II
+
+Damage Control II
+Type-D Restrained Inertial Stabilizers
+Limited Hyperspatial Accelerator
+
+Medium Polycarbon Engine Housing I
+Medium Hyperspatial Velocity Optimizer II
+=== qc2_q148_hawk | alpha=false | env=sde
+[Hawk, qc2-148]
+Rocket Launcher II
+Rocket Launcher II
+Rocket Launcher II
+Rocket Launcher II
+Small Gremlin Compact Energy Neutralizer
+
+Medium Ancillary Shield Booster
+Medium Ancillary Shield Booster
+Medium Ancillary Shield Booster
+Fleeting Compact Stasis Webifier
+1MN Afterburner II
+
+Co-Processor II
+Vigor Compact Micro Auxiliary Power Core
+
+Small EM Shield Reinforcer II
+Small EM Shield Reinforcer II
+=== qc2_q148_hawk_alpha | alpha=true | env=sde
+[Hawk, qc2-148]
+Rocket Launcher II
+Rocket Launcher II
+Rocket Launcher II
+Rocket Launcher II
+Small Gremlin Compact Energy Neutralizer
+
+Medium Ancillary Shield Booster
+Medium Ancillary Shield Booster
+Medium Ancillary Shield Booster
+Fleeting Compact Stasis Webifier
+1MN Afterburner II
+
+Co-Processor II
+Vigor Compact Micro Auxiliary Power Core
+
+Small EM Shield Reinforcer II
+Small EM Shield Reinforcer II
+=== qc2_q172_drake_navy_issue | alpha=false | env=sde
+[Drake Navy Issue, qc2-172]
+Heavy Assault Missile Launcher II
+Heavy Assault Missile Launcher II
+Heavy Assault Missile Launcher II
+Heavy Assault Missile Launcher II
+Heavy Assault Missile Launcher II
+Heavy Assault Missile Launcher II
+Heavy Assault Missile Launcher II
+Medium Ghoul Compact Energy Nosferatu
+
+10MN Afterburner II
+Large Shield Extender II
+Large Shield Extender II
+Multispectrum Shield Hardener II
+Multispectrum Shield Hardener II
+Stasis Webifier II
+
+Ballistic Control System II
+Ballistic Control System II
+Ballistic Control System II
+Damage Control II
+
+Medium Core Defense Field Extender I
+Medium Core Defense Field Extender I
+Medium Core Defense Field Extender I
+=== qc2_q172_drake_navy_issue_alpha | alpha=true | env=sde
+[Drake Navy Issue, qc2-172]
+Heavy Assault Missile Launcher II
+Heavy Assault Missile Launcher II
+Heavy Assault Missile Launcher II
+Heavy Assault Missile Launcher II
+Heavy Assault Missile Launcher II
+Heavy Assault Missile Launcher II
+Heavy Assault Missile Launcher II
+Medium Ghoul Compact Energy Nosferatu
+
+10MN Afterburner II
+Large Shield Extender II
+Large Shield Extender II
+Multispectrum Shield Hardener II
+Multispectrum Shield Hardener II
+Stasis Webifier II
+
+Ballistic Control System II
+Ballistic Control System II
+Ballistic Control System II
+Damage Control II
+
+Medium Core Defense Field Extender I
+Medium Core Defense Field Extender I
+Medium Core Defense Field Extender I
+=== qc2_q182_vargur | alpha=false | env=sde
+[Vargur, qc2-182]
+800mm Repeating Cannon II
+800mm Repeating Cannon II
+800mm Repeating Cannon II
+800mm Repeating Cannon II
+Bastion Module I
+Imperial Navy Large EMP Smartbomb
+Imperial Navy Large EMP Smartbomb
+
+Republic Fleet Large Cap Battery
+Republic Fleet Large Cap Battery
+Republic Fleet Large Cap Battery
+Pith X-Type X-Large Shield Booster
+Cap Recharger II
+Pithum C-Type Multispectrum Shield Hardener
+
+Capacitor Flux Coil II
+Capacitor Flux Coil II
+Capacitor Flux Coil II
+Republic Fleet Gyrostabilizer
+Republic Fleet Gyrostabilizer
+Republic Fleet Gyrostabilizer
+
+Large Capacitor Control Circuit II
+Large Capacitor Control Circuit II
+=== qc2_q182_vargur_alpha | alpha=true | env=sde
+[Vargur, qc2-182]
+800mm Repeating Cannon II
+800mm Repeating Cannon II
+800mm Repeating Cannon II
+800mm Repeating Cannon II
+Bastion Module I
+Imperial Navy Large EMP Smartbomb
+Imperial Navy Large EMP Smartbomb
+
+Republic Fleet Large Cap Battery
+Republic Fleet Large Cap Battery
+Republic Fleet Large Cap Battery
+Pith X-Type X-Large Shield Booster
+Cap Recharger II
+Pithum C-Type Multispectrum Shield Hardener
+
+Capacitor Flux Coil II
+Capacitor Flux Coil II
+Capacitor Flux Coil II
+Republic Fleet Gyrostabilizer
+Republic Fleet Gyrostabilizer
+Republic Fleet Gyrostabilizer
+
+Large Capacitor Control Circuit II
+Large Capacitor Control Circuit II
+=== qc2_q200_cerberus | alpha=false | env=sde
+[Cerberus, qc2-200]
+
+Caldari Navy Ballistic Control System
+Caldari Navy Ballistic Control System
+Caldari Navy Ballistic Control System
+True Sansha Power Diagnostic System
+
+Corelum A-Type 50MN Microwarpdrive
+Pith X-Type Large Shield Booster
+Pithum A-Type Multispectrum Shield Hardener
+Pithum A-Type Multispectrum Shield Hardener
+'Thurifer' Large Cap Battery
+
+Caldari Navy Heavy Assault Missile Launcher, Scourge Rage Heavy Assault Missile
+Caldari Navy Heavy Assault Missile Launcher, Scourge Rage Heavy Assault Missile
+Caldari Navy Heavy Assault Missile Launcher, Scourge Rage Heavy Assault Missile
+Caldari Navy Heavy Assault Missile Launcher, Scourge Rage Heavy Assault Missile
+Caldari Navy Heavy Assault Missile Launcher, Scourge Rage Heavy Assault Missile
+Caldari Navy Heavy Assault Missile Launcher, Scourge Rage Heavy Assault Missile
+
+Medium Warhead Rigor Catalyst II
+Medium Warhead Rigor Catalyst II
+
+
+Caldari Navy Hornet x3
+
+
+High-grade Hydra Alpha
+High-grade Hydra Beta
+High-grade Hydra Gamma
+High-grade Hydra Delta
+High-grade Hydra Epsilon
+High-grade Hydra Omega
+Zainou 'Snapshot' Heavy Assault Missiles AM-706
+Zainou 'Deadeye' Guided Missile Precision GP-806
+Zainou 'Deadeye' Target Navigation Prediction TN-906
+Zainou 'Deadeye' Rapid Launch RL-1006
+
+Improved Blue Pill Booster
+Improved Crash Booster
+Agency 'Pyrolancea' DB5 Dose II
+=== qc2_q200_cerberus_alpha | alpha=true | env=sde
+[Cerberus, qc2-200]
+
+Caldari Navy Ballistic Control System
+Caldari Navy Ballistic Control System
+Caldari Navy Ballistic Control System
+True Sansha Power Diagnostic System
+
+Corelum A-Type 50MN Microwarpdrive
+Pith X-Type Large Shield Booster
+Pithum A-Type Multispectrum Shield Hardener
+Pithum A-Type Multispectrum Shield Hardener
+'Thurifer' Large Cap Battery
+
+Caldari Navy Heavy Assault Missile Launcher, Scourge Rage Heavy Assault Missile
+Caldari Navy Heavy Assault Missile Launcher, Scourge Rage Heavy Assault Missile
+Caldari Navy Heavy Assault Missile Launcher, Scourge Rage Heavy Assault Missile
+Caldari Navy Heavy Assault Missile Launcher, Scourge Rage Heavy Assault Missile
+Caldari Navy Heavy Assault Missile Launcher, Scourge Rage Heavy Assault Missile
+Caldari Navy Heavy Assault Missile Launcher, Scourge Rage Heavy Assault Missile
+
+Medium Warhead Rigor Catalyst II
+Medium Warhead Rigor Catalyst II
+
+
+Caldari Navy Hornet x3
+
+
+High-grade Hydra Alpha
+High-grade Hydra Beta
+High-grade Hydra Gamma
+High-grade Hydra Delta
+High-grade Hydra Epsilon
+High-grade Hydra Omega
+Zainou 'Snapshot' Heavy Assault Missiles AM-706
+Zainou 'Deadeye' Guided Missile Precision GP-806
+Zainou 'Deadeye' Target Navigation Prediction TN-906
+Zainou 'Deadeye' Rapid Launch RL-1006
+
+Improved Blue Pill Booster
+Improved Crash Booster
+Agency 'Pyrolancea' DB5 Dose II
+=== qc2_q201_stormbringer | alpha=false | env=sde
+[Stormbringer, qc2-201]
+Vorton Tuning System II
+Vorton Tuning System II
+Vorton Tuning System II
+
+Republic Fleet 10MN Afterburner
+Pithum B-Type Medium Shield Booster
+'Glycerine' Shield Boost Amplifier
+Multispectrum Shield Hardener II
+Multispectrum Shield Hardener II
+Thukker Large Cap Battery
+
+Medium Vorton Projector II
+
+Medium Capacitor Control Circuit II
+Medium Capacitor Control Circuit II
+Medium Core Defense Operational Solidifier I
+
+Zainou 'Gnome' Weapon Upgrades WU-1003 x1
+Inherent Implants 'Squire' Capacitor Management EM-805 x1
+Inherent Implants 'Squire' Power Grid Management EG-605 x1
+Mid-grade Crystal Alpha x1
+Mid-grade Crystal Beta x1
+Mid-grade Crystal Delta x1
+Mid-grade Crystal Epsilon x1
+Mid-grade Crystal Gamma x1
+=== qc2_q201_stormbringer_alpha | alpha=true | env=sde
+[Stormbringer, qc2-201]
+Vorton Tuning System II
+Vorton Tuning System II
+Vorton Tuning System II
+
+Republic Fleet 10MN Afterburner
+Pithum B-Type Medium Shield Booster
+'Glycerine' Shield Boost Amplifier
+Multispectrum Shield Hardener II
+Multispectrum Shield Hardener II
+Thukker Large Cap Battery
+
+Medium Vorton Projector II
+
+Medium Capacitor Control Circuit II
+Medium Capacitor Control Circuit II
+Medium Core Defense Operational Solidifier I
+
+Zainou 'Gnome' Weapon Upgrades WU-1003 x1
+Inherent Implants 'Squire' Capacitor Management EM-805 x1
+Inherent Implants 'Squire' Power Grid Management EG-605 x1
+Mid-grade Crystal Alpha x1
+Mid-grade Crystal Beta x1
+Mid-grade Crystal Delta x1
+Mid-grade Crystal Epsilon x1
+Mid-grade Crystal Gamma x1
+=== qc2_q202_ikitursa | alpha=false | env=sde
+[Ikitursa, qc2-202]
+
+Centum A-Type Medium Armor Repairer
+True Sansha Reactor Control Unit
+Entropic Radiation Sink II
+Entropic Radiation Sink II
+Corelum B-Type Multispectrum Energized Membrane
+Reactive Armor Hardener
+
+Federation Navy 10MN Afterburner
+Thukker Large Cap Battery
+Thukker Medium Cap Battery
+Federation Navy Stasis Webifier
+
+Veles Heavy Entropic Disintegrator, Occult M
+Dark Blood Small EMP Smartbomb
+Dark Blood Small EMP Smartbomb
+Imperial Navy Large EMP Smartbomb
+
+Medium Ancillary Current Router II
+Medium Ancillary Current Router II
+
+
+Caldari Navy Vespa x5
+Caldari Navy Vespa x2
+
+
+Inherent Implants 'Squire' Energy Pulse Weapons EP-703
+Inherent Implants 'Squire' Capacitor Management EM-803
+Eifyr and Co. 'Rogue' High Speed Maneuvering HS-903
+Inherent Implants 'Noble' Hull Upgrades HG-1003
+
+Standard Exile Booster
+Standard Frentix Booster
+
+
+Mystic M x1500
+Occult M x1000
+Baryon Exotic Plasma M x1500
+Meson Exotic Plasma M x1500
+Tetryon Exotic Plasma M x1500
+Nanite Repair Paste x1000
+Optimal Range Disruption Script x1
+=== qc2_q202_ikitursa_alpha | alpha=true | env=sde
+[Ikitursa, qc2-202]
+
+Centum A-Type Medium Armor Repairer
+True Sansha Reactor Control Unit
+Entropic Radiation Sink II
+Entropic Radiation Sink II
+Corelum B-Type Multispectrum Energized Membrane
+Reactive Armor Hardener
+
+Federation Navy 10MN Afterburner
+Thukker Large Cap Battery
+Thukker Medium Cap Battery
+Federation Navy Stasis Webifier
+
+Veles Heavy Entropic Disintegrator, Occult M
+Dark Blood Small EMP Smartbomb
+Dark Blood Small EMP Smartbomb
+Imperial Navy Large EMP Smartbomb
+
+Medium Ancillary Current Router II
+Medium Ancillary Current Router II
+
+
+Caldari Navy Vespa x5
+Caldari Navy Vespa x2
+
+
+Inherent Implants 'Squire' Energy Pulse Weapons EP-703
+Inherent Implants 'Squire' Capacitor Management EM-803
+Eifyr and Co. 'Rogue' High Speed Maneuvering HS-903
+Inherent Implants 'Noble' Hull Upgrades HG-1003
+
+Standard Exile Booster
+Standard Frentix Booster
+
+
+Mystic M x1500
+Occult M x1000
+Baryon Exotic Plasma M x1500
+Meson Exotic Plasma M x1500
+Tetryon Exotic Plasma M x1500
+Nanite Repair Paste x1000
+Optimal Range Disruption Script x1
+=== qc2_q215_leshak | alpha=false | env=sde
+[Leshak, qc2-215]
+Supratidal Entropic Disintegrator I
+Corpum C-Type Medium Energy Neutralizer
+Corpum C-Type Medium Energy Neutralizer
+Large Solace Scoped Remote Armor Repairer
+Large Solace Scoped Remote Armor Repairer
+
+Dark Blood Warp Scrambler
+X5 Enduring Stasis Webifier
+Core B-Type 500MN Microwarpdrive
+Heavy Capacitor Booster II
+
+Entropic Radiation Sink II
+Entropic Radiation Sink II
+Entropic Radiation Sink II
+Corpum C-Type Multispectrum Energized Membrane
+Centum C-Type Multispectrum Energized Membrane
+'Radical' Damage Control
+Imperial Navy 1600mm Steel Plates
+Imperial Navy 1600mm Steel Plates
+
+Large Trimark Armor Pump I
+Large Trimark Armor Pump I
+Large Trimark Armor Pump I
+=== qc2_q215_leshak_alpha | alpha=true | env=sde
+[Leshak, qc2-215]
+Supratidal Entropic Disintegrator I
+Corpum C-Type Medium Energy Neutralizer
+Corpum C-Type Medium Energy Neutralizer
+Large Solace Scoped Remote Armor Repairer
+Large Solace Scoped Remote Armor Repairer
+
+Dark Blood Warp Scrambler
+X5 Enduring Stasis Webifier
+Core B-Type 500MN Microwarpdrive
+Heavy Capacitor Booster II
+
+Entropic Radiation Sink II
+Entropic Radiation Sink II
+Entropic Radiation Sink II
+Corpum C-Type Multispectrum Energized Membrane
+Centum C-Type Multispectrum Energized Membrane
+'Radical' Damage Control
+Imperial Navy 1600mm Steel Plates
+Imperial Navy 1600mm Steel Plates
+
+Large Trimark Armor Pump I
+Large Trimark Armor Pump I
+Large Trimark Armor Pump I
+=== qc2_q217_vargur | alpha=false | env=sde
+[Vargur, qc2-217]
+Bastion Module I
+Dual 650mm Repeating Cannon II
+Dual 650mm Repeating Cannon II
+Dual 650mm Repeating Cannon II
+Dual 650mm Repeating Cannon II
+True Sansha Large EMP Smartbomb
+
+Pith A-Type X-Large Shield Booster
+Tracking Computer II
+Heavy Stasis Grappler II
+Multispectrum Shield Hardener II
+Gist X-Type 500MN Microwarpdrive
+Heavy 'Brave' Capacitor Booster
+
+Republic Fleet Gyrostabilizer
+Republic Fleet Gyrostabilizer
+Republic Fleet Gyrostabilizer
+Republic Fleet Gyrostabilizer
+Republic Fleet Tracking Enhancer
+Damage Control II
+
+Large Core Defense Capacitor Safeguard II
+Large Core Defense Capacitor Safeguard II
+=== qc2_q217_vargur_alpha | alpha=true | env=sde
+[Vargur, qc2-217]
+Bastion Module I
+Dual 650mm Repeating Cannon II
+Dual 650mm Repeating Cannon II
+Dual 650mm Repeating Cannon II
+Dual 650mm Repeating Cannon II
+True Sansha Large EMP Smartbomb
+
+Pith A-Type X-Large Shield Booster
+Tracking Computer II
+Heavy Stasis Grappler II
+Multispectrum Shield Hardener II
+Gist X-Type 500MN Microwarpdrive
+Heavy 'Brave' Capacitor Booster
+
+Republic Fleet Gyrostabilizer
+Republic Fleet Gyrostabilizer
+Republic Fleet Gyrostabilizer
+Republic Fleet Gyrostabilizer
+Republic Fleet Tracking Enhancer
+Damage Control II
+
+Large Core Defense Capacitor Safeguard II
+Large Core Defense Capacitor Safeguard II
+=== qc2_q64_thorax | alpha=false | env=sde
+[Thorax, qc2-64]
+200mm Railgun II
+200mm Railgun II
+200mm Railgun II
+200mm Railgun II
+200mm Railgun II
+
+10MN Afterburner II
+Stasis Webifier II
+Warp Disruptor II
+Medium Capacitor Booster II
+
+Damage Control II
+Multispectrum Energized Membrane II
+Reactive Armor Hardener
+Magnetic Field Stabilizer II
+Medium Armor Repairer II
+
+Medium Ancillary Current Router I
+Medium Trimark Armor Pump I
+Medium Auxiliary Nano Pump I
+=== qc2_q64_thorax_alpha | alpha=true | env=sde
+[Thorax, qc2-64]
+200mm Railgun II
+200mm Railgun II
+200mm Railgun II
+200mm Railgun II
+200mm Railgun II
+
+10MN Afterburner II
+Stasis Webifier II
+Warp Disruptor II
+Medium Capacitor Booster II
+
+Damage Control II
+Multispectrum Energized Membrane II
+Reactive Armor Hardener
+Magnetic Field Stabilizer II
+Medium Armor Repairer II
+
+Medium Ancillary Current Router I
+Medium Trimark Armor Pump I
+Medium Auxiliary Nano Pump I
+=== qc2_q65_rifter | alpha=false | env=sde
+[Rifter, qc2-65]
+280mm Howitzer Artillery II
+280mm Howitzer Artillery II
+280mm Howitzer Artillery II
+
+1MN Afterburner II
+Stasis Webifier II
+Initiated Compact Warp Disruptor
+
+Counterbalanced Compact Gyrostabilizer
+IFFA Compact Damage Control
+Overdrive Injector System II
+Small Ancillary Armor Repairer
+
+Small Projectile Collision Accelerator I
+Small Auxiliary Thrusters I
+Small Auxiliary Thrusters I
+=== qc2_q65_rifter_alpha | alpha=true | env=sde
+[Rifter, qc2-65]
+280mm Howitzer Artillery II
+280mm Howitzer Artillery II
+280mm Howitzer Artillery II
+
+1MN Afterburner II
+Stasis Webifier II
+Initiated Compact Warp Disruptor
+
+Counterbalanced Compact Gyrostabilizer
+IFFA Compact Damage Control
+Overdrive Injector System II
+Small Ancillary Armor Repairer
+
+Small Projectile Collision Accelerator I
+Small Auxiliary Thrusters I
+Small Auxiliary Thrusters I
+=== qc2_q69_cormorant | alpha=false | env=sde
+[Cormorant, qc2-69]
+150mm Railgun I
+150mm Railgun I
+150mm Railgun I
+150mm Railgun I
+150mm Railgun I
+150mm Railgun I
+150mm Railgun I
+Arbalest Compact Light Missile Launcher
+
+1MN Y-S8 Compact Afterburner
+Small F-S9 Regolith Compact Shield Extender
+Enduring Multispectrum Shield Hardener
+
+Damage Control I
+Magnetic Field Stabilizer I
+
+Small Hybrid Collision Accelerator I
+Small EM Shield Reinforcer I
+Small Low Friction Nozzle Joints I
+=== qc2_q69_cormorant_alpha | alpha=true | env=sde
+[Cormorant, qc2-69]
+150mm Railgun I
+150mm Railgun I
+150mm Railgun I
+150mm Railgun I
+150mm Railgun I
+150mm Railgun I
+150mm Railgun I
+Arbalest Compact Light Missile Launcher
+
+1MN Y-S8 Compact Afterburner
+Small F-S9 Regolith Compact Shield Extender
+Enduring Multispectrum Shield Hardener
+
+Damage Control I
+Magnetic Field Stabilizer I
+
+Small Hybrid Collision Accelerator I
+Small EM Shield Reinforcer I
+Small Low Friction Nozzle Joints I
+=== qc2_q79_gila | alpha=false | env=sde
+[Gila, qc2-79]
+Rapid Light Missile Launcher II
+Rapid Light Missile Launcher II
+Rapid Light Missile Launcher II
+Drone Link Augmentor II
+'Undertaker' Heavy Missile Launcher
+
+Pithum B-Type Multispectrum Shield Hardener
+Thukker Large Cap Battery
+Pithum A-Type Medium Shield Booster
+Federation Navy 10MN Afterburner
+Thukker Large Cap Battery
+Pithum B-Type Multispectrum Shield Hardener
+
+Dread Guristas Drone Damage Amplifier
+Dread Guristas Drone Damage Amplifier
+Dread Guristas Drone Damage Amplifier
+
+Medium Core Defense Operational Solidifier II
+Medium Thermal Shield Reinforcer II
+Medium Ancillary Current Router I
+=== qc2_q79_gila_alpha | alpha=true | env=sde
+[Gila, qc2-79]
+Rapid Light Missile Launcher II
+Rapid Light Missile Launcher II
+Rapid Light Missile Launcher II
+Drone Link Augmentor II
+'Undertaker' Heavy Missile Launcher
+
+Pithum B-Type Multispectrum Shield Hardener
+Thukker Large Cap Battery
+Pithum A-Type Medium Shield Booster
+Federation Navy 10MN Afterburner
+Thukker Large Cap Battery
+Pithum B-Type Multispectrum Shield Hardener
+
+Dread Guristas Drone Damage Amplifier
+Dread Guristas Drone Damage Amplifier
+Dread Guristas Drone Damage Amplifier
+
+Medium Core Defense Operational Solidifier II
+Medium Thermal Shield Reinforcer II
+Medium Ancillary Current Router I
+=== qc2_q97_drake | alpha=false | env=sde
+[Drake, qc2-97]
+Heavy Assault Missile Launcher II
+Heavy Assault Missile Launcher II
+Heavy Assault Missile Launcher II
+Shield Command Burst II
+Heavy Assault Missile Launcher II
+Heavy Assault Missile Launcher II
+Heavy Assault Missile Launcher II
+
+Compact Multispectrum Shield Hardener
+Large F-S9 Regolith Compact Shield Extender
+Warp Scrambler II
+Medium Micro Jump Drive
+Large F-S9 Regolith Compact Shield Extender
+Compact Multispectrum Shield Hardener
+
+Damage Control II
+Ballistic Control System II
+Ballistic Control System II
+Power Diagnostic System II
+
+Medium Core Defense Field Extender I
+Medium Core Defense Field Extender I
+Medium Core Defense Field Extender I
+=== qc2_q97_drake_alpha | alpha=true | env=sde
+[Drake, qc2-97]
+Heavy Assault Missile Launcher II
+Heavy Assault Missile Launcher II
+Heavy Assault Missile Launcher II
+Shield Command Burst II
+Heavy Assault Missile Launcher II
+Heavy Assault Missile Launcher II
+Heavy Assault Missile Launcher II
+
+Compact Multispectrum Shield Hardener
+Large F-S9 Regolith Compact Shield Extender
+Warp Scrambler II
+Medium Micro Jump Drive
+Large F-S9 Regolith Compact Shield Extender
+Compact Multispectrum Shield Hardener
+
+Damage Control II
+Ballistic Control System II
+Ballistic Control System II
+Power Diagnostic System II
+
+Medium Core Defense Field Extender I
+Medium Core Defense Field Extender I
+Medium Core Defense Field Extender I
+=== tools_rifter_cpu_over | alpha=false | env=sde
+[Rifter, CPU Over]
+280mm Howitzer Artillery II
+280mm Howitzer Artillery II
+280mm Howitzer Artillery II
+
+100MN Afterburner II
+Target Painter II
+Warp Scrambler II
+
+Damage Control II
+Gyrostabilizer II
+Gyrostabilizer II
+
+Small Projectile Collision Accelerator I
+Small Core Defense Field Extender I
+Small Core Defense Field Extender I
+=== tools_rifter_cpu_over_alpha | alpha=true | env=sde
+[Rifter, CPU Over]
+280mm Howitzer Artillery II
+280mm Howitzer Artillery II
+280mm Howitzer Artillery II
+
+100MN Afterburner II
+Target Painter II
+Warp Scrambler II
+
+Damage Control II
+Gyrostabilizer II
+Gyrostabilizer II
+
+Small Projectile Collision Accelerator I
+Small Core Defense Field Extender I
+Small Core Defense Field Extender I
+=== tools_rifter_unfittable | alpha=false | env=sde
+[Rifter, Unfittable Module Test]
+Rifter
+280mm Howitzer Artillery II
+
+100MN Afterburner II
+Target Painter II
+Warp Scrambler II
+
+Damage Control II
+Gyrostabilizer II
+Gyrostabilizer II
+
+Small Projectile Collision Accelerator I
+Small Core Defense Field Extender I
+Small Core Defense Field Extender I
+=== tools_rifter_unfittable_alpha | alpha=true | env=sde
+[Rifter, Unfittable Module Test]
+Rifter
+280mm Howitzer Artillery II
+
+100MN Afterburner II
+Target Painter II
+Warp Scrambler II
+
+Damage Control II
+Gyrostabilizer II
+Gyrostabilizer II
+
+Small Projectile Collision Accelerator I
+Small Core Defense Field Extender I
+Small Core Defense Field Extender I
+=== tools_rifter_valid | alpha=false | env=sde
+[Rifter, PvP Rifter]
+Small Autocannon II
+Small Autocannon II
+Small Autocannon II
+[empty high slot]
+
+1MN Afterburner II
+Warp Scrambler II
+Small Shield Booster II
+
+Damage Control II
+Gyrostabilizer II
+Gyrostabilizer II
+
+Small Projectile Collision Accelerator I
+Small Core Defense Field Extender I
+Small Core Defense Field Extender I
+=== tools_rifter_valid_alpha | alpha=true | env=sde
+[Rifter, PvP Rifter]
+Small Autocannon II
+Small Autocannon II
+Small Autocannon II
+[empty high slot]
+
+1MN Afterburner II
+Warp Scrambler II
+Small Shield Booster II
+
+Damage Control II
+Gyrostabilizer II
+Gyrostabilizer II
+
+Small Projectile Collision Accelerator I
+Small Core Defense Field Extender I
+Small Core Defense Field Extender I

@@ -1,0 +1,85 @@
+eve-cyno-data
+Copyright (c) 2026 Bythlak
+
+This product includes software developed by the EVE-Cyno project: the static-data
+(SDE) loader, the Gofa dogma/fitting engine, the retrieval and tool layers, and the
+data API / MCP server. The code is licensed under the MIT licence (see LICENSE). This
+NOTICE carries the attributions that the code and its data depend on. The MIT licence
+covers the code only; it does not cover the third-party material described below.
+
+------------------------------------------------------------------------------
+EVE Online, CCP Games and Fenris Creations
+------------------------------------------------------------------------------
+
+(c) 2014 Fenris Creations hf. All rights reserved. 'EVE', 'EVE Online', 'Fenris
+Creations', and all related logos and images are trademarks or registered trademarks
+of Fenris Creations hf. This material is used with limited permission of Fenris
+Creations. No official affiliation or endorsement by Fenris Creations is stated or
+implied. Created under the EVE Developer License Agreement.
+
+EVE Online game data is the property of CCP Games / Fenris Creations and is used under
+the EVE Developer License Agreement (DLA). That includes the Static Data Export
+("SDE"), ESI responses, and every test fixture in this repository that is derived from
+the SDE or ESI (recorded ESI cassettes, the ESI OpenAPI snapshot, golden tool outputs,
+attribute dumps). These materials are not covered by the MIT licence; they remain CCP's
+and may be used only as the DLA permits.
+
+This repository does not contain the SDE or any database built from it: it is
+downloaded from Fuzzwork Enterprises (https://www.fuzzwork.co.uk/dump/, a conversion of
+CCP's export) at build time into a git-ignored directory and is not redistributed. Any
+public deployment of software built from this repository must show the disclaimer above
+and comply with the EVE Developer License Agreement, including its non-commercial
+terms. This project does not modify the game client, does not automate gameplay and
+does not trade in-game assets for real money.
+
+------------------------------------------------------------------------------
+Fuzzwork Enterprises (SDE conversion)
+------------------------------------------------------------------------------
+
+The SDE builder (cmd/sde, sde/build) downloads the SQLite conversion of CCP's Static
+Data Export published by Fuzzwork Enterprises (https://www.fuzzwork.co.uk/) and
+reshapes it into the schema this project uses. Thanks to Steve Ronuken for maintaining
+the conversion. The conversion is fetched at build time and never bundled.
+
+------------------------------------------------------------------------------
+EVE University Wiki (CC BY-SA 4.0)
+------------------------------------------------------------------------------
+
+Some reference text and the mechanics cited in source-code comments and tool
+descriptions (for example "Stacking penalties", "Capacitor", "Propulsion equipment")
+are taken or condensed from the EVE University Wiki, https://wiki.eveuniversity.org/,
+(c) EVE University and its wiki contributors, available under the Creative Commons
+Attribution-ShareAlike 4.0 International licence,
+https://creativecommons.org/licenses/by-sa/4.0/ . The text was shortened, reformatted
+and combined with other material; it is not endorsed by EVE University. Derived text
+remains under CC BY-SA 4.0 (share-alike) and is kept apart from the code licence. Tool
+results that use wiki text name the page in their sources.
+
+------------------------------------------------------------------------------
+Community fit sources
+------------------------------------------------------------------------------
+
+The community-fit search returns fits that community sites publish (for example
+EVE Workbench, Abyss Tracker, and similar). The fits are not bundled with this
+repository and not redistributed in bulk: they are served by a running API with the
+source, link-back and licence on every hit. Respect each site's terms if you run your
+own index.
+
+------------------------------------------------------------------------------
+Pyfa (validation reference only)
+------------------------------------------------------------------------------
+
+The reference numbers in testdata/golden/gofa/oracle/ were produced by running
+Pyfa (https://github.com/pyfa-org/Pyfa, GPL-3.0, with the eos component partly under
+LGPL) as a separate local test oracle. The files contain attribute values from CCP's
+data and numbers computed from them; no Pyfa or eos source code, data file or binary is
+included in, imported by or linked with this software. Gofa is compared against these
+numbers in tests only.
+
+------------------------------------------------------------------------------
+Third-party software
+------------------------------------------------------------------------------
+
+The Go modules this repository depends on, with their licences, are listed in
+THIRD_PARTY.md. No dependency is licensed under the GPL, LGPL or AGPL; CI enforces a
+permissive-licence allowlist.

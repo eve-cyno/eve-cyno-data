@@ -1,0 +1,8 @@
+Skills required to use **Rifter**:
+
+  • Minmatar Frigate I
+
+Note: also requires the parent skill chain (e.g. Spaceship Command V for capitals).
+
+Full prerequisite chain:
+  • Spaceship Command I

@@ -1,0 +1,553 @@
+##### qc2_hawk_no_coprocessor #####
+STATUS: INVALID (1 violation(s)) — Hawk
+
+CPU: 256.0 / 237.5 tf
+PG:  69.4 / 70.0 MW
+Hi slots:  5/5 [FULL]
+Mid slots: 5/5 [FULL]
+Low slots: 1/2
+Rigs:      2/2 [FULL]
+
+VIOLATIONS:
+• CPU over by 18.5 tf (256.0/237.5 tf). Top consumers: 'Medium Ancillary Shield Booster' (50.0 tf), 'Medium Ancillary Shield Booster' (50.0 tf), 'Medium Ancillary Shield Booster' (50.0 tf). Remove or downgrade one of these.
+Note: skill profile = Power Grid Management V + CPU Management V (+25% PG/CPU), Weapon Upgrades V (-25% turret/launcher CPU), Advanced Weapon Upgrades V (-10% turret/launcher PG), Energy Grid Upgrades V (-25% power-core CPU). Implants and faction-specific bonuses NOT modelled. Data: SDE.
+---- typed ----
+{"ship":"Hawk","valid":false,"cpu":{"used":256,"capacity":237.5,"unit":"tf"},"pg":{"used":69.4,"capacity":70,"unit":"MW"},"slots":{"high":{"used":5,"capacity":5},"mid":{"used":5,"capacity":5},"low":{"used":1,"capacity":2},"rig":{"used":2,"capacity":2}},"violations":["CPU over by 18.5 tf (256.0/237.5 tf). Top consumers: 'Medium Ancillary Shield Booster' (50.0 tf), 'Medium Ancillary Shield Booster' (50.0 tf), 'Medium Ancillary Shield Booster' (50.0 tf). Remove or downgrade one of these."],"unresolved_modules":[],"data_source":"SDE"}
+##### qc2_hawk_no_coprocessor_alpha #####
+STATUS: INVALID (3 violation(s)) — Hawk
+
+CPU: 256.0 / 237.5 tf
+PG:  69.4 / 70.0 MW
+Hi slots:  5/5 [FULL]
+Mid slots: 5/5 [FULL]
+Low slots: 1/2
+Rigs:      2/2 [FULL]
+
+VIOLATIONS:
+• CPU over by 18.5 tf (256.0/237.5 tf). Top consumers: 'Medium Ancillary Shield Booster' (50.0 tf), 'Medium Ancillary Shield Booster' (50.0 tf), 'Medium Ancillary Shield Booster' (50.0 tf). Remove or downgrade one of these.
+• alpha-clone illegal module(s), drone(s) or charge(s) (they need skills an Alpha clone cannot train - Omega required): 1MN Afterburner II
+• alpha-clone illegal hull (an Alpha clone cannot fly it - Omega required): Hawk
+Note: skill profile = Power Grid Management V + CPU Management V (+25% PG/CPU), Weapon Upgrades V (-25% turret/launcher CPU), Advanced Weapon Upgrades V (-10% turret/launcher PG), Energy Grid Upgrades V (-25% power-core CPU). Implants and faction-specific bonuses NOT modelled. Data: SDE.
+---- typed ----
+{"ship":"Hawk","valid":false,"cpu":{"used":256,"capacity":237.5,"unit":"tf"},"pg":{"used":69.4,"capacity":70,"unit":"MW"},"slots":{"high":{"used":5,"capacity":5},"mid":{"used":5,"capacity":5},"low":{"used":1,"capacity":2},"rig":{"used":2,"capacity":2}},"violations":["CPU over by 18.5 tf (256.0/237.5 tf). Top consumers: 'Medium Ancillary Shield Booster' (50.0 tf), 'Medium Ancillary Shield Booster' (50.0 tf), 'Medium Ancillary Shield Booster' (50.0 tf). Remove or downgrade one of these.","alpha-clone illegal module(s), drone(s) or charge(s) (they need skills an Alpha clone cannot train - Omega required): 1MN Afterburner II","alpha-clone illegal hull (an Alpha clone cannot fly it - Omega required): Hawk"],"unresolved_modules":[],"data_source":"SDE"}
+##### qc2_q131_viator #####
+STATUS: VALID — Viator
+
+CPU: 278.0 / 312.5 tf
+PG:  147.2 / 168.8 MW
+Hi slots:  2/2 [FULL]
+Mid slots: 3/3 [FULL]
+Low slots: 3/3 [FULL]
+Rigs:      2/2 [FULL]
+Note: skill profile = Power Grid Management V + CPU Management V (+25% PG/CPU), Weapon Upgrades V (-25% turret/launcher CPU), Advanced Weapon Upgrades V (-10% turret/launcher PG), Energy Grid Upgrades V (-25% power-core CPU). Implants and faction-specific bonuses NOT modelled. Data: SDE.
+---- typed ----
+{"ship":"Viator","valid":true,"cpu":{"used":278,"capacity":312.5,"unit":"tf"},"pg":{"used":147.25,"capacity":168.75,"unit":"MW"},"slots":{"high":{"used":2,"capacity":2},"mid":{"used":3,"capacity":3},"low":{"used":3,"capacity":3},"rig":{"used":2,"capacity":2}},"violations":[],"unresolved_modules":[],"data_source":"SDE"}
+##### qc2_q131_viator_alpha #####
+STATUS: INVALID (2 violation(s)) — Viator
+
+CPU: 278.0 / 312.5 tf
+PG:  147.2 / 168.8 MW
+Hi slots:  2/2 [FULL]
+Mid slots: 3/3 [FULL]
+Low slots: 3/3 [FULL]
+Rigs:      2/2 [FULL]
+
+VIOLATIONS:
+• alpha-clone illegal module(s), drone(s) or charge(s) (they need skills an Alpha clone cannot train - Omega required): Covert Ops Cloaking Device II, Interdiction Nullifier I
+• alpha-clone illegal hull (an Alpha clone cannot fly it - Omega required): Viator
+Note: skill profile = Power Grid Management V + CPU Management V (+25% PG/CPU), Weapon Upgrades V (-25% turret/launcher CPU), Advanced Weapon Upgrades V (-10% turret/launcher PG), Energy Grid Upgrades V (-25% power-core CPU). Implants and faction-specific bonuses NOT modelled. Data: SDE.
+---- typed ----
+{"ship":"Viator","valid":false,"cpu":{"used":278,"capacity":312.5,"unit":"tf"},"pg":{"used":147.25,"capacity":168.75,"unit":"MW"},"slots":{"high":{"used":2,"capacity":2},"mid":{"used":3,"capacity":3},"low":{"used":3,"capacity":3},"rig":{"used":2,"capacity":2}},"violations":["alpha-clone illegal module(s), drone(s) or charge(s) (they need skills an Alpha clone cannot train - Omega required): Covert Ops Cloaking Device II, Interdiction Nullifier I","alpha-clone illegal hull (an Alpha clone cannot fly it - Omega required): Viator"],"unresolved_modules":[],"data_source":"SDE"}
+##### qc2_q148_hawk #####
+STATUS: VALID — Hawk
+
+CPU: 256.0 / 261.3 tf
+PG:  70.4 / 70.0 MW
+Hi slots:  5/5 [FULL]
+Mid slots: 5/5 [FULL]
+Low slots: 2/2 [FULL]
+Rigs:      2/2 [FULL]
+
+WARNINGS:
+• PG over by 0.4 MW (70.4/70.0 MW), within the 5 % implant allowance: fits with a 5 % powergrid implant (EG-605). Top consumers: 'Medium Ancillary Shield Booster' (12.0 MW), 'Medium Ancillary Shield Booster' (12.0 MW), 'Medium Ancillary Shield Booster' (12.0 MW).
+Note: skill profile = Power Grid Management V + CPU Management V (+25% PG/CPU), Weapon Upgrades V (-25% turret/launcher CPU), Advanced Weapon Upgrades V (-10% turret/launcher PG), Energy Grid Upgrades V (-25% power-core CPU). Implants and faction-specific bonuses NOT modelled. Data: SDE.
+---- typed ----
+{"ship":"Hawk","valid":true,"cpu":{"used":256,"capacity":261.25000000000006,"unit":"tf"},"pg":{"used":70.4,"capacity":70,"unit":"MW"},"slots":{"high":{"used":5,"capacity":5},"mid":{"used":5,"capacity":5},"low":{"used":2,"capacity":2},"rig":{"used":2,"capacity":2}},"violations":[],"warnings":["PG over by 0.4 MW (70.4/70.0 MW), within the 5 % implant allowance: fits with a 5 % powergrid implant (EG-605). Top consumers: 'Medium Ancillary Shield Booster' (12.0 MW), 'Medium Ancillary Shield Booster' (12.0 MW), 'Medium Ancillary Shield Booster' (12.0 MW)."],"unresolved_modules":[],"data_source":"SDE"}
+##### qc2_q148_hawk_alpha #####
+STATUS: INVALID (2 violation(s)) — Hawk
+
+CPU: 256.0 / 261.3 tf
+PG:  70.4 / 70.0 MW
+Hi slots:  5/5 [FULL]
+Mid slots: 5/5 [FULL]
+Low slots: 2/2 [FULL]
+Rigs:      2/2 [FULL]
+
+WARNINGS:
+• PG over by 0.4 MW (70.4/70.0 MW), within the 5 % implant allowance: fits with a 5 % powergrid implant (EG-605). Top consumers: 'Medium Ancillary Shield Booster' (12.0 MW), 'Medium Ancillary Shield Booster' (12.0 MW), 'Medium Ancillary Shield Booster' (12.0 MW).
+
+VIOLATIONS:
+• alpha-clone illegal module(s), drone(s) or charge(s) (they need skills an Alpha clone cannot train - Omega required): 1MN Afterburner II
+• alpha-clone illegal hull (an Alpha clone cannot fly it - Omega required): Hawk
+Note: skill profile = Power Grid Management V + CPU Management V (+25% PG/CPU), Weapon Upgrades V (-25% turret/launcher CPU), Advanced Weapon Upgrades V (-10% turret/launcher PG), Energy Grid Upgrades V (-25% power-core CPU). Implants and faction-specific bonuses NOT modelled. Data: SDE.
+---- typed ----
+{"ship":"Hawk","valid":false,"cpu":{"used":256,"capacity":261.25000000000006,"unit":"tf"},"pg":{"used":70.4,"capacity":70,"unit":"MW"},"slots":{"high":{"used":5,"capacity":5},"mid":{"used":5,"capacity":5},"low":{"used":2,"capacity":2},"rig":{"used":2,"capacity":2}},"violations":["alpha-clone illegal module(s), drone(s) or charge(s) (they need skills an Alpha clone cannot train - Omega required): 1MN Afterburner II","alpha-clone illegal hull (an Alpha clone cannot fly it - Omega required): Hawk"],"warnings":["PG over by 0.4 MW (70.4/70.0 MW), within the 5 % implant allowance: fits with a 5 % powergrid implant (EG-605). Top consumers: 'Medium Ancillary Shield Booster' (12.0 MW), 'Medium Ancillary Shield Booster' (12.0 MW), 'Medium Ancillary Shield Booster' (12.0 MW)."],"unresolved_modules":[],"data_source":"SDE"}
+##### qc2_q172_drake_navy_issue #####
+STATUS: VALID — Drake Navy Issue
+
+CPU: 665.5 / 687.5 tf
+PG:  1173.9 / 1187.5 MW
+Hi slots:  8/8 [FULL]
+Mid slots: 6/6 [FULL]
+Low slots: 4/4 [FULL]
+Rigs:      3/3 [FULL]
+Note: skill profile = Power Grid Management V + CPU Management V (+25% PG/CPU), Weapon Upgrades V (-25% turret/launcher CPU), Advanced Weapon Upgrades V (-10% turret/launcher PG), Energy Grid Upgrades V (-25% power-core CPU). Implants and faction-specific bonuses NOT modelled. Data: SDE.
+---- typed ----
+{"ship":"Drake Navy Issue","valid":true,"cpu":{"used":665.5,"capacity":687.5,"unit":"tf"},"pg":{"used":1173.9,"capacity":1187.5,"unit":"MW"},"slots":{"high":{"used":8,"capacity":8},"mid":{"used":6,"capacity":6},"low":{"used":4,"capacity":4},"rig":{"used":3,"capacity":3}},"violations":[],"unresolved_modules":[],"data_source":"SDE"}
+##### qc2_q172_drake_navy_issue_alpha #####
+STATUS: INVALID (1 violation(s)) — Drake Navy Issue
+
+CPU: 665.5 / 687.5 tf
+PG:  1173.9 / 1187.5 MW
+Hi slots:  8/8 [FULL]
+Mid slots: 6/6 [FULL]
+Low slots: 4/4 [FULL]
+Rigs:      3/3 [FULL]
+
+VIOLATIONS:
+• alpha-clone illegal module(s), drone(s) or charge(s) (they need skills an Alpha clone cannot train - Omega required): 10MN Afterburner II
+Note: skill profile = Power Grid Management V + CPU Management V (+25% PG/CPU), Weapon Upgrades V (-25% turret/launcher CPU), Advanced Weapon Upgrades V (-10% turret/launcher PG), Energy Grid Upgrades V (-25% power-core CPU). Implants and faction-specific bonuses NOT modelled. Data: SDE.
+---- typed ----
+{"ship":"Drake Navy Issue","valid":false,"cpu":{"used":665.5,"capacity":687.5,"unit":"tf"},"pg":{"used":1173.9,"capacity":1187.5,"unit":"MW"},"slots":{"high":{"used":8,"capacity":8},"mid":{"used":6,"capacity":6},"low":{"used":4,"capacity":4},"rig":{"used":3,"capacity":3}},"violations":["alpha-clone illegal module(s), drone(s) or charge(s) (they need skills an Alpha clone cannot train - Omega required): 10MN Afterburner II"],"unresolved_modules":[],"data_source":"SDE"}
+##### qc2_q182_vargur #####
+STATUS: VALID — Vargur
+
+CPU: 712.8 / 750.0 tf
+PG:  11485.0 / 16125.0 MW
+Hi slots:  7/7 [FULL]
+Mid slots: 6/6 [FULL]
+Low slots: 6/6 [FULL]
+Rigs:      2/2 [FULL]
+Note: skill profile = Power Grid Management V + CPU Management V (+25% PG/CPU), Weapon Upgrades V (-25% turret/launcher CPU), Advanced Weapon Upgrades V (-10% turret/launcher PG), Energy Grid Upgrades V (-25% power-core CPU). Implants and faction-specific bonuses NOT modelled. Data: SDE.
+---- typed ----
+{"ship":"Vargur","valid":true,"cpu":{"used":712.75,"capacity":750,"unit":"tf"},"pg":{"used":11485,"capacity":16125,"unit":"MW"},"slots":{"high":{"used":7,"capacity":7},"mid":{"used":6,"capacity":6},"low":{"used":6,"capacity":6},"rig":{"used":2,"capacity":2}},"violations":[],"unresolved_modules":[],"data_source":"SDE"}
+##### qc2_q182_vargur_alpha #####
+STATUS: INVALID (2 violation(s)) — Vargur
+
+CPU: 712.8 / 750.0 tf
+PG:  11485.0 / 16125.0 MW
+Hi slots:  7/7 [FULL]
+Mid slots: 6/6 [FULL]
+Low slots: 6/6 [FULL]
+Rigs:      2/2 [FULL]
+
+VIOLATIONS:
+• alpha-clone illegal module(s), drone(s) or charge(s) (they need skills an Alpha clone cannot train - Omega required): 800mm Repeating Cannon II, Bastion Module I
+• alpha-clone illegal hull (an Alpha clone cannot fly it - Omega required): Vargur
+Note: skill profile = Power Grid Management V + CPU Management V (+25% PG/CPU), Weapon Upgrades V (-25% turret/launcher CPU), Advanced Weapon Upgrades V (-10% turret/launcher PG), Energy Grid Upgrades V (-25% power-core CPU). Implants and faction-specific bonuses NOT modelled. Data: SDE.
+---- typed ----
+{"ship":"Vargur","valid":false,"cpu":{"used":712.75,"capacity":750,"unit":"tf"},"pg":{"used":11485,"capacity":16125,"unit":"MW"},"slots":{"high":{"used":7,"capacity":7},"mid":{"used":6,"capacity":6},"low":{"used":6,"capacity":6},"rig":{"used":2,"capacity":2}},"violations":["alpha-clone illegal module(s), drone(s) or charge(s) (they need skills an Alpha clone cannot train - Omega required): 800mm Repeating Cannon II, Bastion Module I","alpha-clone illegal hull (an Alpha clone cannot fly it - Omega required): Vargur"],"unresolved_modules":[],"data_source":"SDE"}
+##### qc2_q200_cerberus #####
+STATUS: VALID — Cerberus
+
+CPU: 579.0 / 668.8 tf
+PG:  1068.8 / 1101.9 MW
+Hi slots:  6/6 [FULL]
+Mid slots: 5/5 [FULL]
+Low slots: 4/4 [FULL]
+Rigs:      2/2 [FULL]
+Note: skill profile = Power Grid Management V + CPU Management V (+25% PG/CPU), Weapon Upgrades V (-25% turret/launcher CPU), Advanced Weapon Upgrades V (-10% turret/launcher PG), Energy Grid Upgrades V (-25% power-core CPU). Implants and faction-specific bonuses NOT modelled. Data: SDE.
+---- typed ----
+{"ship":"Cerberus","valid":true,"cpu":{"used":579,"capacity":668.75,"unit":"tf"},"pg":{"used":1068.7999999999997,"capacity":1101.875,"unit":"MW"},"slots":{"high":{"used":6,"capacity":6},"mid":{"used":5,"capacity":5},"low":{"used":4,"capacity":4},"rig":{"used":2,"capacity":2}},"violations":[],"unresolved_modules":[],"data_source":"SDE"}
+##### qc2_q200_cerberus_alpha #####
+STATUS: INVALID (1 violation(s)) — Cerberus
+
+CPU: 579.0 / 668.8 tf
+PG:  1068.8 / 1101.9 MW
+Hi slots:  6/6 [FULL]
+Mid slots: 5/5 [FULL]
+Low slots: 4/4 [FULL]
+Rigs:      2/2 [FULL]
+
+VIOLATIONS:
+• alpha-clone illegal hull (an Alpha clone cannot fly it - Omega required): Cerberus
+Note: skill profile = Power Grid Management V + CPU Management V (+25% PG/CPU), Weapon Upgrades V (-25% turret/launcher CPU), Advanced Weapon Upgrades V (-10% turret/launcher PG), Energy Grid Upgrades V (-25% power-core CPU). Implants and faction-specific bonuses NOT modelled. Data: SDE.
+---- typed ----
+{"ship":"Cerberus","valid":false,"cpu":{"used":579,"capacity":668.75,"unit":"tf"},"pg":{"used":1068.7999999999997,"capacity":1101.875,"unit":"MW"},"slots":{"high":{"used":6,"capacity":6},"mid":{"used":5,"capacity":5},"low":{"used":4,"capacity":4},"rig":{"used":2,"capacity":2}},"violations":["alpha-clone illegal hull (an Alpha clone cannot fly it - Omega required): Cerberus"],"unresolved_modules":[],"data_source":"SDE"}
+##### qc2_q201_stormbringer #####
+STATUS: VALID — Stormbringer
+
+CPU: 492.0 / 487.5 tf
+PG:  1259.3 / 1212.5 MW
+Hi slots:  1/2
+Mid slots: 6/6 [FULL]
+Low slots: 3/3 [FULL]
+Rigs:      3/3 [FULL]
+
+WARNINGS:
+• CPU over by 4.5 tf (492.0/487.5 tf), within the 5 % implant allowance: fits with a 5 % CPU implant (EE-605). Top consumers: 'Medium Vorton Projector II' (166.5 tf), 'Pithum B-Type Medium Shield Booster' (51.0 tf), 'Multispectrum Shield Hardener II' (44.0 tf).
+• PG over by 46.8 MW (1259.3/1212.5 MW), within the 5 % implant allowance: fits with a 5 % powergrid implant (EG-605). Top consumers: 'Medium Vorton Projector II' (906.3 MW), 'Thukker Large Cap Battery' (280.0 MW), 'Republic Fleet 10MN Afterburner' (55.0 MW).
+Note: skill profile = Power Grid Management V + CPU Management V (+25% PG/CPU), Weapon Upgrades V (-25% turret/launcher CPU), Advanced Weapon Upgrades V (-10% turret/launcher PG), Energy Grid Upgrades V (-25% power-core CPU). Implants and faction-specific bonuses NOT modelled. Data: SDE.
+---- typed ----
+{"ship":"Stormbringer","valid":true,"cpu":{"used":492,"capacity":487.5,"unit":"tf"},"pg":{"used":1259.3000000000002,"capacity":1212.5,"unit":"MW"},"slots":{"high":{"used":1,"capacity":2},"mid":{"used":6,"capacity":6},"low":{"used":3,"capacity":3},"rig":{"used":3,"capacity":3}},"violations":[],"warnings":["CPU over by 4.5 tf (492.0/487.5 tf), within the 5 % implant allowance: fits with a 5 % CPU implant (EE-605). Top consumers: 'Medium Vorton Projector II' (166.5 tf), 'Pithum B-Type Medium Shield Booster' (51.0 tf), 'Multispectrum Shield Hardener II' (44.0 tf).","PG over by 46.8 MW (1259.3/1212.5 MW), within the 5 % implant allowance: fits with a 5 % powergrid implant (EG-605). Top consumers: 'Medium Vorton Projector II' (906.3 MW), 'Thukker Large Cap Battery' (280.0 MW), 'Republic Fleet 10MN Afterburner' (55.0 MW)."],"unresolved_modules":[],"data_source":"SDE"}
+##### qc2_q201_stormbringer_alpha #####
+STATUS: INVALID (2 violation(s)) — Stormbringer
+
+CPU: 492.0 / 487.5 tf
+PG:  1259.3 / 1212.5 MW
+Hi slots:  1/2
+Mid slots: 6/6 [FULL]
+Low slots: 3/3 [FULL]
+Rigs:      3/3 [FULL]
+
+WARNINGS:
+• CPU over by 4.5 tf (492.0/487.5 tf), within the 5 % implant allowance: fits with a 5 % CPU implant (EE-605). Top consumers: 'Medium Vorton Projector II' (166.5 tf), 'Pithum B-Type Medium Shield Booster' (51.0 tf), 'Multispectrum Shield Hardener II' (44.0 tf).
+• PG over by 46.8 MW (1259.3/1212.5 MW), within the 5 % implant allowance: fits with a 5 % powergrid implant (EG-605). Top consumers: 'Medium Vorton Projector II' (906.3 MW), 'Thukker Large Cap Battery' (280.0 MW), 'Republic Fleet 10MN Afterburner' (55.0 MW).
+
+VIOLATIONS:
+• alpha-clone illegal module(s), drone(s) or charge(s) (they need skills an Alpha clone cannot train - Omega required): Medium Vorton Projector II
+• alpha-clone illegal hull (an Alpha clone cannot fly it - Omega required): Stormbringer
+Note: skill profile = Power Grid Management V + CPU Management V (+25% PG/CPU), Weapon Upgrades V (-25% turret/launcher CPU), Advanced Weapon Upgrades V (-10% turret/launcher PG), Energy Grid Upgrades V (-25% power-core CPU). Implants and faction-specific bonuses NOT modelled. Data: SDE.
+---- typed ----
+{"ship":"Stormbringer","valid":false,"cpu":{"used":492,"capacity":487.5,"unit":"tf"},"pg":{"used":1259.3000000000002,"capacity":1212.5,"unit":"MW"},"slots":{"high":{"used":1,"capacity":2},"mid":{"used":6,"capacity":6},"low":{"used":3,"capacity":3},"rig":{"used":3,"capacity":3}},"violations":["alpha-clone illegal module(s), drone(s) or charge(s) (they need skills an Alpha clone cannot train - Omega required): Medium Vorton Projector II","alpha-clone illegal hull (an Alpha clone cannot fly it - Omega required): Stormbringer"],"warnings":["CPU over by 4.5 tf (492.0/487.5 tf), within the 5 % implant allowance: fits with a 5 % CPU implant (EE-605). Top consumers: 'Medium Vorton Projector II' (166.5 tf), 'Pithum B-Type Medium Shield Booster' (51.0 tf), 'Multispectrum Shield Hardener II' (44.0 tf).","PG over by 46.8 MW (1259.3/1212.5 MW), within the 5 % implant allowance: fits with a 5 % powergrid implant (EG-605). Top consumers: 'Medium Vorton Projector II' (906.3 MW), 'Thukker Large Cap Battery' (280.0 MW), 'Republic Fleet 10MN Afterburner' (55.0 MW)."],"unresolved_modules":[],"data_source":"SDE"}
+##### qc2_q202_ikitursa #####
+STATUS: VALID — Ikitursa
+
+CPU: 468.2 / 500.0 tf
+PG:  2279.0 / 2386.7 MW
+Hi slots:  4/4 [FULL]
+Mid slots: 4/4 [FULL]
+Low slots: 6/6 [FULL]
+Rigs:      2/2 [FULL]
+Note: skill profile = Power Grid Management V + CPU Management V (+25% PG/CPU), Weapon Upgrades V (-25% turret/launcher CPU), Advanced Weapon Upgrades V (-10% turret/launcher PG), Energy Grid Upgrades V (-25% power-core CPU). Implants and faction-specific bonuses NOT modelled. Data: SDE.
+---- typed ----
+{"ship":"Ikitursa","valid":true,"cpu":{"used":468.25,"capacity":500,"unit":"tf"},"pg":{"used":2279,"capacity":2386.69921875,"unit":"MW"},"slots":{"high":{"used":4,"capacity":4},"mid":{"used":4,"capacity":4},"low":{"used":6,"capacity":6},"rig":{"used":2,"capacity":2}},"violations":[],"unresolved_modules":[],"data_source":"SDE"}
+##### qc2_q202_ikitursa_alpha #####
+STATUS: INVALID (2 violation(s)) — Ikitursa
+
+CPU: 468.2 / 500.0 tf
+PG:  2279.0 / 2386.7 MW
+Hi slots:  4/4 [FULL]
+Mid slots: 4/4 [FULL]
+Low slots: 6/6 [FULL]
+Rigs:      2/2 [FULL]
+
+VIOLATIONS:
+• alpha-clone illegal module(s), drone(s) or charge(s) (they need skills an Alpha clone cannot train - Omega required): Veles Heavy Entropic Disintegrator, Occult M
+• alpha-clone illegal hull (an Alpha clone cannot fly it - Omega required): Ikitursa
+Note: skill profile = Power Grid Management V + CPU Management V (+25% PG/CPU), Weapon Upgrades V (-25% turret/launcher CPU), Advanced Weapon Upgrades V (-10% turret/launcher PG), Energy Grid Upgrades V (-25% power-core CPU). Implants and faction-specific bonuses NOT modelled. Data: SDE.
+---- typed ----
+{"ship":"Ikitursa","valid":false,"cpu":{"used":468.25,"capacity":500,"unit":"tf"},"pg":{"used":2279,"capacity":2386.69921875,"unit":"MW"},"slots":{"high":{"used":4,"capacity":4},"mid":{"used":4,"capacity":4},"low":{"used":6,"capacity":6},"rig":{"used":2,"capacity":2}},"violations":["alpha-clone illegal module(s), drone(s) or charge(s) (they need skills an Alpha clone cannot train - Omega required): Veles Heavy Entropic Disintegrator, Occult M","alpha-clone illegal hull (an Alpha clone cannot fly it - Omega required): Ikitursa"],"unresolved_modules":[],"data_source":"SDE"}
+##### qc2_q215_leshak #####
+STATUS: VALID — Leshak
+
+CPU: 756.0 / 781.2 tf
+PG:  20769.0 / 21250.0 MW
+Hi slots:  5/5 [FULL]
+Mid slots: 4/4 [FULL]
+Low slots: 8/8 [FULL]
+Rigs:      3/3 [FULL]
+Note: skill profile = Power Grid Management V + CPU Management V (+25% PG/CPU), Weapon Upgrades V (-25% turret/launcher CPU), Advanced Weapon Upgrades V (-10% turret/launcher PG), Energy Grid Upgrades V (-25% power-core CPU). Implants and faction-specific bonuses NOT modelled. Data: SDE.
+---- typed ----
+{"ship":"Leshak","valid":true,"cpu":{"used":756,"capacity":781.25,"unit":"tf"},"pg":{"used":20769,"capacity":21250,"unit":"MW"},"slots":{"high":{"used":5,"capacity":5},"mid":{"used":4,"capacity":4},"low":{"used":8,"capacity":8},"rig":{"used":3,"capacity":3}},"violations":[],"unresolved_modules":[],"data_source":"SDE"}
+##### qc2_q215_leshak_alpha #####
+STATUS: INVALID (2 violation(s)) — Leshak
+
+CPU: 756.0 / 781.2 tf
+PG:  20769.0 / 21250.0 MW
+Hi slots:  5/5 [FULL]
+Mid slots: 4/4 [FULL]
+Low slots: 8/8 [FULL]
+Rigs:      3/3 [FULL]
+
+VIOLATIONS:
+• alpha-clone illegal module(s), drone(s) or charge(s) (they need skills an Alpha clone cannot train - Omega required): Supratidal Entropic Disintegrator I, Heavy Capacitor Booster II
+• alpha-clone illegal hull (an Alpha clone cannot fly it - Omega required): Leshak
+Note: skill profile = Power Grid Management V + CPU Management V (+25% PG/CPU), Weapon Upgrades V (-25% turret/launcher CPU), Advanced Weapon Upgrades V (-10% turret/launcher PG), Energy Grid Upgrades V (-25% power-core CPU). Implants and faction-specific bonuses NOT modelled. Data: SDE.
+---- typed ----
+{"ship":"Leshak","valid":false,"cpu":{"used":756,"capacity":781.25,"unit":"tf"},"pg":{"used":20769,"capacity":21250,"unit":"MW"},"slots":{"high":{"used":5,"capacity":5},"mid":{"used":4,"capacity":4},"low":{"used":8,"capacity":8},"rig":{"used":3,"capacity":3}},"violations":["alpha-clone illegal module(s), drone(s) or charge(s) (they need skills an Alpha clone cannot train - Omega required): Supratidal Entropic Disintegrator I, Heavy Capacitor Booster II","alpha-clone illegal hull (an Alpha clone cannot fly it - Omega required): Leshak"],"unresolved_modules":[],"data_source":"SDE"}
+##### qc2_q217_vargur #####
+STATUS: VALID — Vargur
+
+CPU: 737.0 / 750.0 tf
+PG:  10968.0 / 16125.0 MW
+Hi slots:  6/7
+Mid slots: 6/6 [FULL]
+Low slots: 6/6 [FULL]
+Rigs:      2/2 [FULL]
+Note: skill profile = Power Grid Management V + CPU Management V (+25% PG/CPU), Weapon Upgrades V (-25% turret/launcher CPU), Advanced Weapon Upgrades V (-10% turret/launcher PG), Energy Grid Upgrades V (-25% power-core CPU). Implants and faction-specific bonuses NOT modelled. Data: SDE.
+---- typed ----
+{"ship":"Vargur","valid":true,"cpu":{"used":737,"capacity":750,"unit":"tf"},"pg":{"used":10968,"capacity":16125,"unit":"MW"},"slots":{"high":{"used":6,"capacity":7},"mid":{"used":6,"capacity":6},"low":{"used":6,"capacity":6},"rig":{"used":2,"capacity":2}},"violations":[],"unresolved_modules":[],"data_source":"SDE"}
+##### qc2_q217_vargur_alpha #####
+STATUS: INVALID (2 violation(s)) — Vargur
+
+CPU: 737.0 / 750.0 tf
+PG:  10968.0 / 16125.0 MW
+Hi slots:  6/7
+Mid slots: 6/6 [FULL]
+Low slots: 6/6 [FULL]
+Rigs:      2/2 [FULL]
+
+VIOLATIONS:
+• alpha-clone illegal module(s), drone(s) or charge(s) (they need skills an Alpha clone cannot train - Omega required): Bastion Module I, Dual 650mm Repeating Cannon II, Heavy Stasis Grappler II
+• alpha-clone illegal hull (an Alpha clone cannot fly it - Omega required): Vargur
+Note: skill profile = Power Grid Management V + CPU Management V (+25% PG/CPU), Weapon Upgrades V (-25% turret/launcher CPU), Advanced Weapon Upgrades V (-10% turret/launcher PG), Energy Grid Upgrades V (-25% power-core CPU). Implants and faction-specific bonuses NOT modelled. Data: SDE.
+---- typed ----
+{"ship":"Vargur","valid":false,"cpu":{"used":737,"capacity":750,"unit":"tf"},"pg":{"used":10968,"capacity":16125,"unit":"MW"},"slots":{"high":{"used":6,"capacity":7},"mid":{"used":6,"capacity":6},"low":{"used":6,"capacity":6},"rig":{"used":2,"capacity":2}},"violations":["alpha-clone illegal module(s), drone(s) or charge(s) (they need skills an Alpha clone cannot train - Omega required): Bastion Module I, Dual 650mm Repeating Cannon II, Heavy Stasis Grappler II","alpha-clone illegal hull (an Alpha clone cannot fly it - Omega required): Vargur"],"unresolved_modules":[],"data_source":"SDE"}
+##### qc2_q64_thorax #####
+STATUS: VALID — Thorax
+
+CPU: 410.8 / 412.5 tf
+PG:  1111.0 / 1182.5 MW
+Hi slots:  5/5 [FULL]
+Mid slots: 4/4 [FULL]
+Low slots: 5/5 [FULL]
+Rigs:      3/3 [FULL]
+Note: skill profile = Power Grid Management V + CPU Management V (+25% PG/CPU), Weapon Upgrades V (-25% turret/launcher CPU), Advanced Weapon Upgrades V (-10% turret/launcher PG), Energy Grid Upgrades V (-25% power-core CPU). Implants and faction-specific bonuses NOT modelled. Data: SDE.
+---- typed ----
+{"ship":"Thorax","valid":true,"cpu":{"used":410.75,"capacity":412.5,"unit":"tf"},"pg":{"used":1111,"capacity":1182.5,"unit":"MW"},"slots":{"high":{"used":5,"capacity":5},"mid":{"used":4,"capacity":4},"low":{"used":5,"capacity":5},"rig":{"used":3,"capacity":3}},"violations":[],"unresolved_modules":[],"data_source":"SDE"}
+##### qc2_q64_thorax_alpha #####
+STATUS: INVALID (1 violation(s)) — Thorax
+
+CPU: 410.8 / 412.5 tf
+PG:  1111.0 / 1182.5 MW
+Hi slots:  5/5 [FULL]
+Mid slots: 4/4 [FULL]
+Low slots: 5/5 [FULL]
+Rigs:      3/3 [FULL]
+
+VIOLATIONS:
+• alpha-clone illegal module(s), drone(s) or charge(s) (they need skills an Alpha clone cannot train - Omega required): 10MN Afterburner II, Medium Capacitor Booster II
+Note: skill profile = Power Grid Management V + CPU Management V (+25% PG/CPU), Weapon Upgrades V (-25% turret/launcher CPU), Advanced Weapon Upgrades V (-10% turret/launcher PG), Energy Grid Upgrades V (-25% power-core CPU). Implants and faction-specific bonuses NOT modelled. Data: SDE.
+---- typed ----
+{"ship":"Thorax","valid":false,"cpu":{"used":410.75,"capacity":412.5,"unit":"tf"},"pg":{"used":1111,"capacity":1182.5,"unit":"MW"},"slots":{"high":{"used":5,"capacity":5},"mid":{"used":4,"capacity":4},"low":{"used":5,"capacity":5},"rig":{"used":3,"capacity":3}},"violations":["alpha-clone illegal module(s), drone(s) or charge(s) (they need skills an Alpha clone cannot train - Omega required): 10MN Afterburner II, Medium Capacitor Booster II"],"unresolved_modules":[],"data_source":"SDE"}
+##### qc2_q65_rifter #####
+STATUS: VALID — Rifter
+
+CPU: 163.0 / 162.5 tf
+PG:  49.7 / 51.2 MW
+Hi slots:  3/3 [FULL]
+Mid slots: 3/3 [FULL]
+Low slots: 4/4 [FULL]
+Rigs:      3/3 [FULL]
+
+WARNINGS:
+• CPU over by 0.5 tf (163.0/162.5 tf), within the 5 % implant allowance: fits with a 5 % CPU implant (EE-605). Top consumers: 'Initiated Compact Warp Disruptor' (32.0 tf), 'Stasis Webifier II' (30.0 tf), 'Counterbalanced Compact Gyrostabilizer' (25.0 tf).
+Note: skill profile = Power Grid Management V + CPU Management V (+25% PG/CPU), Weapon Upgrades V (-25% turret/launcher CPU), Advanced Weapon Upgrades V (-10% turret/launcher PG), Energy Grid Upgrades V (-25% power-core CPU). Implants and faction-specific bonuses NOT modelled. Data: SDE.
+---- typed ----
+{"ship":"Rifter","valid":true,"cpu":{"used":163,"capacity":162.5,"unit":"tf"},"pg":{"used":49.7,"capacity":51.25,"unit":"MW"},"slots":{"high":{"used":3,"capacity":3},"mid":{"used":3,"capacity":3},"low":{"used":4,"capacity":4},"rig":{"used":3,"capacity":3}},"violations":[],"warnings":["CPU over by 0.5 tf (163.0/162.5 tf), within the 5 % implant allowance: fits with a 5 % CPU implant (EE-605). Top consumers: 'Initiated Compact Warp Disruptor' (32.0 tf), 'Stasis Webifier II' (30.0 tf), 'Counterbalanced Compact Gyrostabilizer' (25.0 tf)."],"unresolved_modules":[],"data_source":"SDE"}
+##### qc2_q65_rifter_alpha #####
+STATUS: INVALID (1 violation(s)) — Rifter
+
+CPU: 163.0 / 162.5 tf
+PG:  49.7 / 51.2 MW
+Hi slots:  3/3 [FULL]
+Mid slots: 3/3 [FULL]
+Low slots: 4/4 [FULL]
+Rigs:      3/3 [FULL]
+
+WARNINGS:
+• CPU over by 0.5 tf (163.0/162.5 tf), within the 5 % implant allowance: fits with a 5 % CPU implant (EE-605). Top consumers: 'Initiated Compact Warp Disruptor' (32.0 tf), 'Stasis Webifier II' (30.0 tf), 'Counterbalanced Compact Gyrostabilizer' (25.0 tf).
+
+VIOLATIONS:
+• alpha-clone illegal module(s), drone(s) or charge(s) (they need skills an Alpha clone cannot train - Omega required): 1MN Afterburner II
+Note: skill profile = Power Grid Management V + CPU Management V (+25% PG/CPU), Weapon Upgrades V (-25% turret/launcher CPU), Advanced Weapon Upgrades V (-10% turret/launcher PG), Energy Grid Upgrades V (-25% power-core CPU). Implants and faction-specific bonuses NOT modelled. Data: SDE.
+---- typed ----
+{"ship":"Rifter","valid":false,"cpu":{"used":163,"capacity":162.5,"unit":"tf"},"pg":{"used":49.7,"capacity":51.25,"unit":"MW"},"slots":{"high":{"used":3,"capacity":3},"mid":{"used":3,"capacity":3},"low":{"used":4,"capacity":4},"rig":{"used":3,"capacity":3}},"violations":["alpha-clone illegal module(s), drone(s) or charge(s) (they need skills an Alpha clone cannot train - Omega required): 1MN Afterburner II"],"warnings":["CPU over by 0.5 tf (163.0/162.5 tf), within the 5 % implant allowance: fits with a 5 % CPU implant (EE-605). Top consumers: 'Initiated Compact Warp Disruptor' (32.0 tf), 'Stasis Webifier II' (30.0 tf), 'Counterbalanced Compact Gyrostabilizer' (25.0 tf)."],"unresolved_modules":[],"data_source":"SDE"}
+##### qc2_q69_cormorant #####
+STATUS: VALID — Cormorant
+
+CPU: 259.0 / 250.0 tf
+PG:  75.6 / 85.0 MW
+Hi slots:  8/8 [FULL]
+Mid slots: 3/3 [FULL]
+Low slots: 2/2 [FULL]
+Rigs:      3/3 [FULL]
+
+WARNINGS:
+• CPU over by 9.0 tf (259.0/250.0 tf), within the 5 % implant allowance: fits with a 5 % CPU implant (EE-605). Top consumers: 'Enduring Multispectrum Shield Hardener' (40.0 tf), 'Magnetic Field Stabilizer I' (27.0 tf), 'Damage Control I' (25.0 tf).
+Note: skill profile = Power Grid Management V + CPU Management V (+25% PG/CPU), Weapon Upgrades V (-25% turret/launcher CPU), Advanced Weapon Upgrades V (-10% turret/launcher PG), Energy Grid Upgrades V (-25% power-core CPU). Implants and faction-specific bonuses NOT modelled. Data: SDE.
+---- typed ----
+{"ship":"Cormorant","valid":true,"cpu":{"used":259,"capacity":250,"unit":"tf"},"pg":{"used":75.6,"capacity":85,"unit":"MW"},"slots":{"high":{"used":8,"capacity":8},"mid":{"used":3,"capacity":3},"low":{"used":2,"capacity":2},"rig":{"used":3,"capacity":3}},"violations":[],"warnings":["CPU over by 9.0 tf (259.0/250.0 tf), within the 5 % implant allowance: fits with a 5 % CPU implant (EE-605). Top consumers: 'Enduring Multispectrum Shield Hardener' (40.0 tf), 'Magnetic Field Stabilizer I' (27.0 tf), 'Damage Control I' (25.0 tf)."],"unresolved_modules":[],"data_source":"SDE"}
+##### qc2_q69_cormorant_alpha #####
+STATUS: VALID — Cormorant
+
+CPU: 259.0 / 250.0 tf
+PG:  75.6 / 85.0 MW
+Hi slots:  8/8 [FULL]
+Mid slots: 3/3 [FULL]
+Low slots: 2/2 [FULL]
+Rigs:      3/3 [FULL]
+
+WARNINGS:
+• CPU over by 9.0 tf (259.0/250.0 tf), within the 5 % implant allowance: fits with a 5 % CPU implant (EE-605). Top consumers: 'Enduring Multispectrum Shield Hardener' (40.0 tf), 'Magnetic Field Stabilizer I' (27.0 tf), 'Damage Control I' (25.0 tf).
+Note: skill profile = Power Grid Management V + CPU Management V (+25% PG/CPU), Weapon Upgrades V (-25% turret/launcher CPU), Advanced Weapon Upgrades V (-10% turret/launcher PG), Energy Grid Upgrades V (-25% power-core CPU). Implants and faction-specific bonuses NOT modelled. Data: SDE.
+---- typed ----
+{"ship":"Cormorant","valid":true,"cpu":{"used":259,"capacity":250,"unit":"tf"},"pg":{"used":75.6,"capacity":85,"unit":"MW"},"slots":{"high":{"used":8,"capacity":8},"mid":{"used":3,"capacity":3},"low":{"used":2,"capacity":2},"rig":{"used":3,"capacity":3}},"violations":[],"warnings":["CPU over by 9.0 tf (259.0/250.0 tf), within the 5 % implant allowance: fits with a 5 % CPU implant (EE-605). Top consumers: 'Enduring Multispectrum Shield Hardener' (40.0 tf), 'Magnetic Field Stabilizer I' (27.0 tf), 'Damage Control I' (25.0 tf)."],"unresolved_modules":[],"data_source":"SDE"}
+##### qc2_q79_gila #####
+STATUS: VALID — Gila
+
+CPU: 446.0 / 475.0 tf
+PG:  916.9 / 921.3 MW
+Hi slots:  5/5 [FULL]
+Mid slots: 6/6 [FULL]
+Low slots: 3/3 [FULL]
+Rigs:      3/3 [FULL]
+Note: skill profile = Power Grid Management V + CPU Management V (+25% PG/CPU), Weapon Upgrades V (-25% turret/launcher CPU), Advanced Weapon Upgrades V (-10% turret/launcher PG), Energy Grid Upgrades V (-25% power-core CPU). Implants and faction-specific bonuses NOT modelled. Data: SDE.
+---- typed ----
+{"ship":"Gila","valid":true,"cpu":{"used":446,"capacity":475,"unit":"tf"},"pg":{"used":916.9,"capacity":921.2500000000001,"unit":"MW"},"slots":{"high":{"used":5,"capacity":5},"mid":{"used":6,"capacity":6},"low":{"used":3,"capacity":3},"rig":{"used":3,"capacity":3}},"violations":[],"unresolved_modules":[],"data_source":"SDE"}
+##### qc2_q79_gila_alpha #####
+STATUS: INVALID (1 violation(s)) — Gila
+
+CPU: 446.0 / 475.0 tf
+PG:  916.9 / 921.3 MW
+Hi slots:  5/5 [FULL]
+Mid slots: 6/6 [FULL]
+Low slots: 3/3 [FULL]
+Rigs:      3/3 [FULL]
+
+VIOLATIONS:
+• alpha-clone illegal module(s), drone(s) or charge(s) (they need skills an Alpha clone cannot train - Omega required): Drone Link Augmentor II
+Note: skill profile = Power Grid Management V + CPU Management V (+25% PG/CPU), Weapon Upgrades V (-25% turret/launcher CPU), Advanced Weapon Upgrades V (-10% turret/launcher PG), Energy Grid Upgrades V (-25% power-core CPU). Implants and faction-specific bonuses NOT modelled. Data: SDE.
+---- typed ----
+{"ship":"Gila","valid":false,"cpu":{"used":446,"capacity":475,"unit":"tf"},"pg":{"used":916.9,"capacity":921.2500000000001,"unit":"MW"},"slots":{"high":{"used":5,"capacity":5},"mid":{"used":6,"capacity":6},"low":{"used":3,"capacity":3},"rig":{"used":3,"capacity":3}},"violations":["alpha-clone illegal module(s), drone(s) or charge(s) (they need skills an Alpha clone cannot train - Omega required): Drone Link Augmentor II"],"unresolved_modules":[],"data_source":"SDE"}
+##### qc2_q97_drake #####
+STATUS: VALID — Drake
+
+CPU: 617.5 / 625.0 tf
+PG:  1101.2 / 1099.8 MW
+Hi slots:  7/7 [FULL]
+Mid slots: 6/6 [FULL]
+Low slots: 4/4 [FULL]
+Rigs:      3/3 [FULL]
+
+WARNINGS:
+• PG over by 1.5 MW (1101.2/1099.8 MW), within the 5 % implant allowance: fits with a 5 % powergrid implant (EG-605). Top consumers: 'Medium Micro Jump Drive' (165.0 MW), 'Shield Command Burst II' (110.0 MW), 'Large F-S9 Regolith Compact Shield Extender' (105.0 MW).
+Note: skill profile = Power Grid Management V + CPU Management V (+25% PG/CPU), Weapon Upgrades V (-25% turret/launcher CPU), Advanced Weapon Upgrades V (-10% turret/launcher PG), Energy Grid Upgrades V (-25% power-core CPU). Implants and faction-specific bonuses NOT modelled. Data: SDE.
+---- typed ----
+{"ship":"Drake","valid":true,"cpu":{"used":617.5,"capacity":625,"unit":"tf"},"pg":{"used":1101.2000000000003,"capacity":1099.75,"unit":"MW"},"slots":{"high":{"used":7,"capacity":7},"mid":{"used":6,"capacity":6},"low":{"used":4,"capacity":4},"rig":{"used":3,"capacity":3}},"violations":[],"warnings":["PG over by 1.5 MW (1101.2/1099.8 MW), within the 5 % implant allowance: fits with a 5 % powergrid implant (EG-605). Top consumers: 'Medium Micro Jump Drive' (165.0 MW), 'Shield Command Burst II' (110.0 MW), 'Large F-S9 Regolith Compact Shield Extender' (105.0 MW)."],"unresolved_modules":[],"data_source":"SDE"}
+##### qc2_q97_drake_alpha #####
+STATUS: INVALID (1 violation(s)) — Drake
+
+CPU: 617.5 / 625.0 tf
+PG:  1101.2 / 1099.8 MW
+Hi slots:  7/7 [FULL]
+Mid slots: 6/6 [FULL]
+Low slots: 4/4 [FULL]
+Rigs:      3/3 [FULL]
+
+WARNINGS:
+• PG over by 1.5 MW (1101.2/1099.8 MW), within the 5 % implant allowance: fits with a 5 % powergrid implant (EG-605). Top consumers: 'Medium Micro Jump Drive' (165.0 MW), 'Shield Command Burst II' (110.0 MW), 'Large F-S9 Regolith Compact Shield Extender' (105.0 MW).
+
+VIOLATIONS:
+• alpha-clone illegal module(s), drone(s) or charge(s) (they need skills an Alpha clone cannot train - Omega required): Shield Command Burst II, Medium Micro Jump Drive
+Note: skill profile = Power Grid Management V + CPU Management V (+25% PG/CPU), Weapon Upgrades V (-25% turret/launcher CPU), Advanced Weapon Upgrades V (-10% turret/launcher PG), Energy Grid Upgrades V (-25% power-core CPU). Implants and faction-specific bonuses NOT modelled. Data: SDE.
+---- typed ----
+{"ship":"Drake","valid":false,"cpu":{"used":617.5,"capacity":625,"unit":"tf"},"pg":{"used":1101.2000000000003,"capacity":1099.75,"unit":"MW"},"slots":{"high":{"used":7,"capacity":7},"mid":{"used":6,"capacity":6},"low":{"used":4,"capacity":4},"rig":{"used":3,"capacity":3}},"violations":["alpha-clone illegal module(s), drone(s) or charge(s) (they need skills an Alpha clone cannot train - Omega required): Shield Command Burst II, Medium Micro Jump Drive"],"warnings":["PG over by 1.5 MW (1101.2/1099.8 MW), within the 5 % implant allowance: fits with a 5 % powergrid implant (EG-605). Top consumers: 'Medium Micro Jump Drive' (165.0 MW), 'Shield Command Burst II' (110.0 MW), 'Large F-S9 Regolith Compact Shield Extender' (105.0 MW)."],"unresolved_modules":[],"data_source":"SDE"}
+##### tools_rifter_cpu_over #####
+STATUS: INVALID (2 violation(s)) — Rifter
+
+CPU: 236.0 / 162.5 tf
+PG:  722.7 / 51.2 MW
+Hi slots:  3/3 [FULL]
+Mid slots: 3/3 [FULL]
+Low slots: 3/4
+Rigs:      3/3 [FULL]
+
+VIOLATIONS:
+• CPU over by 73.5 tf (236.0/162.5 tf). Top consumers: '100MN Afterburner II' (50.0 tf), 'Warp Scrambler II' (36.0 tf), 'Damage Control II' (30.0 tf). Remove or downgrade one of these.
+• PG over by 671.5 MW (722.7/51.2 MW). Top consumers: '100MN Afterburner II' (688.0 MW), '280mm Howitzer Artillery II' (9.9 MW), '280mm Howitzer Artillery II' (9.9 MW). Remove or downgrade one of these.
+Note: skill profile = Power Grid Management V + CPU Management V (+25% PG/CPU), Weapon Upgrades V (-25% turret/launcher CPU), Advanced Weapon Upgrades V (-10% turret/launcher PG), Energy Grid Upgrades V (-25% power-core CPU). Implants and faction-specific bonuses NOT modelled. Data: SDE.
+---- typed ----
+{"ship":"Rifter","valid":false,"cpu":{"used":236,"capacity":162.5,"unit":"tf"},"pg":{"used":722.7,"capacity":51.25,"unit":"MW"},"slots":{"high":{"used":3,"capacity":3},"mid":{"used":3,"capacity":3},"low":{"used":3,"capacity":4},"rig":{"used":3,"capacity":3}},"violations":["CPU over by 73.5 tf (236.0/162.5 tf). Top consumers: '100MN Afterburner II' (50.0 tf), 'Warp Scrambler II' (36.0 tf), 'Damage Control II' (30.0 tf). Remove or downgrade one of these.","PG over by 671.5 MW (722.7/51.2 MW). Top consumers: '100MN Afterburner II' (688.0 MW), '280mm Howitzer Artillery II' (9.9 MW), '280mm Howitzer Artillery II' (9.9 MW). Remove or downgrade one of these."],"unresolved_modules":[],"data_source":"SDE"}
+##### tools_rifter_cpu_over_alpha #####
+STATUS: INVALID (3 violation(s)) — Rifter
+
+CPU: 236.0 / 162.5 tf
+PG:  722.7 / 51.2 MW
+Hi slots:  3/3 [FULL]
+Mid slots: 3/3 [FULL]
+Low slots: 3/4
+Rigs:      3/3 [FULL]
+
+VIOLATIONS:
+• CPU over by 73.5 tf (236.0/162.5 tf). Top consumers: '100MN Afterburner II' (50.0 tf), 'Warp Scrambler II' (36.0 tf), 'Damage Control II' (30.0 tf). Remove or downgrade one of these.
+• PG over by 671.5 MW (722.7/51.2 MW). Top consumers: '100MN Afterburner II' (688.0 MW), '280mm Howitzer Artillery II' (9.9 MW), '280mm Howitzer Artillery II' (9.9 MW). Remove or downgrade one of these.
+• alpha-clone illegal module(s), drone(s) or charge(s) (they need skills an Alpha clone cannot train - Omega required): 100MN Afterburner II, Target Painter II
+Note: skill profile = Power Grid Management V + CPU Management V (+25% PG/CPU), Weapon Upgrades V (-25% turret/launcher CPU), Advanced Weapon Upgrades V (-10% turret/launcher PG), Energy Grid Upgrades V (-25% power-core CPU). Implants and faction-specific bonuses NOT modelled. Data: SDE.
+---- typed ----
+{"ship":"Rifter","valid":false,"cpu":{"used":236,"capacity":162.5,"unit":"tf"},"pg":{"used":722.7,"capacity":51.25,"unit":"MW"},"slots":{"high":{"used":3,"capacity":3},"mid":{"used":3,"capacity":3},"low":{"used":3,"capacity":4},"rig":{"used":3,"capacity":3}},"violations":["CPU over by 73.5 tf (236.0/162.5 tf). Top consumers: '100MN Afterburner II' (50.0 tf), 'Warp Scrambler II' (36.0 tf), 'Damage Control II' (30.0 tf). Remove or downgrade one of these.","PG over by 671.5 MW (722.7/51.2 MW). Top consumers: '100MN Afterburner II' (688.0 MW), '280mm Howitzer Artillery II' (9.9 MW), '280mm Howitzer Artillery II' (9.9 MW). Remove or downgrade one of these.","alpha-clone illegal module(s), drone(s) or charge(s) (they need skills an Alpha clone cannot train - Omega required): 100MN Afterburner II, Target Painter II"],"unresolved_modules":[],"data_source":"SDE"}
+##### tools_rifter_unfittable #####
+STATUS: INVALID (3 violation(s)) — Rifter
+
+CPU: 212.0 / 162.5 tf
+PG:  702.9 / 51.2 MW
+Hi slots:  1/3
+Mid slots: 3/3 [FULL]
+Low slots: 3/4
+Rigs:      3/3 [FULL]
+
+VIOLATIONS:
+• CPU over by 49.5 tf (212.0/162.5 tf). Top consumers: '100MN Afterburner II' (50.0 tf), 'Warp Scrambler II' (36.0 tf), 'Damage Control II' (30.0 tf). Remove or downgrade one of these.
+• PG over by 651.6 MW (702.9/51.2 MW). Top consumers: '100MN Afterburner II' (688.0 MW), '280mm Howitzer Artillery II' (9.9 MW), 'Target Painter II' (1.0 MW). Remove or downgrade one of these.
+• not a fittable module (resolved via SDE/ESI but has no slot and is not a drone or charge): 'Rifter'
+Note: skill profile = Power Grid Management V + CPU Management V (+25% PG/CPU), Weapon Upgrades V (-25% turret/launcher CPU), Advanced Weapon Upgrades V (-10% turret/launcher PG), Energy Grid Upgrades V (-25% power-core CPU). Implants and faction-specific bonuses NOT modelled. Data: SDE.
+---- typed ----
+{"ship":"Rifter","valid":false,"cpu":{"used":212,"capacity":162.5,"unit":"tf"},"pg":{"used":702.9,"capacity":51.25,"unit":"MW"},"slots":{"high":{"used":1,"capacity":3},"mid":{"used":3,"capacity":3},"low":{"used":3,"capacity":4},"rig":{"used":3,"capacity":3}},"violations":["CPU over by 49.5 tf (212.0/162.5 tf). Top consumers: '100MN Afterburner II' (50.0 tf), 'Warp Scrambler II' (36.0 tf), 'Damage Control II' (30.0 tf). Remove or downgrade one of these.","PG over by 651.6 MW (702.9/51.2 MW). Top consumers: '100MN Afterburner II' (688.0 MW), '280mm Howitzer Artillery II' (9.9 MW), 'Target Painter II' (1.0 MW). Remove or downgrade one of these.","not a fittable module (resolved via SDE/ESI but has no slot and is not a drone or charge): 'Rifter'"],"unresolved_modules":[],"data_source":"SDE"}
+##### tools_rifter_unfittable_alpha #####
+STATUS: INVALID (4 violation(s)) — Rifter
+
+CPU: 212.0 / 162.5 tf
+PG:  702.9 / 51.2 MW
+Hi slots:  1/3
+Mid slots: 3/3 [FULL]
+Low slots: 3/4
+Rigs:      3/3 [FULL]
+
+VIOLATIONS:
+• CPU over by 49.5 tf (212.0/162.5 tf). Top consumers: '100MN Afterburner II' (50.0 tf), 'Warp Scrambler II' (36.0 tf), 'Damage Control II' (30.0 tf). Remove or downgrade one of these.
+• PG over by 651.6 MW (702.9/51.2 MW). Top consumers: '100MN Afterburner II' (688.0 MW), '280mm Howitzer Artillery II' (9.9 MW), 'Target Painter II' (1.0 MW). Remove or downgrade one of these.
+• not a fittable module (resolved via SDE/ESI but has no slot and is not a drone or charge): 'Rifter'
+• alpha-clone illegal module(s), drone(s) or charge(s) (they need skills an Alpha clone cannot train - Omega required): 100MN Afterburner II, Target Painter II
+Note: skill profile = Power Grid Management V + CPU Management V (+25% PG/CPU), Weapon Upgrades V (-25% turret/launcher CPU), Advanced Weapon Upgrades V (-10% turret/launcher PG), Energy Grid Upgrades V (-25% power-core CPU). Implants and faction-specific bonuses NOT modelled. Data: SDE.
+---- typed ----
+{"ship":"Rifter","valid":false,"cpu":{"used":212,"capacity":162.5,"unit":"tf"},"pg":{"used":702.9,"capacity":51.25,"unit":"MW"},"slots":{"high":{"used":1,"capacity":3},"mid":{"used":3,"capacity":3},"low":{"used":3,"capacity":4},"rig":{"used":3,"capacity":3}},"violations":["CPU over by 49.5 tf (212.0/162.5 tf). Top consumers: '100MN Afterburner II' (50.0 tf), 'Warp Scrambler II' (36.0 tf), 'Damage Control II' (30.0 tf). Remove or downgrade one of these.","PG over by 651.6 MW (702.9/51.2 MW). Top consumers: '100MN Afterburner II' (688.0 MW), '280mm Howitzer Artillery II' (9.9 MW), 'Target Painter II' (1.0 MW). Remove or downgrade one of these.","not a fittable module (resolved via SDE/ESI but has no slot and is not a drone or charge): 'Rifter'","alpha-clone illegal module(s), drone(s) or charge(s) (they need skills an Alpha clone cannot train - Omega required): 100MN Afterburner II, Target Painter II"],"unresolved_modules":[],"data_source":"SDE"}
+##### tools_rifter_valid #####
+STATUS: INVALID (1 violation(s)) — Rifter
+
+CPU: 170.0 / 162.5 tf
+PG:  18.0 / 51.2 MW
+Hi slots:  3/3 [FULL]
+Mid slots: 3/3 [FULL]
+Low slots: 3/4
+Rigs:      3/3 [FULL]
+
+WARNINGS:
+• CPU over by 7.5 tf (170.0/162.5 tf), within the 5 % implant allowance: fits with a 5 % CPU implant (EE-605). Top consumers: 'Warp Scrambler II' (36.0 tf), 'Damage Control II' (30.0 tf), 'Gyrostabilizer II' (30.0 tf).
+
+VIOLATIONS:
+• unknown module(s) (not in SDE/ESI — likely fabricated): Small Autocannon II, Small Autocannon II, Small Autocannon II
+Unresolved modules (not counted): Small Autocannon II, Small Autocannon II, Small Autocannon II
+Note: skill profile = Power Grid Management V + CPU Management V (+25% PG/CPU), Weapon Upgrades V (-25% turret/launcher CPU), Advanced Weapon Upgrades V (-10% turret/launcher PG), Energy Grid Upgrades V (-25% power-core CPU). Implants and faction-specific bonuses NOT modelled. Data: SDE.
+---- typed ----
+{"ship":"Rifter","valid":false,"cpu":{"used":170,"capacity":162.5,"unit":"tf"},"pg":{"used":18,"capacity":51.25,"unit":"MW"},"slots":{"high":{"used":3,"capacity":3},"mid":{"used":3,"capacity":3},"low":{"used":3,"capacity":4},"rig":{"used":3,"capacity":3}},"violations":["unknown module(s) (not in SDE/ESI — likely fabricated): Small Autocannon II, Small Autocannon II, Small Autocannon II"],"warnings":["CPU over by 7.5 tf (170.0/162.5 tf), within the 5 % implant allowance: fits with a 5 % CPU implant (EE-605). Top consumers: 'Warp Scrambler II' (36.0 tf), 'Damage Control II' (30.0 tf), 'Gyrostabilizer II' (30.0 tf)."],"unresolved_modules":["Small Autocannon II","Small Autocannon II","Small Autocannon II"],"data_source":"SDE"}
+##### tools_rifter_valid_alpha #####
+STATUS: INVALID (2 violation(s)) — Rifter
+
+CPU: 170.0 / 162.5 tf
+PG:  18.0 / 51.2 MW
+Hi slots:  3/3 [FULL]
+Mid slots: 3/3 [FULL]
+Low slots: 3/4
+Rigs:      3/3 [FULL]
+
+WARNINGS:
+• CPU over by 7.5 tf (170.0/162.5 tf), within the 5 % implant allowance: fits with a 5 % CPU implant (EE-605). Top consumers: 'Warp Scrambler II' (36.0 tf), 'Damage Control II' (30.0 tf), 'Gyrostabilizer II' (30.0 tf).
+
+VIOLATIONS:
+• unknown module(s) (not in SDE/ESI — likely fabricated): Small Autocannon II, Small Autocannon II, Small Autocannon II
+• alpha-clone illegal module(s), drone(s) or charge(s) (they need skills an Alpha clone cannot train - Omega required): 1MN Afterburner II
+Unresolved modules (not counted): Small Autocannon II, Small Autocannon II, Small Autocannon II
+Note: skill profile = Power Grid Management V + CPU Management V (+25% PG/CPU), Weapon Upgrades V (-25% turret/launcher CPU), Advanced Weapon Upgrades V (-10% turret/launcher PG), Energy Grid Upgrades V (-25% power-core CPU). Implants and faction-specific bonuses NOT modelled. Data: SDE.
+---- typed ----
+{"ship":"Rifter","valid":false,"cpu":{"used":170,"capacity":162.5,"unit":"tf"},"pg":{"used":18,"capacity":51.25,"unit":"MW"},"slots":{"high":{"used":3,"capacity":3},"mid":{"used":3,"capacity":3},"low":{"used":3,"capacity":4},"rig":{"used":3,"capacity":3}},"violations":["unknown module(s) (not in SDE/ESI — likely fabricated): Small Autocannon II, Small Autocannon II, Small Autocannon II","alpha-clone illegal module(s), drone(s) or charge(s) (they need skills an Alpha clone cannot train - Omega required): 1MN Afterburner II"],"warnings":["CPU over by 7.5 tf (170.0/162.5 tf), within the 5 % implant allowance: fits with a 5 % CPU implant (EE-605). Top consumers: 'Warp Scrambler II' (36.0 tf), 'Damage Control II' (30.0 tf), 'Gyrostabilizer II' (30.0 tf)."],"unresolved_modules":["Small Autocannon II","Small Autocannon II","Small Autocannon II"],"data_source":"SDE"}
