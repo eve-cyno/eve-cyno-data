@@ -28,6 +28,10 @@ type Surface struct {
 	Docs bool
 	// Limits are the per-route budgets stated in the documents.
 	Limits Limits
+	// PublicURL, when set (validated, no trailing slash), makes the OpenAPI servers entry
+	// and the llms.txt links absolute. PublicSurface leaves it empty so the committed
+	// generated files stay host-independent.
+	PublicURL string
 }
 
 // PublicSurface is what the internet-facing cmd/dataapi serves with every optional part
@@ -57,6 +61,9 @@ type route struct {
 	when   func(Surface) bool
 	rate   func(Surface) Rate
 	handle func(*API, http.ResponseWriter, *http.Request)
+	// cache is the Cache-Control policy of a 200 answer ("" leaves the header unset);
+	// every other status is no-store.
+	cache string
 	// doc is nil for a route the OpenAPI document leaves out (the root-level llms files).
 	doc *opDoc
 }
@@ -154,6 +161,7 @@ func routeTable() []route {
 			method: http.MethodPost, path: "/fits/detail", when: always,
 			rate:   func(s Surface) Rate { return s.Limits.FitsDetail },
 			handle: (*API).fitsDetail,
+			cache:  cacheNone,
 			doc: &opDoc{
 				id: "fitDetail", tag: "fits", summary: "Describe a fit",
 				description: "Parses an EFT block and returns its slots, CPU / powergrid / calibration use and ship class. " +
@@ -173,6 +181,7 @@ func routeTable() []route {
 			method: http.MethodPost, path: "/fit/stats", when: always,
 			rate:   func(s Surface) Rate { return s.Limits.FitStats },
 			handle: (*API).fitStats,
+			cache:  cacheNone,
 			doc: &opDoc{
 				id: "fitStats", tag: "fits", summary: "Compute fit statistics",
 				description: "Parses an EFT block and returns the Gofa engine's DPS, tank, capacitor, navigation, targeting and drone " +
@@ -192,6 +201,7 @@ func routeTable() []route {
 			method: http.MethodPost, path: "/fit/suggest", when: always,
 			rate:   func(s Surface) Rate { return s.Limits.FitSuggest },
 			handle: (*API).fitSuggest,
+			cache:  cacheNone,
 			doc: &opDoc{
 				id: "fitSuggest", tag: "fits", summary: "Suggest modules for an empty slot",
 				description: "Ranks the modules that can fill a slot tier of the given fit: how often similar community fits carry them " +
@@ -212,6 +222,7 @@ func routeTable() []route {
 			method: http.MethodGet, path: "/items/search", when: always,
 			rate:   func(s Surface) Rate { return s.Limits.ItemsSearch },
 			handle: (*API).itemsSearch,
+			cache:  cacheSDE,
 			doc: &opDoc{
 				id: "searchItems", tag: "items", summary: "Search modules, charges and drones",
 				description: "Name search over the SDE's fittable modules, charges or drones (the fitting palette's search).",
@@ -234,6 +245,7 @@ func routeTable() []route {
 				return s.Limits.Tool
 			},
 			handle: (*API).tool,
+			cache:  cacheNone,
 			doc: &opDoc{
 				id: "tool", tag: "tools", summary: "Run a tool",
 				description: "Runs one deterministic tool in-process. The body is the tool's arguments object; the answer is the envelope " +
@@ -246,6 +258,7 @@ func routeTable() []route {
 			method: http.MethodPost, path: "/mcp", anyMethod: true, when: mcpOn,
 			rate:   func(s Surface) Rate { return s.Limits.MCP },
 			handle: (*API).mcpTransport,
+			cache:  cacheNone,
 			doc: &opDoc{
 				id: "mcp", tag: "mcp", summary: "Model Context Protocol endpoint",
 				description: "Streamable-HTTP MCP server (stateless, JSON responses): the same tools as `/tool/{name}`, for MCP clients such as " +
@@ -280,6 +293,7 @@ func routeTable() []route {
 		{
 			method: http.MethodGet, path: "/health", when: always, rate: unlimited,
 			handle: (*API).health,
+			cache:  cacheNone,
 			doc: &opDoc{
 				id: "health", tag: "meta", summary: "Liveness probe",
 				description: "Always 200 while the process serves; a degraded dependency shows in the body, never in the status. The flags say which " +
@@ -293,6 +307,7 @@ func routeTable() []route {
 			method: http.MethodGet, path: "/openapi.yaml", when: docsOn,
 			rate:   func(s Surface) Rate { return s.Limits.Docs },
 			handle: (*API).serveOpenAPIYAML,
+			cache:  cacheDocs,
 			doc: &opDoc{
 				id: "openapiYaml", tag: "meta", summary: "This API description (YAML)",
 				description: "The OpenAPI 3.1 document of this service, generated from its route table and tool registry.",
@@ -304,6 +319,7 @@ func routeTable() []route {
 			method: http.MethodGet, path: "/openapi.json", when: docsOn,
 			rate:   func(s Surface) Rate { return s.Limits.Docs },
 			handle: (*API).serveOpenAPIJSON,
+			cache:  cacheDocs,
 			doc: &opDoc{
 				id: "openapiJson", tag: "meta", summary: "This API description (JSON)",
 				description: "The same OpenAPI 3.1 document as JSON.",
@@ -312,14 +328,34 @@ func routeTable() []route {
 			},
 		},
 		{
+			method: http.MethodGet, path: "/{$}", root: true, when: docsOn,
+			rate:   func(s Surface) Rate { return s.Limits.Docs },
+			handle: (*API).serveIndex,
+			cache:  cacheDocs,
+		},
+		{
+			method: http.MethodGet, path: "/terms", root: true, when: docsOn,
+			rate:   func(s Surface) Rate { return s.Limits.Docs },
+			handle: (*API).serveTerms,
+			cache:  cacheDocs,
+		},
+		{
+			method: http.MethodGet, path: "/terms.md", root: true, when: docsOn,
+			rate:   func(s Surface) Rate { return s.Limits.Docs },
+			handle: (*API).serveTermsMarkdown,
+			cache:  cacheDocs,
+		},
+		{
 			method: http.MethodGet, path: "/llms.txt", root: true, when: docsOn,
 			rate:   func(s Surface) Rate { return s.Limits.Docs },
 			handle: (*API).serveLLMs,
+			cache:  cacheDocs,
 		},
 		{
 			method: http.MethodGet, path: "/llms-full.txt", root: true, when: docsOn,
 			rate:   func(s Surface) Rate { return s.Limits.Docs },
 			handle: (*API).serveLLMsFull,
+			cache:  cacheDocs,
 		},
 	}
 }

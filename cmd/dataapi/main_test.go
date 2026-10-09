@@ -187,3 +187,36 @@ func TestSDEOnly_FailsClosedToConfiguredCorpus(t *testing.T) {
 		require.True(t, sdeOnly(env(map[string]string{"DATAAPI_SDE_ONLY": v})), "value %q", v)
 	}
 }
+
+func TestPublicURL(t *testing.T) {
+	u, err := publicURL(env(nil))
+	require.NoError(t, err)
+	require.Empty(t, u, "unset keeps relative links")
+
+	u, err = publicURL(env(map[string]string{"DATAAPI_PUBLIC_URL": "https://data.example.test/"}))
+	require.NoError(t, err)
+	require.Equal(t, "https://data.example.test", u)
+
+	for _, bad := range []string{"http://data.example.test", "https://data.example.test/v1", "https://data.example.test?x=1", "data.example.test", "ftp://x"} {
+		_, err = publicURL(env(map[string]string{"DATAAPI_PUBLIC_URL": bad}))
+		require.ErrorContains(t, err, "DATAAPI_PUBLIC_URL", bad)
+	}
+}
+
+func TestNewHandler_PublicURLMakesTheDescriptionsAbsolute(t *testing.T) {
+	h, err := newHandler(&bootstrap.Deps{Tools: &tools.Deps{}}, exposure{publicURL: "https://data.example.test"}, slog.Default())
+	require.NoError(t, err)
+
+	require.Contains(t, get(h, "/v1/openapi.yaml").Body.String(), "url: https://data.example.test/v1")
+	require.Contains(t, get(h, "/llms.txt").Body.String(), "](https://data.example.test/v1/openapi.yaml)")
+	require.NotContains(t, get(h, "/llms.txt").Body.String(), "](/")
+}
+
+func TestNewHandler_ServesTheIndexAndTerms(t *testing.T) {
+	h, err := newHandler(&bootstrap.Deps{Tools: &tools.Deps{}}, exposure{}, slog.Default())
+	require.NoError(t, err)
+
+	require.Equal(t, http.StatusOK, get(h, "/").Code)
+	require.Equal(t, http.StatusOK, get(h, "/terms").Code)
+	require.Equal(t, http.StatusOK, get(h, "/terms.md").Code)
+}

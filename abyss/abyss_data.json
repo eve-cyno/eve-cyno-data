@@ -1,0 +1,7921 @@
+{
+  "schema_version": 1,
+  "source": "EVE SDE (Fenris Creations)",
+  "sde_build": "3586130_20261007",
+  "notes": [
+    "Derived only from SDE tables invTypes, invGroups, dgmTypeAttributes and dgmTypeEffects.",
+    "The SDE gives the weather environments no dogma: per-weather, per-tier penalties and bonuses are not in it.",
+    "The SDE does not say which NPCs spawn in which tier or weather.",
+    "Damage and EHP are derived (see package doc); kill priority is a separate heuristic of ours and is not stored here."
+  ],
+  "tiers": [
+    {
+      "index": 0,
+      "name": "Tranquil",
+      "filaments": [
+        {
+          "type_id": 56132,
+          "name": "Tranquil Dark Filament",
+          "weather": "Dark"
+        },
+        {
+          "type_id": 56131,
+          "name": "Tranquil Electrical Filament",
+          "weather": "Electrical"
+        },
+        {
+          "type_id": 56133,
+          "name": "Tranquil Exotic Filament",
+          "weather": "Exotic"
+        },
+        {
+          "type_id": 56134,
+          "name": "Tranquil Firestorm Filament",
+          "weather": "Firestorm"
+        },
+        {
+          "type_id": 56136,
+          "name": "Tranquil Gamma Filament",
+          "weather": "Gamma"
+        }
+      ]
+    },
+    {
+      "index": 1,
+      "name": "Calm",
+      "filaments": [
+        {
+          "type_id": 47762,
+          "name": "Calm Dark Filament",
+          "weather": "Dark"
+        },
+        {
+          "type_id": 47765,
+          "name": "Calm Electrical Filament",
+          "weather": "Electrical"
+        },
+        {
+          "type_id": 47761,
+          "name": "Calm Exotic Filament",
+          "weather": "Exotic"
+        },
+        {
+          "type_id": 47763,
+          "name": "Calm Firestorm Filament",
+          "weather": "Firestorm"
+        },
+        {
+          "type_id": 47764,
+          "name": "Calm Gamma Filament",
+          "weather": "Gamma"
+        }
+      ]
+    },
+    {
+      "index": 2,
+      "name": "Agitated",
+      "filaments": [
+        {
+          "type_id": 47892,
+          "name": "Agitated Dark Filament",
+          "weather": "Dark"
+        },
+        {
+          "type_id": 47904,
+          "name": "Agitated Electrical Filament",
+          "weather": "Electrical"
+        },
+        {
+          "type_id": 47888,
+          "name": "Agitated Exotic Filament",
+          "weather": "Exotic"
+        },
+        {
+          "type_id": 47896,
+          "name": "Agitated Firestorm Filament",
+          "weather": "Firestorm"
+        },
+        {
+          "type_id": 47900,
+          "name": "Agitated Gamma Filament",
+          "weather": "Gamma"
+        }
+      ]
+    },
+    {
+      "index": 3,
+      "name": "Fierce",
+      "filaments": [
+        {
+          "type_id": 47893,
+          "name": "Fierce Dark Filament",
+          "weather": "Dark"
+        },
+        {
+          "type_id": 47905,
+          "name": "Fierce Electrical Filament",
+          "weather": "Electrical"
+        },
+        {
+          "type_id": 47889,
+          "name": "Fierce Exotic Filament",
+          "weather": "Exotic"
+        },
+        {
+          "type_id": 47897,
+          "name": "Fierce Firestorm Filament",
+          "weather": "Firestorm"
+        },
+        {
+          "type_id": 47901,
+          "name": "Fierce Gamma Filament",
+          "weather": "Gamma"
+        }
+      ]
+    },
+    {
+      "index": 4,
+      "name": "Raging",
+      "filaments": [
+        {
+          "type_id": 47894,
+          "name": "Raging Dark Filament",
+          "weather": "Dark"
+        },
+        {
+          "type_id": 47906,
+          "name": "Raging Electrical Filament",
+          "weather": "Electrical"
+        },
+        {
+          "type_id": 47890,
+          "name": "Raging Exotic Filament",
+          "weather": "Exotic"
+        },
+        {
+          "type_id": 47898,
+          "name": "Raging Firestorm Filament",
+          "weather": "Firestorm"
+        },
+        {
+          "type_id": 47902,
+          "name": "Raging Gamma Filament",
+          "weather": "Gamma"
+        }
+      ]
+    },
+    {
+      "index": 5,
+      "name": "Chaotic",
+      "filaments": [
+        {
+          "type_id": 47895,
+          "name": "Chaotic Dark Filament",
+          "weather": "Dark"
+        },
+        {
+          "type_id": 47907,
+          "name": "Chaotic Electrical Filament",
+          "weather": "Electrical"
+        },
+        {
+          "type_id": 47891,
+          "name": "Chaotic Exotic Filament",
+          "weather": "Exotic"
+        },
+        {
+          "type_id": 47899,
+          "name": "Chaotic Firestorm Filament",
+          "weather": "Firestorm"
+        },
+        {
+          "type_id": 47903,
+          "name": "Chaotic Gamma Filament",
+          "weather": "Gamma"
+        }
+      ]
+    },
+    {
+      "index": 6,
+      "name": "Cataclysmic",
+      "filaments": [
+        {
+          "type_id": 56140,
+          "name": "Cataclysmic Dark Filament",
+          "weather": "Dark"
+        },
+        {
+          "type_id": 56139,
+          "name": "Cataclysmic Electrical Filament",
+          "weather": "Electrical"
+        },
+        {
+          "type_id": 56141,
+          "name": "Cataclysmic Exotic Filament",
+          "weather": "Exotic"
+        },
+        {
+          "type_id": 56142,
+          "name": "Cataclysmic Firestorm Filament",
+          "weather": "Firestorm"
+        },
+        {
+          "type_id": 56143,
+          "name": "Cataclysmic Gamma Filament",
+          "weather": "Gamma"
+        }
+      ]
+    }
+  ],
+  "weather": [
+    {
+      "type_id": 47863,
+      "name": "Dark",
+      "sde_name": "Dark Matter Field",
+      "modifiers_in_sde": false,
+      "filament_type_ids": [
+        56132,
+        47762,
+        47892,
+        47893,
+        47894,
+        47895,
+        56140
+      ]
+    },
+    {
+      "type_id": 47865,
+      "name": "Electrical",
+      "sde_name": "Electrical Storm",
+      "modifiers_in_sde": false,
+      "filament_type_ids": [
+        56131,
+        47765,
+        47904,
+        47905,
+        47906,
+        47907,
+        56139
+      ]
+    },
+    {
+      "type_id": 47862,
+      "name": "Exotic",
+      "sde_name": "Exotic Particle Storm",
+      "modifiers_in_sde": false,
+      "filament_type_ids": [
+        56133,
+        47761,
+        47888,
+        47889,
+        47890,
+        47891,
+        56141
+      ]
+    },
+    {
+      "type_id": 47864,
+      "name": "Firestorm",
+      "sde_name": "Plasma Firestorm",
+      "modifiers_in_sde": false,
+      "filament_type_ids": [
+        56134,
+        47763,
+        47896,
+        47897,
+        47898,
+        47899,
+        56142
+      ]
+    },
+    {
+      "type_id": 47866,
+      "name": "Gamma",
+      "sde_name": "Gamma-Ray Afterglow",
+      "modifiers_in_sde": false,
+      "filament_type_ids": [
+        56136,
+        47764,
+        47900,
+        47901,
+        47902,
+        47903,
+        56143
+      ]
+    }
+  ],
+  "hazards": [
+    {
+      "type_id": 47436,
+      "name": "Small Caustic Cloud",
+      "range_m": 5000,
+      "buffs": [
+        {
+          "id": 80,
+          "value": -50
+        },
+        {
+          "id": 81,
+          "value": 300
+        }
+      ]
+    },
+    {
+      "type_id": 47439,
+      "name": "Small Bioluminescence Cloud",
+      "range_m": 5000,
+      "buffs": [
+        {
+          "id": 79,
+          "value": 300
+        }
+      ]
+    },
+    {
+      "type_id": 47440,
+      "name": "Medium Bioluminescence Cloud",
+      "range_m": 15000,
+      "buffs": [
+        {
+          "id": 79,
+          "value": 300
+        }
+      ]
+    },
+    {
+      "type_id": 47441,
+      "name": "Large Bioluminescence Cloud",
+      "range_m": 40000,
+      "buffs": [
+        {
+          "id": 79,
+          "value": 300
+        }
+      ]
+    },
+    {
+      "type_id": 47467,
+      "name": "Medium Caustic Cloud",
+      "range_m": 15000,
+      "buffs": [
+        {
+          "id": 80,
+          "value": -50
+        },
+        {
+          "id": 81,
+          "value": 300
+        }
+      ]
+    },
+    {
+      "type_id": 47468,
+      "name": "Large Caustic Cloud",
+      "range_m": 40000,
+      "buffs": [
+        {
+          "id": 80,
+          "value": -50
+        },
+        {
+          "id": 81,
+          "value": 300
+        }
+      ]
+    },
+    {
+      "type_id": 47472,
+      "name": "Medium Filament Cloud",
+      "range_m": 15000,
+      "buffs": [
+        {
+          "id": 88,
+          "value": -40
+        },
+        {
+          "id": 89,
+          "value": -40
+        }
+      ]
+    },
+    {
+      "type_id": 47473,
+      "name": "Large Filament Cloud",
+      "range_m": 40000,
+      "buffs": [
+        {
+          "id": 88,
+          "value": -30
+        },
+        {
+          "id": 89,
+          "value": -30
+        }
+      ]
+    },
+    {
+      "type_id": 47620,
+      "name": "Small Filament Cloud",
+      "range_m": 5000,
+      "buffs": [
+        {
+          "id": 88,
+          "value": -50
+        },
+        {
+          "id": 89,
+          "value": -50
+        }
+      ]
+    }
+  ],
+  "npcs": [
+    {
+      "type_id": 48089,
+      "name": "Anchoring Damavik",
+      "group": "Abyssal Spaceship Entities",
+      "family": "Damavik",
+      "shield": {
+        "hp": 500,
+        "resists": {
+          "em": 0,
+          "thermal": 20,
+          "kinetic": 40,
+          "explosive": 50
+        }
+      },
+      "armor": {
+        "hp": 2200,
+        "resists": {
+          "em": 60,
+          "thermal": 48,
+          "kinetic": 53,
+          "explosive": 36
+        }
+      },
+      "hull": {
+        "hp": 650,
+        "resists": {
+          "em": 33,
+          "thermal": 33,
+          "kinetic": 33,
+          "explosive": 33
+        }
+      },
+      "total_hp": 3350,
+      "ehp": 5994.7798,
+      "damage": {
+        "kind": "disintegrator",
+        "em": 0,
+        "thermal": 57.6,
+        "kinetic": 0,
+        "explosive": 26.4,
+        "volley": 84,
+        "cycle_s": 3.5,
+        "dps": 24,
+        "dominant": "thermal",
+        "optimal_m": 10000,
+        "tracking": 500,
+        "ramp_per_cycle": 0.04,
+        "ramp_max": 1.5
+      },
+      "max_velocity": 3000,
+      "signature_radius": 192,
+      "orbit_range_m": 6000,
+      "effects": [
+        {
+          "kind": "warp_scramble",
+          "duration_s": 5,
+          "range_m": 9500,
+          "strength": 2,
+          "strength_unit": "warp disruption points"
+        },
+        {
+          "kind": "remote_armor_repair",
+          "duration_s": 3,
+          "range_m": 14000,
+          "falloff_m": 2500,
+          "strength": 40,
+          "strength_unit": "armor HP per cycle",
+          "per_second": 13.3333
+        }
+      ]
+    },
+    {
+      "type_id": 48258,
+      "name": "Anchoring Vila Damavik",
+      "group": "Abyssal Spaceship Entities",
+      "family": "Vila Damavik",
+      "shield": {
+        "hp": 500,
+        "resists": {
+          "em": 0,
+          "thermal": 20,
+          "kinetic": 40,
+          "explosive": 50
+        }
+      },
+      "armor": {
+        "hp": 2200,
+        "resists": {
+          "em": 60,
+          "thermal": 48,
+          "kinetic": 53,
+          "explosive": 36
+        }
+      },
+      "hull": {
+        "hp": 650,
+        "resists": {
+          "em": 33,
+          "thermal": 33,
+          "kinetic": 33,
+          "explosive": 33
+        }
+      },
+      "total_hp": 3350,
+      "ehp": 5994.7798,
+      "damage": {
+        "kind": "disintegrator",
+        "em": 0,
+        "thermal": 14.4,
+        "kinetic": 0,
+        "explosive": 6.6,
+        "volley": 21,
+        "cycle_s": 3.5,
+        "dps": 6,
+        "dominant": "thermal",
+        "optimal_m": 8000,
+        "tracking": 500,
+        "ramp_per_cycle": 0.01,
+        "ramp_max": 1.5
+      },
+      "max_velocity": 3000,
+      "signature_radius": 192,
+      "orbit_range_m": 6000,
+      "effects": [
+        {
+          "kind": "warp_scramble",
+          "duration_s": 5,
+          "range_m": 10000,
+          "strength": 3,
+          "strength_unit": "warp disruption points"
+        }
+      ]
+    },
+    {
+      "type_id": 56177,
+      "name": "Arrester Marshal Disparu Troop",
+      "group": "Abyssal Spaceship Entities",
+      "family": "Disparu Troop",
+      "shield": {
+        "hp": 7500,
+        "resists": {
+          "em": 30,
+          "thermal": 30,
+          "kinetic": 30,
+          "explosive": 30
+        }
+      },
+      "armor": {
+        "hp": 7500,
+        "resists": {
+          "em": 30,
+          "thermal": 30,
+          "kinetic": 30,
+          "explosive": 30
+        }
+      },
+      "hull": {
+        "hp": 5200,
+        "resists": {
+          "em": 30,
+          "thermal": 30,
+          "kinetic": 30,
+          "explosive": 30
+        }
+      },
+      "total_hp": 20200,
+      "ehp": 28857.1429,
+      "damage": {
+        "kind": "missile",
+        "em": 0,
+        "thermal": 0,
+        "kinetic": 0,
+        "explosive": 2565,
+        "volley": 2565,
+        "cycle_s": 6,
+        "dps": 427.5,
+        "dominant": "explosive",
+        "optimal_m": 75465
+      },
+      "max_velocity": 340,
+      "signature_radius": 370,
+      "orbit_range_m": 15000,
+      "effects": [
+        {
+          "kind": "web",
+          "duration_s": 5,
+          "range_m": 15000,
+          "strength": 50,
+          "strength_unit": "percent speed reduction"
+        },
+        {
+          "kind": "local_armor_repair",
+          "duration_s": 6,
+          "strength_unit": "armor HP per cycle"
+        }
+      ]
+    },
+    {
+      "type_id": 56171,
+      "name": "Arrester Pacifier Disparu Troop",
+      "group": "Abyssal Spaceship Entities",
+      "family": "Disparu Troop",
+      "shield": {
+        "hp": 1450,
+        "resists": {
+          "em": 30,
+          "thermal": 30,
+          "kinetic": 30,
+          "explosive": 30
+        }
+      },
+      "armor": {
+        "hp": 1450,
+        "resists": {
+          "em": 30,
+          "thermal": 30,
+          "kinetic": 30,
+          "explosive": 30
+        }
+      },
+      "hull": {
+        "hp": 290,
+        "resists": {
+          "em": 30,
+          "thermal": 30,
+          "kinetic": 30,
+          "explosive": 30
+        }
+      },
+      "total_hp": 3190,
+      "ehp": 4557.1429,
+      "damage": {
+        "kind": "missile",
+        "em": 0,
+        "thermal": 0,
+        "kinetic": 0,
+        "explosive": 396,
+        "volley": 396,
+        "cycle_s": 10,
+        "dps": 39.6,
+        "dominant": "explosive",
+        "optimal_m": 36000
+      },
+      "max_velocity": 2400,
+      "signature_radius": 150,
+      "orbit_range_m": 15000,
+      "effects": [
+        {
+          "kind": "web",
+          "duration_s": 5,
+          "range_m": 10000,
+          "strength": 50,
+          "strength_unit": "percent speed reduction"
+        },
+        {
+          "kind": "local_armor_repair",
+          "duration_s": 5,
+          "strength": 120,
+          "strength_unit": "armor HP per cycle",
+          "per_second": 24
+        }
+      ]
+    },
+    {
+      "type_id": 56174,
+      "name": "Assault Enforcer Disparu Troop",
+      "group": "Abyssal Spaceship Entities",
+      "family": "Disparu Troop",
+      "shield": {
+        "hp": 5200,
+        "resists": {
+          "em": 30,
+          "thermal": 30,
+          "kinetic": 30,
+          "explosive": 30
+        }
+      },
+      "armor": {
+        "hp": 5200,
+        "resists": {
+          "em": 30,
+          "thermal": 30,
+          "kinetic": 30,
+          "explosive": 30
+        }
+      },
+      "hull": {
+        "hp": 1050,
+        "resists": {
+          "em": 30,
+          "thermal": 30,
+          "kinetic": 30,
+          "explosive": 30
+        }
+      },
+      "total_hp": 11450,
+      "ehp": 16357.1429,
+      "damage": {
+        "kind": "missile",
+        "em": 0,
+        "thermal": 1700,
+        "kinetic": 0,
+        "explosive": 0,
+        "volley": 1700,
+        "cycle_s": 13,
+        "dps": 130.7692,
+        "dominant": "thermal",
+        "optimal_m": 36000
+      },
+      "max_velocity": 1300,
+      "signature_radius": 660,
+      "orbit_range_m": 9000,
+      "effects": [
+        {
+          "kind": "local_armor_repair",
+          "duration_s": 6,
+          "strength": 160,
+          "strength_unit": "armor HP per cycle",
+          "per_second": 26.6667
+        }
+      ]
+    },
+    {
+      "type_id": 56176,
+      "name": "Attacker Marshal Disparu Troop",
+      "group": "Abyssal Spaceship Entities",
+      "family": "Disparu Troop",
+      "shield": {
+        "hp": 7500,
+        "resists": {
+          "em": 30,
+          "thermal": 30,
+          "kinetic": 30,
+          "explosive": 30
+        }
+      },
+      "armor": {
+        "hp": 7500,
+        "resists": {
+          "em": 30,
+          "thermal": 30,
+          "kinetic": 30,
+          "explosive": 30
+        }
+      },
+      "hull": {
+        "hp": 5200,
+        "resists": {
+          "em": 30,
+          "thermal": 30,
+          "kinetic": 30,
+          "explosive": 30
+        }
+      },
+      "total_hp": 20200,
+      "ehp": 28857.1429,
+      "damage": {
+        "kind": "missile",
+        "em": 0,
+        "thermal": 2565,
+        "kinetic": 0,
+        "explosive": 0,
+        "volley": 2565,
+        "cycle_s": 6,
+        "dps": 427.5,
+        "dominant": "thermal",
+        "optimal_m": 75465
+      },
+      "max_velocity": 340,
+      "signature_radius": 370,
+      "orbit_range_m": 15000,
+      "effects": [
+        {
+          "kind": "local_armor_repair",
+          "duration_s": 6,
+          "strength_unit": "armor HP per cycle"
+        }
+      ]
+    },
+    {
+      "type_id": 56170,
+      "name": "Attacker Pacifier Disparu Troop",
+      "group": "Abyssal Spaceship Entities",
+      "family": "Disparu Troop",
+      "shield": {
+        "hp": 1450,
+        "resists": {
+          "em": 30,
+          "thermal": 30,
+          "kinetic": 30,
+          "explosive": 30
+        }
+      },
+      "armor": {
+        "hp": 1450,
+        "resists": {
+          "em": 30,
+          "thermal": 30,
+          "kinetic": 30,
+          "explosive": 30
+        }
+      },
+      "hull": {
+        "hp": 290,
+        "resists": {
+          "em": 30,
+          "thermal": 30,
+          "kinetic": 30,
+          "explosive": 30
+        }
+      },
+      "total_hp": 3190,
+      "ehp": 4557.1429,
+      "damage": {
+        "kind": "missile",
+        "em": 0,
+        "thermal": 396,
+        "kinetic": 0,
+        "explosive": 0,
+        "volley": 396,
+        "cycle_s": 10,
+        "dps": 39.6,
+        "dominant": "thermal",
+        "optimal_m": 36000
+      },
+      "max_velocity": 2400,
+      "signature_radius": 150,
+      "orbit_range_m": 10000,
+      "effects": [
+        {
+          "kind": "local_armor_repair",
+          "duration_s": 5,
+          "strength": 130,
+          "strength_unit": "armor HP per cycle",
+          "per_second": 26
+        }
+      ]
+    },
+    {
+      "type_id": 81161,
+      "name": "Awoken Preserver",
+      "group": "Abyssal Spaceship Entities",
+      "family": "Awoken",
+      "shield": {
+        "hp": 0,
+        "resists": {
+          "em": 100,
+          "thermal": 100,
+          "kinetic": 100,
+          "explosive": 100
+        }
+      },
+      "armor": {
+        "hp": 250,
+        "resists": {
+          "em": 50,
+          "thermal": 50,
+          "kinetic": 50,
+          "explosive": 50
+        }
+      },
+      "hull": {
+        "hp": 350,
+        "resists": {
+          "em": 100,
+          "thermal": 100,
+          "kinetic": 100,
+          "explosive": 100
+        }
+      },
+      "total_hp": 600,
+      "ehp": 850,
+      "damage": {
+        "kind": "turret",
+        "em": 30,
+        "thermal": 30,
+        "kinetic": 0,
+        "explosive": 0,
+        "volley": 60,
+        "cycle_s": 2,
+        "dps": 30,
+        "dominant": "em",
+        "optimal_m": 12000,
+        "falloff_m": 7000,
+        "tracking": 2000
+      },
+      "max_velocity": 1500,
+      "signature_radius": 120,
+      "orbit_range_m": 8000,
+      "effects": [
+        {
+          "kind": "energy_neutralizer",
+          "duration_s": 4,
+          "range_m": 8000,
+          "falloff_m": 6000,
+          "strength": 40,
+          "strength_unit": "GJ per cycle",
+          "per_second": 10
+        }
+      ]
+    },
+    {
+      "type_id": 47878,
+      "name": "Bathyic Abyssal Overmind",
+      "group": "Abyssal Spaceship Entities",
+      "family": "Abyssal Overmind",
+      "shield": {
+        "hp": 9000,
+        "resists": {
+          "em": 12.5,
+          "thermal": 30,
+          "kinetic": 47.5,
+          "explosive": 56.25
+        }
+      },
+      "armor": {
+        "hp": 20000,
+        "resists": {
+          "em": 68,
+          "thermal": 59,
+          "kinetic": 59,
+          "explosive": 68
+        }
+      },
+      "hull": {
+        "hp": 10625,
+        "resists": {
+          "em": 60,
+          "thermal": 60,
+          "kinetic": 60,
+          "explosive": 60
+        }
+      },
+      "total_hp": 39625,
+      "ehp": 95544.2127,
+      "damage": {
+        "kind": "turret",
+        "em": 0,
+        "thermal": 690,
+        "kinetic": 966,
+        "explosive": 0,
+        "volley": 1656,
+        "cycle_s": 4.28,
+        "dps": 386.9159,
+        "dominant": "kinetic",
+        "optimal_m": 29025,
+        "falloff_m": 28750,
+        "tracking": 2.89
+      },
+      "max_velocity": 300,
+      "signature_radius": 465
+    },
+    {
+      "type_id": 81170,
+      "name": "Battered Drifter Battleship",
+      "group": "Abyssal Spaceship Entities",
+      "family": "Drifter",
+      "shield": {
+        "hp": 50000,
+        "resists": {
+          "em": 50,
+          "thermal": 50,
+          "kinetic": 50,
+          "explosive": 50
+        }
+      },
+      "armor": {
+        "hp": 50000,
+        "resists": {
+          "em": 50,
+          "thermal": 50,
+          "kinetic": 50,
+          "explosive": 50
+        }
+      },
+      "hull": {
+        "hp": 50000,
+        "resists": {
+          "em": 0,
+          "thermal": 0,
+          "kinetic": 0,
+          "explosive": 0
+        }
+      },
+      "total_hp": 150000,
+      "ehp": 250000,
+      "damage": {
+        "kind": "turret",
+        "em": 140,
+        "thermal": 140,
+        "kinetic": 140,
+        "explosive": 140,
+        "volley": 560,
+        "cycle_s": 5,
+        "dps": 112,
+        "dominant": "em",
+        "optimal_m": 60000,
+        "falloff_m": 20000,
+        "tracking": 15
+      },
+      "max_velocity": 300,
+      "signature_radius": 400
+    },
+    {
+      "type_id": 80041,
+      "name": "Battered Shackling Leshak",
+      "group": "Abyssal Spaceship Entities",
+      "family": "Leshak",
+      "shield": {
+        "hp": 50000,
+        "resists": {
+          "em": 0,
+          "thermal": 20,
+          "kinetic": 40,
+          "explosive": 50
+        }
+      },
+      "armor": {
+        "hp": 50000,
+        "resists": {
+          "em": 60,
+          "thermal": 48,
+          "kinetic": 53,
+          "explosive": 36
+        }
+      },
+      "hull": {
+        "hp": 50000,
+        "resists": {
+          "em": 33,
+          "thermal": 33,
+          "kinetic": 33,
+          "explosive": 33
+        }
+      },
+      "total_hp": 150000,
+      "ehp": 242114.5504,
+      "damage": {
+        "kind": "disintegrator",
+        "em": 0,
+        "thermal": 200,
+        "kinetic": 0,
+        "explosive": 120,
+        "volley": 320,
+        "cycle_s": 5,
+        "dps": 64,
+        "dominant": "thermal",
+        "optimal_m": 63000,
+        "tracking": 8,
+        "ramp_per_cycle": 0.02,
+        "ramp_max": 1.5
+      },
+      "max_velocity": 400,
+      "signature_radius": 370,
+      "orbit_range_m": 12000,
+      "effects": [
+        {
+          "kind": "web",
+          "duration_s": 5,
+          "range_m": 1000,
+          "falloff_m": 12000,
+          "strength": 60,
+          "strength_unit": "percent speed reduction"
+        }
+      ]
+    },
+    {
+      "type_id": 47880,
+      "name": "Benthic Abyssal Overmind",
+      "group": "Abyssal Spaceship Entities",
+      "family": "Abyssal Overmind",
+      "shield": {
+        "hp": 11875,
+        "resists": {
+          "em": 21,
+          "thermal": 37,
+          "kinetic": 53,
+          "explosive": 61
+        }
+      },
+      "armor": {
+        "hp": 25750,
+        "resists": {
+          "em": 76,
+          "thermal": 68,
+          "kinetic": 68,
+          "explosive": 70
+        }
+      },
+      "hull": {
+        "hp": 13750,
+        "resists": {
+          "em": 68,
+          "thermal": 68,
+          "kinetic": 68,
+          "explosive": 68
+        }
+      },
+      "total_hp": 51375,
+      "ehp": 151090.2189,
+      "damage": {
+        "kind": "turret",
+        "em": 0,
+        "thermal": 984,
+        "kinetic": 1377.6,
+        "explosive": 0,
+        "volley": 2361.6,
+        "cycle_s": 3.97,
+        "dps": 594.8615,
+        "dominant": "kinetic",
+        "optimal_m": 29160,
+        "falloff_m": 29000,
+        "tracking": 3.23
+      },
+      "max_velocity": 400,
+      "signature_radius": 455,
+      "effects": [
+        {
+          "kind": "web",
+          "duration_s": 5,
+          "range_m": 15000,
+          "strength": 55,
+          "strength_unit": "percent speed reduction"
+        }
+      ]
+    },
+    {
+      "type_id": 48265,
+      "name": "Blastgrip Tessera",
+      "group": "Abyssal Drone Entities",
+      "family": "Tessera",
+      "shield": {
+        "hp": 3000,
+        "resists": {
+          "em": 60,
+          "thermal": 70,
+          "kinetic": 70,
+          "explosive": 60
+        }
+      },
+      "armor": {
+        "hp": 2300,
+        "resists": {
+          "em": 60,
+          "thermal": 70,
+          "kinetic": 70,
+          "explosive": 60
+        }
+      },
+      "hull": {
+        "hp": 2500,
+        "resists": {
+          "em": 0,
+          "thermal": 0,
+          "kinetic": 0,
+          "explosive": 0
+        }
+      },
+      "total_hp": 7800,
+      "ehp": 17642.8571,
+      "damage": {
+        "kind": "turret",
+        "em": 0,
+        "thermal": 0,
+        "kinetic": 0,
+        "explosive": 1000,
+        "volley": 1000,
+        "cycle_s": 5,
+        "dps": 200,
+        "dominant": "explosive",
+        "optimal_m": 2000,
+        "falloff_m": 6000,
+        "tracking": 4000
+      },
+      "max_velocity": 900,
+      "signature_radius": 300,
+      "orbit_range_m": 2000
+    },
+    {
+      "type_id": 47859,
+      "name": "Blastlance Tessella",
+      "group": "Abyssal Drone Entities",
+      "family": "Tessella",
+      "shield": {
+        "hp": 1100,
+        "resists": {
+          "em": 0,
+          "thermal": 20,
+          "kinetic": 40,
+          "explosive": 50
+        }
+      },
+      "armor": {
+        "hp": 200,
+        "resists": {
+          "em": 50,
+          "thermal": 35,
+          "kinetic": 25,
+          "explosive": 20
+        }
+      },
+      "hull": {
+        "hp": 400,
+        "resists": {
+          "em": 0,
+          "thermal": 0,
+          "kinetic": 0,
+          "explosive": 0
+        }
+      },
+      "total_hp": 1700,
+      "ehp": 2213.5377,
+      "damage": {
+        "kind": "turret",
+        "em": 0,
+        "thermal": 0,
+        "kinetic": 0,
+        "explosive": 100,
+        "volley": 100,
+        "cycle_s": 2,
+        "dps": 50,
+        "dominant": "explosive",
+        "optimal_m": 5000,
+        "falloff_m": 10000,
+        "tracking": 4000
+      },
+      "max_velocity": 1500,
+      "signature_radius": 50,
+      "orbit_range_m": 9000
+    },
+    {
+      "type_id": 47855,
+      "name": "Blastneedle Tessella",
+      "group": "Abyssal Drone Entities",
+      "family": "Tessella",
+      "shield": {
+        "hp": 550,
+        "resists": {
+          "em": 0,
+          "thermal": 20,
+          "kinetic": 40,
+          "explosive": 50
+        }
+      },
+      "armor": {
+        "hp": 200,
+        "resists": {
+          "em": 50,
+          "thermal": 35,
+          "kinetic": 25,
+          "explosive": 20
+        }
+      },
+      "hull": {
+        "hp": 400,
+        "resists": {
+          "em": 0,
+          "thermal": 0,
+          "kinetic": 0,
+          "explosive": 0
+        }
+      },
+      "total_hp": 1150,
+      "ehp": 1454.917,
+      "damage": {
+        "kind": "turret",
+        "em": 0,
+        "thermal": 0,
+        "kinetic": 0,
+        "explosive": 50,
+        "volley": 50,
+        "cycle_s": 2,
+        "dps": 25,
+        "dominant": "explosive",
+        "optimal_m": 2500,
+        "falloff_m": 5000,
+        "tracking": 4000
+      },
+      "max_velocity": 1500,
+      "signature_radius": 50,
+      "orbit_range_m": 5000
+    },
+    {
+      "type_id": 48127,
+      "name": "Blinding Leshak",
+      "group": "Abyssal Spaceship Entities",
+      "family": "Leshak",
+      "shield": {
+        "hp": 5000,
+        "resists": {
+          "em": 0,
+          "thermal": 20,
+          "kinetic": 40,
+          "explosive": 50
+        }
+      },
+      "armor": {
+        "hp": 13000,
+        "resists": {
+          "em": 60,
+          "thermal": 48,
+          "kinetic": 53,
+          "explosive": 36
+        }
+      },
+      "hull": {
+        "hp": 10000,
+        "resists": {
+          "em": 33,
+          "thermal": 33,
+          "kinetic": 33,
+          "explosive": 33
+        }
+      },
+      "total_hp": 28000,
+      "ehp": 47437.6884,
+      "damage": {
+        "kind": "disintegrator",
+        "em": 0,
+        "thermal": 302.4,
+        "kinetic": 0,
+        "explosive": 190.4,
+        "volley": 492.8,
+        "cycle_s": 5,
+        "dps": 98.56,
+        "dominant": "thermal",
+        "optimal_m": 63000,
+        "tracking": 7,
+        "ramp_per_cycle": 0.02,
+        "ramp_max": 1.5
+      },
+      "max_velocity": 400,
+      "signature_radius": 370,
+      "effects": [
+        {
+          "kind": "sensor_dampener",
+          "duration_s": 10,
+          "range_m": 40000,
+          "falloff_m": 80000,
+          "strength": -25,
+          "strength_unit": "percent targeting range"
+        },
+        {
+          "kind": "remote_armor_repair",
+          "duration_s": 6,
+          "range_m": 33000,
+          "falloff_m": 28000,
+          "strength": 225,
+          "strength_unit": "armor HP per cycle",
+          "per_second": 37.5
+        }
+      ]
+    },
+    {
+      "type_id": 48260,
+      "name": "Blinding Vila Damavik",
+      "group": "Abyssal Spaceship Entities",
+      "family": "Vila Damavik",
+      "shield": {
+        "hp": 500,
+        "resists": {
+          "em": 0,
+          "thermal": 20,
+          "kinetic": 40,
+          "explosive": 50
+        }
+      },
+      "armor": {
+        "hp": 2200,
+        "resists": {
+          "em": 60,
+          "thermal": 48,
+          "kinetic": 53,
+          "explosive": 36
+        }
+      },
+      "hull": {
+        "hp": 650,
+        "resists": {
+          "em": 33,
+          "thermal": 33,
+          "kinetic": 33,
+          "explosive": 33
+        }
+      },
+      "total_hp": 3350,
+      "ehp": 5994.7798,
+      "damage": {
+        "kind": "disintegrator",
+        "em": 0,
+        "thermal": 14.4,
+        "kinetic": 0,
+        "explosive": 6.6,
+        "volley": 21,
+        "cycle_s": 3.5,
+        "dps": 6,
+        "dominant": "thermal",
+        "optimal_m": 8000,
+        "tracking": 500,
+        "ramp_per_cycle": 0.01,
+        "ramp_max": 1.5
+      },
+      "max_velocity": 2700,
+      "signature_radius": 192,
+      "orbit_range_m": 6000,
+      "effects": [
+        {
+          "kind": "sensor_dampener",
+          "duration_s": 10,
+          "range_m": 40000,
+          "falloff_m": 80000,
+          "strength": -20,
+          "strength_unit": "percent targeting range"
+        }
+      ]
+    },
+    {
+      "type_id": 56162,
+      "name": "Devoted Fisher",
+      "group": "Abyssal Spaceship Entities",
+      "family": "Devoted",
+      "shield": {
+        "hp": 1500,
+        "resists": {
+          "em": 5,
+          "thermal": 15,
+          "kinetic": 25,
+          "explosive": 35
+        }
+      },
+      "armor": {
+        "hp": 500,
+        "resists": {
+          "em": 5,
+          "thermal": 20,
+          "kinetic": 30,
+          "explosive": 40
+        }
+      },
+      "hull": {
+        "hp": 525,
+        "resists": {
+          "em": 100,
+          "thermal": 100,
+          "kinetic": 100,
+          "explosive": 100
+        }
+      },
+      "total_hp": 2525,
+      "ehp": 3055.7377,
+      "damage": {
+        "kind": "turret",
+        "em": 75.24,
+        "thermal": 62.7,
+        "kinetic": 0,
+        "explosive": 0,
+        "volley": 137.94,
+        "cycle_s": 5,
+        "dps": 27.588,
+        "dominant": "em",
+        "optimal_m": 18000,
+        "falloff_m": 8000,
+        "tracking": 600
+      },
+      "max_velocity": 740,
+      "signature_radius": 49,
+      "orbit_range_m": 7000,
+      "effects": [
+        {
+          "kind": "web",
+          "duration_s": 5,
+          "range_m": 10000,
+          "strength": 50,
+          "strength_unit": "percent speed reduction"
+        },
+        {
+          "kind": "local_shield_boost",
+          "duration_s": 2,
+          "strength": 25,
+          "strength_unit": "shield HP per cycle",
+          "per_second": 12.5
+        }
+      ]
+    },
+    {
+      "type_id": 56167,
+      "name": "Devoted Herald",
+      "group": "Abyssal Spaceship Entities",
+      "family": "Devoted",
+      "shield": {
+        "hp": 1500,
+        "resists": {
+          "em": 5,
+          "thermal": 15,
+          "kinetic": 25,
+          "explosive": 35
+        }
+      },
+      "armor": {
+        "hp": 500,
+        "resists": {
+          "em": 5,
+          "thermal": 20,
+          "kinetic": 30,
+          "explosive": 40
+        }
+      },
+      "hull": {
+        "hp": 525,
+        "resists": {
+          "em": 100,
+          "thermal": 100,
+          "kinetic": 100,
+          "explosive": 100
+        }
+      },
+      "total_hp": 2525,
+      "ehp": 3055.7377,
+      "damage": {
+        "kind": "turret",
+        "em": 75.24,
+        "thermal": 62.7,
+        "kinetic": 0,
+        "explosive": 0,
+        "volley": 137.94,
+        "cycle_s": 5,
+        "dps": 27.588,
+        "dominant": "em",
+        "optimal_m": 18000,
+        "falloff_m": 8000,
+        "tracking": 600
+      },
+      "max_velocity": 740,
+      "signature_radius": 49,
+      "orbit_range_m": 7000,
+      "effects": [
+        {
+          "kind": "guidance_disruptor",
+          "duration_s": 5,
+          "range_m": 25000,
+          "falloff_m": 15000,
+          "strength": -13.75,
+          "strength_unit": "percent explosion velocity"
+        },
+        {
+          "kind": "tracking_disruptor",
+          "duration_s": 5,
+          "range_m": 25000,
+          "falloff_m": 15000
+        },
+        {
+          "kind": "local_shield_boost",
+          "duration_s": 2,
+          "strength": 25,
+          "strength_unit": "shield HP per cycle",
+          "per_second": 12.5
+        }
+      ]
+    },
+    {
+      "type_id": 56138,
+      "name": "Devoted Hunter",
+      "group": "Abyssal Spaceship Entities",
+      "family": "Devoted",
+      "shield": {
+        "hp": 2500,
+        "resists": {
+          "em": 5,
+          "thermal": 19,
+          "kinetic": 29,
+          "explosive": 40
+        }
+      },
+      "armor": {
+        "hp": 700,
+        "resists": {
+          "em": 5,
+          "thermal": 19,
+          "kinetic": 29,
+          "explosive": 40
+        }
+      },
+      "hull": {
+        "hp": 675,
+        "resists": {
+          "em": 100,
+          "thermal": 100,
+          "kinetic": 100,
+          "explosive": 100
+        }
+      },
+      "total_hp": 3875,
+      "ehp": 4844.3811,
+      "damage": {
+        "kind": "turret",
+        "em": 120,
+        "thermal": 100,
+        "kinetic": 0,
+        "explosive": 0,
+        "volley": 220,
+        "cycle_s": 4.5,
+        "dps": 48.8889,
+        "dominant": "em",
+        "optimal_m": 18000,
+        "falloff_m": 8000,
+        "tracking": 600
+      },
+      "max_velocity": 740,
+      "signature_radius": 49,
+      "orbit_range_m": 7000,
+      "effects": [
+        {
+          "kind": "local_shield_boost",
+          "duration_s": 2,
+          "strength": 25,
+          "strength_unit": "shield HP per cycle",
+          "per_second": 12.5
+        }
+      ]
+    },
+    {
+      "type_id": 56148,
+      "name": "Devoted Knight",
+      "group": "Abyssal Spaceship Entities",
+      "family": "Devoted",
+      "shield": {
+        "hp": 6500,
+        "resists": {
+          "em": 25,
+          "thermal": 62,
+          "kinetic": 56,
+          "explosive": 40
+        }
+      },
+      "armor": {
+        "hp": 1500,
+        "resists": {
+          "em": 50,
+          "thermal": 20,
+          "kinetic": 25,
+          "explosive": 35
+        }
+      },
+      "hull": {
+        "hp": 2000,
+        "resists": {
+          "em": 100,
+          "thermal": 100,
+          "kinetic": 100,
+          "explosive": 100
+        }
+      },
+      "total_hp": 10000,
+      "ehp": 16203.789,
+      "damage": {
+        "kind": "turret",
+        "em": 312,
+        "thermal": 208,
+        "kinetic": 0,
+        "explosive": 0,
+        "volley": 520,
+        "cycle_s": 3.5,
+        "dps": 148.5714,
+        "dominant": "em",
+        "optimal_m": 20000,
+        "falloff_m": 15000,
+        "tracking": 21
+      },
+      "max_velocity": 580,
+      "signature_radius": 660,
+      "orbit_range_m": 32000,
+      "effects": [
+        {
+          "kind": "web",
+          "duration_s": 5,
+          "range_m": 10000,
+          "strength": 50,
+          "strength_unit": "percent speed reduction"
+        },
+        {
+          "kind": "energy_neutralizer",
+          "duration_s": 10,
+          "range_m": 10000,
+          "falloff_m": 3000,
+          "strength": 160,
+          "strength_unit": "GJ per cycle",
+          "per_second": 16
+        },
+        {
+          "kind": "local_shield_boost",
+          "duration_s": 3.5,
+          "strength": 78,
+          "strength_unit": "shield HP per cycle",
+          "per_second": 22.2857
+        }
+      ]
+    },
+    {
+      "type_id": 56166,
+      "name": "Devoted Lookout",
+      "group": "Abyssal Spaceship Entities",
+      "family": "Devoted",
+      "shield": {
+        "hp": 1500,
+        "resists": {
+          "em": 5,
+          "thermal": 15,
+          "kinetic": 25,
+          "explosive": 35
+        }
+      },
+      "armor": {
+        "hp": 500,
+        "resists": {
+          "em": 5,
+          "thermal": 20,
+          "kinetic": 30,
+          "explosive": 40
+        }
+      },
+      "hull": {
+        "hp": 525,
+        "resists": {
+          "em": 100,
+          "thermal": 100,
+          "kinetic": 100,
+          "explosive": 100
+        }
+      },
+      "total_hp": 2525,
+      "ehp": 3055.7377,
+      "damage": {
+        "kind": "turret",
+        "em": 75.24,
+        "thermal": 62.7,
+        "kinetic": 0,
+        "explosive": 0,
+        "volley": 137.94,
+        "cycle_s": 5,
+        "dps": 27.588,
+        "dominant": "em",
+        "optimal_m": 18000,
+        "falloff_m": 8000,
+        "tracking": 600
+      },
+      "max_velocity": 740,
+      "signature_radius": 49,
+      "orbit_range_m": 7000,
+      "effects": [
+        {
+          "kind": "sensor_dampener",
+          "duration_s": 10,
+          "range_m": 40000,
+          "falloff_m": 80000,
+          "strength": -20,
+          "strength_unit": "percent targeting range"
+        },
+        {
+          "kind": "local_shield_boost",
+          "duration_s": 2,
+          "strength": 25,
+          "strength_unit": "shield HP per cycle",
+          "per_second": 12.5
+        }
+      ]
+    },
+    {
+      "type_id": 56163,
+      "name": "Devoted Priest",
+      "group": "Abyssal Spaceship Entities",
+      "family": "Devoted",
+      "shield": {
+        "hp": 1500,
+        "resists": {
+          "em": 5,
+          "thermal": 15,
+          "kinetic": 25,
+          "explosive": 35
+        }
+      },
+      "armor": {
+        "hp": 500,
+        "resists": {
+          "em": 5,
+          "thermal": 20,
+          "kinetic": 30,
+          "explosive": 40
+        }
+      },
+      "hull": {
+        "hp": 525,
+        "resists": {
+          "em": 100,
+          "thermal": 100,
+          "kinetic": 100,
+          "explosive": 100
+        }
+      },
+      "total_hp": 2525,
+      "ehp": 3055.7377,
+      "damage": {
+        "kind": "turret",
+        "em": 75.24,
+        "thermal": 62.7,
+        "kinetic": 0,
+        "explosive": 0,
+        "volley": 137.94,
+        "cycle_s": 5,
+        "dps": 27.588,
+        "dominant": "em",
+        "optimal_m": 18000,
+        "falloff_m": 8000,
+        "tracking": 600
+      },
+      "max_velocity": 740,
+      "signature_radius": 49,
+      "orbit_range_m": 7000,
+      "effects": [
+        {
+          "kind": "remote_shield_boost",
+          "duration_s": 12,
+          "range_m": 13000,
+          "falloff_m": 4800,
+          "strength": 200,
+          "strength_unit": "shield HP per cycle",
+          "per_second": 16.6667
+        },
+        {
+          "kind": "local_shield_boost",
+          "duration_s": 2,
+          "strength": 25,
+          "strength_unit": "shield HP per cycle",
+          "per_second": 12.5
+        }
+      ]
+    },
+    {
+      "type_id": 56165,
+      "name": "Devoted Smith",
+      "group": "Abyssal Spaceship Entities",
+      "family": "Devoted",
+      "shield": {
+        "hp": 1500,
+        "resists": {
+          "em": 5,
+          "thermal": 15,
+          "kinetic": 25,
+          "explosive": 35
+        }
+      },
+      "armor": {
+        "hp": 500,
+        "resists": {
+          "em": 5,
+          "thermal": 20,
+          "kinetic": 30,
+          "explosive": 40
+        }
+      },
+      "hull": {
+        "hp": 525,
+        "resists": {
+          "em": 100,
+          "thermal": 100,
+          "kinetic": 100,
+          "explosive": 100
+        }
+      },
+      "total_hp": 2525,
+      "ehp": 3055.7377,
+      "damage": {
+        "kind": "turret",
+        "em": 75.24,
+        "thermal": 62.7,
+        "kinetic": 0,
+        "explosive": 0,
+        "volley": 137.94,
+        "cycle_s": 5,
+        "dps": 27.588,
+        "dominant": "em",
+        "optimal_m": 18000,
+        "falloff_m": 8000,
+        "tracking": 600
+      },
+      "max_velocity": 740,
+      "signature_radius": 49,
+      "orbit_range_m": 7000,
+      "effects": [
+        {
+          "kind": "energy_neutralizer",
+          "duration_s": 10,
+          "range_m": 8000,
+          "falloff_m": 5000,
+          "strength": 120,
+          "strength_unit": "GJ per cycle",
+          "per_second": 12
+        },
+        {
+          "kind": "local_shield_boost",
+          "duration_s": 2,
+          "strength": 25,
+          "strength_unit": "shield HP per cycle",
+          "per_second": 12.5
+        }
+      ]
+    },
+    {
+      "type_id": 56168,
+      "name": "Devoted Torchbearer",
+      "group": "Abyssal Spaceship Entities",
+      "family": "Devoted",
+      "shield": {
+        "hp": 1500,
+        "resists": {
+          "em": 5,
+          "thermal": 15,
+          "kinetic": 25,
+          "explosive": 35
+        }
+      },
+      "armor": {
+        "hp": 500,
+        "resists": {
+          "em": 5,
+          "thermal": 20,
+          "kinetic": 30,
+          "explosive": 40
+        }
+      },
+      "hull": {
+        "hp": 525,
+        "resists": {
+          "em": 100,
+          "thermal": 100,
+          "kinetic": 100,
+          "explosive": 100
+        }
+      },
+      "total_hp": 2525,
+      "ehp": 3055.7377,
+      "damage": {
+        "kind": "turret",
+        "em": 75.24,
+        "thermal": 62.7,
+        "kinetic": 0,
+        "explosive": 0,
+        "volley": 137.94,
+        "cycle_s": 5,
+        "dps": 27.588,
+        "dominant": "em",
+        "optimal_m": 18000,
+        "falloff_m": 8000,
+        "tracking": 600
+      },
+      "max_velocity": 740,
+      "signature_radius": 49,
+      "orbit_range_m": 7000,
+      "effects": [
+        {
+          "kind": "target_painter",
+          "duration_s": 5,
+          "range_m": 50000,
+          "falloff_m": 10000,
+          "strength": 35,
+          "strength_unit": "percent signature radius"
+        },
+        {
+          "kind": "local_shield_boost",
+          "duration_s": 2,
+          "strength": 25,
+          "strength_unit": "shield HP per cycle",
+          "per_second": 12.5
+        }
+      ]
+    },
+    {
+      "type_id": 56164,
+      "name": "Devoted Trapper",
+      "group": "Abyssal Spaceship Entities",
+      "family": "Devoted",
+      "shield": {
+        "hp": 1500,
+        "resists": {
+          "em": 5,
+          "thermal": 15,
+          "kinetic": 25,
+          "explosive": 35
+        }
+      },
+      "armor": {
+        "hp": 500,
+        "resists": {
+          "em": 5,
+          "thermal": 20,
+          "kinetic": 30,
+          "explosive": 40
+        }
+      },
+      "hull": {
+        "hp": 525,
+        "resists": {
+          "em": 100,
+          "thermal": 100,
+          "kinetic": 100,
+          "explosive": 100
+        }
+      },
+      "total_hp": 2525,
+      "ehp": 3055.7377,
+      "damage": {
+        "kind": "turret",
+        "em": 75.24,
+        "thermal": 62.7,
+        "kinetic": 0,
+        "explosive": 0,
+        "volley": 137.94,
+        "cycle_s": 5,
+        "dps": 27.588,
+        "dominant": "em",
+        "optimal_m": 18000,
+        "falloff_m": 8000,
+        "tracking": 600
+      },
+      "max_velocity": 740,
+      "signature_radius": 49,
+      "orbit_range_m": 7000,
+      "effects": [
+        {
+          "kind": "warp_scramble",
+          "duration_s": 5,
+          "range_m": 10000,
+          "strength": 2,
+          "strength_unit": "warp disruption points"
+        },
+        {
+          "kind": "local_shield_boost",
+          "duration_s": 2,
+          "strength": 25,
+          "strength_unit": "shield HP per cycle",
+          "per_second": 12.5
+        }
+      ]
+    },
+    {
+      "type_id": 80044,
+      "name": "Dievas Shackling Leshak",
+      "group": "Abyssal Spaceship Entities",
+      "family": "Leshak",
+      "shield": {
+        "hp": 50000,
+        "resists": {
+          "em": 0,
+          "thermal": 20,
+          "kinetic": 40,
+          "explosive": 50
+        }
+      },
+      "armor": {
+        "hp": 50000,
+        "resists": {
+          "em": 60,
+          "thermal": 48,
+          "kinetic": 53,
+          "explosive": 36
+        }
+      },
+      "hull": {
+        "hp": 50000,
+        "resists": {
+          "em": 33,
+          "thermal": 33,
+          "kinetic": 33,
+          "explosive": 33
+        }
+      },
+      "total_hp": 150000,
+      "ehp": 242114.5504,
+      "damage": {
+        "kind": "disintegrator",
+        "em": 0,
+        "thermal": 260,
+        "kinetic": 0,
+        "explosive": 160,
+        "volley": 420,
+        "cycle_s": 5,
+        "dps": 84,
+        "dominant": "thermal",
+        "optimal_m": 90000,
+        "falloff_m": 63000,
+        "tracking": 30,
+        "ramp_per_cycle": 0.02,
+        "ramp_max": 1.5
+      },
+      "max_velocity": 400,
+      "signature_radius": 370,
+      "orbit_range_m": 12000,
+      "effects": [
+        {
+          "kind": "web",
+          "duration_s": 5,
+          "range_m": 1000,
+          "falloff_m": 20000,
+          "strength": 80,
+          "strength_unit": "percent speed reduction"
+        },
+        {
+          "kind": "local_armor_repair",
+          "strength_unit": "armor HP per cycle"
+        },
+        {
+          "kind": "local_shield_boost",
+          "strength_unit": "shield HP per cycle"
+        }
+      ]
+    },
+    {
+      "type_id": 56175,
+      "name": "Drainer Enforcer Disparu Troop",
+      "group": "Abyssal Spaceship Entities",
+      "family": "Disparu Troop",
+      "shield": {
+        "hp": 5200,
+        "resists": {
+          "em": 30,
+          "thermal": 30,
+          "kinetic": 30,
+          "explosive": 30
+        }
+      },
+      "armor": {
+        "hp": 5200,
+        "resists": {
+          "em": 30,
+          "thermal": 30,
+          "kinetic": 30,
+          "explosive": 30
+        }
+      },
+      "hull": {
+        "hp": 1050,
+        "resists": {
+          "em": 30,
+          "thermal": 30,
+          "kinetic": 30,
+          "explosive": 30
+        }
+      },
+      "total_hp": 11450,
+      "ehp": 16357.1429,
+      "damage": {
+        "kind": "missile",
+        "em": 0,
+        "thermal": 0,
+        "kinetic": 0,
+        "explosive": 1600,
+        "volley": 1600,
+        "cycle_s": 13,
+        "dps": 123.0769,
+        "dominant": "explosive",
+        "optimal_m": 36000
+      },
+      "max_velocity": 1300,
+      "signature_radius": 660,
+      "orbit_range_m": 9000,
+      "effects": [
+        {
+          "kind": "energy_neutralizer",
+          "duration_s": 20,
+          "range_m": 10000,
+          "falloff_m": 5000,
+          "strength": 360,
+          "strength_unit": "GJ per cycle",
+          "per_second": 18
+        },
+        {
+          "kind": "local_armor_repair",
+          "duration_s": 6,
+          "strength": 150,
+          "strength_unit": "armor HP per cycle",
+          "per_second": 25
+        }
+      ]
+    },
+    {
+      "type_id": 56178,
+      "name": "Drainer Marshal Disparu Troop",
+      "group": "Abyssal Spaceship Entities",
+      "family": "Disparu Troop",
+      "shield": {
+        "hp": 7500,
+        "resists": {
+          "em": 30,
+          "thermal": 30,
+          "kinetic": 30,
+          "explosive": 30
+        }
+      },
+      "armor": {
+        "hp": 7500,
+        "resists": {
+          "em": 30,
+          "thermal": 30,
+          "kinetic": 30,
+          "explosive": 30
+        }
+      },
+      "hull": {
+        "hp": 5200,
+        "resists": {
+          "em": 30,
+          "thermal": 30,
+          "kinetic": 30,
+          "explosive": 30
+        }
+      },
+      "total_hp": 20200,
+      "ehp": 28857.1429,
+      "damage": {
+        "kind": "missile",
+        "em": 0,
+        "thermal": 2565,
+        "kinetic": 0,
+        "explosive": 0,
+        "volley": 2565,
+        "cycle_s": 6,
+        "dps": 427.5,
+        "dominant": "thermal",
+        "optimal_m": 75465
+      },
+      "max_velocity": 340,
+      "signature_radius": 370,
+      "orbit_range_m": 15000,
+      "effects": [
+        {
+          "kind": "energy_neutralizer",
+          "duration_s": 24,
+          "range_m": 30000,
+          "falloff_m": 20000,
+          "strength": 400,
+          "strength_unit": "GJ per cycle",
+          "per_second": 16.6667
+        },
+        {
+          "kind": "local_armor_repair",
+          "duration_s": 6,
+          "strength_unit": "armor HP per cycle"
+        }
+      ]
+    },
+    {
+      "type_id": 56173,
+      "name": "Drainer Pacifier Disparu Troop",
+      "group": "Abyssal Spaceship Entities",
+      "family": "Disparu Troop",
+      "shield": {
+        "hp": 1450,
+        "resists": {
+          "em": 30,
+          "thermal": 30,
+          "kinetic": 30,
+          "explosive": 30
+        }
+      },
+      "armor": {
+        "hp": 1450,
+        "resists": {
+          "em": 30,
+          "thermal": 30,
+          "kinetic": 30,
+          "explosive": 30
+        }
+      },
+      "hull": {
+        "hp": 290,
+        "resists": {
+          "em": 30,
+          "thermal": 30,
+          "kinetic": 30,
+          "explosive": 30
+        }
+      },
+      "total_hp": 3190,
+      "ehp": 4557.1429,
+      "damage": {
+        "kind": "missile",
+        "em": 0,
+        "thermal": 0,
+        "kinetic": 0,
+        "explosive": 396,
+        "volley": 396,
+        "cycle_s": 10,
+        "dps": 39.6,
+        "dominant": "explosive",
+        "optimal_m": 36000
+      },
+      "max_velocity": 2400,
+      "signature_radius": 150,
+      "orbit_range_m": 10000,
+      "effects": [
+        {
+          "kind": "energy_neutralizer",
+          "duration_s": 8,
+          "range_m": 9000,
+          "falloff_m": 9000,
+          "strength": 100,
+          "strength_unit": "GJ per cycle",
+          "per_second": 12.5
+        },
+        {
+          "kind": "local_armor_repair",
+          "duration_s": 5,
+          "strength": 120,
+          "strength_unit": "armor HP per cycle",
+          "per_second": 24
+        }
+      ]
+    },
+    {
+      "type_id": 47957,
+      "name": "Drifter Assault Battleship",
+      "group": "Abyssal Spaceship Entities",
+      "family": "Drifter",
+      "shield": {
+        "hp": 40000,
+        "resists": {
+          "em": 50,
+          "thermal": 50,
+          "kinetic": 50,
+          "explosive": 50
+        }
+      },
+      "armor": {
+        "hp": 10000,
+        "resists": {
+          "em": 50,
+          "thermal": 50,
+          "kinetic": 50,
+          "explosive": 50
+        }
+      },
+      "hull": {
+        "hp": 20000,
+        "resists": {
+          "em": 100,
+          "thermal": 100,
+          "kinetic": 100,
+          "explosive": 100
+        }
+      },
+      "total_hp": 70000,
+      "ehp": 120000,
+      "damage": {
+        "kind": "turret",
+        "em": 625,
+        "thermal": 625,
+        "kinetic": 625,
+        "explosive": 625,
+        "volley": 2500,
+        "cycle_s": 5,
+        "dps": 500,
+        "dominant": "em",
+        "optimal_m": 60000,
+        "falloff_m": 20000,
+        "tracking": 2
+      },
+      "max_velocity": 300,
+      "signature_radius": 400
+    },
+    {
+      "type_id": 56214,
+      "name": "Drifter Command Battleship",
+      "group": "Abyssal Spaceship Entities",
+      "family": "Drifter",
+      "shield": {
+        "hp": 40000,
+        "resists": {
+          "em": 50,
+          "thermal": 50,
+          "kinetic": 50,
+          "explosive": 50
+        }
+      },
+      "armor": {
+        "hp": 10000,
+        "resists": {
+          "em": 50,
+          "thermal": 50,
+          "kinetic": 50,
+          "explosive": 50
+        }
+      },
+      "hull": {
+        "hp": 20000,
+        "resists": {
+          "em": 100,
+          "thermal": 100,
+          "kinetic": 100,
+          "explosive": 100
+        }
+      },
+      "total_hp": 70000,
+      "ehp": 120000,
+      "damage": {
+        "kind": "turret",
+        "em": 750,
+        "thermal": 750,
+        "kinetic": 750,
+        "explosive": 750,
+        "volley": 3000,
+        "cycle_s": 5,
+        "dps": 600,
+        "dominant": "em",
+        "optimal_m": 60000,
+        "falloff_m": 20000,
+        "tracking": 2
+      },
+      "max_velocity": 300,
+      "signature_radius": 400
+    },
+    {
+      "type_id": 47958,
+      "name": "Drifter Entanglement Cruiser",
+      "group": "Abyssal Spaceship Entities",
+      "family": "Drifter",
+      "shield": {
+        "hp": 10000,
+        "resists": {
+          "em": 50,
+          "thermal": 50,
+          "kinetic": 50,
+          "explosive": 50
+        }
+      },
+      "armor": {
+        "hp": 5000,
+        "resists": {
+          "em": 50,
+          "thermal": 50,
+          "kinetic": 50,
+          "explosive": 50
+        }
+      },
+      "hull": {
+        "hp": 7500,
+        "resists": {
+          "em": 100,
+          "thermal": 100,
+          "kinetic": 100,
+          "explosive": 100
+        }
+      },
+      "total_hp": 22500,
+      "ehp": 37500,
+      "damage": {
+        "kind": "turret",
+        "em": 50,
+        "thermal": 50,
+        "kinetic": 50,
+        "explosive": 50,
+        "volley": 200,
+        "cycle_s": 5,
+        "dps": 40,
+        "dominant": "em",
+        "optimal_m": 6000,
+        "falloff_m": 10000,
+        "tracking": 50
+      },
+      "max_velocity": 1000,
+      "signature_radius": 400,
+      "orbit_range_m": 7500,
+      "effects": [
+        {
+          "kind": "web",
+          "duration_s": 5,
+          "range_m": 10000,
+          "strength": 50,
+          "strength_unit": "percent speed reduction"
+        }
+      ]
+    },
+    {
+      "type_id": 47953,
+      "name": "Drifter Foothold Battleship",
+      "group": "Abyssal Spaceship Entities",
+      "family": "Drifter",
+      "shield": {
+        "hp": 40000,
+        "resists": {
+          "em": 50,
+          "thermal": 50,
+          "kinetic": 50,
+          "explosive": 50
+        }
+      },
+      "armor": {
+        "hp": 10000,
+        "resists": {
+          "em": 50,
+          "thermal": 50,
+          "kinetic": 50,
+          "explosive": 50
+        }
+      },
+      "hull": {
+        "hp": 20000,
+        "resists": {
+          "em": 100,
+          "thermal": 100,
+          "kinetic": 100,
+          "explosive": 100
+        }
+      },
+      "total_hp": 70000,
+      "ehp": 120000,
+      "damage": {
+        "kind": "turret",
+        "em": 125,
+        "thermal": 125,
+        "kinetic": 125,
+        "explosive": 125,
+        "volley": 500,
+        "cycle_s": 5,
+        "dps": 100,
+        "dominant": "em",
+        "optimal_m": 60000,
+        "falloff_m": 20000,
+        "tracking": 2
+      },
+      "max_velocity": 300,
+      "signature_radius": 400
+    },
+    {
+      "type_id": 47955,
+      "name": "Drifter Frontline Battleship",
+      "group": "Abyssal Spaceship Entities",
+      "family": "Drifter",
+      "shield": {
+        "hp": 40000,
+        "resists": {
+          "em": 50,
+          "thermal": 50,
+          "kinetic": 50,
+          "explosive": 50
+        }
+      },
+      "armor": {
+        "hp": 10000,
+        "resists": {
+          "em": 50,
+          "thermal": 50,
+          "kinetic": 50,
+          "explosive": 50
+        }
+      },
+      "hull": {
+        "hp": 20000,
+        "resists": {
+          "em": 100,
+          "thermal": 100,
+          "kinetic": 100,
+          "explosive": 100
+        }
+      },
+      "total_hp": 70000,
+      "ehp": 120000,
+      "damage": {
+        "kind": "turret",
+        "em": 375,
+        "thermal": 375,
+        "kinetic": 375,
+        "explosive": 375,
+        "volley": 1500,
+        "cycle_s": 5,
+        "dps": 300,
+        "dominant": "em",
+        "optimal_m": 60000,
+        "falloff_m": 20000,
+        "tracking": 2
+      },
+      "max_velocity": 300,
+      "signature_radius": 400
+    },
+    {
+      "type_id": 47960,
+      "name": "Drifter Nullcharge Cruiser",
+      "group": "Abyssal Spaceship Entities",
+      "family": "Drifter",
+      "shield": {
+        "hp": 10000,
+        "resists": {
+          "em": 50,
+          "thermal": 50,
+          "kinetic": 50,
+          "explosive": 50
+        }
+      },
+      "armor": {
+        "hp": 5000,
+        "resists": {
+          "em": 50,
+          "thermal": 50,
+          "kinetic": 50,
+          "explosive": 50
+        }
+      },
+      "hull": {
+        "hp": 7500,
+        "resists": {
+          "em": 100,
+          "thermal": 100,
+          "kinetic": 100,
+          "explosive": 100
+        }
+      },
+      "total_hp": 22500,
+      "ehp": 37500,
+      "damage": {
+        "kind": "turret",
+        "em": 50,
+        "thermal": 50,
+        "kinetic": 50,
+        "explosive": 50,
+        "volley": 200,
+        "cycle_s": 5,
+        "dps": 40,
+        "dominant": "em",
+        "optimal_m": 6000,
+        "falloff_m": 10000,
+        "tracking": 50
+      },
+      "max_velocity": 1000,
+      "signature_radius": 400,
+      "orbit_range_m": 7500,
+      "effects": [
+        {
+          "kind": "energy_neutralizer",
+          "duration_s": 10,
+          "range_m": 10000,
+          "strength": 150,
+          "strength_unit": "GJ per cycle",
+          "per_second": 15
+        }
+      ]
+    },
+    {
+      "type_id": 47959,
+      "name": "Drifter Nullwarp Cruiser",
+      "group": "Abyssal Spaceship Entities",
+      "family": "Drifter",
+      "shield": {
+        "hp": 10000,
+        "resists": {
+          "em": 50,
+          "thermal": 50,
+          "kinetic": 50,
+          "explosive": 50
+        }
+      },
+      "armor": {
+        "hp": 5000,
+        "resists": {
+          "em": 50,
+          "thermal": 50,
+          "kinetic": 50,
+          "explosive": 50
+        }
+      },
+      "hull": {
+        "hp": 7500,
+        "resists": {
+          "em": 100,
+          "thermal": 100,
+          "kinetic": 100,
+          "explosive": 100
+        }
+      },
+      "total_hp": 22500,
+      "ehp": 37500,
+      "damage": {
+        "kind": "turret",
+        "em": 50,
+        "thermal": 50,
+        "kinetic": 50,
+        "explosive": 50,
+        "volley": 200,
+        "cycle_s": 5,
+        "dps": 40,
+        "dominant": "em",
+        "optimal_m": 6000,
+        "falloff_m": 10000,
+        "tracking": 50
+      },
+      "max_velocity": 1000,
+      "signature_radius": 400,
+      "orbit_range_m": 7500,
+      "effects": [
+        {
+          "kind": "warp_scramble",
+          "duration_s": 5,
+          "range_m": 10000,
+          "strength": 2,
+          "strength_unit": "warp disruption points"
+        }
+      ]
+    },
+    {
+      "type_id": 47954,
+      "name": "Drifter Rearguard Battleship",
+      "group": "Abyssal Spaceship Entities",
+      "family": "Drifter",
+      "shield": {
+        "hp": 40000,
+        "resists": {
+          "em": 50,
+          "thermal": 50,
+          "kinetic": 50,
+          "explosive": 50
+        }
+      },
+      "armor": {
+        "hp": 10000,
+        "resists": {
+          "em": 50,
+          "thermal": 50,
+          "kinetic": 50,
+          "explosive": 50
+        }
+      },
+      "hull": {
+        "hp": 20000,
+        "resists": {
+          "em": 100,
+          "thermal": 100,
+          "kinetic": 100,
+          "explosive": 100
+        }
+      },
+      "total_hp": 70000,
+      "ehp": 120000,
+      "damage": {
+        "kind": "turret",
+        "em": 250,
+        "thermal": 250,
+        "kinetic": 250,
+        "explosive": 250,
+        "volley": 1000,
+        "cycle_s": 5,
+        "dps": 200,
+        "dominant": "em",
+        "optimal_m": 60000,
+        "falloff_m": 20000,
+        "tracking": 2
+      },
+      "max_velocity": 300,
+      "signature_radius": 400
+    },
+    {
+      "type_id": 47956,
+      "name": "Drifter Vanguard Battleship",
+      "group": "Abyssal Spaceship Entities",
+      "family": "Drifter",
+      "shield": {
+        "hp": 40000,
+        "resists": {
+          "em": 50,
+          "thermal": 50,
+          "kinetic": 50,
+          "explosive": 50
+        }
+      },
+      "armor": {
+        "hp": 10000,
+        "resists": {
+          "em": 50,
+          "thermal": 50,
+          "kinetic": 50,
+          "explosive": 50
+        }
+      },
+      "hull": {
+        "hp": 20000,
+        "resists": {
+          "em": 100,
+          "thermal": 100,
+          "kinetic": 100,
+          "explosive": 100
+        }
+      },
+      "total_hp": 70000,
+      "ehp": 120000,
+      "damage": {
+        "kind": "turret",
+        "em": 500,
+        "thermal": 500,
+        "kinetic": 500,
+        "explosive": 500,
+        "volley": 2000,
+        "cycle_s": 5,
+        "dps": 400,
+        "dominant": "em",
+        "optimal_m": 60000,
+        "falloff_m": 20000,
+        "tracking": 2
+      },
+      "max_velocity": 300,
+      "signature_radius": 400
+    },
+    {
+      "type_id": 56315,
+      "name": "Elite Lucifer Cynabal",
+      "group": "Abyssal Spaceship Entities",
+      "family": "Lucifer",
+      "shield": {
+        "hp": 4368,
+        "resists": {
+          "em": 70,
+          "thermal": 68,
+          "kinetic": 63,
+          "explosive": 60
+        }
+      },
+      "armor": {
+        "hp": 2190,
+        "resists": {
+          "em": 65,
+          "thermal": 40,
+          "kinetic": 30,
+          "explosive": 15
+        }
+      },
+      "hull": {
+        "hp": 2190,
+        "resists": {
+          "em": 54,
+          "thermal": 54,
+          "kinetic": 54,
+          "explosive": 54
+        }
+      },
+      "total_hp": 8748,
+      "ehp": 20834.6537,
+      "damage": {
+        "kind": "turret",
+        "em": 400,
+        "thermal": 0,
+        "kinetic": 0,
+        "explosive": 150,
+        "volley": 550,
+        "cycle_s": 5,
+        "dps": 110,
+        "dominant": "em",
+        "optimal_m": 10000,
+        "falloff_m": 62000,
+        "tracking": 60
+      },
+      "max_velocity": 2658,
+      "signature_radius": 146,
+      "orbit_range_m": 8000,
+      "effects": [
+        {
+          "kind": "web",
+          "duration_s": 5,
+          "range_m": 15000,
+          "strength": 50,
+          "strength_unit": "percent speed reduction"
+        },
+        {
+          "kind": "energy_neutralizer",
+          "duration_s": 10,
+          "range_m": 10000,
+          "falloff_m": 14000,
+          "strength": 100,
+          "strength_unit": "GJ per cycle",
+          "per_second": 10
+        },
+        {
+          "kind": "local_shield_boost",
+          "duration_s": 9,
+          "strength": 169,
+          "strength_unit": "shield HP per cycle",
+          "per_second": 18.7778
+        }
+      ]
+    },
+    {
+      "type_id": 56347,
+      "name": "Elite Lucifer Dramiel",
+      "group": "Abyssal Spaceship Entities",
+      "family": "Lucifer",
+      "shield": {
+        "hp": 1100,
+        "resists": {
+          "em": 60,
+          "thermal": 58,
+          "kinetic": 53,
+          "explosive": 50
+        }
+      },
+      "armor": {
+        "hp": 1100,
+        "resists": {
+          "em": 65,
+          "thermal": 40,
+          "kinetic": 30,
+          "explosive": 15
+        }
+      },
+      "hull": {
+        "hp": 975,
+        "resists": {
+          "em": 54,
+          "thermal": 54,
+          "kinetic": 54,
+          "explosive": 54
+        }
+      },
+      "total_hp": 3175,
+      "ehp": 6337.6658,
+      "damage": {
+        "kind": "turret",
+        "em": 0,
+        "thermal": 0,
+        "kinetic": 33,
+        "explosive": 77,
+        "volley": 110,
+        "cycle_s": 6,
+        "dps": 18.3333,
+        "dominant": "explosive",
+        "optimal_m": 6000,
+        "falloff_m": 28000,
+        "tracking": 1200
+      },
+      "max_velocity": 3709,
+      "signature_radius": 70,
+      "orbit_range_m": 6000,
+      "effects": [
+        {
+          "kind": "web",
+          "duration_s": 5,
+          "range_m": 12000,
+          "strength": 50,
+          "strength_unit": "percent speed reduction"
+        },
+        {
+          "kind": "local_shield_boost",
+          "duration_s": 5,
+          "strength": 45,
+          "strength_unit": "shield HP per cycle",
+          "per_second": 9
+        }
+      ]
+    },
+    {
+      "type_id": 48263,
+      "name": "Embergrip Tessera",
+      "group": "Abyssal Drone Entities",
+      "family": "Tessera",
+      "shield": {
+        "hp": 3000,
+        "resists": {
+          "em": 60,
+          "thermal": 70,
+          "kinetic": 70,
+          "explosive": 60
+        }
+      },
+      "armor": {
+        "hp": 2300,
+        "resists": {
+          "em": 60,
+          "thermal": 70,
+          "kinetic": 70,
+          "explosive": 60
+        }
+      },
+      "hull": {
+        "hp": 2500,
+        "resists": {
+          "em": 0,
+          "thermal": 0,
+          "kinetic": 0,
+          "explosive": 0
+        }
+      },
+      "total_hp": 7800,
+      "ehp": 17642.8571,
+      "damage": {
+        "kind": "turret",
+        "em": 0,
+        "thermal": 1000,
+        "kinetic": 0,
+        "explosive": 0,
+        "volley": 1000,
+        "cycle_s": 5,
+        "dps": 200,
+        "dominant": "thermal",
+        "optimal_m": 2000,
+        "falloff_m": 6000,
+        "tracking": 4000
+      },
+      "max_velocity": 525,
+      "signature_radius": 300,
+      "orbit_range_m": 2000
+    },
+    {
+      "type_id": 47857,
+      "name": "Emberlance Tessella",
+      "group": "Abyssal Drone Entities",
+      "family": "Tessella",
+      "shield": {
+        "hp": 200,
+        "resists": {
+          "em": 0,
+          "thermal": 20,
+          "kinetic": 40,
+          "explosive": 50
+        }
+      },
+      "armor": {
+        "hp": 1000,
+        "resists": {
+          "em": 50,
+          "thermal": 35,
+          "kinetic": 35,
+          "explosive": 10
+        }
+      },
+      "hull": {
+        "hp": 450,
+        "resists": {
+          "em": 0,
+          "thermal": 0,
+          "kinetic": 0,
+          "explosive": 0
+        }
+      },
+      "total_hp": 1650,
+      "ehp": 2207.3436,
+      "damage": {
+        "kind": "turret",
+        "em": 0,
+        "thermal": 100,
+        "kinetic": 0,
+        "explosive": 0,
+        "volley": 100,
+        "cycle_s": 2,
+        "dps": 50,
+        "dominant": "thermal",
+        "optimal_m": 5000,
+        "falloff_m": 10000,
+        "tracking": 4000
+      },
+      "max_velocity": 1500,
+      "signature_radius": 50,
+      "orbit_range_m": 9000
+    },
+    {
+      "type_id": 47848,
+      "name": "Emberneedle Tessella",
+      "group": "Abyssal Drone Entities",
+      "family": "Tessella",
+      "shield": {
+        "hp": 200,
+        "resists": {
+          "em": 0,
+          "thermal": 20,
+          "kinetic": 40,
+          "explosive": 50
+        }
+      },
+      "armor": {
+        "hp": 500,
+        "resists": {
+          "em": 50,
+          "thermal": 35,
+          "kinetic": 35,
+          "explosive": 10
+        }
+      },
+      "hull": {
+        "hp": 450,
+        "resists": {
+          "em": 0,
+          "thermal": 0,
+          "kinetic": 0,
+          "explosive": 0
+        }
+      },
+      "total_hp": 1150,
+      "ehp": 1466.6028,
+      "damage": {
+        "kind": "turret",
+        "em": 0,
+        "thermal": 50,
+        "kinetic": 0,
+        "explosive": 0,
+        "volley": 50,
+        "cycle_s": 2,
+        "dps": 25,
+        "dominant": "thermal",
+        "optimal_m": 2500,
+        "falloff_m": 5000,
+        "tracking": 4000
+      },
+      "max_velocity": 1500,
+      "signature_radius": 50,
+      "orbit_range_m": 5000
+    },
+    {
+      "type_id": 56213,
+      "name": "Endobenthic Abyssal Overmind",
+      "group": "Abyssal Spaceship Entities",
+      "family": "Abyssal Overmind",
+      "shield": {
+        "hp": 14850,
+        "resists": {
+          "em": 21,
+          "thermal": 37,
+          "kinetic": 53,
+          "explosive": 61
+        }
+      },
+      "armor": {
+        "hp": 32180,
+        "resists": {
+          "em": 76,
+          "thermal": 68,
+          "kinetic": 68,
+          "explosive": 70
+        }
+      },
+      "hull": {
+        "hp": 17000,
+        "resists": {
+          "em": 68,
+          "thermal": 68,
+          "kinetic": 68,
+          "explosive": 68
+        }
+      },
+      "total_hp": 64030,
+      "ehp": 188262.3773,
+      "damage": {
+        "kind": "turret",
+        "em": 0,
+        "thermal": 1200,
+        "kinetic": 1680,
+        "explosive": 0,
+        "volley": 2880,
+        "cycle_s": 3.97,
+        "dps": 725.4408,
+        "dominant": "kinetic",
+        "optimal_m": 29160,
+        "falloff_m": 29000,
+        "tracking": 3.23
+      },
+      "max_velocity": 400,
+      "signature_radius": 455,
+      "effects": [
+        {
+          "kind": "web",
+          "duration_s": 5,
+          "range_m": 15000,
+          "strength": 55,
+          "strength_unit": "percent speed reduction"
+        }
+      ]
+    },
+    {
+      "type_id": 48240,
+      "name": "Ephialtes Confuser",
+      "group": "Abyssal Spaceship Entities",
+      "family": "Ephialtes",
+      "shield": {
+        "hp": 2500,
+        "resists": {
+          "em": 10,
+          "thermal": 10,
+          "kinetic": 10,
+          "explosive": 10
+        }
+      },
+      "armor": {
+        "hp": 1500,
+        "resists": {
+          "em": 10,
+          "thermal": 10,
+          "kinetic": 10,
+          "explosive": 10
+        }
+      },
+      "hull": {
+        "hp": 1000,
+        "resists": {
+          "em": 100,
+          "thermal": 100,
+          "kinetic": 100,
+          "explosive": 100
+        }
+      },
+      "total_hp": 5000,
+      "ehp": 5444.4444,
+      "damage": {
+        "kind": "turret",
+        "em": 40,
+        "thermal": 40,
+        "kinetic": 0,
+        "explosive": 0,
+        "volley": 80,
+        "cycle_s": 4,
+        "dps": 20,
+        "dominant": "em",
+        "optimal_m": 12000,
+        "falloff_m": 10000,
+        "tracking": 100
+      },
+      "max_velocity": 1400,
+      "signature_radius": 150,
+      "orbit_range_m": 10000,
+      "effects": [
+        {
+          "kind": "guidance_disruptor",
+          "duration_s": 5,
+          "range_m": 30000,
+          "falloff_m": 15000,
+          "strength": -10,
+          "strength_unit": "percent explosion velocity"
+        },
+        {
+          "kind": "tracking_disruptor",
+          "duration_s": 5,
+          "range_m": 30000,
+          "falloff_m": 15000
+        }
+      ]
+    },
+    {
+      "type_id": 48238,
+      "name": "Ephialtes Dissipator",
+      "group": "Abyssal Spaceship Entities",
+      "family": "Ephialtes",
+      "shield": {
+        "hp": 2500,
+        "resists": {
+          "em": 10,
+          "thermal": 10,
+          "kinetic": 10,
+          "explosive": 10
+        }
+      },
+      "armor": {
+        "hp": 1500,
+        "resists": {
+          "em": 10,
+          "thermal": 10,
+          "kinetic": 10,
+          "explosive": 10
+        }
+      },
+      "hull": {
+        "hp": 1000,
+        "resists": {
+          "em": 100,
+          "thermal": 100,
+          "kinetic": 100,
+          "explosive": 100
+        }
+      },
+      "total_hp": 5000,
+      "ehp": 5444.4444,
+      "damage": {
+        "kind": "turret",
+        "em": 40,
+        "thermal": 40,
+        "kinetic": 0,
+        "explosive": 0,
+        "volley": 80,
+        "cycle_s": 4,
+        "dps": 20,
+        "dominant": "em",
+        "optimal_m": 12000,
+        "falloff_m": 10000,
+        "tracking": 100
+      },
+      "max_velocity": 1400,
+      "signature_radius": 150,
+      "orbit_range_m": 10000,
+      "effects": [
+        {
+          "kind": "energy_neutralizer",
+          "duration_s": 10,
+          "range_m": 8000,
+          "falloff_m": 4000,
+          "strength": 100,
+          "strength_unit": "GJ per cycle",
+          "per_second": 10
+        }
+      ]
+    },
+    {
+      "type_id": 48235,
+      "name": "Ephialtes Entangler",
+      "group": "Abyssal Spaceship Entities",
+      "family": "Ephialtes",
+      "shield": {
+        "hp": 2500,
+        "resists": {
+          "em": 10,
+          "thermal": 10,
+          "kinetic": 10,
+          "explosive": 10
+        }
+      },
+      "armor": {
+        "hp": 1500,
+        "resists": {
+          "em": 10,
+          "thermal": 10,
+          "kinetic": 10,
+          "explosive": 10
+        }
+      },
+      "hull": {
+        "hp": 1000,
+        "resists": {
+          "em": 100,
+          "thermal": 100,
+          "kinetic": 100,
+          "explosive": 100
+        }
+      },
+      "total_hp": 5000,
+      "ehp": 5444.4444,
+      "damage": {
+        "kind": "turret",
+        "em": 40,
+        "thermal": 40,
+        "kinetic": 0,
+        "explosive": 0,
+        "volley": 80,
+        "cycle_s": 4,
+        "dps": 20,
+        "dominant": "em",
+        "optimal_m": 12000,
+        "falloff_m": 10000,
+        "tracking": 100
+      },
+      "max_velocity": 1400,
+      "signature_radius": 150,
+      "orbit_range_m": 8000,
+      "effects": [
+        {
+          "kind": "web",
+          "duration_s": 5,
+          "range_m": 10000,
+          "strength": 40,
+          "strength_unit": "percent speed reduction"
+        }
+      ]
+    },
+    {
+      "type_id": 48237,
+      "name": "Ephialtes Illuminator",
+      "group": "Abyssal Spaceship Entities",
+      "family": "Ephialtes",
+      "shield": {
+        "hp": 2500,
+        "resists": {
+          "em": 10,
+          "thermal": 10,
+          "kinetic": 10,
+          "explosive": 10
+        }
+      },
+      "armor": {
+        "hp": 1500,
+        "resists": {
+          "em": 10,
+          "thermal": 10,
+          "kinetic": 10,
+          "explosive": 10
+        }
+      },
+      "hull": {
+        "hp": 1000,
+        "resists": {
+          "em": 100,
+          "thermal": 100,
+          "kinetic": 100,
+          "explosive": 100
+        }
+      },
+      "total_hp": 5000,
+      "ehp": 5444.4444,
+      "damage": {
+        "kind": "turret",
+        "em": 40,
+        "thermal": 40,
+        "kinetic": 0,
+        "explosive": 0,
+        "volley": 80,
+        "cycle_s": 4,
+        "dps": 20,
+        "dominant": "em",
+        "optimal_m": 12000,
+        "falloff_m": 10000,
+        "tracking": 100
+      },
+      "max_velocity": 1400,
+      "signature_radius": 150,
+      "orbit_range_m": 10000,
+      "effects": [
+        {
+          "kind": "target_painter",
+          "duration_s": 5,
+          "range_m": 20000,
+          "falloff_m": 40000,
+          "strength": 25,
+          "strength_unit": "percent signature radius"
+        }
+      ]
+    },
+    {
+      "type_id": 48234,
+      "name": "Ephialtes Lancer",
+      "group": "Abyssal Spaceship Entities",
+      "family": "Ephialtes",
+      "shield": {
+        "hp": 2500,
+        "resists": {
+          "em": 10,
+          "thermal": 10,
+          "kinetic": 10,
+          "explosive": 10
+        }
+      },
+      "armor": {
+        "hp": 1500,
+        "resists": {
+          "em": 10,
+          "thermal": 10,
+          "kinetic": 10,
+          "explosive": 10
+        }
+      },
+      "hull": {
+        "hp": 1000,
+        "resists": {
+          "em": 100,
+          "thermal": 100,
+          "kinetic": 100,
+          "explosive": 100
+        }
+      },
+      "total_hp": 5000,
+      "ehp": 5444.4444,
+      "damage": {
+        "kind": "turret",
+        "em": 60,
+        "thermal": 60,
+        "kinetic": 0,
+        "explosive": 0,
+        "volley": 120,
+        "cycle_s": 4,
+        "dps": 30,
+        "dominant": "em",
+        "optimal_m": 12000,
+        "falloff_m": 10000,
+        "tracking": 100
+      },
+      "max_velocity": 1400,
+      "signature_radius": 150,
+      "orbit_range_m": 10000
+    },
+    {
+      "type_id": 48239,
+      "name": "Ephialtes Obfuscator",
+      "group": "Abyssal Spaceship Entities",
+      "family": "Ephialtes",
+      "shield": {
+        "hp": 2500,
+        "resists": {
+          "em": 10,
+          "thermal": 10,
+          "kinetic": 10,
+          "explosive": 10
+        }
+      },
+      "armor": {
+        "hp": 1500,
+        "resists": {
+          "em": 10,
+          "thermal": 10,
+          "kinetic": 10,
+          "explosive": 10
+        }
+      },
+      "hull": {
+        "hp": 1000,
+        "resists": {
+          "em": 100,
+          "thermal": 100,
+          "kinetic": 100,
+          "explosive": 100
+        }
+      },
+      "total_hp": 5000,
+      "ehp": 5444.4444,
+      "damage": {
+        "kind": "turret",
+        "em": 40,
+        "thermal": 40,
+        "kinetic": 0,
+        "explosive": 0,
+        "volley": 80,
+        "cycle_s": 4,
+        "dps": 20,
+        "dominant": "em",
+        "optimal_m": 12000,
+        "falloff_m": 10000,
+        "tracking": 100
+      },
+      "max_velocity": 1400,
+      "signature_radius": 150,
+      "orbit_range_m": 10000,
+      "effects": [
+        {
+          "kind": "sensor_dampener",
+          "duration_s": 5,
+          "range_m": 15000,
+          "falloff_m": 30000,
+          "strength": -15,
+          "strength_unit": "percent targeting range"
+        }
+      ]
+    },
+    {
+      "type_id": 48236,
+      "name": "Ephialtes Spearfisher",
+      "group": "Abyssal Spaceship Entities",
+      "family": "Ephialtes",
+      "shield": {
+        "hp": 2500,
+        "resists": {
+          "em": 10,
+          "thermal": 10,
+          "kinetic": 10,
+          "explosive": 10
+        }
+      },
+      "armor": {
+        "hp": 1500,
+        "resists": {
+          "em": 10,
+          "thermal": 10,
+          "kinetic": 10,
+          "explosive": 10
+        }
+      },
+      "hull": {
+        "hp": 1000,
+        "resists": {
+          "em": 100,
+          "thermal": 100,
+          "kinetic": 100,
+          "explosive": 100
+        }
+      },
+      "total_hp": 5000,
+      "ehp": 5444.4444,
+      "damage": {
+        "kind": "turret",
+        "em": 40,
+        "thermal": 40,
+        "kinetic": 0,
+        "explosive": 0,
+        "volley": 80,
+        "cycle_s": 4,
+        "dps": 20,
+        "dominant": "em",
+        "optimal_m": 12000,
+        "falloff_m": 10000,
+        "tracking": 100
+      },
+      "max_velocity": 1400,
+      "signature_radius": 150,
+      "orbit_range_m": 7000,
+      "effects": [
+        {
+          "kind": "warp_scramble",
+          "duration_s": 5,
+          "range_m": 9000,
+          "strength": 2,
+          "strength_unit": "warp disruption points"
+        }
+      ]
+    },
+    {
+      "type_id": 47850,
+      "name": "Fieldweaver Tessella",
+      "group": "Abyssal Drone Entities",
+      "family": "Tessella",
+      "shield": {
+        "hp": 500,
+        "resists": {
+          "em": 0,
+          "thermal": 0,
+          "kinetic": 0,
+          "explosive": 0
+        }
+      },
+      "armor": {
+        "hp": 300,
+        "resists": {
+          "em": 0,
+          "thermal": 0,
+          "kinetic": 0,
+          "explosive": 0
+        }
+      },
+      "hull": {
+        "hp": 500,
+        "resists": {
+          "em": 0,
+          "thermal": 0,
+          "kinetic": 0,
+          "explosive": 0
+        }
+      },
+      "total_hp": 1300,
+      "ehp": 1300,
+      "damage": {
+        "kind": "none",
+        "em": 0,
+        "thermal": 0,
+        "kinetic": 0,
+        "explosive": 0,
+        "volley": 0,
+        "dps": 0
+      },
+      "max_velocity": 900,
+      "signature_radius": 75,
+      "effects": [
+        {
+          "kind": "remote_shield_boost",
+          "duration_s": 2,
+          "range_m": 7000,
+          "falloff_m": 10000,
+          "strength": 20,
+          "strength_unit": "shield HP per cycle",
+          "per_second": 10
+        }
+      ]
+    },
+    {
+      "type_id": 47852,
+      "name": "Fogcaster Tessella",
+      "group": "Abyssal Drone Entities",
+      "family": "Tessella",
+      "shield": {
+        "hp": 350,
+        "resists": {
+          "em": 0,
+          "thermal": 20,
+          "kinetic": 40,
+          "explosive": 50
+        }
+      },
+      "armor": {
+        "hp": 350,
+        "resists": {
+          "em": 60,
+          "thermal": 35,
+          "kinetic": 25,
+          "explosive": 10
+        }
+      },
+      "hull": {
+        "hp": 300,
+        "resists": {
+          "em": 0,
+          "thermal": 0,
+          "kinetic": 0,
+          "explosive": 0
+        }
+      },
+      "total_hp": 1000,
+      "ehp": 1301.2771,
+      "damage": {
+        "kind": "turret",
+        "em": 10,
+        "thermal": 10,
+        "kinetic": 10,
+        "explosive": 10,
+        "volley": 40,
+        "cycle_s": 4,
+        "dps": 10,
+        "dominant": "em",
+        "optimal_m": 8000,
+        "falloff_m": 4000,
+        "tracking": 4000
+      },
+      "max_velocity": 1000,
+      "signature_radius": 50,
+      "orbit_range_m": 8000,
+      "effects": [
+        {
+          "kind": "guidance_disruptor",
+          "duration_s": 5,
+          "range_m": 25000,
+          "falloff_m": 10000,
+          "strength": -10,
+          "strength_unit": "percent explosion velocity"
+        },
+        {
+          "kind": "tracking_disruptor",
+          "duration_s": 5,
+          "range_m": 25000,
+          "falloff_m": 10000
+        }
+      ]
+    },
+    {
+      "type_id": 47853,
+      "name": "Gazedimmer Tessella",
+      "group": "Abyssal Drone Entities",
+      "family": "Tessella",
+      "shield": {
+        "hp": 350,
+        "resists": {
+          "em": 0,
+          "thermal": 20,
+          "kinetic": 40,
+          "explosive": 50
+        }
+      },
+      "armor": {
+        "hp": 350,
+        "resists": {
+          "em": 60,
+          "thermal": 35,
+          "kinetic": 25,
+          "explosive": 10
+        }
+      },
+      "hull": {
+        "hp": 300,
+        "resists": {
+          "em": 0,
+          "thermal": 0,
+          "kinetic": 0,
+          "explosive": 0
+        }
+      },
+      "total_hp": 1000,
+      "ehp": 1301.2771,
+      "damage": {
+        "kind": "turret",
+        "em": 10,
+        "thermal": 10,
+        "kinetic": 10,
+        "explosive": 10,
+        "volley": 40,
+        "cycle_s": 4,
+        "dps": 10,
+        "dominant": "em",
+        "optimal_m": 8000,
+        "falloff_m": 4000,
+        "tracking": 4000
+      },
+      "max_velocity": 1000,
+      "signature_radius": 50,
+      "orbit_range_m": 8000,
+      "effects": [
+        {
+          "kind": "sensor_dampener",
+          "duration_s": 5,
+          "range_m": 20000,
+          "falloff_m": 20000,
+          "strength": -15,
+          "strength_unit": "percent targeting range"
+        }
+      ]
+    },
+    {
+      "type_id": 48086,
+      "name": "Ghosting Damavik",
+      "group": "Abyssal Spaceship Entities",
+      "family": "Damavik",
+      "shield": {
+        "hp": 500,
+        "resists": {
+          "em": 0,
+          "thermal": 20,
+          "kinetic": 40,
+          "explosive": 50
+        }
+      },
+      "armor": {
+        "hp": 2200,
+        "resists": {
+          "em": 60,
+          "thermal": 48,
+          "kinetic": 53,
+          "explosive": 36
+        }
+      },
+      "hull": {
+        "hp": 650,
+        "resists": {
+          "em": 33,
+          "thermal": 33,
+          "kinetic": 33,
+          "explosive": 33
+        }
+      },
+      "total_hp": 3350,
+      "ehp": 5994.7798,
+      "damage": {
+        "kind": "disintegrator",
+        "em": 0,
+        "thermal": 57.6,
+        "kinetic": 0,
+        "explosive": 26.4,
+        "volley": 84,
+        "cycle_s": 3.5,
+        "dps": 24,
+        "dominant": "thermal",
+        "optimal_m": 10000,
+        "tracking": 500,
+        "ramp_per_cycle": 0.04,
+        "ramp_max": 1.5
+      },
+      "max_velocity": 2800,
+      "signature_radius": 192,
+      "orbit_range_m": 6000,
+      "effects": [
+        {
+          "kind": "guidance_disruptor",
+          "duration_s": 5,
+          "range_m": 20000,
+          "falloff_m": 10000,
+          "strength": -13.75,
+          "strength_unit": "percent explosion velocity"
+        },
+        {
+          "kind": "tracking_disruptor",
+          "duration_s": 5,
+          "range_m": 20000,
+          "falloff_m": 10000
+        },
+        {
+          "kind": "remote_armor_repair",
+          "duration_s": 3,
+          "range_m": 14000,
+          "falloff_m": 2500,
+          "strength": 40,
+          "strength_unit": "armor HP per cycle",
+          "per_second": 13.3333
+        }
+      ]
+    },
+    {
+      "type_id": 56151,
+      "name": "Ghosting Kikimora",
+      "group": "Abyssal Spaceship Entities",
+      "family": "Kikimora",
+      "shield": {
+        "hp": 1100,
+        "resists": {
+          "em": 0,
+          "thermal": 20,
+          "kinetic": 40,
+          "explosive": 50
+        }
+      },
+      "armor": {
+        "hp": 2900,
+        "resists": {
+          "em": 60,
+          "thermal": 48,
+          "kinetic": 53,
+          "explosive": 36
+        }
+      },
+      "hull": {
+        "hp": 1300,
+        "resists": {
+          "em": 33,
+          "thermal": 33,
+          "kinetic": 33,
+          "explosive": 33
+        }
+      },
+      "total_hp": 5300,
+      "ehp": 9171.8256,
+      "damage": {
+        "kind": "disintegrator",
+        "em": 0,
+        "thermal": 170,
+        "kinetic": 0,
+        "explosive": 80,
+        "volley": 250,
+        "cycle_s": 3,
+        "dps": 83.3333,
+        "dominant": "thermal",
+        "optimal_m": 25000,
+        "tracking": 500,
+        "ramp_per_cycle": 0.02,
+        "ramp_max": 1.5
+      },
+      "max_velocity": 1400,
+      "signature_radius": 192,
+      "orbit_range_m": 16000,
+      "effects": [
+        {
+          "kind": "guidance_disruptor",
+          "duration_s": 5,
+          "range_m": 20000,
+          "falloff_m": 10000,
+          "strength": -10.625,
+          "strength_unit": "percent explosion velocity"
+        },
+        {
+          "kind": "tracking_disruptor",
+          "duration_s": 5,
+          "range_m": 20000,
+          "falloff_m": 10000
+        },
+        {
+          "kind": "remote_armor_repair",
+          "duration_s": 3,
+          "range_m": 15000,
+          "falloff_m": 25000,
+          "strength": 60,
+          "strength_unit": "armor HP per cycle",
+          "per_second": 20
+        }
+      ]
+    },
+    {
+      "type_id": 48261,
+      "name": "Ghosting Vila Damavik",
+      "group": "Abyssal Spaceship Entities",
+      "family": "Vila Damavik",
+      "shield": {
+        "hp": 500,
+        "resists": {
+          "em": 0,
+          "thermal": 20,
+          "kinetic": 40,
+          "explosive": 50
+        }
+      },
+      "armor": {
+        "hp": 2200,
+        "resists": {
+          "em": 60,
+          "thermal": 48,
+          "kinetic": 53,
+          "explosive": 36
+        }
+      },
+      "hull": {
+        "hp": 650,
+        "resists": {
+          "em": 33,
+          "thermal": 33,
+          "kinetic": 33,
+          "explosive": 33
+        }
+      },
+      "total_hp": 3350,
+      "ehp": 5994.7798,
+      "damage": {
+        "kind": "disintegrator",
+        "em": 0,
+        "thermal": 14.4,
+        "kinetic": 0,
+        "explosive": 6.6,
+        "volley": 21,
+        "cycle_s": 3.5,
+        "dps": 6,
+        "dominant": "thermal",
+        "optimal_m": 8000,
+        "tracking": 500,
+        "ramp_per_cycle": 0.01,
+        "ramp_max": 1.5
+      },
+      "max_velocity": 2700,
+      "signature_radius": 192,
+      "orbit_range_m": 6000,
+      "effects": [
+        {
+          "kind": "guidance_disruptor",
+          "duration_s": 10,
+          "range_m": 40000,
+          "falloff_m": 20000,
+          "strength": -15,
+          "strength_unit": "percent explosion velocity"
+        },
+        {
+          "kind": "tracking_disruptor",
+          "duration_s": 10,
+          "range_m": 40000,
+          "falloff_m": 20000
+        }
+      ]
+    },
+    {
+      "type_id": 47879,
+      "name": "Hadal Abyssal Overmind",
+      "group": "Abyssal Spaceship Entities",
+      "family": "Abyssal Overmind",
+      "shield": {
+        "hp": 11875,
+        "resists": {
+          "em": 12.5,
+          "thermal": 30,
+          "kinetic": 47.5,
+          "explosive": 56.25
+        }
+      },
+      "armor": {
+        "hp": 22500,
+        "resists": {
+          "em": 77,
+          "thermal": 70,
+          "kinetic": 70,
+          "explosive": 68
+        }
+      },
+      "hull": {
+        "hp": 13750,
+        "resists": {
+          "em": 60,
+          "thermal": 60,
+          "kinetic": 60,
+          "explosive": 60
+        }
+      },
+      "total_hp": 48125,
+      "ehp": 131355.0814,
+      "damage": {
+        "kind": "turret",
+        "em": 0,
+        "thermal": 667,
+        "kinetic": 933.8,
+        "explosive": 0,
+        "volley": 1600.8,
+        "cycle_s": 3.39,
+        "dps": 472.2124,
+        "dominant": "kinetic",
+        "optimal_m": 20790,
+        "falloff_m": 19820,
+        "tracking": 4.33
+      },
+      "max_velocity": 350,
+      "signature_radius": 455
+    },
+    {
+      "type_id": 48091,
+      "name": "Harrowing Vedmak",
+      "group": "Abyssal Spaceship Entities",
+      "family": "Vedmak",
+      "shield": {
+        "hp": 2000,
+        "resists": {
+          "em": 0,
+          "thermal": 20,
+          "kinetic": 40,
+          "explosive": 50
+        }
+      },
+      "armor": {
+        "hp": 7000,
+        "resists": {
+          "em": 60,
+          "thermal": 48,
+          "kinetic": 53,
+          "explosive": 36
+        }
+      },
+      "hull": {
+        "hp": 3000,
+        "resists": {
+          "em": 33,
+          "thermal": 33,
+          "kinetic": 33,
+          "explosive": 33
+        }
+      },
+      "total_hp": 12000,
+      "ehp": 21029.3361,
+      "damage": {
+        "kind": "disintegrator",
+        "em": 0,
+        "thermal": 456,
+        "kinetic": 0,
+        "explosive": 336,
+        "volley": 792,
+        "cycle_s": 5,
+        "dps": 158.4,
+        "dominant": "thermal",
+        "optimal_m": 22000,
+        "tracking": 65,
+        "ramp_per_cycle": 0.04,
+        "ramp_max": 1.5
+      },
+      "max_velocity": 2000,
+      "signature_radius": 660,
+      "orbit_range_m": 15000,
+      "effects": [
+        {
+          "kind": "remote_armor_repair",
+          "duration_s": 6,
+          "range_m": 28000,
+          "falloff_m": 2500,
+          "strength": 160,
+          "strength_unit": "armor HP per cycle",
+          "per_second": 26.6667
+        }
+      ]
+    },
+    {
+      "type_id": 48255,
+      "name": "Harrowing Vila Vedmak",
+      "group": "Abyssal Spaceship Entities",
+      "family": "Vila Vedmak",
+      "shield": {
+        "hp": 2000,
+        "resists": {
+          "em": 0,
+          "thermal": 20,
+          "kinetic": 40,
+          "explosive": 50
+        }
+      },
+      "armor": {
+        "hp": 7000,
+        "resists": {
+          "em": 60,
+          "thermal": 48,
+          "kinetic": 53,
+          "explosive": 36
+        }
+      },
+      "hull": {
+        "hp": 3000,
+        "resists": {
+          "em": 33,
+          "thermal": 33,
+          "kinetic": 33,
+          "explosive": 33
+        }
+      },
+      "total_hp": 12000,
+      "ehp": 21029.3361,
+      "damage": {
+        "kind": "disintegrator",
+        "em": 0,
+        "thermal": 228,
+        "kinetic": 0,
+        "explosive": 168,
+        "volley": 396,
+        "cycle_s": 5,
+        "dps": 79.2,
+        "dominant": "thermal",
+        "optimal_m": 22000,
+        "tracking": 65,
+        "ramp_per_cycle": 0.01,
+        "ramp_max": 1.5
+      },
+      "max_velocity": 2000,
+      "signature_radius": 660,
+      "orbit_range_m": 15000
+    },
+    {
+      "type_id": 80248,
+      "name": "Igniting Swarmer",
+      "group": "Abyssal Drone Entities",
+      "family": "Swarmer",
+      "shield": {
+        "hp": 140,
+        "resists": {
+          "em": 0,
+          "thermal": 20,
+          "kinetic": 40,
+          "explosive": 50
+        }
+      },
+      "armor": {
+        "hp": 140,
+        "resists": {
+          "em": 60,
+          "thermal": 35,
+          "kinetic": 25,
+          "explosive": 10
+        }
+      },
+      "hull": {
+        "hp": 100,
+        "resists": {
+          "em": 0,
+          "thermal": 0,
+          "kinetic": 0,
+          "explosive": 0
+        }
+      },
+      "total_hp": 380,
+      "ehp": 500.5109,
+      "damage": {
+        "kind": "turret",
+        "em": 16,
+        "thermal": 16,
+        "kinetic": 16,
+        "explosive": 16,
+        "volley": 64,
+        "cycle_s": 4,
+        "dps": 16,
+        "dominant": "em",
+        "optimal_m": 8000,
+        "falloff_m": 4000,
+        "tracking": 4000
+      },
+      "max_velocity": 1000,
+      "signature_radius": 120,
+      "orbit_range_m": 8000,
+      "effects": [
+        {
+          "kind": "target_painter",
+          "duration_s": 5,
+          "range_m": 30000,
+          "falloff_m": 20000,
+          "strength": 20,
+          "strength_unit": "percent signature radius"
+        }
+      ]
+    },
+    {
+      "type_id": 81306,
+      "name": "Impaired Blitzing Kikimora",
+      "group": "Abyssal Spaceship Entities",
+      "family": "Kikimora",
+      "shield": {
+        "hp": 1100,
+        "resists": {
+          "em": 0,
+          "thermal": 20,
+          "kinetic": 40,
+          "explosive": 50
+        }
+      },
+      "armor": {
+        "hp": 2900,
+        "resists": {
+          "em": 60,
+          "thermal": 48,
+          "kinetic": 53,
+          "explosive": 36
+        }
+      },
+      "hull": {
+        "hp": 1300,
+        "resists": {
+          "em": 33,
+          "thermal": 33,
+          "kinetic": 33,
+          "explosive": 33
+        }
+      },
+      "total_hp": 5300,
+      "ehp": 9171.8256,
+      "damage": {
+        "kind": "disintegrator",
+        "em": 0,
+        "thermal": 170,
+        "kinetic": 0,
+        "explosive": 80,
+        "volley": 250,
+        "cycle_s": 3,
+        "dps": 83.3333,
+        "dominant": "thermal",
+        "optimal_m": 25000,
+        "tracking": 500,
+        "ramp_per_cycle": 0.02,
+        "ramp_max": 1.5
+      },
+      "max_velocity": 1400,
+      "signature_radius": 192,
+      "orbit_range_m": 16000
+    },
+    {
+      "type_id": 81299,
+      "name": "Impaired Drifter Battleship",
+      "group": "Abyssal Spaceship Entities",
+      "family": "Drifter",
+      "shield": {
+        "hp": 50000,
+        "resists": {
+          "em": 50,
+          "thermal": 50,
+          "kinetic": 50,
+          "explosive": 50
+        }
+      },
+      "armor": {
+        "hp": 50000,
+        "resists": {
+          "em": 50,
+          "thermal": 50,
+          "kinetic": 50,
+          "explosive": 50
+        }
+      },
+      "hull": {
+        "hp": 50000,
+        "resists": {
+          "em": 0,
+          "thermal": 0,
+          "kinetic": 0,
+          "explosive": 0
+        }
+      },
+      "total_hp": 150000,
+      "ehp": 250000,
+      "damage": {
+        "kind": "turret",
+        "em": 180,
+        "thermal": 180,
+        "kinetic": 180,
+        "explosive": 180,
+        "volley": 720,
+        "cycle_s": 5,
+        "dps": 144,
+        "dominant": "em",
+        "optimal_m": 60000,
+        "falloff_m": 20000,
+        "tracking": 20
+      },
+      "max_velocity": 300,
+      "signature_radius": 400,
+      "effects": [
+        {
+          "kind": "local_armor_repair",
+          "duration_s": 30,
+          "strength": 50,
+          "strength_unit": "armor HP per cycle",
+          "per_second": 1.6667
+        }
+      ]
+    },
+    {
+      "type_id": 80043,
+      "name": "Impaired Shackling Leshak",
+      "group": "Abyssal Spaceship Entities",
+      "family": "Leshak",
+      "shield": {
+        "hp": 50000,
+        "resists": {
+          "em": 0,
+          "thermal": 20,
+          "kinetic": 40,
+          "explosive": 50
+        }
+      },
+      "armor": {
+        "hp": 50000,
+        "resists": {
+          "em": 60,
+          "thermal": 48,
+          "kinetic": 53,
+          "explosive": 36
+        }
+      },
+      "hull": {
+        "hp": 50000,
+        "resists": {
+          "em": 33,
+          "thermal": 33,
+          "kinetic": 33,
+          "explosive": 33
+        }
+      },
+      "total_hp": 150000,
+      "ehp": 242114.5504,
+      "damage": {
+        "kind": "disintegrator",
+        "em": 0,
+        "thermal": 220,
+        "kinetic": 0,
+        "explosive": 132,
+        "volley": 352,
+        "cycle_s": 5,
+        "dps": 70.4,
+        "dominant": "thermal",
+        "optimal_m": 63000,
+        "tracking": 15,
+        "ramp_per_cycle": 0.02,
+        "ramp_max": 1.5
+      },
+      "max_velocity": 400,
+      "signature_radius": 370,
+      "orbit_range_m": 12000,
+      "effects": [
+        {
+          "kind": "web",
+          "duration_s": 5,
+          "range_m": 1000,
+          "falloff_m": 15000,
+          "strength": 70,
+          "strength_unit": "percent speed reduction"
+        },
+        {
+          "kind": "local_armor_repair",
+          "duration_s": 30,
+          "strength": 50,
+          "strength_unit": "armor HP per cycle",
+          "per_second": 1.6667
+        }
+      ]
+    },
+    {
+      "type_id": 48245,
+      "name": "Lucid Aegis",
+      "group": "Abyssal Spaceship Entities",
+      "family": "Lucid",
+      "shield": {
+        "hp": 0,
+        "resists": {
+          "em": 100,
+          "thermal": 100,
+          "kinetic": 100,
+          "explosive": 100
+        }
+      },
+      "armor": {
+        "hp": 1000,
+        "resists": {
+          "em": 50,
+          "thermal": 50,
+          "kinetic": 50,
+          "explosive": 50
+        }
+      },
+      "hull": {
+        "hp": 1250,
+        "resists": {
+          "em": 100,
+          "thermal": 100,
+          "kinetic": 100,
+          "explosive": 100
+        }
+      },
+      "total_hp": 2250,
+      "ehp": 3250,
+      "damage": {
+        "kind": "turret",
+        "em": 36,
+        "thermal": 36,
+        "kinetic": 0,
+        "explosive": 0,
+        "volley": 72,
+        "cycle_s": 2,
+        "dps": 36,
+        "dominant": "em",
+        "optimal_m": 10000,
+        "falloff_m": 5000,
+        "tracking": 500
+      },
+      "max_velocity": 1000,
+      "signature_radius": 70,
+      "orbit_range_m": 8000,
+      "effects": [
+        {
+          "kind": "remote_armor_repair",
+          "duration_s": 7,
+          "range_m": 40000,
+          "falloff_m": 20000,
+          "strength": 15,
+          "strength_unit": "armor HP per cycle",
+          "per_second": 2.1429
+        },
+        {
+          "kind": "local_armor_repair",
+          "duration_s": 5,
+          "strength": 30,
+          "strength_unit": "armor HP per cycle",
+          "per_second": 6
+        }
+      ]
+    },
+    {
+      "type_id": 48252,
+      "name": "Lucid Deepwatcher",
+      "group": "Abyssal Spaceship Entities",
+      "family": "Lucid",
+      "shield": {
+        "hp": 0,
+        "resists": {
+          "em": 100,
+          "thermal": 100,
+          "kinetic": 100,
+          "explosive": 100
+        }
+      },
+      "armor": {
+        "hp": 22000,
+        "resists": {
+          "em": 70,
+          "thermal": 70,
+          "kinetic": 70,
+          "explosive": 70
+        }
+      },
+      "hull": {
+        "hp": 25000,
+        "resists": {
+          "em": 100,
+          "thermal": 100,
+          "kinetic": 100,
+          "explosive": 100
+        }
+      },
+      "total_hp": 47000,
+      "ehp": 98333.3333,
+      "damage": {
+        "kind": "turret",
+        "em": 400,
+        "thermal": 400,
+        "kinetic": 0,
+        "explosive": 0,
+        "volley": 800,
+        "cycle_s": 5,
+        "dps": 160,
+        "dominant": "em",
+        "optimal_m": 50000,
+        "falloff_m": 50000,
+        "tracking": 1
+      },
+      "max_velocity": 100,
+      "signature_radius": 400,
+      "orbit_range_m": 50000,
+      "effects": [
+        {
+          "kind": "target_painter",
+          "duration_s": 5,
+          "range_m": 5000,
+          "falloff_m": 50000,
+          "strength": 10,
+          "strength_unit": "percent signature radius"
+        },
+        {
+          "kind": "remote_armor_repair",
+          "duration_s": 45,
+          "range_m": 50000,
+          "falloff_m": 50000,
+          "strength": 200,
+          "strength_unit": "armor HP per cycle",
+          "per_second": 4.4444
+        },
+        {
+          "kind": "local_armor_repair",
+          "duration_s": 90,
+          "strength": 700,
+          "strength_unit": "armor HP per cycle",
+          "per_second": 7.7778
+        }
+      ]
+    },
+    {
+      "type_id": 48241,
+      "name": "Lucid Escort",
+      "group": "Abyssal Spaceship Entities",
+      "family": "Lucid",
+      "shield": {
+        "hp": 0,
+        "resists": {
+          "em": 100,
+          "thermal": 100,
+          "kinetic": 100,
+          "explosive": 100
+        }
+      },
+      "armor": {
+        "hp": 800,
+        "resists": {
+          "em": 50,
+          "thermal": 50,
+          "kinetic": 50,
+          "explosive": 50
+        }
+      },
+      "hull": {
+        "hp": 900,
+        "resists": {
+          "em": 100,
+          "thermal": 100,
+          "kinetic": 100,
+          "explosive": 100
+        }
+      },
+      "total_hp": 1700,
+      "ehp": 2500,
+      "damage": {
+        "kind": "turret",
+        "em": 24,
+        "thermal": 24,
+        "kinetic": 0,
+        "explosive": 0,
+        "volley": 48,
+        "cycle_s": 2,
+        "dps": 24,
+        "dominant": "em",
+        "optimal_m": 10000,
+        "falloff_m": 5000,
+        "tracking": 500
+      },
+      "max_velocity": 1750,
+      "signature_radius": 70,
+      "orbit_range_m": 8000,
+      "effects": [
+        {
+          "kind": "remote_armor_repair",
+          "duration_s": 7,
+          "range_m": 40000,
+          "falloff_m": 20000,
+          "strength": 15,
+          "strength_unit": "armor HP per cycle",
+          "per_second": 2.1429
+        },
+        {
+          "kind": "local_armor_repair",
+          "duration_s": 5,
+          "strength": 20,
+          "strength_unit": "armor HP per cycle",
+          "per_second": 4
+        }
+      ]
+    },
+    {
+      "type_id": 48247,
+      "name": "Lucid Firewatcher",
+      "group": "Abyssal Spaceship Entities",
+      "family": "Lucid",
+      "shield": {
+        "hp": 0,
+        "resists": {
+          "em": 100,
+          "thermal": 100,
+          "kinetic": 100,
+          "explosive": 100
+        }
+      },
+      "armor": {
+        "hp": 1000,
+        "resists": {
+          "em": 50,
+          "thermal": 50,
+          "kinetic": 50,
+          "explosive": 50
+        }
+      },
+      "hull": {
+        "hp": 1250,
+        "resists": {
+          "em": 100,
+          "thermal": 100,
+          "kinetic": 100,
+          "explosive": 100
+        }
+      },
+      "total_hp": 2250,
+      "ehp": 3250,
+      "damage": {
+        "kind": "turret",
+        "em": 30,
+        "thermal": 30,
+        "kinetic": 0,
+        "explosive": 0,
+        "volley": 60,
+        "cycle_s": 2,
+        "dps": 30,
+        "dominant": "em",
+        "optimal_m": 10000,
+        "falloff_m": 5000,
+        "tracking": 500
+      },
+      "max_velocity": 1000,
+      "signature_radius": 70,
+      "orbit_range_m": 8000,
+      "effects": [
+        {
+          "kind": "energy_neutralizer",
+          "duration_s": 5,
+          "range_m": 5000,
+          "falloff_m": 5000,
+          "strength": 40,
+          "strength_unit": "GJ per cycle",
+          "per_second": 8
+        },
+        {
+          "kind": "remote_armor_repair",
+          "duration_s": 7,
+          "range_m": 40000,
+          "falloff_m": 20000,
+          "strength": 15,
+          "strength_unit": "armor HP per cycle",
+          "per_second": 2.1429
+        },
+        {
+          "kind": "local_armor_repair",
+          "duration_s": 5,
+          "strength": 30,
+          "strength_unit": "armor HP per cycle",
+          "per_second": 6
+        }
+      ]
+    },
+    {
+      "type_id": 48251,
+      "name": "Lucid Preserver",
+      "group": "Abyssal Spaceship Entities",
+      "family": "Lucid",
+      "shield": {
+        "hp": 0,
+        "resists": {
+          "em": 100,
+          "thermal": 100,
+          "kinetic": 100,
+          "explosive": 100
+        }
+      },
+      "armor": {
+        "hp": 1200,
+        "resists": {
+          "em": 20,
+          "thermal": 20,
+          "kinetic": 20,
+          "explosive": 20
+        }
+      },
+      "hull": {
+        "hp": 1100,
+        "resists": {
+          "em": 100,
+          "thermal": 100,
+          "kinetic": 100,
+          "explosive": 100
+        }
+      },
+      "total_hp": 2300,
+      "ehp": 2600,
+      "damage": {
+        "kind": "none",
+        "em": 0,
+        "thermal": 0,
+        "kinetic": 0,
+        "explosive": 0,
+        "volley": 0,
+        "dps": 0
+      },
+      "max_velocity": 1100,
+      "signature_radius": 100,
+      "effects": [
+        {
+          "kind": "remote_armor_repair",
+          "duration_s": 5,
+          "range_m": 20000,
+          "falloff_m": 20000,
+          "strength": 40,
+          "strength_unit": "armor HP per cycle",
+          "per_second": 8
+        },
+        {
+          "kind": "local_armor_repair",
+          "duration_s": 5,
+          "strength": 30,
+          "strength_unit": "armor HP per cycle",
+          "per_second": 6
+        }
+      ]
+    },
+    {
+      "type_id": 48250,
+      "name": "Lucid Sentinel",
+      "group": "Abyssal Spaceship Entities",
+      "family": "Lucid",
+      "shield": {
+        "hp": 0,
+        "resists": {
+          "em": 100,
+          "thermal": 100,
+          "kinetic": 100,
+          "explosive": 100
+        }
+      },
+      "armor": {
+        "hp": 3500,
+        "resists": {
+          "em": 60,
+          "thermal": 60,
+          "kinetic": 60,
+          "explosive": 60
+        }
+      },
+      "hull": {
+        "hp": 3250,
+        "resists": {
+          "em": 100,
+          "thermal": 100,
+          "kinetic": 100,
+          "explosive": 100
+        }
+      },
+      "total_hp": 6750,
+      "ehp": 12000,
+      "damage": {
+        "kind": "turret",
+        "em": 100,
+        "thermal": 100,
+        "kinetic": 0,
+        "explosive": 0,
+        "volley": 200,
+        "cycle_s": 5,
+        "dps": 40,
+        "dominant": "em",
+        "optimal_m": 20000,
+        "falloff_m": 20000,
+        "tracking": 100
+      },
+      "max_velocity": 600,
+      "signature_radius": 150,
+      "orbit_range_m": 12000,
+      "effects": [
+        {
+          "kind": "energy_neutralizer",
+          "duration_s": 10,
+          "range_m": 12000,
+          "falloff_m": 6000,
+          "strength": 150,
+          "strength_unit": "GJ per cycle",
+          "per_second": 15
+        },
+        {
+          "kind": "remote_armor_repair",
+          "duration_s": 12,
+          "range_m": 50000,
+          "falloff_m": 30000,
+          "strength": 50,
+          "strength_unit": "armor HP per cycle",
+          "per_second": 4.1667
+        },
+        {
+          "kind": "local_armor_repair",
+          "duration_s": 15,
+          "strength": 125,
+          "strength_unit": "armor HP per cycle",
+          "per_second": 8.3333
+        }
+      ]
+    },
+    {
+      "type_id": 48249,
+      "name": "Lucid Upholder",
+      "group": "Abyssal Spaceship Entities",
+      "family": "Lucid",
+      "shield": {
+        "hp": 0,
+        "resists": {
+          "em": 100,
+          "thermal": 100,
+          "kinetic": 100,
+          "explosive": 100
+        }
+      },
+      "armor": {
+        "hp": 3500,
+        "resists": {
+          "em": 60,
+          "thermal": 60,
+          "kinetic": 60,
+          "explosive": 60
+        }
+      },
+      "hull": {
+        "hp": 3250,
+        "resists": {
+          "em": 100,
+          "thermal": 100,
+          "kinetic": 100,
+          "explosive": 100
+        }
+      },
+      "total_hp": 6750,
+      "ehp": 12000,
+      "damage": {
+        "kind": "turret",
+        "em": 100,
+        "thermal": 100,
+        "kinetic": 0,
+        "explosive": 0,
+        "volley": 200,
+        "cycle_s": 5,
+        "dps": 40,
+        "dominant": "em",
+        "optimal_m": 20000,
+        "falloff_m": 20000,
+        "tracking": 100
+      },
+      "max_velocity": 800,
+      "signature_radius": 150,
+      "orbit_range_m": 12000,
+      "effects": [
+        {
+          "kind": "web",
+          "duration_s": 5,
+          "range_m": 10000,
+          "strength": 50,
+          "strength_unit": "percent speed reduction"
+        },
+        {
+          "kind": "remote_armor_repair",
+          "duration_s": 12,
+          "range_m": 50000,
+          "falloff_m": 30000,
+          "strength": 50,
+          "strength_unit": "armor HP per cycle",
+          "per_second": 4.1667
+        },
+        {
+          "kind": "local_armor_repair",
+          "duration_s": 15,
+          "strength": 125,
+          "strength_unit": "armor HP per cycle",
+          "per_second": 8.3333
+        }
+      ]
+    },
+    {
+      "type_id": 48246,
+      "name": "Lucid Warden",
+      "group": "Abyssal Spaceship Entities",
+      "family": "Lucid",
+      "shield": {
+        "hp": 0,
+        "resists": {
+          "em": 100,
+          "thermal": 100,
+          "kinetic": 100,
+          "explosive": 100
+        }
+      },
+      "armor": {
+        "hp": 800,
+        "resists": {
+          "em": 50,
+          "thermal": 50,
+          "kinetic": 50,
+          "explosive": 50
+        }
+      },
+      "hull": {
+        "hp": 900,
+        "resists": {
+          "em": 100,
+          "thermal": 100,
+          "kinetic": 100,
+          "explosive": 100
+        }
+      },
+      "total_hp": 1700,
+      "ehp": 2500,
+      "damage": {
+        "kind": "turret",
+        "em": 20,
+        "thermal": 20,
+        "kinetic": 0,
+        "explosive": 0,
+        "volley": 40,
+        "cycle_s": 2,
+        "dps": 20,
+        "dominant": "em",
+        "optimal_m": 10000,
+        "falloff_m": 5000,
+        "tracking": 500
+      },
+      "max_velocity": 1750,
+      "signature_radius": 70,
+      "orbit_range_m": 8000,
+      "effects": [
+        {
+          "kind": "web",
+          "duration_s": 5,
+          "range_m": 10000,
+          "strength": 40,
+          "strength_unit": "percent speed reduction"
+        },
+        {
+          "kind": "remote_armor_repair",
+          "duration_s": 7,
+          "range_m": 40000,
+          "falloff_m": 20000,
+          "strength": 15,
+          "strength_unit": "armor HP per cycle",
+          "per_second": 2.1429
+        },
+        {
+          "kind": "local_armor_repair",
+          "duration_s": 5,
+          "strength": 20,
+          "strength_unit": "armor HP per cycle",
+          "per_second": 4
+        }
+      ]
+    },
+    {
+      "type_id": 48248,
+      "name": "Lucid Watchman",
+      "group": "Abyssal Spaceship Entities",
+      "family": "Lucid",
+      "shield": {
+        "hp": 0,
+        "resists": {
+          "em": 100,
+          "thermal": 100,
+          "kinetic": 100,
+          "explosive": 100
+        }
+      },
+      "armor": {
+        "hp": 3500,
+        "resists": {
+          "em": 60,
+          "thermal": 60,
+          "kinetic": 60,
+          "explosive": 60
+        }
+      },
+      "hull": {
+        "hp": 3250,
+        "resists": {
+          "em": 100,
+          "thermal": 100,
+          "kinetic": 100,
+          "explosive": 100
+        }
+      },
+      "total_hp": 6750,
+      "ehp": 12000,
+      "damage": {
+        "kind": "turret",
+        "em": 120,
+        "thermal": 120,
+        "kinetic": 0,
+        "explosive": 0,
+        "volley": 240,
+        "cycle_s": 5,
+        "dps": 48,
+        "dominant": "em",
+        "optimal_m": 20000,
+        "falloff_m": 20000,
+        "tracking": 100
+      },
+      "max_velocity": 700,
+      "signature_radius": 150,
+      "orbit_range_m": 12000,
+      "effects": [
+        {
+          "kind": "remote_armor_repair",
+          "duration_s": 12,
+          "range_m": 50000,
+          "falloff_m": 30000,
+          "strength": 50,
+          "strength_unit": "armor HP per cycle",
+          "per_second": 4.1667
+        },
+        {
+          "kind": "local_armor_repair",
+          "duration_s": 15,
+          "strength": 125,
+          "strength_unit": "armor HP per cycle",
+          "per_second": 8.3333
+        }
+      ]
+    },
+    {
+      "type_id": 56351,
+      "name": "Lucifer Burst",
+      "group": "Abyssal Spaceship Entities",
+      "family": "Lucifer",
+      "shield": {
+        "hp": 700,
+        "resists": {
+          "em": 50,
+          "thermal": 48,
+          "kinetic": 43,
+          "explosive": 40
+        }
+      },
+      "armor": {
+        "hp": 700,
+        "resists": {
+          "em": 60,
+          "thermal": 35,
+          "kinetic": 25,
+          "explosive": 10
+        }
+      },
+      "hull": {
+        "hp": 500,
+        "resists": {
+          "em": 33,
+          "thermal": 33,
+          "kinetic": 33,
+          "explosive": 33
+        }
+      },
+      "total_hp": 1900,
+      "ehp": 3061.8445,
+      "damage": {
+        "kind": "none",
+        "em": 0,
+        "thermal": 0,
+        "kinetic": 0,
+        "explosive": 0,
+        "volley": 0,
+        "dps": 0
+      },
+      "max_velocity": 2430,
+      "signature_radius": 100,
+      "orbit_range_m": 9000,
+      "effects": [
+        {
+          "kind": "remote_shield_boost",
+          "duration_s": 2,
+          "range_m": 15000,
+          "falloff_m": 20000,
+          "strength": 25,
+          "strength_unit": "shield HP per cycle",
+          "per_second": 12.5
+        },
+        {
+          "kind": "local_shield_boost",
+          "duration_s": 5,
+          "strength": 20,
+          "strength_unit": "shield HP per cycle",
+          "per_second": 4
+        }
+      ]
+    },
+    {
+      "type_id": 56295,
+      "name": "Lucifer Cynabal",
+      "group": "Abyssal Spaceship Entities",
+      "family": "Lucifer",
+      "shield": {
+        "hp": 2912,
+        "resists": {
+          "em": 60,
+          "thermal": 58,
+          "kinetic": 53,
+          "explosive": 50
+        }
+      },
+      "armor": {
+        "hp": 1460,
+        "resists": {
+          "em": 60,
+          "thermal": 35,
+          "kinetic": 25,
+          "explosive": 10
+        }
+      },
+      "hull": {
+        "hp": 1460,
+        "resists": {
+          "em": 33,
+          "thermal": 33,
+          "kinetic": 33,
+          "explosive": 33
+        }
+      },
+      "total_hp": 5832,
+      "ehp": 10849.33,
+      "damage": {
+        "kind": "turret",
+        "em": 360,
+        "thermal": 0,
+        "kinetic": 0,
+        "explosive": 135,
+        "volley": 495,
+        "cycle_s": 7,
+        "dps": 70.7143,
+        "dominant": "em",
+        "optimal_m": 9000,
+        "falloff_m": 52000,
+        "tracking": 40
+      },
+      "max_velocity": 2070,
+      "signature_radius": 146,
+      "orbit_range_m": 8000,
+      "effects": [
+        {
+          "kind": "web",
+          "duration_s": 5,
+          "range_m": 13000,
+          "strength": 40,
+          "strength_unit": "percent speed reduction"
+        },
+        {
+          "kind": "energy_neutralizer",
+          "duration_s": 10,
+          "range_m": 9000,
+          "falloff_m": 10000,
+          "strength": 70,
+          "strength_unit": "GJ per cycle",
+          "per_second": 7
+        },
+        {
+          "kind": "local_shield_boost",
+          "duration_s": 9,
+          "strength": 135,
+          "strength_unit": "shield HP per cycle",
+          "per_second": 15
+        }
+      ]
+    },
+    {
+      "type_id": 56346,
+      "name": "Lucifer Dramiel",
+      "group": "Abyssal Spaceship Entities",
+      "family": "Lucifer",
+      "shield": {
+        "hp": 737,
+        "resists": {
+          "em": 55,
+          "thermal": 53,
+          "kinetic": 48,
+          "explosive": 45
+        }
+      },
+      "armor": {
+        "hp": 737,
+        "resists": {
+          "em": 60,
+          "thermal": 35,
+          "kinetic": 25,
+          "explosive": 10
+        }
+      },
+      "hull": {
+        "hp": 650,
+        "resists": {
+          "em": 33,
+          "thermal": 33,
+          "kinetic": 33,
+          "explosive": 33
+        }
+      },
+      "total_hp": 2124,
+      "ehp": 3543.4081,
+      "damage": {
+        "kind": "turret",
+        "em": 0,
+        "thermal": 0,
+        "kinetic": 27,
+        "explosive": 63,
+        "volley": 90,
+        "cycle_s": 6,
+        "dps": 15,
+        "dominant": "explosive",
+        "optimal_m": 6000,
+        "falloff_m": 22000,
+        "tracking": 1000
+      },
+      "max_velocity": 3219,
+      "signature_radius": 70,
+      "orbit_range_m": 6000,
+      "effects": [
+        {
+          "kind": "local_shield_boost",
+          "duration_s": 5,
+          "strength": 35,
+          "strength_unit": "shield HP per cycle",
+          "per_second": 7
+        }
+      ]
+    },
+    {
+      "type_id": 56349,
+      "name": "Lucifer Echo",
+      "group": "Abyssal Spaceship Entities",
+      "family": "Lucifer",
+      "shield": {
+        "hp": 650,
+        "resists": {
+          "em": 55,
+          "thermal": 53,
+          "kinetic": 48,
+          "explosive": 45
+        }
+      },
+      "armor": {
+        "hp": 650,
+        "resists": {
+          "em": 60,
+          "thermal": 35,
+          "kinetic": 25,
+          "explosive": 10
+        }
+      },
+      "hull": {
+        "hp": 650,
+        "resists": {
+          "em": 33,
+          "thermal": 33,
+          "kinetic": 33,
+          "explosive": 33
+        }
+      },
+      "total_hp": 1950,
+      "ehp": 3239.6449,
+      "damage": {
+        "kind": "turret",
+        "em": 0,
+        "thermal": 0,
+        "kinetic": 21,
+        "explosive": 49,
+        "volley": 70,
+        "cycle_s": 6,
+        "dps": 11.6667,
+        "dominant": "explosive",
+        "optimal_m": 4000,
+        "falloff_m": 20000,
+        "tracking": 700
+      },
+      "max_velocity": 4125,
+      "signature_radius": 80,
+      "orbit_range_m": 4000,
+      "effects": [
+        {
+          "kind": "web",
+          "duration_s": 5,
+          "range_m": 12000,
+          "strength": 40,
+          "strength_unit": "percent speed reduction"
+        },
+        {
+          "kind": "warp_scramble",
+          "duration_s": 5,
+          "range_m": 11250,
+          "strength": 2,
+          "strength_unit": "warp disruption points"
+        },
+        {
+          "kind": "local_shield_boost",
+          "duration_s": 5,
+          "strength": 35,
+          "strength_unit": "shield HP per cycle",
+          "per_second": 7
+        }
+      ]
+    },
+    {
+      "type_id": 56348,
+      "name": "Lucifer Fury",
+      "group": "Abyssal Spaceship Entities",
+      "family": "Lucifer",
+      "shield": {
+        "hp": 700,
+        "resists": {
+          "em": 55,
+          "thermal": 53,
+          "kinetic": 48,
+          "explosive": 45
+        }
+      },
+      "armor": {
+        "hp": 700,
+        "resists": {
+          "em": 60,
+          "thermal": 35,
+          "kinetic": 25,
+          "explosive": 10
+        }
+      },
+      "hull": {
+        "hp": 600,
+        "resists": {
+          "em": 33,
+          "thermal": 33,
+          "kinetic": 33,
+          "explosive": 33
+        }
+      },
+      "total_hp": 2000,
+      "ehp": 3339.5946,
+      "damage": {
+        "kind": "turret",
+        "em": 0,
+        "thermal": 0,
+        "kinetic": 21,
+        "explosive": 49,
+        "volley": 70,
+        "cycle_s": 6,
+        "dps": 11.6667,
+        "dominant": "explosive",
+        "optimal_m": 8000,
+        "falloff_m": 20000,
+        "tracking": 700
+      },
+      "max_velocity": 3000,
+      "signature_radius": 80,
+      "orbit_range_m": 8000,
+      "effects": [
+        {
+          "kind": "energy_neutralizer",
+          "duration_s": 5,
+          "range_m": 8000,
+          "falloff_m": 6000,
+          "strength": 25,
+          "strength_unit": "GJ per cycle",
+          "per_second": 5
+        },
+        {
+          "kind": "local_shield_boost",
+          "duration_s": 5,
+          "strength": 35,
+          "strength_unit": "shield HP per cycle",
+          "per_second": 7
+        }
+      ]
+    },
+    {
+      "type_id": 56316,
+      "name": "Lucifer Ixion",
+      "group": "Abyssal Spaceship Entities",
+      "family": "Lucifer",
+      "shield": {
+        "hp": 2480,
+        "resists": {
+          "em": 60,
+          "thermal": 58,
+          "kinetic": 53,
+          "explosive": 50
+        }
+      },
+      "armor": {
+        "hp": 1120,
+        "resists": {
+          "em": 60,
+          "thermal": 35,
+          "kinetic": 25,
+          "explosive": 10
+        }
+      },
+      "hull": {
+        "hp": 1120,
+        "resists": {
+          "em": 33,
+          "thermal": 33,
+          "kinetic": 33,
+          "explosive": 33
+        }
+      },
+      "total_hp": 4720,
+      "ehp": 8872.8005,
+      "damage": {
+        "kind": "turret",
+        "em": 0,
+        "thermal": 40,
+        "kinetic": 10,
+        "explosive": 0,
+        "volley": 50,
+        "cycle_s": 20,
+        "dps": 2.5,
+        "dominant": "thermal",
+        "optimal_m": 70000,
+        "falloff_m": 28000,
+        "tracking": 25
+      },
+      "max_velocity": 1489,
+      "signature_radius": 125,
+      "orbit_range_m": 18000,
+      "effects": [
+        {
+          "kind": "target_painter",
+          "duration_s": 5,
+          "range_m": 30000,
+          "falloff_m": 80000,
+          "strength": 38,
+          "strength_unit": "percent signature radius"
+        },
+        {
+          "kind": "guidance_disruptor",
+          "duration_s": 5,
+          "range_m": 40000,
+          "falloff_m": 50000,
+          "strength": -30,
+          "strength_unit": "percent explosion velocity"
+        },
+        {
+          "kind": "local_shield_boost",
+          "duration_s": 9,
+          "strength": 100,
+          "strength_unit": "shield HP per cycle",
+          "per_second": 11.1111
+        }
+      ]
+    },
+    {
+      "type_id": 56350,
+      "name": "Lucifer Medusa",
+      "group": "Abyssal Spaceship Entities",
+      "family": "Lucifer",
+      "shield": {
+        "hp": 700,
+        "resists": {
+          "em": 55,
+          "thermal": 53,
+          "kinetic": 48,
+          "explosive": 45
+        }
+      },
+      "armor": {
+        "hp": 600,
+        "resists": {
+          "em": 60,
+          "thermal": 35,
+          "kinetic": 25,
+          "explosive": 10
+        }
+      },
+      "hull": {
+        "hp": 600,
+        "resists": {
+          "em": 33,
+          "thermal": 33,
+          "kinetic": 33,
+          "explosive": 33
+        }
+      },
+      "total_hp": 1900,
+      "ehp": 3191.4465,
+      "damage": {
+        "kind": "turret",
+        "em": 0,
+        "thermal": 84,
+        "kinetic": 36,
+        "explosive": 0,
+        "volley": 120,
+        "cycle_s": 6,
+        "dps": 20,
+        "dominant": "thermal",
+        "optimal_m": 6000,
+        "falloff_m": 20000,
+        "tracking": 700
+      },
+      "max_velocity": 2800,
+      "signature_radius": 90,
+      "orbit_range_m": 8000,
+      "effects": [
+        {
+          "kind": "sensor_dampener",
+          "duration_s": 5,
+          "range_m": 20000,
+          "falloff_m": 50000,
+          "strength": -20,
+          "strength_unit": "percent targeting range"
+        },
+        {
+          "kind": "local_shield_boost",
+          "duration_s": 5,
+          "strength": 35,
+          "strength_unit": "shield HP per cycle",
+          "per_second": 7
+        }
+      ]
+    },
+    {
+      "type_id": 56352,
+      "name": "Lucifer Swordspine",
+      "group": "Abyssal Spaceship Entities",
+      "family": "Lucifer",
+      "shield": {
+        "hp": 700,
+        "resists": {
+          "em": 55,
+          "thermal": 53,
+          "kinetic": 48,
+          "explosive": 45
+        }
+      },
+      "armor": {
+        "hp": 600,
+        "resists": {
+          "em": 60,
+          "thermal": 35,
+          "kinetic": 25,
+          "explosive": 10
+        }
+      },
+      "hull": {
+        "hp": 600,
+        "resists": {
+          "em": 33,
+          "thermal": 33,
+          "kinetic": 33,
+          "explosive": 33
+        }
+      },
+      "total_hp": 1900,
+      "ehp": 3191.4465,
+      "damage": {
+        "kind": "turret",
+        "em": 0,
+        "thermal": 49,
+        "kinetic": 21,
+        "explosive": 0,
+        "volley": 70,
+        "cycle_s": 6,
+        "dps": 11.6667,
+        "dominant": "thermal",
+        "optimal_m": 12000,
+        "falloff_m": 20000,
+        "tracking": 500
+      },
+      "max_velocity": 3188,
+      "signature_radius": 90,
+      "orbit_range_m": 12000,
+      "effects": [
+        {
+          "kind": "target_painter",
+          "duration_s": 5,
+          "range_m": 20000,
+          "falloff_m": 40000,
+          "strength": 38,
+          "strength_unit": "percent signature radius"
+        },
+        {
+          "kind": "local_shield_boost",
+          "duration_s": 5,
+          "strength": 35,
+          "strength_unit": "shield HP per cycle",
+          "per_second": 7
+        }
+      ]
+    },
+    {
+      "type_id": 56216,
+      "name": "Marker Enforcer Disparu Troop",
+      "group": "Abyssal Spaceship Entities",
+      "family": "Disparu Troop",
+      "shield": {
+        "hp": 5200,
+        "resists": {
+          "em": 30,
+          "thermal": 30,
+          "kinetic": 30,
+          "explosive": 30
+        }
+      },
+      "armor": {
+        "hp": 5200,
+        "resists": {
+          "em": 30,
+          "thermal": 30,
+          "kinetic": 30,
+          "explosive": 30
+        }
+      },
+      "hull": {
+        "hp": 1050,
+        "resists": {
+          "em": 30,
+          "thermal": 30,
+          "kinetic": 30,
+          "explosive": 30
+        }
+      },
+      "total_hp": 11450,
+      "ehp": 16357.1429,
+      "damage": {
+        "kind": "missile",
+        "em": 0,
+        "thermal": 1700,
+        "kinetic": 0,
+        "explosive": 0,
+        "volley": 1700,
+        "cycle_s": 13,
+        "dps": 130.7692,
+        "dominant": "thermal",
+        "optimal_m": 36000
+      },
+      "max_velocity": 1300,
+      "signature_radius": 660,
+      "orbit_range_m": 9000,
+      "effects": [
+        {
+          "kind": "target_painter",
+          "duration_s": 5,
+          "range_m": 50000,
+          "falloff_m": 100000,
+          "strength": 30,
+          "strength_unit": "percent signature radius"
+        },
+        {
+          "kind": "local_armor_repair",
+          "duration_s": 6,
+          "strength": 160,
+          "strength_unit": "armor HP per cycle",
+          "per_second": 26.6667
+        }
+      ]
+    },
+    {
+      "type_id": 56172,
+      "name": "Marker Pacifier Disparu Troop",
+      "group": "Abyssal Spaceship Entities",
+      "family": "Disparu Troop",
+      "shield": {
+        "hp": 1450,
+        "resists": {
+          "em": 30,
+          "thermal": 30,
+          "kinetic": 30,
+          "explosive": 30
+        }
+      },
+      "armor": {
+        "hp": 1450,
+        "resists": {
+          "em": 30,
+          "thermal": 30,
+          "kinetic": 30,
+          "explosive": 30
+        }
+      },
+      "hull": {
+        "hp": 290,
+        "resists": {
+          "em": 30,
+          "thermal": 30,
+          "kinetic": 30,
+          "explosive": 30
+        }
+      },
+      "total_hp": 3190,
+      "ehp": 4557.1429,
+      "damage": {
+        "kind": "missile",
+        "em": 0,
+        "thermal": 396,
+        "kinetic": 0,
+        "explosive": 0,
+        "volley": 396,
+        "cycle_s": 10,
+        "dps": 39.6,
+        "dominant": "thermal",
+        "optimal_m": 36000
+      },
+      "max_velocity": 2400,
+      "signature_radius": 150,
+      "orbit_range_m": 10000,
+      "effects": [
+        {
+          "kind": "target_painter",
+          "duration_s": 5,
+          "range_m": 50000,
+          "falloff_m": 100000,
+          "strength": 40,
+          "strength_unit": "percent signature radius"
+        },
+        {
+          "kind": "local_armor_repair",
+          "duration_s": 5,
+          "strength": 120,
+          "strength_unit": "armor HP per cycle",
+          "per_second": 24
+        }
+      ]
+    },
+    {
+      "type_id": 47876,
+      "name": "Photic Abyssal Overmind",
+      "group": "Abyssal Spaceship Entities",
+      "family": "Abyssal Overmind",
+      "shield": {
+        "hp": 9000,
+        "resists": {
+          "em": 0,
+          "thermal": 20,
+          "kinetic": 40,
+          "explosive": 50
+        }
+      },
+      "armor": {
+        "hp": 10000,
+        "resists": {
+          "em": 62.5,
+          "thermal": 51.25,
+          "kinetic": 51.25,
+          "explosive": 32.5
+        }
+      },
+      "hull": {
+        "hp": 10625,
+        "resists": {
+          "em": 33,
+          "thermal": 33,
+          "kinetic": 33,
+          "explosive": 33
+        }
+      },
+      "total_hp": 29625,
+      "ehp": 48025.0885,
+      "damage": {
+        "kind": "turret",
+        "em": 0,
+        "thermal": 171.6,
+        "kinetic": 286,
+        "explosive": 0,
+        "volley": 457.6,
+        "cycle_s": 4.212,
+        "dps": 108.642,
+        "dominant": "kinetic",
+        "optimal_m": 30000,
+        "falloff_m": 15000,
+        "tracking": 3.6
+      },
+      "max_velocity": 200,
+      "signature_radius": 465
+    },
+    {
+      "type_id": 47860,
+      "name": "Plateforger Tessella",
+      "group": "Abyssal Drone Entities",
+      "family": "Tessella",
+      "shield": {
+        "hp": 300,
+        "resists": {
+          "em": 0,
+          "thermal": 0,
+          "kinetic": 0,
+          "explosive": 0
+        }
+      },
+      "armor": {
+        "hp": 500,
+        "resists": {
+          "em": 0,
+          "thermal": 0,
+          "kinetic": 0,
+          "explosive": 0
+        }
+      },
+      "hull": {
+        "hp": 500,
+        "resists": {
+          "em": 0,
+          "thermal": 0,
+          "kinetic": 0,
+          "explosive": 0
+        }
+      },
+      "total_hp": 1300,
+      "ehp": 1300,
+      "damage": {
+        "kind": "none",
+        "em": 0,
+        "thermal": 0,
+        "kinetic": 0,
+        "explosive": 0,
+        "volley": 0,
+        "dps": 0
+      },
+      "max_velocity": 900,
+      "signature_radius": 75,
+      "effects": [
+        {
+          "kind": "remote_armor_repair",
+          "duration_s": 2,
+          "range_m": 7000,
+          "falloff_m": 10000,
+          "strength": 20,
+          "strength_unit": "armor HP per cycle",
+          "per_second": 10
+        }
+      ]
+    },
+    {
+      "type_id": 48123,
+      "name": "Renewing Leshak",
+      "group": "Abyssal Spaceship Entities",
+      "family": "Leshak",
+      "shield": {
+        "hp": 5000,
+        "resists": {
+          "em": 0,
+          "thermal": 20,
+          "kinetic": 40,
+          "explosive": 50
+        }
+      },
+      "armor": {
+        "hp": 13000,
+        "resists": {
+          "em": 60,
+          "thermal": 48,
+          "kinetic": 53,
+          "explosive": 36
+        }
+      },
+      "hull": {
+        "hp": 10000,
+        "resists": {
+          "em": 33,
+          "thermal": 33,
+          "kinetic": 33,
+          "explosive": 33
+        }
+      },
+      "total_hp": 28000,
+      "ehp": 47437.6884,
+      "damage": {
+        "kind": "disintegrator",
+        "em": 0,
+        "thermal": 302.4,
+        "kinetic": 0,
+        "explosive": 190.4,
+        "volley": 492.8,
+        "cycle_s": 5,
+        "dps": 98.56,
+        "dominant": "thermal",
+        "optimal_m": 63000,
+        "tracking": 7,
+        "ramp_per_cycle": 0.02,
+        "ramp_max": 1.5
+      },
+      "max_velocity": 400,
+      "signature_radius": 370,
+      "effects": [
+        {
+          "kind": "remote_armor_repair",
+          "duration_s": 6,
+          "range_m": 33000,
+          "falloff_m": 28000,
+          "strength": 450,
+          "strength_unit": "armor HP per cycle",
+          "per_second": 75
+        }
+      ]
+    },
+    {
+      "type_id": 56159,
+      "name": "Renewing Rodiva",
+      "group": "Abyssal Spaceship Entities",
+      "family": "Rodiva",
+      "shield": {
+        "hp": 1200,
+        "resists": {
+          "em": 0,
+          "thermal": 20,
+          "kinetic": 40,
+          "explosive": 50
+        }
+      },
+      "armor": {
+        "hp": 4700,
+        "resists": {
+          "em": 60,
+          "thermal": 48,
+          "kinetic": 53,
+          "explosive": 36
+        }
+      },
+      "hull": {
+        "hp": 2400,
+        "resists": {
+          "em": 33,
+          "thermal": 33,
+          "kinetic": 33,
+          "explosive": 33
+        }
+      },
+      "total_hp": 8300,
+      "ehp": 14498.3457,
+      "damage": {
+        "kind": "disintegrator",
+        "em": 0,
+        "thermal": 189,
+        "kinetic": 0,
+        "explosive": 136.5,
+        "volley": 325.5,
+        "cycle_s": 5,
+        "dps": 65.1,
+        "dominant": "thermal",
+        "optimal_m": 22000,
+        "tracking": 70,
+        "ramp_per_cycle": 0.02,
+        "ramp_max": 1.5
+      },
+      "max_velocity": 1900,
+      "signature_radius": 150,
+      "orbit_range_m": 15000,
+      "effects": [
+        {
+          "kind": "remote_armor_repair",
+          "duration_s": 6,
+          "range_m": 30000,
+          "falloff_m": 40000,
+          "strength": 450,
+          "strength_unit": "armor HP per cycle",
+          "per_second": 75
+        }
+      ]
+    },
+    {
+      "type_id": 81162,
+      "name": "Ruptured Drifter Battleship",
+      "group": "Abyssal Spaceship Entities",
+      "family": "Drifter",
+      "shield": {
+        "hp": 50000,
+        "resists": {
+          "em": 50,
+          "thermal": 50,
+          "kinetic": 50,
+          "explosive": 50
+        }
+      },
+      "armor": {
+        "hp": 50000,
+        "resists": {
+          "em": 50,
+          "thermal": 50,
+          "kinetic": 50,
+          "explosive": 50
+        }
+      },
+      "hull": {
+        "hp": 50000,
+        "resists": {
+          "em": 0,
+          "thermal": 0,
+          "kinetic": 0,
+          "explosive": 0
+        }
+      },
+      "total_hp": 150000,
+      "ehp": 250000,
+      "damage": {
+        "kind": "turret",
+        "em": 100,
+        "thermal": 100,
+        "kinetic": 100,
+        "explosive": 100,
+        "volley": 400,
+        "cycle_s": 5,
+        "dps": 80,
+        "dominant": "em",
+        "optimal_m": 60000,
+        "falloff_m": 20000,
+        "tracking": 3
+      },
+      "max_velocity": 300,
+      "signature_radius": 400
+    },
+    {
+      "type_id": 80039,
+      "name": "Ruptured Shackling Leshak",
+      "group": "Abyssal Spaceship Entities",
+      "family": "Leshak",
+      "shield": {
+        "hp": 50000,
+        "resists": {
+          "em": 0,
+          "thermal": 20,
+          "kinetic": 40,
+          "explosive": 50
+        }
+      },
+      "armor": {
+        "hp": 50000,
+        "resists": {
+          "em": 60,
+          "thermal": 48,
+          "kinetic": 53,
+          "explosive": 36
+        }
+      },
+      "hull": {
+        "hp": 50000,
+        "resists": {
+          "em": 33,
+          "thermal": 33,
+          "kinetic": 33,
+          "explosive": 33
+        }
+      },
+      "total_hp": 150000,
+      "ehp": 242114.5504,
+      "damage": {
+        "kind": "disintegrator",
+        "em": 0,
+        "thermal": 200,
+        "kinetic": 0,
+        "explosive": 120,
+        "volley": 320,
+        "cycle_s": 5,
+        "dps": 64,
+        "dominant": "thermal",
+        "optimal_m": 63000,
+        "tracking": 8,
+        "ramp_per_cycle": 0.02,
+        "ramp_max": 1.5
+      },
+      "max_velocity": 400,
+      "signature_radius": 370,
+      "orbit_range_m": 12000,
+      "effects": [
+        {
+          "kind": "web",
+          "duration_s": 5,
+          "range_m": 1000,
+          "falloff_m": 10000,
+          "strength": 50,
+          "strength_unit": "percent speed reduction"
+        }
+      ]
+    },
+    {
+      "type_id": 56161,
+      "name": "Shining Drekavac",
+      "group": "Abyssal Spaceship Entities",
+      "family": "Drekavac",
+      "shield": {
+        "hp": 2700,
+        "resists": {
+          "em": 0,
+          "thermal": 20,
+          "kinetic": 40,
+          "explosive": 50
+        }
+      },
+      "armor": {
+        "hp": 9500,
+        "resists": {
+          "em": 60,
+          "thermal": 48,
+          "kinetic": 53,
+          "explosive": 36
+        }
+      },
+      "hull": {
+        "hp": 6800,
+        "resists": {
+          "em": 33,
+          "thermal": 33,
+          "kinetic": 33,
+          "explosive": 33
+        }
+      },
+      "total_hp": 19000,
+      "ehp": 32592.6035,
+      "damage": {
+        "kind": "disintegrator",
+        "em": 0,
+        "thermal": 270,
+        "kinetic": 0,
+        "explosive": 202.5,
+        "volley": 472.5,
+        "cycle_s": 5,
+        "dps": 94.5,
+        "dominant": "thermal",
+        "optimal_m": 38000,
+        "tracking": 10,
+        "ramp_per_cycle": 0.01,
+        "ramp_max": 1.5
+      },
+      "max_velocity": 450,
+      "signature_radius": 300,
+      "orbit_range_m": 30000,
+      "effects": [
+        {
+          "kind": "target_painter",
+          "duration_s": 5,
+          "range_m": 50000,
+          "falloff_m": 100000,
+          "strength": 20,
+          "strength_unit": "percent signature radius"
+        },
+        {
+          "kind": "remote_armor_repair",
+          "duration_s": 5,
+          "range_m": 30000,
+          "falloff_m": 40000,
+          "strength": 170,
+          "strength_unit": "armor HP per cycle",
+          "per_second": 34
+        }
+      ]
+    },
+    {
+      "type_id": 48259,
+      "name": "Shining Vila Damavik",
+      "group": "Abyssal Spaceship Entities",
+      "family": "Vila Damavik",
+      "shield": {
+        "hp": 500,
+        "resists": {
+          "em": 0,
+          "thermal": 20,
+          "kinetic": 40,
+          "explosive": 50
+        }
+      },
+      "armor": {
+        "hp": 2200,
+        "resists": {
+          "em": 60,
+          "thermal": 48,
+          "kinetic": 53,
+          "explosive": 36
+        }
+      },
+      "hull": {
+        "hp": 650,
+        "resists": {
+          "em": 33,
+          "thermal": 33,
+          "kinetic": 33,
+          "explosive": 33
+        }
+      },
+      "total_hp": 3350,
+      "ehp": 5994.7798,
+      "damage": {
+        "kind": "disintegrator",
+        "em": 0,
+        "thermal": 14.4,
+        "kinetic": 0,
+        "explosive": 6.6,
+        "volley": 21,
+        "cycle_s": 3.5,
+        "dps": 6,
+        "dominant": "thermal",
+        "optimal_m": 8000,
+        "tracking": 500,
+        "ramp_per_cycle": 0.01,
+        "ramp_max": 1.5
+      },
+      "max_velocity": 2800,
+      "signature_radius": 192,
+      "orbit_range_m": 6000,
+      "effects": [
+        {
+          "kind": "target_painter",
+          "duration_s": 5,
+          "range_m": 50000,
+          "falloff_m": 100000,
+          "strength": 35,
+          "strength_unit": "percent signature radius"
+        }
+      ]
+    },
+    {
+      "type_id": 56188,
+      "name": "Skybreaker Disparu Troop",
+      "group": "Abyssal Spaceship Entities",
+      "family": "Disparu Troop",
+      "shield": {
+        "hp": 1600,
+        "resists": {
+          "em": 44,
+          "thermal": 44,
+          "kinetic": 65,
+          "explosive": 65
+        }
+      },
+      "armor": {
+        "hp": 400,
+        "resists": {
+          "em": 50,
+          "thermal": 10,
+          "kinetic": 25,
+          "explosive": 45
+        }
+      },
+      "hull": {
+        "hp": 450,
+        "resists": {
+          "em": 33,
+          "thermal": 33,
+          "kinetic": 33,
+          "explosive": 33
+        }
+      },
+      "total_hp": 2450,
+      "ehp": 4780.7179,
+      "damage": {
+        "kind": "none",
+        "em": 0,
+        "thermal": 0,
+        "kinetic": 0,
+        "explosive": 0,
+        "volley": 0,
+        "dps": 0
+      },
+      "max_velocity": 2000,
+      "signature_radius": 192,
+      "orbit_range_m": 17000,
+      "effects": [
+        {
+          "kind": "local_shield_boost",
+          "duration_s": 5,
+          "strength": 160,
+          "strength_unit": "shield HP per cycle",
+          "per_second": 32
+        },
+        {
+          "kind": "chain_lightning"
+        }
+      ]
+    },
+    {
+      "type_id": 47851,
+      "name": "Snarecaster Tessella",
+      "group": "Abyssal Drone Entities",
+      "family": "Tessella",
+      "shield": {
+        "hp": 300,
+        "resists": {
+          "em": 0,
+          "thermal": 20,
+          "kinetic": 40,
+          "explosive": 50
+        }
+      },
+      "armor": {
+        "hp": 300,
+        "resists": {
+          "em": 60,
+          "thermal": 35,
+          "kinetic": 25,
+          "explosive": 10
+        }
+      },
+      "hull": {
+        "hp": 400,
+        "resists": {
+          "em": 0,
+          "thermal": 0,
+          "kinetic": 0,
+          "explosive": 0
+        }
+      },
+      "total_hp": 1000,
+      "ehp": 1258.2375,
+      "damage": {
+        "kind": "turret",
+        "em": 10,
+        "thermal": 10,
+        "kinetic": 10,
+        "explosive": 10,
+        "volley": 40,
+        "cycle_s": 4,
+        "dps": 10,
+        "dominant": "em",
+        "optimal_m": 8000,
+        "falloff_m": 4000,
+        "tracking": 4000
+      },
+      "max_velocity": 1500,
+      "signature_radius": 50,
+      "orbit_range_m": 8000,
+      "effects": [
+        {
+          "kind": "web",
+          "duration_s": 5,
+          "range_m": 10000,
+          "strength": 30,
+          "strength_unit": "percent speed reduction"
+        }
+      ]
+    },
+    {
+      "type_id": 48262,
+      "name": "Sparkgrip Tessera",
+      "group": "Abyssal Drone Entities",
+      "family": "Tessera",
+      "shield": {
+        "hp": 3000,
+        "resists": {
+          "em": 60,
+          "thermal": 70,
+          "kinetic": 70,
+          "explosive": 60
+        }
+      },
+      "armor": {
+        "hp": 2300,
+        "resists": {
+          "em": 60,
+          "thermal": 70,
+          "kinetic": 70,
+          "explosive": 60
+        }
+      },
+      "hull": {
+        "hp": 2500,
+        "resists": {
+          "em": 0,
+          "thermal": 0,
+          "kinetic": 0,
+          "explosive": 0
+        }
+      },
+      "total_hp": 7800,
+      "ehp": 17642.8571,
+      "damage": {
+        "kind": "turret",
+        "em": 1000,
+        "thermal": 0,
+        "kinetic": 0,
+        "explosive": 0,
+        "volley": 1000,
+        "cycle_s": 5,
+        "dps": 200,
+        "dominant": "em",
+        "optimal_m": 2000,
+        "falloff_m": 6000,
+        "tracking": 4000
+      },
+      "max_velocity": 775,
+      "signature_radius": 300,
+      "orbit_range_m": 2000
+    },
+    {
+      "type_id": 47856,
+      "name": "Sparklance Tessella",
+      "group": "Abyssal Drone Entities",
+      "family": "Tessella",
+      "shield": {
+        "hp": 200,
+        "resists": {
+          "em": 0,
+          "thermal": 20,
+          "kinetic": 40,
+          "explosive": 50
+        }
+      },
+      "armor": {
+        "hp": 1000,
+        "resists": {
+          "em": 60,
+          "thermal": 35,
+          "kinetic": 25,
+          "explosive": 10
+        }
+      },
+      "hull": {
+        "hp": 450,
+        "resists": {
+          "em": 0,
+          "thermal": 0,
+          "kinetic": 0,
+          "explosive": 0
+        }
+      },
+      "total_hp": 1650,
+      "ehp": 2207.3436,
+      "damage": {
+        "kind": "turret",
+        "em": 100,
+        "thermal": 0,
+        "kinetic": 0,
+        "explosive": 0,
+        "volley": 100,
+        "cycle_s": 2,
+        "dps": 50,
+        "dominant": "em",
+        "optimal_m": 8000,
+        "falloff_m": 4000,
+        "tracking": 4000
+      },
+      "max_velocity": 1500,
+      "signature_radius": 50,
+      "orbit_range_m": 9000
+    },
+    {
+      "type_id": 47847,
+      "name": "Sparkneedle Tessella",
+      "group": "Abyssal Drone Entities",
+      "family": "Tessella",
+      "shield": {
+        "hp": 200,
+        "resists": {
+          "em": 0,
+          "thermal": 20,
+          "kinetic": 40,
+          "explosive": 50
+        }
+      },
+      "armor": {
+        "hp": 500,
+        "resists": {
+          "em": 60,
+          "thermal": 35,
+          "kinetic": 25,
+          "explosive": 10
+        }
+      },
+      "hull": {
+        "hp": 450,
+        "resists": {
+          "em": 0,
+          "thermal": 0,
+          "kinetic": 0,
+          "explosive": 0
+        }
+      },
+      "total_hp": 1150,
+      "ehp": 1466.6028,
+      "damage": {
+        "kind": "turret",
+        "em": 50,
+        "thermal": 0,
+        "kinetic": 0,
+        "explosive": 0,
+        "volley": 50,
+        "cycle_s": 2,
+        "dps": 25,
+        "dominant": "em",
+        "optimal_m": 4000,
+        "falloff_m": 2000,
+        "tracking": 4000
+      },
+      "max_velocity": 1500,
+      "signature_radius": 50,
+      "orbit_range_m": 5000
+    },
+    {
+      "type_id": 47854,
+      "name": "Spotlighter Tessella",
+      "group": "Abyssal Drone Entities",
+      "family": "Tessella",
+      "shield": {
+        "hp": 350,
+        "resists": {
+          "em": 0,
+          "thermal": 20,
+          "kinetic": 40,
+          "explosive": 50
+        }
+      },
+      "armor": {
+        "hp": 350,
+        "resists": {
+          "em": 60,
+          "thermal": 35,
+          "kinetic": 25,
+          "explosive": 10
+        }
+      },
+      "hull": {
+        "hp": 300,
+        "resists": {
+          "em": 0,
+          "thermal": 0,
+          "kinetic": 0,
+          "explosive": 0
+        }
+      },
+      "total_hp": 1000,
+      "ehp": 1301.2771,
+      "damage": {
+        "kind": "turret",
+        "em": 10,
+        "thermal": 10,
+        "kinetic": 10,
+        "explosive": 10,
+        "volley": 40,
+        "cycle_s": 4,
+        "dps": 10,
+        "dominant": "em",
+        "optimal_m": 8000,
+        "falloff_m": 4000,
+        "tracking": 4000
+      },
+      "max_velocity": 1000,
+      "signature_radius": 50,
+      "orbit_range_m": 8000,
+      "effects": [
+        {
+          "kind": "target_painter",
+          "duration_s": 5,
+          "range_m": 30000,
+          "falloff_m": 20000,
+          "strength": 20,
+          "strength_unit": "percent signature radius"
+        }
+      ]
+    },
+    {
+      "type_id": 48090,
+      "name": "Starving Damavik",
+      "group": "Abyssal Spaceship Entities",
+      "family": "Damavik",
+      "shield": {
+        "hp": 500,
+        "resists": {
+          "em": 0,
+          "thermal": 20,
+          "kinetic": 40,
+          "explosive": 50
+        }
+      },
+      "armor": {
+        "hp": 2200,
+        "resists": {
+          "em": 60,
+          "thermal": 48,
+          "kinetic": 53,
+          "explosive": 36
+        }
+      },
+      "hull": {
+        "hp": 650,
+        "resists": {
+          "em": 33,
+          "thermal": 33,
+          "kinetic": 33,
+          "explosive": 33
+        }
+      },
+      "total_hp": 3350,
+      "ehp": 5994.7798,
+      "damage": {
+        "kind": "disintegrator",
+        "em": 0,
+        "thermal": 57.6,
+        "kinetic": 0,
+        "explosive": 26.4,
+        "volley": 84,
+        "cycle_s": 3.5,
+        "dps": 24,
+        "dominant": "thermal",
+        "optimal_m": 10000,
+        "tracking": 500,
+        "ramp_per_cycle": 0.04,
+        "ramp_max": 1.5
+      },
+      "max_velocity": 2700,
+      "signature_radius": 192,
+      "orbit_range_m": 6000,
+      "effects": [
+        {
+          "kind": "energy_neutralizer",
+          "duration_s": 8,
+          "range_m": 4000,
+          "falloff_m": 9000,
+          "strength": 100,
+          "strength_unit": "GJ per cycle",
+          "per_second": 12.5
+        }
+      ]
+    },
+    {
+      "type_id": 48125,
+      "name": "Starving Leshak",
+      "group": "Abyssal Spaceship Entities",
+      "family": "Leshak",
+      "shield": {
+        "hp": 5000,
+        "resists": {
+          "em": 0,
+          "thermal": 20,
+          "kinetic": 40,
+          "explosive": 50
+        }
+      },
+      "armor": {
+        "hp": 13000,
+        "resists": {
+          "em": 60,
+          "thermal": 48,
+          "kinetic": 53,
+          "explosive": 36
+        }
+      },
+      "hull": {
+        "hp": 10000,
+        "resists": {
+          "em": 33,
+          "thermal": 33,
+          "kinetic": 33,
+          "explosive": 33
+        }
+      },
+      "total_hp": 28000,
+      "ehp": 47437.6884,
+      "damage": {
+        "kind": "disintegrator",
+        "em": 0,
+        "thermal": 302.4,
+        "kinetic": 0,
+        "explosive": 190.4,
+        "volley": 492.8,
+        "cycle_s": 5,
+        "dps": 98.56,
+        "dominant": "thermal",
+        "optimal_m": 63000,
+        "tracking": 7,
+        "ramp_per_cycle": 0.02,
+        "ramp_max": 1.5
+      },
+      "max_velocity": 400,
+      "signature_radius": 370,
+      "effects": [
+        {
+          "kind": "energy_neutralizer",
+          "duration_s": 24,
+          "range_m": 30000,
+          "falloff_m": 20000,
+          "strength": 600,
+          "strength_unit": "GJ per cycle",
+          "per_second": 25
+        },
+        {
+          "kind": "remote_armor_repair",
+          "duration_s": 6,
+          "range_m": 33000,
+          "falloff_m": 28000,
+          "strength": 225,
+          "strength_unit": "armor HP per cycle",
+          "per_second": 37.5
+        }
+      ]
+    },
+    {
+      "type_id": 48087,
+      "name": "Starving Vedmak",
+      "group": "Abyssal Spaceship Entities",
+      "family": "Vedmak",
+      "shield": {
+        "hp": 2000,
+        "resists": {
+          "em": 0,
+          "thermal": 20,
+          "kinetic": 40,
+          "explosive": 50
+        }
+      },
+      "armor": {
+        "hp": 7000,
+        "resists": {
+          "em": 60,
+          "thermal": 48,
+          "kinetic": 53,
+          "explosive": 36
+        }
+      },
+      "hull": {
+        "hp": 3000,
+        "resists": {
+          "em": 33,
+          "thermal": 33,
+          "kinetic": 33,
+          "explosive": 33
+        }
+      },
+      "total_hp": 12000,
+      "ehp": 21029.3361,
+      "damage": {
+        "kind": "disintegrator",
+        "em": 0,
+        "thermal": 456,
+        "kinetic": 0,
+        "explosive": 336,
+        "volley": 792,
+        "cycle_s": 5,
+        "dps": 158.4,
+        "dominant": "thermal",
+        "optimal_m": 22000,
+        "tracking": 65,
+        "ramp_per_cycle": 0.04,
+        "ramp_max": 1.5
+      },
+      "max_velocity": 1800,
+      "signature_radius": 660,
+      "effects": [
+        {
+          "kind": "energy_neutralizer",
+          "duration_s": 20,
+          "range_m": 10000,
+          "falloff_m": 5000,
+          "strength": 360,
+          "strength_unit": "GJ per cycle",
+          "per_second": 18
+        }
+      ]
+    },
+    {
+      "type_id": 56189,
+      "name": "Stormbringer Disparu Troop",
+      "group": "Abyssal Spaceship Entities",
+      "family": "Disparu Troop",
+      "shield": {
+        "hp": 7500,
+        "resists": {
+          "em": 44,
+          "thermal": 44,
+          "kinetic": 65,
+          "explosive": 65
+        }
+      },
+      "armor": {
+        "hp": 800,
+        "resists": {
+          "em": 50,
+          "thermal": 10,
+          "kinetic": 25,
+          "explosive": 45
+        }
+      },
+      "hull": {
+        "hp": 1300,
+        "resists": {
+          "em": 33,
+          "thermal": 33,
+          "kinetic": 33,
+          "explosive": 33
+        }
+      },
+      "total_hp": 9600,
+      "ehp": 19609.0002,
+      "damage": {
+        "kind": "none",
+        "em": 0,
+        "thermal": 0,
+        "kinetic": 0,
+        "explosive": 0,
+        "volley": 0,
+        "dps": 0
+      },
+      "max_velocity": 1000,
+      "signature_radius": 660,
+      "orbit_range_m": 24000,
+      "effects": [
+        {
+          "kind": "local_shield_boost",
+          "duration_s": 6,
+          "strength": 220,
+          "strength_unit": "shield HP per cycle",
+          "per_second": 36.6667
+        },
+        {
+          "kind": "chain_lightning"
+        }
+      ]
+    },
+    {
+      "type_id": 48264,
+      "name": "Strikegrip Tessera",
+      "group": "Abyssal Drone Entities",
+      "family": "Tessera",
+      "shield": {
+        "hp": 3000,
+        "resists": {
+          "em": 60,
+          "thermal": 70,
+          "kinetic": 70,
+          "explosive": 60
+        }
+      },
+      "armor": {
+        "hp": 2300,
+        "resists": {
+          "em": 60,
+          "thermal": 70,
+          "kinetic": 70,
+          "explosive": 60
+        }
+      },
+      "hull": {
+        "hp": 2500,
+        "resists": {
+          "em": 0,
+          "thermal": 0,
+          "kinetic": 0,
+          "explosive": 0
+        }
+      },
+      "total_hp": 7800,
+      "ehp": 17642.8571,
+      "damage": {
+        "kind": "turret",
+        "em": 0,
+        "thermal": 0,
+        "kinetic": 1000,
+        "explosive": 0,
+        "volley": 1000,
+        "cycle_s": 5,
+        "dps": 200,
+        "dominant": "kinetic",
+        "optimal_m": 2000,
+        "falloff_m": 6000,
+        "tracking": 4000
+      },
+      "max_velocity": 650,
+      "signature_radius": 300,
+      "orbit_range_m": 2000
+    },
+    {
+      "type_id": 47858,
+      "name": "Strikelance Tessella",
+      "group": "Abyssal Drone Entities",
+      "family": "Tessella",
+      "shield": {
+        "hp": 1100,
+        "resists": {
+          "em": 0,
+          "thermal": 20,
+          "kinetic": 40,
+          "explosive": 50
+        }
+      },
+      "armor": {
+        "hp": 200,
+        "resists": {
+          "em": 50,
+          "thermal": 45,
+          "kinetic": 25,
+          "explosive": 10
+        }
+      },
+      "hull": {
+        "hp": 400,
+        "resists": {
+          "em": 0,
+          "thermal": 0,
+          "kinetic": 0,
+          "explosive": 0
+        }
+      },
+      "total_hp": 1700,
+      "ehp": 2213.5377,
+      "damage": {
+        "kind": "turret",
+        "em": 0,
+        "thermal": 0,
+        "kinetic": 100,
+        "explosive": 0,
+        "volley": 100,
+        "cycle_s": 2,
+        "dps": 50,
+        "dominant": "kinetic",
+        "optimal_m": 8000,
+        "falloff_m": 4000,
+        "tracking": 4000
+      },
+      "max_velocity": 1500,
+      "signature_radius": 50,
+      "orbit_range_m": 9000
+    },
+    {
+      "type_id": 47849,
+      "name": "Strikeneedle Tessella",
+      "group": "Abyssal Drone Entities",
+      "family": "Tessella",
+      "shield": {
+        "hp": 550,
+        "resists": {
+          "em": 0,
+          "thermal": 20,
+          "kinetic": 40,
+          "explosive": 50
+        }
+      },
+      "armor": {
+        "hp": 200,
+        "resists": {
+          "em": 50,
+          "thermal": 45,
+          "kinetic": 25,
+          "explosive": 10
+        }
+      },
+      "hull": {
+        "hp": 400,
+        "resists": {
+          "em": 0,
+          "thermal": 0,
+          "kinetic": 0,
+          "explosive": 0
+        }
+      },
+      "total_hp": 1150,
+      "ehp": 1454.917,
+      "damage": {
+        "kind": "turret",
+        "em": 0,
+        "thermal": 0,
+        "kinetic": 50,
+        "explosive": 0,
+        "volley": 50,
+        "cycle_s": 2,
+        "dps": 25,
+        "dominant": "kinetic",
+        "optimal_m": 4000,
+        "falloff_m": 2000,
+        "tracking": 4000
+      },
+      "max_velocity": 1500,
+      "signature_radius": 50,
+      "orbit_range_m": 5000
+    },
+    {
+      "type_id": 48092,
+      "name": "Striking Damavik",
+      "group": "Abyssal Spaceship Entities",
+      "family": "Damavik",
+      "shield": {
+        "hp": 500,
+        "resists": {
+          "em": 0,
+          "thermal": 20,
+          "kinetic": 40,
+          "explosive": 50
+        }
+      },
+      "armor": {
+        "hp": 2200,
+        "resists": {
+          "em": 60,
+          "thermal": 48,
+          "kinetic": 53,
+          "explosive": 36
+        }
+      },
+      "hull": {
+        "hp": 650,
+        "resists": {
+          "em": 33,
+          "thermal": 33,
+          "kinetic": 33,
+          "explosive": 33
+        }
+      },
+      "total_hp": 3350,
+      "ehp": 5994.7798,
+      "damage": {
+        "kind": "disintegrator",
+        "em": 0,
+        "thermal": 57.6,
+        "kinetic": 0,
+        "explosive": 26.4,
+        "volley": 84,
+        "cycle_s": 3.5,
+        "dps": 24,
+        "dominant": "thermal",
+        "optimal_m": 10000,
+        "tracking": 500,
+        "ramp_per_cycle": 0.04,
+        "ramp_max": 1.5
+      },
+      "max_velocity": 2900,
+      "signature_radius": 192,
+      "orbit_range_m": 6000,
+      "effects": [
+        {
+          "kind": "remote_armor_repair",
+          "duration_s": 3,
+          "range_m": 14000,
+          "falloff_m": 2500,
+          "strength": 40,
+          "strength_unit": "armor HP per cycle",
+          "per_second": 13.3333
+        }
+      ]
+    },
+    {
+      "type_id": 56160,
+      "name": "Striking Drekavac",
+      "group": "Abyssal Spaceship Entities",
+      "family": "Drekavac",
+      "shield": {
+        "hp": 2700,
+        "resists": {
+          "em": 0,
+          "thermal": 20,
+          "kinetic": 40,
+          "explosive": 50
+        }
+      },
+      "armor": {
+        "hp": 9500,
+        "resists": {
+          "em": 60,
+          "thermal": 48,
+          "kinetic": 53,
+          "explosive": 36
+        }
+      },
+      "hull": {
+        "hp": 6800,
+        "resists": {
+          "em": 33,
+          "thermal": 33,
+          "kinetic": 33,
+          "explosive": 33
+        }
+      },
+      "total_hp": 19000,
+      "ehp": 32592.6035,
+      "damage": {
+        "kind": "disintegrator",
+        "em": 0,
+        "thermal": 330,
+        "kinetic": 0,
+        "explosive": 247.5,
+        "volley": 577.5,
+        "cycle_s": 5,
+        "dps": 115.5,
+        "dominant": "thermal",
+        "optimal_m": 38000,
+        "tracking": 10,
+        "ramp_per_cycle": 0.01,
+        "ramp_max": 1.5
+      },
+      "max_velocity": 450,
+      "signature_radius": 300,
+      "orbit_range_m": 30000,
+      "effects": [
+        {
+          "kind": "remote_armor_repair",
+          "duration_s": 5,
+          "range_m": 30000,
+          "falloff_m": 40000,
+          "strength": 170,
+          "strength_unit": "armor HP per cycle",
+          "per_second": 34
+        }
+      ]
+    },
+    {
+      "type_id": 56150,
+      "name": "Striking Kikimora",
+      "group": "Abyssal Spaceship Entities",
+      "family": "Kikimora",
+      "shield": {
+        "hp": 1100,
+        "resists": {
+          "em": 0,
+          "thermal": 20,
+          "kinetic": 40,
+          "explosive": 50
+        }
+      },
+      "armor": {
+        "hp": 2900,
+        "resists": {
+          "em": 60,
+          "thermal": 48,
+          "kinetic": 53,
+          "explosive": 36
+        }
+      },
+      "hull": {
+        "hp": 1300,
+        "resists": {
+          "em": 33,
+          "thermal": 33,
+          "kinetic": 33,
+          "explosive": 33
+        }
+      },
+      "total_hp": 5300,
+      "ehp": 9171.8256,
+      "damage": {
+        "kind": "disintegrator",
+        "em": 0,
+        "thermal": 170,
+        "kinetic": 0,
+        "explosive": 80,
+        "volley": 250,
+        "cycle_s": 3,
+        "dps": 83.3333,
+        "dominant": "thermal",
+        "optimal_m": 25000,
+        "tracking": 500,
+        "ramp_per_cycle": 0.02,
+        "ramp_max": 1.5
+      },
+      "max_velocity": 1400,
+      "signature_radius": 192,
+      "orbit_range_m": 16000,
+      "effects": [
+        {
+          "kind": "remote_armor_repair",
+          "duration_s": 3,
+          "range_m": 15000,
+          "falloff_m": 25000,
+          "strength": 60,
+          "strength_unit": "armor HP per cycle",
+          "per_second": 20
+        }
+      ]
+    },
+    {
+      "type_id": 48122,
+      "name": "Striking Leshak",
+      "group": "Abyssal Spaceship Entities",
+      "family": "Leshak",
+      "shield": {
+        "hp": 5000,
+        "resists": {
+          "em": 0,
+          "thermal": 20,
+          "kinetic": 40,
+          "explosive": 50
+        }
+      },
+      "armor": {
+        "hp": 13000,
+        "resists": {
+          "em": 60,
+          "thermal": 48,
+          "kinetic": 53,
+          "explosive": 36
+        }
+      },
+      "hull": {
+        "hp": 10000,
+        "resists": {
+          "em": 33,
+          "thermal": 33,
+          "kinetic": 33,
+          "explosive": 33
+        }
+      },
+      "total_hp": 28000,
+      "ehp": 47437.6884,
+      "damage": {
+        "kind": "disintegrator",
+        "em": 0,
+        "thermal": 302.4,
+        "kinetic": 0,
+        "explosive": 190.4,
+        "volley": 492.8,
+        "cycle_s": 5,
+        "dps": 98.56,
+        "dominant": "thermal",
+        "optimal_m": 63000,
+        "tracking": 7,
+        "ramp_per_cycle": 0.02,
+        "ramp_max": 1.5
+      },
+      "max_velocity": 400,
+      "signature_radius": 370,
+      "effects": [
+        {
+          "kind": "remote_armor_repair",
+          "duration_s": 6,
+          "range_m": 33000,
+          "falloff_m": 28000,
+          "strength": 225,
+          "strength_unit": "armor HP per cycle",
+          "per_second": 37.5
+        }
+      ]
+    },
+    {
+      "type_id": 48256,
+      "name": "Striking Vila Damavik",
+      "group": "Abyssal Spaceship Entities",
+      "family": "Vila Damavik",
+      "shield": {
+        "hp": 500,
+        "resists": {
+          "em": 0,
+          "thermal": 20,
+          "kinetic": 40,
+          "explosive": 50
+        }
+      },
+      "armor": {
+        "hp": 2200,
+        "resists": {
+          "em": 60,
+          "thermal": 48,
+          "kinetic": 53,
+          "explosive": 36
+        }
+      },
+      "hull": {
+        "hp": 650,
+        "resists": {
+          "em": 33,
+          "thermal": 33,
+          "kinetic": 33,
+          "explosive": 33
+        }
+      },
+      "total_hp": 3350,
+      "ehp": 5994.7798,
+      "damage": {
+        "kind": "disintegrator",
+        "em": 0,
+        "thermal": 14.4,
+        "kinetic": 0,
+        "explosive": 6.6,
+        "volley": 21,
+        "cycle_s": 3.5,
+        "dps": 6,
+        "dominant": "thermal",
+        "optimal_m": 8000,
+        "tracking": 500,
+        "ramp_per_cycle": 0.01,
+        "ramp_max": 1.5
+      },
+      "max_velocity": 2900,
+      "signature_radius": 192,
+      "orbit_range_m": 6000
+    },
+    {
+      "type_id": 48088,
+      "name": "Tangling Damavik",
+      "group": "Abyssal Spaceship Entities",
+      "family": "Damavik",
+      "shield": {
+        "hp": 500,
+        "resists": {
+          "em": 0,
+          "thermal": 20,
+          "kinetic": 40,
+          "explosive": 50
+        }
+      },
+      "armor": {
+        "hp": 2200,
+        "resists": {
+          "em": 60,
+          "thermal": 48,
+          "kinetic": 53,
+          "explosive": 36
+        }
+      },
+      "hull": {
+        "hp": 650,
+        "resists": {
+          "em": 33,
+          "thermal": 33,
+          "kinetic": 33,
+          "explosive": 33
+        }
+      },
+      "total_hp": 3350,
+      "ehp": 5994.7798,
+      "damage": {
+        "kind": "disintegrator",
+        "em": 0,
+        "thermal": 57.6,
+        "kinetic": 0,
+        "explosive": 26.4,
+        "volley": 84,
+        "cycle_s": 3.5,
+        "dps": 24,
+        "dominant": "thermal",
+        "optimal_m": 10000,
+        "tracking": 500,
+        "ramp_per_cycle": 0.04,
+        "ramp_max": 1.5
+      },
+      "max_velocity": 3000,
+      "signature_radius": 192,
+      "orbit_range_m": 6000,
+      "effects": [
+        {
+          "kind": "web",
+          "duration_s": 5,
+          "range_m": 10000,
+          "strength": 50,
+          "strength_unit": "percent speed reduction"
+        },
+        {
+          "kind": "remote_armor_repair",
+          "duration_s": 3,
+          "range_m": 14000,
+          "falloff_m": 2500,
+          "strength": 40,
+          "strength_unit": "armor HP per cycle",
+          "per_second": 13.3333
+        }
+      ]
+    },
+    {
+      "type_id": 56152,
+      "name": "Tangling Kikimora",
+      "group": "Abyssal Spaceship Entities",
+      "family": "Kikimora",
+      "shield": {
+        "hp": 1100,
+        "resists": {
+          "em": 0,
+          "thermal": 20,
+          "kinetic": 40,
+          "explosive": 50
+        }
+      },
+      "armor": {
+        "hp": 2900,
+        "resists": {
+          "em": 60,
+          "thermal": 48,
+          "kinetic": 53,
+          "explosive": 36
+        }
+      },
+      "hull": {
+        "hp": 1300,
+        "resists": {
+          "em": 33,
+          "thermal": 33,
+          "kinetic": 33,
+          "explosive": 33
+        }
+      },
+      "total_hp": 5300,
+      "ehp": 9171.8256,
+      "damage": {
+        "kind": "disintegrator",
+        "em": 0,
+        "thermal": 170,
+        "kinetic": 0,
+        "explosive": 80,
+        "volley": 250,
+        "cycle_s": 3,
+        "dps": 83.3333,
+        "dominant": "thermal",
+        "optimal_m": 25000,
+        "tracking": 500,
+        "ramp_per_cycle": 0.02,
+        "ramp_max": 1.5
+      },
+      "max_velocity": 1400,
+      "signature_radius": 192,
+      "orbit_range_m": 16000,
+      "effects": [
+        {
+          "kind": "web",
+          "duration_s": 5,
+          "range_m": 10000,
+          "strength": 50,
+          "strength_unit": "percent speed reduction"
+        },
+        {
+          "kind": "remote_armor_repair",
+          "duration_s": 3,
+          "range_m": 15000,
+          "falloff_m": 25000,
+          "strength": 60,
+          "strength_unit": "armor HP per cycle",
+          "per_second": 20
+        }
+      ]
+    },
+    {
+      "type_id": 48124,
+      "name": "Tangling Leshak",
+      "group": "Abyssal Spaceship Entities",
+      "family": "Leshak",
+      "shield": {
+        "hp": 5000,
+        "resists": {
+          "em": 0,
+          "thermal": 20,
+          "kinetic": 40,
+          "explosive": 50
+        }
+      },
+      "armor": {
+        "hp": 13000,
+        "resists": {
+          "em": 60,
+          "thermal": 48,
+          "kinetic": 53,
+          "explosive": 36
+        }
+      },
+      "hull": {
+        "hp": 10000,
+        "resists": {
+          "em": 33,
+          "thermal": 33,
+          "kinetic": 33,
+          "explosive": 33
+        }
+      },
+      "total_hp": 28000,
+      "ehp": 47437.6884,
+      "damage": {
+        "kind": "disintegrator",
+        "em": 0,
+        "thermal": 302.4,
+        "kinetic": 0,
+        "explosive": 190.4,
+        "volley": 492.8,
+        "cycle_s": 5,
+        "dps": 98.56,
+        "dominant": "thermal",
+        "optimal_m": 63000,
+        "tracking": 7,
+        "ramp_per_cycle": 0.02,
+        "ramp_max": 1.5
+      },
+      "max_velocity": 400,
+      "signature_radius": 370,
+      "orbit_range_m": 12000,
+      "effects": [
+        {
+          "kind": "web",
+          "duration_s": 5,
+          "range_m": 15000,
+          "strength": 50,
+          "strength_unit": "percent speed reduction"
+        },
+        {
+          "kind": "remote_armor_repair",
+          "duration_s": 6,
+          "range_m": 33000,
+          "falloff_m": 28000,
+          "strength": 225,
+          "strength_unit": "armor HP per cycle",
+          "per_second": 37.5
+        }
+      ]
+    },
+    {
+      "type_id": 48257,
+      "name": "Tangling Vila Damavik",
+      "group": "Abyssal Spaceship Entities",
+      "family": "Vila Damavik",
+      "shield": {
+        "hp": 500,
+        "resists": {
+          "em": 0,
+          "thermal": 20,
+          "kinetic": 40,
+          "explosive": 50
+        }
+      },
+      "armor": {
+        "hp": 2200,
+        "resists": {
+          "em": 60,
+          "thermal": 48,
+          "kinetic": 53,
+          "explosive": 36
+        }
+      },
+      "hull": {
+        "hp": 650,
+        "resists": {
+          "em": 33,
+          "thermal": 33,
+          "kinetic": 33,
+          "explosive": 33
+        }
+      },
+      "total_hp": 3350,
+      "ehp": 5994.7798,
+      "damage": {
+        "kind": "disintegrator",
+        "em": 0,
+        "thermal": 14.4,
+        "kinetic": 0,
+        "explosive": 6.6,
+        "volley": 21,
+        "cycle_s": 3.5,
+        "dps": 6,
+        "dominant": "thermal",
+        "optimal_m": 8000,
+        "tracking": 500,
+        "ramp_per_cycle": 0.01,
+        "ramp_max": 1.5
+      },
+      "max_velocity": 3000,
+      "signature_radius": 192,
+      "orbit_range_m": 6000,
+      "effects": [
+        {
+          "kind": "web",
+          "duration_s": 5,
+          "range_m": 10000,
+          "strength": 50,
+          "strength_unit": "percent speed reduction"
+        }
+      ]
+    },
+    {
+      "type_id": 56200,
+      "name": "Thunderchild Disparu Troop",
+      "group": "Abyssal Spaceship Entities",
+      "family": "Disparu Troop",
+      "shield": {
+        "hp": 11500,
+        "resists": {
+          "em": 44,
+          "thermal": 44,
+          "kinetic": 65,
+          "explosive": 65
+        }
+      },
+      "armor": {
+        "hp": 5100,
+        "resists": {
+          "em": 50,
+          "thermal": 10,
+          "kinetic": 25,
+          "explosive": 45
+        }
+      },
+      "hull": {
+        "hp": 7400,
+        "resists": {
+          "em": 33,
+          "thermal": 33,
+          "kinetic": 33,
+          "explosive": 33
+        }
+      },
+      "total_hp": 24000,
+      "ehp": 43875.0569,
+      "damage": {
+        "kind": "none",
+        "em": 0,
+        "thermal": 0,
+        "kinetic": 0,
+        "explosive": 0,
+        "volley": 0,
+        "dps": 0
+      },
+      "max_velocity": 400,
+      "signature_radius": 370,
+      "effects": [
+        {
+          "kind": "local_shield_boost",
+          "duration_s": 6,
+          "strength": 260,
+          "strength_unit": "shield HP per cycle",
+          "per_second": 43.3333
+        },
+        {
+          "kind": "chain_lightning"
+        }
+      ]
+    },
+    {
+      "type_id": 47877,
+      "name": "Twilit Abyssal Overmind",
+      "group": "Abyssal Spaceship Entities",
+      "family": "Abyssal Overmind",
+      "shield": {
+        "hp": 9000,
+        "resists": {
+          "em": 12.5,
+          "thermal": 30,
+          "kinetic": 47.5,
+          "explosive": 56.25
+        }
+      },
+      "armor": {
+        "hp": 10000,
+        "resists": {
+          "em": 68,
+          "thermal": 59,
+          "kinetic": 77,
+          "explosive": 68
+        }
+      },
+      "hull": {
+        "hp": 10625,
+        "resists": {
+          "em": 60,
+          "thermal": 60,
+          "kinetic": 60,
+          "explosive": 60
+        }
+      },
+      "total_hp": 29625,
+      "ehp": 71999.6921,
+      "damage": {
+        "kind": "turret",
+        "em": 0,
+        "thermal": 331.2,
+        "kinetic": 552,
+        "explosive": 0,
+        "volley": 883.2,
+        "cycle_s": 3.22,
+        "dps": 274.2857,
+        "dominant": "kinetic",
+        "optimal_m": 36000,
+        "falloff_m": 15000,
+        "tracking": 4.26
+      },
+      "max_velocity": 250,
+      "signature_radius": 465
+    },
+    {
+      "type_id": 81302,
+      "name": "Tyrannos Typhon",
+      "group": "Abyssal Spaceship Entities",
+      "family": "Tyrannos",
+      "shield": {
+        "hp": 50000,
+        "resists": {
+          "em": 50,
+          "thermal": 50,
+          "kinetic": 50,
+          "explosive": 50
+        }
+      },
+      "armor": {
+        "hp": 50000,
+        "resists": {
+          "em": 50,
+          "thermal": 50,
+          "kinetic": 50,
+          "explosive": 50
+        }
+      },
+      "hull": {
+        "hp": 50000,
+        "resists": {
+          "em": 0,
+          "thermal": 0,
+          "kinetic": 0,
+          "explosive": 0
+        }
+      },
+      "total_hp": 150000,
+      "ehp": 250000,
+      "damage": {
+        "kind": "turret",
+        "em": 160,
+        "thermal": 160,
+        "kinetic": 160,
+        "explosive": 160,
+        "volley": 640,
+        "cycle_s": 5,
+        "dps": 128,
+        "dominant": "em",
+        "optimal_m": 60000,
+        "falloff_m": 20000,
+        "tracking": 30
+      },
+      "max_velocity": 300,
+      "signature_radius": 400,
+      "effects": [
+        {
+          "kind": "local_armor_repair",
+          "strength_unit": "armor HP per cycle"
+        },
+        {
+          "kind": "local_shield_boost",
+          "strength_unit": "shield HP per cycle"
+        }
+      ]
+    },
+    {
+      "type_id": 48253,
+      "name": "Vila Swarmer",
+      "group": "Abyssal Drone Entities",
+      "family": "Swarmer",
+      "shield": {
+        "hp": 50,
+        "resists": {
+          "em": 0,
+          "thermal": 20,
+          "kinetic": 40,
+          "explosive": 50
+        }
+      },
+      "armor": {
+        "hp": 200,
+        "resists": {
+          "em": 50,
+          "thermal": 35,
+          "kinetic": 25,
+          "explosive": 20
+        }
+      },
+      "hull": {
+        "hp": 100,
+        "resists": {
+          "em": 0,
+          "thermal": 0,
+          "kinetic": 0,
+          "explosive": 0
+        }
+      },
+      "total_hp": 350,
+      "ehp": 465.2618,
+      "damage": {
+        "kind": "turret",
+        "em": 4,
+        "thermal": 4,
+        "kinetic": 4,
+        "explosive": 4,
+        "volley": 16,
+        "cycle_s": 2,
+        "dps": 8,
+        "dominant": "em",
+        "optimal_m": 3000,
+        "falloff_m": 3000,
+        "tracking": 4000
+      },
+      "max_velocity": 3500,
+      "signature_radius": 25,
+      "orbit_range_m": 2500
+    },
+    {
+      "type_id": 48126,
+      "name": "Warding Leshak",
+      "group": "Abyssal Spaceship Entities",
+      "family": "Leshak",
+      "shield": {
+        "hp": 5000,
+        "resists": {
+          "em": 0,
+          "thermal": 20,
+          "kinetic": 40,
+          "explosive": 50
+        }
+      },
+      "armor": {
+        "hp": 13000,
+        "resists": {
+          "em": 60,
+          "thermal": 48,
+          "kinetic": 53,
+          "explosive": 36
+        }
+      },
+      "hull": {
+        "hp": 10000,
+        "resists": {
+          "em": 33,
+          "thermal": 33,
+          "kinetic": 33,
+          "explosive": 33
+        }
+      },
+      "total_hp": 28000,
+      "ehp": 47437.6884,
+      "damage": {
+        "kind": "disintegrator",
+        "em": 0,
+        "thermal": 302.4,
+        "kinetic": 0,
+        "explosive": 190.4,
+        "volley": 492.8,
+        "cycle_s": 5,
+        "dps": 98.56,
+        "dominant": "thermal",
+        "optimal_m": 63000,
+        "tracking": 7,
+        "ramp_per_cycle": 0.02,
+        "ramp_max": 1.5
+      },
+      "max_velocity": 400,
+      "signature_radius": 370,
+      "effects": [
+        {
+          "kind": "remote_armor_repair",
+          "duration_s": 6,
+          "range_m": 33000,
+          "falloff_m": 28000,
+          "strength": 225,
+          "strength_unit": "armor HP per cycle",
+          "per_second": 37.5
+        }
+      ]
+    }
+  ]
+}

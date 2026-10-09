@@ -7,7 +7,7 @@
 # Build context = the repository root.
 
 # -- Build stage ---------------------------------------------------------------------------
-FROM golang:1.27-trixie AS build
+FROM golang:1.27.2-trixie AS build
 WORKDIR /src
 
 # Cache module downloads on go.mod / go.sum only (the common edit case is code).

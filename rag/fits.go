@@ -380,7 +380,19 @@ func buildListFitFilter(q ListFitQuery) []map[string]any {
 // Mirrors Python _qdrant_client.count(collection_name=…, count_filter=…, exact=True).
 // Quarantined fits (G3) are excluded by default via must_not.
 func (r *QdrantRetriever) CountFits(ctx context.Context, q ListFitQuery) (int, error) {
-	must := buildListFitFilter(q)
+	return r.countPoints(ctx, buildListFitFilter(q))
+}
+
+// CountCommunityFits returns the exact number of community fits in the corpus: every
+// point from a fit source (corpus.FitSources), quarantined ones excluded. It is the
+// public "community fits" figure of the landing stats.
+func (r *QdrantRetriever) CountCommunityFits(ctx context.Context) (int, error) {
+	return r.countPoints(ctx, []map[string]any{fitSourceMatch()})
+}
+
+// countPoints runs one exact Qdrant /points/count for the must conditions, with
+// quarantined fits (G3) always excluded.
+func (r *QdrantRetriever) countPoints(ctx context.Context, must []map[string]any) (int, error) {
 	body, err := json.Marshal(map[string]any{
 		"filter": map[string]any{
 			"must":     must,

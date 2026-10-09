@@ -198,8 +198,9 @@ func assembleFitDetail(
 		}
 	}
 
-	// --- Unresolved names: a first-class field. The note is a count only, so a
-	// consumer that renders just the notes still warns that the totals are partial.
+	// --- Unresolved names: a first-class field. The web UI lists the names (chips) from
+	// Unresolved; the count note stays for consumers that render only the notes (LLM
+	// tools) and the UI drops it when it shows the names.
 	fd.Unresolved = append([]string{}, unresolvedOnce...)
 	fd.Valid = len(fd.Unresolved) == 0
 	if n := len(fd.Unresolved); n > 0 {

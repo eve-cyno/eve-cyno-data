@@ -21,7 +21,12 @@ Everything is one tool registry (`catalog`) published three ways, so the descrip
 | MCP | stdio: `cmd/mcp`; streamable HTTP: `POST /v1/mcp` of `cmd/dataapi` | stateless, JSON responses |
 | `llms.txt` | [`llms.txt`](llms.txt), [`llms-full.txt`](llms-full.txt); served at `/llms.txt`, `/llms-full.txt` | the same information in prose |
 
-No hosted endpoint is live yet. Everything below uses `http://localhost:8092`, a server you run yourself.
+A hosted instance runs at `https://data.eve-cyno.dev` (R3.5 stage 1: public tier only, rate limited per IP, no API keys yet;
+keyed tools answer 401, `appraise_items` needs your own `X-Janice-Key`). Its index page at
+[`https://data.eve-cyno.dev/`](https://data.eve-cyno.dev/) lists every entry point (JSON with `Accept: application/json`), and
+the [terms of use](https://data.eve-cyno.dev/terms) (draft, source in [`dataapi/terms.md`](dataapi/terms.md)) apply to it.
+Everything below uses `http://localhost:8092`, a server
+you run yourself.
 
 ## Quick start (SDE only, no other services)
 
@@ -129,7 +134,7 @@ Per caller (per API key when one is sent, otherwise per client IP), sliding wind
 | `POST /v1/fits/detail`, `/v1/fit/stats`, `/v1/fit/suggest` | 60 |
 | `POST /v1/tool/{name}` | 30 |
 | `POST /v1/mcp` (an MCP session is a few requests plus one per tool call) | 60 |
-| `GET /v1/openapi.*`, `/llms*.txt` | 60 |
+| `GET /`, `/terms*`, `/v1/openapi.*`, `/llms*.txt` | 60 |
 
 The limiter takes the client IP from Cloudflare's `CF-Connecting-IP` header and falls back to the TCP peer, so run the
 service on loopback or behind a Cloudflare tunnel; do not expose it directly to the internet.
@@ -232,6 +237,7 @@ Read from the process environment; the commands do not read a `.env` file.
 | `DATAAPI_EXPOSE_TOOL_API` | dataapi | `true` registers `POST /v1/tool/{name}` (default off) |
 | `DATAAPI_EXPOSE_MCP` | dataapi | `true` mounts `POST /v1/mcp` (default off) |
 | `DATAAPI_API_KEYS_FILE` | dataapi | API key file, see [Authentication](#authentication) |
+| `DATAAPI_PUBLIC_URL` | dataapi | the public origin, e.g. `https://data.eve-cyno.dev` (https, no path or query; invalid is a startup error). Makes the OpenAPI `servers` entry and the `llms*.txt` links absolute, which ChatGPT Actions need; unset keeps them relative |
 | `DATAAPI_SDE_ONLY` | dataapi | `true` runs without the fit corpus, see [SDE-only mode](#quick-start-sde-only-no-other-services) |
 | `MCP_EXPOSE_ALL` (or `-all`) | mcp | register every tool, for your own machine and keys |
 | `MCP_SDE_ONLY` (or `-sde-only`) | mcp | `true` runs without the fit corpus, as `DATAAPI_SDE_ONLY` does |

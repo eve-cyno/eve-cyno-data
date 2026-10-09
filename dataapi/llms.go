@@ -29,8 +29,12 @@ const fitNotice = "Community fits (get_fits, list_fits, /fits/search) belong to 
 
 // LLMsTxt returns the /llms.txt of the service described by s (https://llmstxt.org): a
 // short index of the interfaces, endpoints and tools, linking to llms-full.txt for the
-// detail. Links are root-relative: the file is served by the host it describes.
+// detail. Links are root-relative unless Surface.PublicURL is set, which makes them absolute.
 func LLMsTxt(s Surface) string {
+	return absolutize(s, llmsTxt(s))
+}
+
+func llmsTxt(s Surface) string {
 	p := s.prefix()
 	var b strings.Builder
 	b.WriteString("# EVE-Cyno Data API\n\n")
@@ -82,6 +86,10 @@ func LLMsTxt(s Surface) string {
 // LLMsFullTxt returns the /llms-full.txt: everything an agent needs to use the service
 // without fetching anything else.
 func LLMsFullTxt(s Surface) string {
+	return absolutize(s, llmsFullTxt(s))
+}
+
+func llmsFullTxt(s Surface) string {
 	p := s.prefix()
 	b := newSchemaBuilder()
 	var w strings.Builder

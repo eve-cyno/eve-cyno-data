@@ -30,13 +30,8 @@ func renderDocs(s Surface) (renderedDocs, error) {
 	}, nil
 }
 
-// docsMaxAge lets caches and Cloudflare keep the generated descriptions for an hour; they
-// change only on deploy.
-const docsMaxAge = "public, max-age=3600"
-
 func serveDoc(w http.ResponseWriter, contentType string, body []byte) {
 	w.Header().Set("Content-Type", contentType)
-	w.Header().Set("Cache-Control", docsMaxAge)
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write(body)
 }

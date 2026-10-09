@@ -38,7 +38,12 @@
 //     Config.MCP mounts an MCP streamable-HTTP handler at {prefix}/mcp behind the same
 //     request IDs and limiter. Both are off by default: cmd/dataapi turns them on, the
 //     native "/api" mount does not (its paths and tool responses are legacy, and the
-//     root-level files are not its to serve).
+//     root-level files are not its to serve). Config.Docs also serves the human/developer
+//     index at GET / (HTML, or JSON for Accept: application/json) and the service terms at
+//     GET /terms (HTML) and /terms.md.
+//   - Cache-Control: descriptions, index and terms are public for an hour, pure-SDE reads
+//     (items search) for five minutes, and /health, every POST and the MCP endpoint are
+//     no-store. Only a 200 is cacheable; every error is no-store.
 //
 // Dependencies arrive through Config; the package has no globals and imports
 // only Product A packages (enforced by core/internal/tools/importcheck).
@@ -217,6 +222,13 @@ type Config struct {
 	// not describe.
 	Docs bool
 
+	// PublicURL is the origin the service is reachable at, e.g. "https://data.eve-cyno.dev"
+	// (https, no path or query; New fails otherwise). When set, the generated OpenAPI
+	// `servers` entry and the links of llms.txt / llms-full.txt are absolute, which clients
+	// that cannot resolve relative server URLs (ChatGPT Actions) need, and the index page
+	// shows it in its examples. Empty keeps everything relative.
+	PublicURL string
+
 	// MCP, when non-nil, is mounted at {prefix}/mcp for every HTTP method, behind the
 	// request ID, panic recovery, API-key authentication (an invalid key is a 401 before
 	// the handler runs) and the Limits.MCP limiter. Build it with mcpserver.HTTPHandler,
@@ -242,6 +254,7 @@ type API struct {
 	mcp         http.Handler
 	surface     Surface
 	docs        renderedDocs
+	pages       renderedPages
 	log         *slog.Logger
 	mux         *http.ServeMux
 	// corpusProbe is nil unless Deps.Retriever implements Pinger.
@@ -273,6 +286,11 @@ func New(cfg Config) (*API, error) {
 		return nil, errors.New("dataapi: Docs describes the JSON tool envelope and cannot be combined with ToolFormatText")
 	}
 
+	publicURL, err := ValidatePublicURL(cfg.PublicURL)
+	if err != nil {
+		return nil, fmt.Errorf("dataapi: %w", err)
+	}
+
 	limits := DefaultLimits()
 	if cfg.Limits != nil {
 		limits = *cfg.Limits
@@ -292,7 +310,7 @@ func New(cfg Config) (*API, error) {
 	if p, ok := cfg.Deps.Retriever.(Pinger); ok && p != nil {
 		a.corpusProbe = newCorpusProbe(p, cfg.CorpusProbeTTL)
 	}
-	a.surface = Surface{Prefix: prefix, ToolAPI: cfg.ToolAPI, MCP: cfg.MCP != nil, Docs: cfg.Docs, Auth: cfg.Auth != nil, Limits: limits}
+	a.surface = Surface{Prefix: prefix, ToolAPI: cfg.ToolAPI, MCP: cfg.MCP != nil, Docs: cfg.Docs, Auth: cfg.Auth != nil, Limits: limits, PublicURL: publicURL}
 	if a.keys == nil {
 		a.keys = CallerKeys{}
 	}
@@ -314,6 +332,7 @@ func New(cfg Config) (*API, error) {
 			return nil, fmt.Errorf("dataapi: render the API description: %w", err)
 		}
 		a.docs = docs
+		a.pages = renderPages(a.surface)
 	}
 	a.mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		writeError(w, r, http.StatusNotFound, "not_found", "no such route")
@@ -330,9 +349,9 @@ func (a *API) register(rt route) {
 	if !rt.root {
 		full = a.prefix + rt.path
 	}
-	h := a.limited(limiterFor(rt.rate(a.surface)), func(w http.ResponseWriter, r *http.Request) {
+	h := cached(rt.cache, a.limited(limiterFor(rt.rate(a.surface)), func(w http.ResponseWriter, r *http.Request) {
 		rt.handle(a, w, r)
-	})
+	}))
 	if rt.anyMethod {
 		a.mux.HandleFunc(full, h)
 		return

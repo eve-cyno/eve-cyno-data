@@ -82,6 +82,41 @@ func TestCountFits_excludesQuarantinedByDefault(t *testing.T) {
 	requireQuarantineMustNot(t, filter)
 }
 
+func TestCountCommunityFits_filtersFitSourcesAndExcludesQuarantined(t *testing.T) {
+	var body []byte
+	srv := captureBody(t, &body, `{"result":{"count":1234}}`)
+	defer srv.Close()
+
+	r := NewQdrantRetriever(srv.URL, "c", fakeEmbed{}, 5)
+	n, err := r.CountCommunityFits(context.Background())
+	require.NoError(t, err)
+	require.Equal(t, 1234, n)
+
+	var req map[string]any
+	require.NoError(t, json.Unmarshal(body, &req))
+	require.Equal(t, true, req["exact"])
+	filter, ok := req["filter"].(map[string]any)
+	require.True(t, ok)
+	requireQuarantineMustNot(t, filter)
+	must, ok := filter["must"].([]any)
+	require.True(t, ok)
+	require.Len(t, must, 1)
+	cond := must[0].(map[string]any)
+	require.Equal(t, "source", cond["key"])
+	require.Contains(t, cond["match"].(map[string]any)["any"], "workbench")
+}
+
+func TestCountCommunityFits_errorOnHTTPFailure(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer srv.Close()
+
+	r := NewQdrantRetriever(srv.URL, "c", fakeEmbed{}, 5)
+	_, err := r.CountCommunityFits(context.Background())
+	require.Error(t, err)
+}
+
 func TestScrollListFits_excludesQuarantinedByDefault(t *testing.T) {
 	var lastBody []byte
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

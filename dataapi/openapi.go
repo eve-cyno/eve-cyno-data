@@ -251,7 +251,7 @@ func buildOpenAPI(s Surface) (*oaDocument, error) {
 			Description: apiDescription(s),
 			Version:     SpecVersion,
 		},
-		Servers:    []oaServer{{URL: prefix, Description: "Paths in this document are relative to this URL."}},
+		Servers:    []oaServer{{URL: s.PublicURL + prefix, Description: serverDescription(s)}},
 		Tags:       tags,
 		Paths:      paths,
 		Components: comps,
@@ -667,4 +667,12 @@ func toolNames(ts []catalog.Tool) string {
 		names[i] = "`" + t.Name + "`"
 	}
 	return strings.Join(names, ", ")
+}
+
+// serverDescription says how the paths of the document resolve against its servers entry.
+func serverDescription(s Surface) string {
+	if s.PublicURL != "" {
+		return "The public API; paths in this document are relative to this URL."
+	}
+	return "Paths in this document are relative to this URL."
 }

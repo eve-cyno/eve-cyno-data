@@ -14,6 +14,8 @@
 //	                         streamable HTTP (stateless, JSON responses), chosen per request
 //	GET  /v1/openapi.yaml    the generated API description (also /v1/openapi.json)
 //	GET  /llms.txt           the llmstxt.org index and /llms-full.txt, the full reference
+//	GET  /                   the index page (HTML; JSON with Accept: application/json)
+//	GET  /terms, /terms.md   the service terms
 //
 // The tool endpoint and the MCP endpoint apply the same tool tiers (core/catalog): public
 // tools for anyone, keyed tools (get_fits, list_fits, the ESI pass-throughs, analyze_battle)
@@ -39,6 +41,10 @@
 //	                          corpus is not configured. Unset (default): Qdrant is expected; if
 //	                          it is configured but down, fit search answers 502 "upstream_error"
 //	                          per request and /v1/health still reports corpus:true
+//	DATAAPI_PUBLIC_URL        the public origin, e.g. https://data.eve-cyno.dev (https, no path or
+//	                          query; invalid is a startup error). Makes the OpenAPI servers entry
+//	                          and the llms.txt links absolute (ChatGPT Actions need that); unset
+//	                          keeps them relative
 //	EVE_CORE_*, QDRANT_*, DEEPINFRA_EMBED_*   the deterministic layer (core/config)
 //
 // Client IPs for the limiters come from Cloudflare's CF-Connecting-IP header and
@@ -102,6 +108,18 @@ func envBool(getenv func(string) string, key string) bool {
 type exposure struct {
 	toolAPI, mcp bool
 	auth         dataapi.Authenticator
+	// publicURL is the validated DATAAPI_PUBLIC_URL ("" means relative links).
+	publicURL string
+}
+
+// publicURL resolves DATAAPI_PUBLIC_URL: unset is fine, a value that is not an https origin
+// is an error.
+func publicURL(getenv func(string) string) (string, error) {
+	u, err := dataapi.ValidatePublicURL(getenv("DATAAPI_PUBLIC_URL"))
+	if err != nil {
+		return "", fmt.Errorf("DATAAPI_PUBLIC_URL: %w", err)
+	}
+	return u, nil
 }
 
 // loadAuth builds the authenticator from DATAAPI_API_KEYS_FILE; unset is no keys (a nil
@@ -124,10 +142,11 @@ func loadAuth(getenv func(string) string) (dataapi.Authenticator, error) {
 // describe whatever else is.
 func newHandler(d *bootstrap.Deps, ex exposure, log *slog.Logger) (http.Handler, error) {
 	cfg := dataapi.Config{
-		Deps:   dataapi.NewDeps(d.Tools, d.Retriever),
-		Docs:   true,
-		Auth:   ex.auth,
-		Logger: log,
+		Deps:      dataapi.NewDeps(d.Tools, d.Retriever),
+		Docs:      true,
+		Auth:      ex.auth,
+		PublicURL: ex.publicURL,
+		Logger:    log,
 	}
 	if ex.toolAPI {
 		cfg.ToolAPI = dataapi.ToolAPIPublic
@@ -180,7 +199,11 @@ func run(log *slog.Logger) error {
 	if err != nil {
 		return err
 	}
-	ex := exposure{toolAPI: exposeToolAPI(os.Getenv), mcp: exposeMCP(os.Getenv), auth: auth}
+	pub, err := publicURL(os.Getenv)
+	if err != nil {
+		return err
+	}
+	ex := exposure{toolAPI: exposeToolAPI(os.Getenv), mcp: exposeMCP(os.Getenv), auth: auth, publicURL: pub}
 	if auth != nil {
 		log.Info("API keys loaded: the keyed tool tier is available", "env", "DATAAPI_API_KEYS_FILE")
 	}
