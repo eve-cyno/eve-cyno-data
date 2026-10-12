@@ -200,8 +200,10 @@ jobs:
           "$RUNNER_TEMP/bin/go-licenses" check ./... \
             --allowed_licenses=MIT,BSD-2-Clause,BSD-3-Clause,Apache-2.0,ISC,MPL-2.0
 
-  # Generated files (api/openapi.yaml, llms.txt, llms-full.txt, tool_schemas.json) must be
-  # committed in sync with the tool catalog.
+  # Generated files (api/openapi.yaml, llms.txt, llms-full.txt, tool_schemas.json,
+  # dataapi/fielddocs.json) must be committed in sync with the tool catalog. abyss/abyss_data.json
+  # is left out: it is regenerated from a full SDE at SDE refresh time (it needs the SDE file and
+  # its build id), not from the sources in this repo.
   generate:
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -216,11 +218,11 @@ jobs:
 
       - name: go generate drift check
         run: |
-          go generate ./...
+          go generate $(go list ./... | grep -v '/abyss$')
           if [ -n "$(git status --porcelain)" ]; then
             git status --short
             git diff --stat
-            echo "::error::go generate changed tracked files; run 'go generate ./...' and commit the result"
+            echo "::error::go generate changed tracked files; run 'go generate ./dataapi' and commit the result"
             exit 1
           fi
 
