@@ -23,12 +23,23 @@ func romanNumeral(level int) string {
 	return fmt.Sprintf("%d", level)
 }
 
-// secClass mirrors Python sec_class calculation.
-func secClass(sec float64) string {
-	if sec >= 0.5 {
-		return "highsec"
+// displaySec returns a system's security status as the game shows it: rounded to one decimal,
+// except that a positive value below 0.05 shows as 0.1 (the system is still lowsec).
+func displaySec(sec float64) float64 {
+	if sec > 0 && sec < 0.05 {
+		return 0.1
 	}
-	if sec >= 0.0 {
+	return math.Round(sec*10) / 10
+}
+
+// secClass classes a system by its displayed security, as the game does: 0.5 and up is highsec
+// (true security 0.45 and up, the same cut the highsec-only pathfinder in sde uses), above 0.0 is
+// lowsec, and 0.0 or below is nullsec.
+func secClass(sec float64) string {
+	switch d := displaySec(sec); {
+	case d >= 0.5:
+		return "highsec"
+	case d > 0.0:
 		return "lowsec"
 	}
 	return "nullsec"
@@ -55,28 +66,31 @@ func commaSep(n, w int) string {
 	return fmt.Sprintf("%*s", w, result)
 }
 
-// getJumpsBetween mirrors Python _get_jumps_between.
-func getJumpsBetween(s *sde.SDE, from, to string, preferHighSec bool) string {
+// getJumpsBetween mirrors Python _get_jumps_between. The *Route is built in the same
+// pass as the text; it is nil for every text-only answer (SDE missing, unknown system,
+// no route).
+func getJumpsBetween(s *sde.SDE, from, to string, preferHighSec bool) (string, *Route) {
 	if !s.Available() {
-		return "SDE not loaded — routing unavailable."
+		return "SDE not loaded — routing unavailable.", nil
 	}
 	fID := s.ResolveSystemName(from)
 	if fID == nil {
-		return fmt.Sprintf("Unknown system: %s.", from)
+		return fmt.Sprintf("Unknown system: %s.", from), nil
 	}
 	tID := s.ResolveSystemName(to)
 	if tID == nil {
-		return fmt.Sprintf("Unknown system: %s.", to)
+		return fmt.Sprintf("Unknown system: %s.", to), nil
 	}
 
 	path, highsecSatisfied := s.GetJumpsPath(*fID, *tID, preferHighSec)
 	if path == nil {
-		return fmt.Sprintf("No route found from %s to %s (disconnected wormhole space?).", from, to)
+		return fmt.Sprintf("No route found from %s to %s (disconnected wormhole space?).", from, to), nil
 	}
 
 	// Batch resolve names + security for path
 	names := map[int]string{}
 	secs := map[int]float64{}
+	regions := map[int]string{}
 	if len(path) > 0 {
 		phMap := map[int]string{}
 		secMap := map[int]float64{}
@@ -94,6 +108,9 @@ func getJumpsBetween(s *sde.SDE, from, to string, preferHighSec bool) string {
 				}
 				if sec, ok := m["security"].(float64); ok {
 					secMap[sysID] = sec
+				}
+				if rn, ok := m["region_name"].(string); ok {
+					regions[sysID] = rn
 				}
 			}
 		}
@@ -116,12 +133,20 @@ func getJumpsBetween(s *sde.SDE, from, to string, preferHighSec bool) string {
 		fmt.Sprintf("Route from **%s** to **%s** (%s%d %s):", from, to, label, hops, jumpWord),
 		"",
 	}
+	route := &Route{
+		From: from, To: to, PreferHighSec: preferHighSec, HighsecSatisfied: highsecSatisfied,
+		Jumps: hops, Systems: make([]RouteSystem, 0, len(path)),
+	}
 	for i, sid := range path {
 		name := names[sid]
 		if name == "" {
 			name = fmt.Sprintf("%d", sid)
 		}
 		sec := secs[sid]
+		route.Systems = append(route.Systems, RouteSystem{
+			ID: sid, Name: name, Region: regions[sid], Security: sec,
+			Sec: fmt.Sprintf("%+.1f", displaySec(sec)), Class: secClass(sec),
+		})
 		var marker string
 		switch {
 		case i == 0:
@@ -131,7 +156,7 @@ func getJumpsBetween(s *sde.SDE, from, to string, preferHighSec bool) string {
 		default:
 			marker = "→"
 		}
-		lines = append(lines, fmt.Sprintf("  %s %-24s (%+.1f, %s)", marker, name, sec, secClass(sec)))
+		lines = append(lines, fmt.Sprintf("  %s %-24s (%+.1f, %s)", marker, name, displaySec(sec), secClass(sec)))
 	}
 	if preferHighSec && !highsecSatisfied {
 		lines = append(lines, "")
@@ -139,7 +164,7 @@ func getJumpsBetween(s *sde.SDE, from, to string, preferHighSec bool) string {
 			"Note: at least one hop crosses lowsec/nullsec/wormhole. "+
 				"Plan accordingly (no autopilot, watch local, scout ahead).")
 	}
-	return strings.Join(lines, "\n")
+	return strings.Join(lines, "\n"), route
 }
 
 // getSystemsInRegion mirrors Python _get_systems_in_region.

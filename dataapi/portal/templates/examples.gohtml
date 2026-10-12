@@ -1,0 +1,22 @@
+{{/* Code blocks of the design: tabbed request examples and a response block. The markup is
+the design's; the code inside is generated from the recorded fixture (portal_examples.go). */}}
+{{define "request-tabs"}}<div class="code" data-tabs data-tab-group="lang" data-copy-scope>
+          <div class="code-head">
+            <div class="code-tabs" role="tablist" aria-label="Language">
+              <button class="code-tab" type="button" role="tab" aria-selected="true" data-tab="curl">curl</button>
+              <button class="code-tab" type="button" role="tab" aria-selected="false" tabindex="-1" data-tab="python">Python</button>
+              <button class="code-tab" type="button" role="tab" aria-selected="false" tabindex="-1" data-tab="js">JavaScript</button>
+{{if .Claude}}              <button class="code-tab" type="button" role="tab" aria-selected="false" tabindex="-1" data-tab="claude">Claude Code</button>
+{{end}}            </div>
+            <button class="code-copy" type="button" data-copy aria-label="Copy code"><svg class="ico" aria-hidden="true"><use href="#i-copy"/></svg><span data-copy-label>Copy</span></button>
+          </div>
+<pre role="tabpanel" data-panel="curl"><code>{{.Curl}}</code></pre>
+<pre role="tabpanel" data-panel="python" hidden><code>{{.Python}}</code></pre>
+<pre role="tabpanel" data-panel="js" hidden><code>{{.JS}}</code></pre>
+{{if .Claude}}<pre role="tabpanel" data-panel="claude" hidden><code>{{.Claude}}</code></pre>
+{{end}}        </div>{{end}}
+
+{{define "response-block"}}{{if .Response}}<div class="code" data-copy-scope>
+          <div class="code-head"><span class="code-label">{{.ResponseLabel}}</span><button class="code-copy" type="button" data-copy aria-label="Copy response"><svg class="ico" aria-hidden="true"><use href="#i-copy"/></svg><span data-copy-label>Copy</span></button></div>
+<pre><code>{{.Response}}</code></pre>
+        </div>{{end}}{{end}}

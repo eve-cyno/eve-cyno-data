@@ -1,0 +1,86 @@
+{{define "article"}}<article class="doc" data-page="mcp">
+  <header class="doc-head">
+    <ol class="crumbs"><li><a href="/docs/">Docs</a></li><li>Connect</li><li aria-current="page">MCP (any harness)</li></ol>
+    <h1>MCP (any harness)</h1>
+    <p class="doc-lede">Any MCP client that speaks streamable HTTP can use the tools. One URL, no account, no key for the public tools.</p>
+  </header>
+  <details class="toc" data-toc open>
+    <summary><svg class="ico" aria-hidden="true"><use href="#i-chev"/></svg>On this page</summary>
+    <ul>
+      <li><a href="#mcp-connect">Connect</a></li>
+      <li><a href="#mcp-tools">What the server lists</a></li>
+      <li><a href="#mcp-result">Reading a result</a></li>
+      <li><a href="#mcp-local">Run it locally (stdio)</a></li>
+      <li><a href="#mcp-limits">Limits</a></li>
+    </ul>
+    <div class="toc-more"><a href="https://discord.gg/XZzkH38dt9"><svg class="ico" aria-hidden="true"><use href="#i-discord"/></svg>Ask on Discord</a><a href="#top"><svg class="ico" aria-hidden="true"><use href="#i-up"/></svg>Back to top</a></div>
+  </details>
+  <div class="doc-body prose">
+    <dl class="facts">
+      <dt>Endpoint</dt><dd><code>{{.Origin}}{{.Prefix}}/mcp</code></dd>
+      <dt>Transport</dt><dd>Streamable HTTP, stateless, JSON responses. One JSON-RPC 2.0 message per POST; <code>GET</code> and <code>DELETE</code> answer 405.</dd>
+      <dt>Auth</dt><dd>None for public tools. <code>X-Janice-Key</code> for <code>appraise_items</code>. An API key for keyed tools{{if not .Auth}} (none issued yet){{end}}.</dd>
+      <dt>Rate limit</dt><dd><b>{{.Lim.MCP}} requests per minute</b> per caller</dd>
+    </dl>
+
+    <h2 id="mcp-connect">Connect<a class="h-anchor" href="#mcp-connect" aria-label="Link to this section">#</a></h2>
+    <div class="code" data-tabs data-tab-group="mcp" data-copy-scope>
+      <div class="code-head">
+        <div class="code-tabs" role="tablist" aria-label="Client">
+          <button class="code-tab" type="button" role="tab" aria-selected="true" data-tab="cli">Claude Code CLI</button>
+          <button class="code-tab" type="button" role="tab" aria-selected="false" tabindex="-1" data-tab="json">JSON config</button>
+        </div>
+        <button class="code-copy" type="button" data-copy aria-label="Copy"><svg class="ico" aria-hidden="true"><use href="#i-copy"/></svg><span data-copy-label>Copy</span></button>
+      </div>
+<pre role="tabpanel" data-panel="cli"><code><span class="tk-p" data-nocopy>$ </span>claude mcp add --transport http eve-cyno {{.Origin}}{{.Prefix}}/mcp</code></pre>
+<pre role="tabpanel" data-panel="json" hidden><code>{
+  <span class="tk-k">"mcpServers"</span>: {
+    <span class="tk-k">"eve-cyno"</span>: {
+      <span class="tk-k">"type"</span>: <span class="tk-s">"http"</span>,
+      <span class="tk-k">"url"</span>: <span class="tk-s">"{{.Origin}}{{.Prefix}}/mcp"</span>,
+      <span class="tk-k">"headers"</span>: { <span class="tk-k">"X-Janice-Key"</span>: <span class="tk-s">"&lt;your Janice key, optional&gt;"</span> }
+    }
+  }
+}</code></pre>
+    </div>
+    <p>The JSON is the shape the Claude Code plugin ships. Other clients name these fields their own way: look for an HTTP or streamable-HTTP server setting and give it the URL.</p>
+    <aside class="callout" data-kind="note"><svg class="ico" aria-hidden="true"><use href="#i-info"/></svg><div><p class="callout-title">More harnesses</p><p>Claude Code has a packaged plugin today. Plugins for more harnesses are planned: tell us which one you use on the <a href="https://discord.gg/XZzkH38dt9">EVE-Cyno Discord</a>.</p></div></aside>
+
+    <h2 id="mcp-tools">What the server lists<a class="h-anchor" href="#mcp-tools" aria-label="Link to this section">#</a></h2>
+    <p><code>tools/list</code> follows the access tiers and is chosen per request:</p>
+    <div class="tbl"><table>
+      <thead><tr><th scope="col">Tier</th><th scope="col">In <code>tools/list</code></th></tr></thead>
+      <tbody>
+        <tr><td><span class="badge" data-tier="public">public</span></td><td>Always.</td></tr>
+        <tr><td><span class="badge" data-tier="byo-key">byo-key</span></td><td>Always. A call without <code>X-Janice-Key</code> is an error result that names the header.</td></tr>
+        <tr><td><span class="badge" data-tier="keyed">keyed</span></td><td>Only when the caller presents a valid API key.</td></tr>
+        <tr><td><span class="badge badge-plain">disabled</span></td><td>Never. Calling one is the protocol's own "unknown tool" error.</td></tr>
+      </tbody>
+    </table></div>
+
+    <h2 id="mcp-result">Reading a result<a class="h-anchor" href="#mcp-result" aria-label="Link to this section">#</a></h2>
+    <dl class="fields">
+      <dt><code>content[0]</code></dt><dd>The text answer, exactly as REST returns it in <code>result.text</code>.</dd>
+      <dt><code>content[1]</code></dt><dd>A short "Sources:" line, when the tool has upstreams. Most clients do not show <code>_meta</code> to the model, and attribution is a condition of several licences.</dd>
+      <dt><code>structuredContent</code></dt><dd>The typed result (REST: <code>result.data</code>).</dd>
+      <dt><code>_meta</code></dt><dd>The attribution.</dd>
+    </dl>
+
+    <h2 id="mcp-local">Run it locally (stdio)<a class="h-anchor" href="#mcp-local" aria-label="Link to this section">#</a></h2>
+    <p>The <code>cmd/mcp</code> binary of the core module speaks MCP over stdio, for Claude Desktop, Claude Code and other stdio hosts. It reads the SDE from <code>EVE_CORE_SDE_PATH</code>.</p>
+    <div class="code" data-copy-scope>
+      <div class="code-head"><span class="code-label">core module</span><button class="code-copy" type="button" data-copy aria-label="Copy"><svg class="ico" aria-hidden="true"><use href="#i-copy"/></svg><span data-copy-label>Copy</span></button></div>
+<pre><code><span class="tk-p" data-nocopy>$ </span>go run ./cmd/mcp</code></pre>
+    </div>
+
+    <h2 id="mcp-limits">Limits<a class="h-anchor" href="#mcp-limits" aria-label="Link to this section">#</a></h2>
+    <p>{{.Lim.MCP}} requests per minute per caller. A session is a handful of requests (the handshake is three) plus one per tool call. The live ESI tools have their own {{.Lim.UpstreamTool}} calls per minute, shared with REST. Request bodies are capped at 64 KiB.</p>
+
+    <nav class="pager" aria-label="Previous and next page">
+      <a href="/docs/claude-code"><span class="pg-k"><svg class="ico" aria-hidden="true"><use href="#i-back"/></svg>Previous</span><span class="pg-t">Claude Code plugin</span></a>
+      <a class="next" href="/docs/rest"><span class="pg-k">Next<svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></span><span class="pg-t">REST &amp; OpenAPI</span></a>
+    </nav>
+    <p class="doc-foot"><span>Questions or a mistake on this page? <a href="https://discord.gg/XZzkH38dt9">EVE-Cyno Discord</a></span><span>Generated from the tool registry · <span data-slot="version">{{.Version}}</span></span></p>
+  </div>
+</article>
+{{end}}

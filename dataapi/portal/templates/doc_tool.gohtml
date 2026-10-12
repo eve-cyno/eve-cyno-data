@@ -1,0 +1,76 @@
+{{define "article"}}{{with .T}}<article class="doc" data-page="tools/{{.Name}}">
+  <header class="doc-head">
+    <ol class="crumbs"><li><a href="/docs/">Docs</a></li><li><a href="/docs/tools">Tools</a></li><li><a href="/docs/tools#{{.GroupAnchor}}">{{.GroupLabel}}</a></li><li aria-current="page">{{.Name}}</li></ol>
+    <h1 class="mono">{{.Name}}</h1>
+    <div class="doc-badges"><span class="badge" data-tier="{{.Tier}}">{{.Tier}}</span>{{if .Upstream}}<span class="badge badge-live">live ESI</span>{{end}}{{if .DataName}}<span class="badge badge-plain">result: {{.DataName}}</span>{{end}}</div>
+    <p class="doc-lede">{{.Summary}}</p>
+  </header>
+  <details class="toc" data-toc open>
+    <summary><svg class="ico" aria-hidden="true"><use href="#i-chev"/></svg>On this page</summary>
+    <ul>
+      <li><a href="#{{.Name}}-params">Parameters</a></li>
+      <li><a href="#{{.Name}}-example">Example request</a></li>
+{{if .Example.Response}}      <li><a href="#{{.Name}}-response">Example response</a></li>
+{{end}}{{if .DataName}}      <li><a href="#{{.Name}}-result">Typed result</a></li>
+{{end}}      <li><a href="#{{.Name}}-errors">Errors</a></li>
+      <li><a href="#{{.Name}}-attribution">Attribution</a></li>
+    </ul>
+    <div class="toc-more"><a href="{{$.URL}}/llms-full.txt"><svg class="ico" aria-hidden="true"><use href="#i-ext"/></svg>In llms-full.txt</a><a href="#top"><svg class="ico" aria-hidden="true"><use href="#i-up"/></svg>Back to top</a></div>
+  </details>
+  <div class="doc-body prose">
+    <dl class="facts">
+      <dt>Call</dt><dd><code>POST {{$.Prefix}}/tool/{{.Name}}</code> · MCP tool <code>{{.Name}}</code></dd>
+      <dt>Access</dt><dd>{{.AccessHTML}}</dd>
+      <dt>Rate limit</dt><dd>{{.RateHTML}}</dd>
+      <dt>Typed result</dt><dd>{{if .DataName}}<code>{{.DataName}}</code> in <code>result.data</code> (MCP: <code>structuredContent</code>){{else}}none: <code>result.data</code> is <code>null</code> and <code>result.text</code> carries the answer{{end}}</dd>
+      <dt>Sources</dt><dd>{{range $i, $s := .Sources}}{{if $i}}, {{end}}{{$s.Name}}{{end}}</dd>
+    </dl>
+    <p>{{.Description}}</p>
+{{if .Upstream}}    <aside class="callout" data-kind="note"><svg class="ico" aria-hidden="true"><use href="#i-live"/></svg><div><p class="callout-title">Live ESI data</p><p>Reads live public data from EVE's ESI through a shared cache that follows ESI's <code>Expires</code>. Its own fair-use limit is {{$.Lim.UpstreamTool}} calls per minute per caller (REST and MCP together), on top of the route limit. When the shared ESI budget is nearly spent the call is refused with <code>503 upstream_busy</code> (MCP: an error result starting <code>upstream_busy</code>) and <code>Retry-After</code>; retry later.</p></div></aside>
+{{end}}{{range .Callouts}}    <aside class="callout" data-kind="{{.Kind}}"><svg class="ico" aria-hidden="true"><use href="#{{.Icon}}"/></svg><div><p class="callout-title">{{.Title}}</p><p>{{.Text}}{{with .SeeTool}} <a href="/docs/tools/{{.}}"><code>{{.}}</code></a>{{end}}{{.After}}</p></div></aside>
+{{end}}
+    <h2 id="{{.Name}}-params">Parameters<a class="h-anchor" href="#{{.Name}}-params" aria-label="Link to this section">#</a></h2>
+    <p>The body is a JSON object.</p>
+    <div class="tbl params"><table>
+      <thead><tr><th scope="col">Name</th><th scope="col">Type</th><th scope="col">Description</th></tr></thead>
+      <tbody>
+{{range .Params}}        <tr><td><span class="p-name">{{.Name}}</span>{{if .Required}}<span class="p-req">required</span>{{end}}</td><td><span class="p-type">{{.Type}}</span></td><td>{{.Desc}}</td></tr>
+{{end}}      </tbody>
+    </table></div>
+
+    <h2 id="{{.Name}}-example">Example request<a class="h-anchor" href="#{{.Name}}-example" aria-label="Link to this section">#</a></h2>
+    {{template "request-tabs" .Example}}
+
+{{if .Example.Response}}    <h2 id="{{.Name}}-response">Example response<a class="h-anchor" href="#{{.Name}}-response" aria-label="Link to this section">#</a></h2>
+    {{template "response-block" .Example}}
+    <p class="code-cap">{{.Example.Caption}}</p>
+{{else}}    <aside class="callout" data-kind="note"><svg class="ico" aria-hidden="true"><use href="#i-info"/></svg><div><p class="callout-title">No recorded response</p><p>{{.Example.Note}}</p></div></aside>
+{{end}}
+{{if .DataName}}    <h2 id="{{.Name}}-result">Typed result: {{.DataName}}<a class="h-anchor" href="#{{.Name}}-result" aria-label="Link to this section">#</a></h2>
+    <dl class="fields">
+{{range .Fields}}      <dt><code>{{.Name}}</code></dt><dd><span class="ty">{{.Type}}</span>{{.Desc}}</dd>
+{{end}}    </dl>
+{{end}}
+    <h2 id="{{.Name}}-errors">Errors<a class="h-anchor" href="#{{.Name}}-errors" aria-label="Link to this section">#</a></h2>
+    <div class="tbl"><table>
+      <thead><tr><th scope="col">Status</th><th scope="col">When</th></tr></thead>
+      <tbody>
+{{range .Errors}}        <tr><td class="num">{{.Status}}</td><td>{{.HTML}}</td></tr>
+{{end}}      </tbody>
+    </table></div>
+    <p>Every other code is on <a href="/docs/rest#rest-errors">REST &amp; OpenAPI · Errors</a>.</p>
+
+    <h2 id="{{.Name}}-attribution">Attribution<a class="h-anchor" href="#{{.Name}}-attribution" aria-label="Link to this section">#</a></h2>
+    <p>Show the source with the data:</p>
+    <div class="tbl"><table>
+      <thead><tr><th scope="col">Source</th><th scope="col">Terms</th></tr></thead>
+      <tbody>{{range .Sources}}<tr><td><a href="{{.URL}}">{{.Name}}</a></td><td>{{.License}}</td></tr>{{end}}</tbody>
+    </table></div>
+
+    <nav class="pager" aria-label="Previous and next tool">
+      <a href="{{.Prev.Href}}"><span class="pg-k"><svg class="ico" aria-hidden="true"><use href="#i-back"/></svg>Previous{{if .Prev.Tool}} tool{{end}}</span><span class="pg-t{{if .Prev.Tool}} mono{{end}}">{{.Prev.Label}}</span></a>
+{{if .Next.Href}}      <a class="next" href="{{.Next.Href}}"><span class="pg-k">Next tool<svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></span><span class="pg-t mono">{{.Next.Label}}</span></a>
+{{end}}    </nav>
+    <p class="doc-foot"><span>Questions or a mistake on this page? <a href="https://discord.gg/XZzkH38dt9">EVE-Cyno Discord</a></span><span>Generated from tool_schemas.json · <span data-slot="version">{{$.Version}}</span></span></p>
+  </div>
+</article>{{end}}{{end}}

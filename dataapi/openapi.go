@@ -163,7 +163,7 @@ func errorResponseNames() map[int]struct{ name, description string } {
 		http.StatusTooManyRequests:       {"RateLimited", "The caller is over the rate limit; retry after the number of seconds in `Retry-After` (`rate_limited`)."},
 		http.StatusInternalServerError:   {"InternalError", "The operation failed inside the service (`internal_error`)."},
 		http.StatusBadGateway:            {"UpstreamError", "An upstream dependency failed (`upstream_error`)."},
-		http.StatusServiceUnavailable:    {"Unavailable", "A dependency this operation needs is not loaded, for example the SDE or the fit corpus (`unavailable`)."},
+		http.StatusServiceUnavailable:    {"Unavailable", "A dependency this operation needs is not loaded, for example the SDE or the fit corpus (`unavailable`), or the upstream a live-data tool reads (EVE's ESI) is near its rate limit and nothing was sent (`upstream_busy`; retry after the number of seconds in `Retry-After`)."},
 		http.StatusGatewayTimeout:        {"Timeout", "The operation ran past its time budget (`timeout`)."},
 	}
 }
@@ -433,7 +433,7 @@ func errorComponents() map[string]schema {
 	out := map[string]schema{}
 	for status, e := range errorResponseNames() {
 		headers := schema{"X-Request-ID": schema{"$ref": "#/components/headers/RequestID"}}
-		if status == http.StatusTooManyRequests {
+		if status == http.StatusTooManyRequests || status == http.StatusServiceUnavailable {
 			headers["Retry-After"] = schema{"$ref": "#/components/headers/RetryAfter"}
 		}
 		out[e.name] = schema{
@@ -539,6 +539,9 @@ func (b *schemaBuilder) toolOperation(s Surface, rt route, tl catalog.Tool, rate
 	}
 	desc.WriteString(tierSentence(s, tl))
 	desc.WriteString(rateSentence(rate))
+	if up := upstreamSentence(s, tl); up != "" {
+		desc.WriteString("\n\n" + up)
+	}
 
 	errs := []int{http.StatusBadRequest, http.StatusRequestEntityTooLarge, http.StatusInternalServerError, http.StatusServiceUnavailable, http.StatusGatewayTimeout}
 	if s.ToolAPI == ToolAPIPublic {

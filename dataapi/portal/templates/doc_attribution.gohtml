@@ -1,0 +1,50 @@
+{{define "article"}}<article class="doc" data-page="attribution">
+  <header class="doc-head">
+    <ol class="crumbs"><li><a href="/docs/">Docs</a></li><li>Project</li><li aria-current="page">Attribution &amp; licences</li></ol>
+    <h1>Attribution &amp; licences</h1>
+    <p class="doc-lede">What the data is used under, and what you keep when you show it.</p>
+  </header>
+  <details class="toc" data-toc open>
+    <summary><svg class="ico" aria-hidden="true"><use href="#i-chev"/></svg>On this page</summary>
+    <ul>
+      <li><a href="#attr-game">Game data</a></li>
+      <li><a href="#attr-rules">When you show the data</a></li>
+      <li><a href="#attr-sources">Sources behind the answers</a></li>
+      <li><a href="#attr-hof">Hall of Fame</a></li>
+    </ul>
+    <div class="toc-more"><a href="https://discord.gg/XZzkH38dt9"><svg class="ico" aria-hidden="true"><use href="#i-discord"/></svg>Ask on Discord</a><a href="#top"><svg class="ico" aria-hidden="true"><use href="#i-up"/></svg>Back to top</a></div>
+  </details>
+  <div class="doc-body prose">
+    <h2 id="attr-game">Game data<a class="h-anchor" href="#attr-game" aria-label="Link to this section">#</a></h2>
+    <p class="notice">© 2014 Fenris Creations hf. All rights reserved. 'EVE', 'EVE Online', 'Fenris Creations', and all related logos and images are trademarks or registered trademarks of Fenris Creations hf. This material is used with limited permission of Fenris Creations. No official affiliation or endorsement by Fenris Creations is stated or implied. Created under the EVE Developer License Agreement.</p>
+    <p>This service is non-commercial and complies with the EVE Developer License Agreement. It does not modify the game client, automate gameplay or trade in-game assets for real money.</p>
+
+    <h2 id="attr-rules">When you show the data<a class="h-anchor" href="#attr-rules" aria-label="Link to this section">#</a></h2>
+    <ul>
+      <li><b>Every answer</b> carries <code>attribution</code>: the upstreams with <code>name</code>, <code>url</code> and <code>license</code>. Keep it where you show the data.</li>
+      <li><b>Community fits</b> (<code>get_fits</code>, <code>list_fits</code>, <code>/fits/search</code>) belong to their authors and sites. Every fit carries an <code>attribution</code> object (<code>source</code>, <code>source_url</code>, <code>author</code> when known, <code>license</code>); keep the link and the credit. Fits are served ranked and capped (at most 24 per answer, no paging), not for bulk export.</li>
+      <li><b>EVE University Wiki</b> text is taken or condensed from <a href="https://wiki.eveuniversity.org/">wiki.eveuniversity.org</a>, © EVE University and its wiki contributors, licensed under <a href="https://creativecommons.org/licenses/by-sa/4.0/">CC BY-SA 4.0</a>. It was shortened and combined with other material and is not endorsed by EVE University; derived text remains CC BY-SA 4.0.</li>
+    </ul>
+
+    <h2 id="attr-sources">Sources behind the answers<a class="h-anchor" href="#attr-sources" aria-label="Link to this section">#</a></h2>
+    <div class="tbl"><table>
+      <thead><tr><th scope="col">Source</th><th scope="col">Terms</th></tr></thead>
+      <tbody>
+{{range .Sources}}        <tr><td><a href="{{.URL}}">{{.Name}}</a></td><td>{{.License}}</td></tr>
+{{end}}      </tbody>
+    </table></div>
+
+    <h2 id="attr-hof">Hall of Fame<a class="h-anchor" href="#attr-hof" aria-label="Link to this section">#</a></h2>
+    <p>Every project behind this service, with what we use it for and its licence, open-source libraries included.</p>
+    <div class="linkcards">
+      <a class="linkcard" href="/#credits"><svg class="ico" aria-hidden="true"><use href="#i-shield"/></svg><span class="lc-t">Hall of Fame</span><svg class="go" aria-hidden="true"><use href="#i-arrow"/></svg><span class="lc-s">Fenris Creations, Fuzzwork, EVE University, the fit sites, Janice, Pyfa, Go, MCP Go SDK, Qdrant, SQLite.</span></a>
+    </div>
+
+    <nav class="pager" aria-label="Previous and next page">
+      <a href="/docs/access"><span class="pg-k"><svg class="ico" aria-hidden="true"><use href="#i-back"/></svg>Previous</span><span class="pg-t">Access tiers &amp; rate limits</span></a>
+      <a class="next" href="/docs/terms"><span class="pg-k">Next<svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></span><span class="pg-t">Terms of use</span></a>
+    </nav>
+    <p class="doc-foot"><span>Questions or a mistake on this page? <a href="https://discord.gg/XZzkH38dt9">EVE-Cyno Discord</a></span><span>Generated from tools.Attribution · <span data-slot="version">{{.Version}}</span></span></p>
+  </div>
+</article>
+{{end}}

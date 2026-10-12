@@ -1,0 +1,24 @@
+{
+  "tool": "get_production_chain",
+  "request": {
+    "item_name": "Rifter"
+  },
+  "prompt": "What does it take to build a Rifter?",
+  "recorded": "2026-10-09",
+  "trimmed": false,
+  "response": {
+    "tool": "get_production_chain",
+    "version": "sha-aa76146",
+    "result": {
+      "text": "Production chain for **Rifter** (1 run, ME 10):\n\nMaterial                                        Quantity\n--------------------------------------------------------\nTritanium                                         28,800\nPyerite                                            5,400\nMexallon                                           2,250\nIsogen                                               450\n\nTotal unique material types: 4\n\nNote: ME 10 fully-researched BPO; sub-component BPOs assumed at same ME. Rig 0 (~0% material savings).",
+      "data": null
+    },
+    "attribution": [
+      {
+        "name": "EVE Static Data Export (via Fuzzwork)",
+        "url": "https://www.fuzzwork.co.uk/dump/",
+        "license": "CCP game data under the EVE Developer License Agreement; converted by Fuzzwork Enterprises"
+      }
+    ]
+  }
+}

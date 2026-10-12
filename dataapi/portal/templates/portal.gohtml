@@ -1,0 +1,228 @@
+{{define "portal"}}{{template "head" .}}
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+{{template "sprite-portal" .}}
+{{template "topbar-portal" .}}
+<div class="scrim" data-drawer-scrim></div>
+
+<main id="main">
+
+<!-- ============ HERO ============ -->
+<section class="hero">
+  <div class="wrap hero-grid">
+    <div class="reveal">
+      <p class="eyebrow"><span class="cyno-mark pulse" aria-hidden="true"></span>Claude Code plugin · MCP · REST</p>
+      <h1>EVE data in <em>Claude Code</em> in two commands.</h1>
+      <p class="lede">Fit stats from a real dogma engine, ship and module facts, industry chains, routes and live Jita prices, as tools your agent can call. <strong>Deterministic:</strong> no language model in the loop, the same input gives the same answer, and every answer names its sources.</p>
+      <div class="cta">
+        <a class="btn primary" href="/docs/claude-code">Plugin guide<svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+        <a class="btn" href="/docs/">Read the docs</a>
+        <a class="btn" href="https://discord.gg/XZzkH38dt9"><svg class="ico" aria-hidden="true"><use href="#i-discord"/></svg>Discord</a>
+      </div>
+      <p class="hero-note">Free · non-commercial · no account · <span data-slot="tools_public">{{.Stats.Public}}</span> tools need no key</p>
+    </div>
+
+    <div class="install reveal-2" role="group" aria-label="Install the Claude Code plugin">
+      <div class="install-head">
+        <svg class="ico" aria-hidden="true"><use href="#i-terminal"/></svg>
+        <span class="install-title">Claude Code</span>
+        <span class="badge badge-ok">available now</span>
+      </div>
+      <div class="install-body">
+        <div class="install-step">
+          <span class="step-k"><b>01</b>Add the marketplace</span>
+          <div class="cmd" data-copy-scope><pre><code>/plugin marketplace add eve-cyno/claude-plugins</code></pre><button class="code-copy" type="button" data-copy aria-label="Copy command"><svg class="ico" aria-hidden="true"><use href="#i-copy"/></svg><span data-copy-label>Copy</span></button></div>
+        </div>
+        <div class="install-step">
+          <span class="step-k"><b>02</b>Install the plugin</span>
+          <div class="cmd" data-copy-scope><pre><code>/plugin install eve-cyno@eve-cyno</code></pre><button class="code-copy" type="button" data-copy aria-label="Copy command"><svg class="ico" aria-hidden="true"><use href="#i-copy"/></svg><span data-copy-label>Copy</span></button></div>
+        </div>
+        <div class="install-try">
+          <span class="step-k"><b>03</b>Ask in plain words, or use a command</span>
+          <span class="cmd-chip">/eve-fit <i>&lt;EFT block&gt;</i></span>
+          <span class="cmd-chip">/eve-item <i>&lt;name&gt;</i></span>
+          <span class="cmd-chip">/eve-fits <i>&lt;hull&gt; [activity]</i></span>
+        </div>
+      </div>
+      <div class="install-foot">
+        <span>Adds the MCP server, the <code>eve-data</code> skill and three slash commands.</span>
+        <a class="link-arrow" href="/docs/claude-code">Details<svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ AT A GLANCE (counts from core/catalog; status from {{.Prefix}}/health) ============ -->
+<div class="stats" aria-label="At a glance">
+  <div class="wrap">
+    <dl>
+      <div class="stat"><dt><i aria-hidden="true"></i>Tools offered</dt><dd><span data-slot="tools_offered">{{.Stats.Offered}}</span><small><span data-slot="tools_public">{{.Stats.Public}}</span> public, no key</small></dd></div>
+      <div class="stat"><dt><i aria-hidden="true"></i>Live ESI tools</dt><dd><span data-slot="tools_upstream">{{.Stats.Upstream}}</span><small>shared cache, {{.Lim.UpstreamTool}} calls/min</small></dd></div>
+      <div class="stat"><dt><i aria-hidden="true"></i>MCP budget</dt><dd><span data-slot="limit_mcp">{{.Lim.MCP}}</span><small>requests/min per caller</small></dd></div>
+      <div class="stat"><dt><i aria-hidden="true"></i>Status</dt><dd><span data-slot="health">{{.Health}}</span><small>{{.Prefix}}/health</small></dd></div>
+    </dl>
+  </div>
+</div>
+
+<!-- ============ HARNESSES ============ -->
+<section class="s" id="harnesses">
+  <div class="wrap">
+    <div class="s-head">
+      <p class="eyebrow">Harnesses</p>
+      <h2>Claude Code today. Any MCP client or HTTP stack right now.</h2>
+      <p>One service behind every door: the same tools, tiers and limits over MCP and REST. Packaged plugins for more harnesses are on the way.</p>
+    </div>
+    <ul class="harnesses">
+      <li class="harness" data-state="now">
+        <div class="harness-top"><span class="glyph"><svg class="ico" aria-hidden="true"><use href="#i-terminal"/></svg></span><span class="state">Available now</span></div>
+        <h3>Claude Code plugin</h3>
+        <p>Two commands. The MCP server, an <code>eve-data</code> skill for tool choice and attribution, and <code>/eve-fit</code>, <code>/eve-item</code>, <code>/eve-fits</code>.</p>
+        <a class="link-arrow" href="/docs/claude-code">Plugin guide<svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+      </li>
+      <li class="harness" data-state="works">
+        <div class="harness-top"><span class="glyph"><svg class="ico" aria-hidden="true"><use href="#i-plug"/></svg></span><span class="state" data-state="works">Works now</span></div>
+        <h3>Any MCP client</h3>
+        <p>Streamable HTTP, stateless. Point your client at <code>{{.Host}}{{.Prefix}}/mcp</code>.</p>
+        <a class="link-arrow" href="/docs/mcp">MCP guide<svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+      </li>
+      <li class="harness" data-state="works">
+        <div class="harness-top"><span class="glyph"><svg class="ico" aria-hidden="true"><use href="#i-braces"/></svg></span><span class="state" data-state="works">Works now</span></div>
+        <h3>REST and OpenAPI</h3>
+        <p><code>POST {{.Prefix}}/tool/{name}</code> runs any tool. OpenAPI 3.1 for codegen, llms.txt for agents.</p>
+        <a class="link-arrow" href="/docs/rest">REST guide<svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+      </li>
+      <li class="harness" data-state="soon">
+        <div class="harness-top"><span class="glyph"><svg class="ico" aria-hidden="true"><use href="#i-plus"/></svg></span><span class="state" data-state="soon">Soon</span></div>
+        <h3>More harness plugins</h3>
+        <p>Packaged plugins for other harnesses are planned. Tell us which one you use.</p>
+        <a class="link-arrow" href="https://discord.gg/XZzkH38dt9">Ask on Discord<svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+      </li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============ WHAT'S INSIDE ============ -->
+<section class="s" id="inside">
+  <div class="wrap">
+    <div class="s-head">
+      <p class="eyebrow">What's inside</p>
+      <h2>{{.Stats.Offered}} tools. Five sources. One contract.</h2>
+      <p>The same tools on MCP and REST, in three access tiers. Every answer carries an <code>attribution</code> block: keep it where you show the data.</p>
+    </div>
+
+    <ul class="sources">
+      <li class="source"><svg class="ico" aria-hidden="true"><use href="#i-db"/></svg><h3>Static data (SDE)</h3><p>Items, ships, skills, stations, regions, routes, reprocessing and production chains from the official export.</p><div class="meta">via <b>Fuzzwork</b> · EVE Developer License</div></li>
+      <li class="source" data-acc="blue"><svg class="ico" aria-hidden="true"><use href="#i-gear"/></svg><h3>Gofa fit engine</h3><p>A Go dogma engine. Validate an EFT fit, then get DPS, EHP, speed, align and capacitor. All-V skills, no implants.</p><div class="meta"><b>validate_fitting</b> · <b>compute_fit_stats</b></div></li>
+      <li class="source" data-acc="green"><svg class="ico" aria-hidden="true"><use href="#i-live"/></svg><h3>Live ESI</h3><p>Jita prices, type info, sovereignty and system activity, through a shared cache that follows ESI's <code>Expires</code>.</p><div class="meta"><b data-slot="tools_upstream">{{.Stats.Upstream}}</b> tools · {{.Lim.UpstreamTool}} calls/min per caller</div></li>
+      <li class="source" data-acc="red"><svg class="ico" aria-hidden="true"><use href="#i-fit"/></svg><h3>Community fits</h3><p>Searchable fits from public fitting sites. Every fit keeps its source link and author credit. Not a dataset to republish.</p><div class="meta">at most <b>{{.Stats.FitMax}}</b> fits per answer</div></li>
+      <li class="source" data-acc="muted"><svg class="ico" aria-hidden="true"><use href="#i-book"/></svg><h3>EVE University wiki</h3><p>Condensed reference text for questions the SDE cannot answer. Keep the credit, share alike.</p><div class="meta"><b>CC BY-SA 4.0</b></div></li>
+    </ul>
+
+    <!-- TIER OVERVIEW: generated from core/catalog (catalog.ToolsIn per tier, registry order).
+         .tool-row carries data-tier and data-upstream; descriptions are the catalog Summary. -->
+    <div class="tiers">
+      <div class="tier-group" data-tier="public">
+        <div class="tier-head">
+          <span class="badge" data-tier="public">public</span><h3>No key</h3><span class="n">{{.Stats.Public}} {{plural .Stats.Public "tool"}}</span>
+          <p class="tier-rule">Anyone, anonymous included: SDE lookups, the fit engine and {{.Stats.Upstream}} live ESI reads.</p>
+        </div>
+        <ul class="tool-list">
+{{range .Tools.Public}}          <li class="tool-row" data-tier="public"{{if .Upstream}} data-upstream="true"{{end}}><a class="tool-name" href="/docs/tools/{{.Name}}">{{.Name}}</a>{{if .Upstream}}<span class="tool-badges"><span class="badge badge-live">live ESI</span></span>{{end}}<p class="tool-desc">{{.Summary}}</p></li>
+{{end}}        </ul>
+      </div>
+      <div class="tier-side">
+{{if .Tools.BYO}}        <div class="tier-group" data-tier="byo-key">
+          <div class="tier-head">
+            <span class="badge" data-tier="byo-key">byo-key</span><h3>Your Janice key</h3><span class="n">{{len .Tools.BYO}} {{plural (len .Tools.BYO) "tool"}}</span>
+            <p class="tier-rule">Send your own key in <code>X-Janice-Key</code>. Used for that request only, never stored or logged.</p>
+          </div>
+          <ul class="tool-list">
+{{range .Tools.BYO}}            <li class="tool-row" data-tier="byo-key"><a class="tool-name" href="/docs/tools/{{.Name}}">{{.Name}}</a><p class="tool-desc">{{.Summary}}</p></li>
+{{end}}          </ul>
+        </div>
+{{end}}{{if .Tools.Keyed}}        <div class="tier-group" data-tier="keyed">
+          <div class="tier-head">
+            <span class="badge" data-tier="keyed">keyed</span><h3>API key</h3><span class="n">{{len .Tools.Keyed}} {{plural (len .Tools.Keyed) "tool"}}</span>
+            <p class="tier-rule">A valid API key. <span data-slot="keys_note">{{if .Auth}}Keys are personal and may be revoked for abuse.{{else}}No keys are issued yet; these answer <code>401 api_key_required</code>.{{end}}</span></p>
+          </div>
+          <ul class="tool-list">
+{{range .Tools.Keyed}}            <li class="tool-row" data-tier="keyed"><a class="tool-name" href="/docs/tools/{{.Name}}">{{.Name}}</a><p class="tool-desc">{{.Summary}}</p></li>
+{{end}}          </ul>
+        </div>
+{{end}}      </div>
+    </div>
+    <p class="s-more"><a class="link-arrow" href="/docs/tools">Full tools reference<svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></a></p>
+  </div>
+</section>
+
+<!-- ============ EXAMPLE ============ -->
+<section class="s" id="example">
+  <div class="wrap">
+    <div class="s-head"><p class="eyebrow">Example</p><h2>One call, one attributed answer.</h2></div>
+    {{with .Example}}<div class="ex">
+      <div class="ex-copy">
+        <p>{{.Intro}} <code>{{.Tool}}</code> is {{.TierSentence}}</p>
+        <ul>
+          <li><span><code>result.text</code> is the answer as a model reads it; <code>result.data</code> is the typed result.</span></li>
+          <li><span><code>attribution</code> names the source and its licence. Show it with the data.</span></li>
+          <li><span>Errors are JSON with stable codes, always.</span></li>
+        </ul>
+        <a class="link-arrow" href="/docs/tools/{{.Tool}}">{{.Tool}} reference<svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+      </div>
+      <div>
+        {{template "request-tabs" .}}
+        {{template "response-block" .}}
+        <p class="code-cap">{{.Caption}}</p>
+      </div>
+    </div>{{end}}
+  </div>
+</section>
+
+<!-- ============ ACCESS ============ -->
+<section class="s" id="access">
+  <div class="wrap">
+    <div class="s-head">
+      <p class="eyebrow">Access &amp; limits</p>
+      <h2>Free. Non-commercial. No key for public tools.</h2>
+      <p>Hobby-run, no SLA. Limits are per caller: per API key when one is sent, otherwise per client IP, over a sliding window.</p>
+    </div>
+    <div class="access">
+      <div class="access-card"><div class="top"><span class="badge" data-tier="public">public</span><span class="big">{{.Stats.Public}}<small>{{plural .Stats.Public "tool"}}</small></span></div><p>Anyone, no key.</p></div>
+      <div class="access-card"><div class="top"><span class="badge" data-tier="byo-key">byo-key</span><span class="big">{{len .Tools.BYO}}<small>{{plural (len .Tools.BYO) "tool"}}</small></span></div><p>Your own Janice API key in <code>X-Janice-Key</code>, used for that request only, never stored or logged.</p></div>
+      <div class="access-card"><div class="top"><span class="badge" data-tier="keyed">keyed</span><span class="big">{{len .Tools.Keyed}}<small>{{plural (len .Tools.Keyed) "tool"}}</small></span></div><p>A valid API key: <code>Authorization: Bearer &lt;key&gt;</code> or <code>X-API-Key</code>.{{if not .Auth}} No keys are issued on this service yet.{{end}}</p></div>
+    </div>
+    <div class="limits-row" aria-label="Rate limits per minute">
+{{range .LimitCards}}      <div class="limit"><b>{{.Max}}<small>/{{.Unit}}</small></b><span>{{.Label}}</span></div>
+{{end}}    </div>
+    <p class="pledge">Over a limit you get <code>429</code> with <code>Retry-After</code>. <span>No cookies, no accounts, no analytics. Your IP is held in memory for the limiter only. <a href="/docs/access">Every limit</a> · <a href="{{.URL}}/terms">Terms</a></span></p>
+  </div>
+</section>
+
+<!-- ============ HALL OF FAME (tiles: .credit + data-cat; repeatable) ============ -->
+<section class="s" id="credits">
+  <div class="wrap">
+    <div class="s-head"><p class="eyebrow">Hall of fame</p><h2>Built on the shoulders of.</h2><p>Every source and project this data relies on, with what we use it for and the terms it comes under.</p></div>
+    <ul class="legend" aria-label="Categories">
+      <li data-cat="game"><i aria-hidden="true"></i>Game data</li>
+      <li data-cat="community"><i aria-hidden="true"></i>Community</li>
+      <li data-cat="tool"><i aria-hidden="true"></i>Tools</li>
+      <li data-cat="oss"><i aria-hidden="true"></i>Open source</li>
+    </ul>
+    <ul class="credits">
+{{range .Credits}}      <li class="credit" data-cat="{{.Cat}}"><div class="cr-top"><div class="mk" aria-hidden="true">{{.Mark}}</div><div><h3>{{.Name}}</h3><span class="cr-cat">{{.CatLabel}}</span></div></div><p>{{.Blurb}}</p><div class="cr-links">{{range .Links}}<a href="{{.URL}}">{{.Label}}</a>{{end}}</div><p class="cr-lic">{{.License}}</p></li>
+{{end}}    </ul>
+    <p class="cr-note">Names and marks belong to their owners; listed with thanks. Want your project listed differently? Tell us on the <a href="https://discord.gg/XZzkH38dt9">EVE-Cyno Discord</a>.</p>
+  </div>
+</section>
+
+</main>
+
+{{template "discord-band" .}}
+
+{{template "footer" .}}
+
+{{template "search-index" .}}
+</body>
+</html>
+{{end}}

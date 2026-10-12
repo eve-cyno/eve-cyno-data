@@ -1,0 +1,26 @@
+{
+  "tool": "get_systems_in_region",
+  "request": {
+    "region_name": "Black Rise",
+    "sec_min": 0.0,
+    "sec_max": 0.4
+  },
+  "prompt": "List the low-sec systems of Black Rise.",
+  "recorded": "2026-10-09",
+  "trimmed": true,
+  "response": {
+    "tool": "get_systems_in_region",
+    "version": "sha-aa76146",
+    "result": {
+      "text": "Systems in **Black Rise** with security 0.0 ≤ s ≤ 0.4 (lowsec, 36 total):\n\n  Eha                    +0.40\n  Pavanakka              +0.40\n  Martoh                 +0.38\n  Raihbaka               +0.38\n  Aivonen                +0.38\n  Hallanen               +0.36\n  Hikkoken               +0.34\n  Kedama                 +0.34\n  Hirri                  +0.34\n  Enaluri                +0.33\n  Iralaja                +0.32\n  Innia                  +0.32\n  Vaaralen               +0.31\n  Nisuwa                 +0.31\n  Teskanen               +0.29\n  Okkamon                +0.29\n  Ikoskio                +0.28\n  Nennamaila             +0.27\n  Teimo                  +0.27\n  Ashitsu                +0.26\n  Asa…",
+      "data": null
+    },
+    "attribution": [
+      {
+        "name": "EVE Static Data Export (via Fuzzwork)",
+        "url": "https://www.fuzzwork.co.uk/dump/",
+        "license": "CCP game data under the EVE Developer License Agreement; converted by Fuzzwork Enterprises"
+      }
+    ]
+  }
+}

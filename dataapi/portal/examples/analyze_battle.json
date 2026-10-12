@@ -1,0 +1,9 @@
+{
+  "tool": "analyze_battle",
+  "request": {
+    "battle_url": "https://zkillboard.com/br/4885/",
+    "detail": "summary"
+  },
+  "prompt": "Analyze this battle report: https://zkillboard.com/br/4885/",
+  "note": "Request only: no API keys are issued yet, so there is no recorded response."
+}

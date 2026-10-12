@@ -68,7 +68,8 @@ func dispatch(ctx context.Context, deps *Deps, name string, arguments map[string
 		from, _ := arguments["from_system"].(string)
 		to, _ := arguments["to_system"].(string)
 		preferHS, _ := arguments["prefer_high_sec"].(bool)
-		return plain(getJumpsBetween(deps.SDE, from, to, preferHS))
+		text, route := getJumpsBetween(deps.SDE, from, to, preferHS)
+		return typed(text, route, nil)
 
 	case "get_systems_in_region":
 		region, _ := arguments["region_name"].(string)

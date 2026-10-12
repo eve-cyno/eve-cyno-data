@@ -1,0 +1,25 @@
+{
+  "tool": "get_required_skills",
+  "request": {
+    "item_name": "Gila",
+    "purpose": "fly"
+  },
+  "prompt": "Which skills do I need to fly a Gila?",
+  "recorded": "2026-10-09",
+  "trimmed": false,
+  "response": {
+    "tool": "get_required_skills",
+    "version": "sha-aa76146",
+    "result": {
+      "text": "Skills required to use **Gila**:\n\n  • Caldari Cruiser II\n  • Gallente Cruiser II\n\nNote: also requires the parent skill chain (e.g. Spaceship Command V for capitals).\n\nFull prerequisite chain:\n  • Caldari Destroyer III\n  • Caldari Frigate III\n  • Gallente Destroyer III\n  • Gallente Frigate III\n  • Spaceship Command II",
+      "data": null
+    },
+    "attribution": [
+      {
+        "name": "EVE Static Data Export (via Fuzzwork)",
+        "url": "https://www.fuzzwork.co.uk/dump/",
+        "license": "CCP game data under the EVE Developer License Agreement; converted by Fuzzwork Enterprises"
+      }
+    ]
+  }
+}

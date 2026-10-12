@@ -263,3 +263,13 @@ func TestRankFitPool_trimsToLimitAfterFilter(t *testing.T) {
 		require.NotEqual(t, "brawl", h.FitName)
 	}
 }
+
+// The exported marker helpers chat/fitgen's role checks use.
+func TestExportedMarkerHelpers(t *testing.T) {
+	require.True(t, MatchesWeaponFamily("Dual Heavy Pulse Laser II", "laser"))
+	require.False(t, MatchesWeaponFamily("200mm AutoCannon II", "laser"))
+	require.False(t, MatchesWeaponFamily("Dual Heavy Pulse Laser II", ""))
+	require.True(t, HasTackleModule("Warp Disruptor II"))
+	require.True(t, HasTackleModule("Domination Heavy Warp Scrambler"))
+	require.False(t, HasTackleModule("Stasis Webifier II"))
+}

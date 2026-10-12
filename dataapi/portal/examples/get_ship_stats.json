@@ -1,0 +1,44 @@
+{
+  "tool": "get_ship_stats",
+  "request": {
+    "ship_name": "Rifter"
+  },
+  "prompt": "What are the slot layout and fitting resources of a Rifter?",
+  "recorded": "2026-10-09",
+  "trimmed": true,
+  "response": {
+    "tool": "get_ship_stats",
+    "version": "sha-aa76146",
+    "result": {
+      "text": "## Rifter (typeID=587) — Dogma Stats\n\n  Armor HP                       450\n  CPU                            130\n  Cargo                          140\n  Drone Bay                      0\n  Hi Slots                       3\n  Launcher Hardpoints            2\n  Low Slots                      4\n  Mid Slots                      3\n  Power Grid                     41\n  Rig Slots                      3\n  Shield HP                      450\n  Turret Hardpoints              3\n  Velocity                       350",
+      "data": {
+        "type_id": 587,
+        "name": "Rifter",
+        "attributes": [
+          {
+            "attribute_id": 265,
+            "name": "Armor HP",
+            "value": 450
+          },
+          {
+            "attribute_id": 48,
+            "name": "CPU",
+            "value": 130
+          },
+          {
+            "attribute_id": 38,
+            "name": "Cargo",
+            "value": 140
+          }
+        ]
+      }
+    },
+    "attribution": [
+      {
+        "name": "EVE Static Data Export (via Fuzzwork)",
+        "url": "https://www.fuzzwork.co.uk/dump/",
+        "license": "CCP game data under the EVE Developer License Agreement; converted by Fuzzwork Enterprises"
+      }
+    ]
+  }
+}

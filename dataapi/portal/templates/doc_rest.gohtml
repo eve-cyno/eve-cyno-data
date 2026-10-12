@@ -1,0 +1,110 @@
+{{define "article"}}<article class="doc" data-page="rest">
+  <header class="doc-head">
+    <ol class="crumbs"><li><a href="/docs/">Docs</a></li><li>Connect</li><li aria-current="page">REST &amp; OpenAPI</li></ol>
+    <h1>REST &amp; OpenAPI</h1>
+    <p class="doc-lede">Plain HTTP and JSON. Every tool runs at <code>POST {{.Prefix}}/tool/{name}</code>; a few routes have endpoints of their own. The OpenAPI 3.1 document describes all of it.</p>
+  </header>
+  <details class="toc" data-toc open>
+    <summary><svg class="ico" aria-hidden="true"><use href="#i-chev"/></svg>On this page</summary>
+    <ul>
+      <li><a href="#rest-spec">Machine-readable docs</a></li>
+      <li><a href="#rest-tool">Run a tool</a></li>
+      <li><a href="#rest-endpoints">Endpoints</a></li>
+      <li><a href="#rest-headers">Headers</a></li>
+      <li><a href="#rest-errors">Errors</a></li>
+    </ul>
+    <div class="toc-more"><a href="{{.URL}}{{.Prefix}}/openapi.yaml"><svg class="ico" aria-hidden="true"><use href="#i-ext"/></svg>openapi.yaml</a><a href="#top"><svg class="ico" aria-hidden="true"><use href="#i-up"/></svg>Back to top</a></div>
+  </details>
+  <div class="doc-body prose">
+    <h2 id="rest-spec">Machine-readable docs<a class="h-anchor" href="#rest-spec" aria-label="Link to this section">#</a></h2>
+    <div class="linkcards">
+      <a class="linkcard" href="{{.URL}}{{.Prefix}}/openapi.yaml"><svg class="ico" aria-hidden="true"><use href="#i-braces"/></svg><span class="lc-t">{{.Prefix}}/openapi.yaml</span><svg class="go" aria-hidden="true"><use href="#i-ext"/></svg><span class="lc-s">OpenAPI 3.1: every operation, parameter and schema.</span></a>
+      <a class="linkcard" href="{{.URL}}{{.Prefix}}/openapi.json"><svg class="ico" aria-hidden="true"><use href="#i-braces"/></svg><span class="lc-t">{{.Prefix}}/openapi.json</span><svg class="go" aria-hidden="true"><use href="#i-ext"/></svg><span class="lc-s">The same document as JSON.</span></a>
+      <a class="linkcard" href="{{.URL}}/llms.txt"><svg class="ico" aria-hidden="true"><use href="#i-doc"/></svg><span class="lc-t">/llms.txt</span><svg class="go" aria-hidden="true"><use href="#i-ext"/></svg><span class="lc-s">llmstxt.org index for agents.</span></a>
+      <a class="linkcard" href="{{.URL}}/llms-full.txt"><svg class="ico" aria-hidden="true"><use href="#i-doc"/></svg><span class="lc-t">/llms-full.txt</span><svg class="go" aria-hidden="true"><use href="#i-ext"/></svg><span class="lc-s">The full reference in one file.</span></a>
+    </div>
+
+    <h2 id="rest-tool">Run a tool<a class="h-anchor" href="#rest-tool" aria-label="Link to this section">#</a></h2>
+    <p>The body is the tool's arguments as a JSON object; the response is <code>{"tool", "version", "result": {"text", "data"}, "attribution": [{"name", "url", "license"}]}</code>.</p>
+    <div class="code" data-tabs data-tab-group="lang" data-copy-scope>
+      <div class="code-head">
+        <div class="code-tabs" role="tablist" aria-label="Language">
+          <button class="code-tab" type="button" role="tab" aria-selected="true" data-tab="curl">curl</button>
+          <button class="code-tab" type="button" role="tab" aria-selected="false" tabindex="-1" data-tab="python">Python</button>
+          <button class="code-tab" type="button" role="tab" aria-selected="false" tabindex="-1" data-tab="js">JavaScript</button>
+        </div>
+        <button class="code-copy" type="button" data-copy aria-label="Copy code"><svg class="ico" aria-hidden="true"><use href="#i-copy"/></svg><span data-copy-label>Copy</span></button>
+      </div>
+<pre role="tabpanel" data-panel="curl"><code><span class="tk-p" data-nocopy>$ </span>curl -s {{.Origin}}{{.Prefix}}/tool/get_jumps_between \
+    -H 'Content-Type: application/json' \
+    -d '{"from_system": "Jita", "to_system": "Amarr"}'</code></pre>
+<pre role="tabpanel" data-panel="python" hidden><code><span class="tk-kw">import</span> httpx
+
+r = httpx.post(
+    <span class="tk-s">"{{.Origin}}{{.Prefix}}/tool/get_jumps_between"</span>,
+    json={<span class="tk-s">"from_system"</span>: <span class="tk-s">"Jita"</span>, <span class="tk-s">"to_system"</span>: <span class="tk-s">"Amarr"</span>},
+)
+<span class="tk-kw">print</span>(r.json()[<span class="tk-s">"result"</span>][<span class="tk-s">"text"</span>])</code></pre>
+<pre role="tabpanel" data-panel="js" hidden><code><span class="tk-c">// Node 18+ or another server runtime: the API sends no CORS headers.</span>
+<span class="tk-kw">const</span> r = <span class="tk-kw">await</span> fetch(<span class="tk-s">"{{.Origin}}{{.Prefix}}/tool/get_jumps_between"</span>, {
+  method: <span class="tk-s">"POST"</span>,
+  headers: { <span class="tk-s">"Content-Type"</span>: <span class="tk-s">"application/json"</span> },
+  body: JSON.stringify({ from_system: <span class="tk-s">"Jita"</span>, to_system: <span class="tk-s">"Amarr"</span> }),
+});
+console.log((<span class="tk-kw">await</span> r.json()).result.text);</code></pre>
+    </div>
+
+    <h2 id="rest-endpoints">Endpoints<a class="h-anchor" href="#rest-endpoints" aria-label="Link to this section">#</a></h2>
+    <div class="tbl"><table>
+      <thead><tr><th scope="col">Route</th><th scope="col">What it does</th><th scope="col" class="num">Limit / min</th></tr></thead>
+      <tbody>
+        <tr><td><code>POST {{.Prefix}}/tool/{name}</code></td><td>Run one tool; the body is its arguments.</td><td class="num">{{.Lim.Tool}}</td></tr>
+        <tr><td><code>POST {{.Prefix}}/mcp</code></td><td>Streamable-HTTP MCP server.</td><td class="num">{{.Lim.MCP}}</td></tr>
+        <tr><td><code>GET {{.Prefix}}/fits/search</code></td><td>Search community fits.</td><td class="num">{{.Lim.FitsSearch}}</td></tr>
+        <tr><td><code>POST {{.Prefix}}/fits/detail</code></td><td>Describe a fit: slots, CPU / powergrid / calibration, ship class.</td><td class="num">{{.Lim.FitsDetail}}</td></tr>
+        <tr><td><code>POST {{.Prefix}}/fit/stats</code></td><td>Compute fit statistics with the Gofa engine.</td><td class="num">{{.Lim.FitStats}}</td></tr>
+        <tr><td><code>POST {{.Prefix}}/fit/suggest</code></td><td>Suggest modules for an empty slot.</td><td class="num">{{.Lim.FitSuggest}}</td></tr>
+        <tr><td><code>GET {{.Prefix}}/items/search</code></td><td>Search modules, charges and drones.</td><td class="num">{{.Lim.ItemsSearch}}</td></tr>
+        <tr><td><code>GET {{.Prefix}}/health</code></td><td>Liveness probe and which dependencies loaded.</td><td class="num">–</td></tr>
+        <tr><td><code>GET {{.Prefix}}/openapi.yaml</code>, <code>.json</code></td><td>The OpenAPI 3.1 document.</td><td class="num">{{.Lim.Docs}}</td></tr>
+      </tbody>
+    </table></div>
+
+    <h2 id="rest-headers">Headers<a class="h-anchor" href="#rest-headers" aria-label="Link to this section">#</a></h2>
+    <div class="tbl"><table>
+      <thead><tr><th scope="col">Header</th><th scope="col">Use</th></tr></thead>
+      <tbody>
+        <tr><td><code>Authorization: Bearer &lt;key&gt;</code> or <code>X-API-Key</code></td><td>Keyed tools.{{if not .Auth}} No keys are issued yet.{{end}}</td></tr>
+        <tr><td><code>X-Janice-Key</code></td><td>Your own Janice key for <code>appraise_items</code>. Used for that request only, never logged or stored.</td></tr>
+        <tr><td><code>X-Request-ID</code></td><td>On every response: your value when it is a token of 1-64 characters from <code>[A-Za-z0-9._-]</code>, otherwise a generated one.</td></tr>
+        <tr><td><code>Retry-After</code></td><td>On <code>429</code> and <code>503 upstream_busy</code>: seconds to wait.</td></tr>
+      </tbody>
+    </table></div>
+
+    <h2 id="rest-errors">Errors<a class="h-anchor" href="#rest-errors" aria-label="Link to this section">#</a></h2>
+    <p>Errors are JSON, always, with a stable code:</p>
+    <div class="code" data-copy-scope>
+      <div class="code-head"><span class="code-label">401 · keyed tool without a key</span><button class="code-copy" type="button" data-copy aria-label="Copy"><svg class="ico" aria-hidden="true"><use href="#i-copy"/></svg><span data-copy-label>Copy</span></button></div>
+<pre><code>{ <span class="tk-k">"error"</span>: { <span class="tk-k">"code"</span>: <span class="tk-s">"api_key_required"</span>, <span class="tk-k">"message"</span>: <span class="tk-s">"this tool needs an API key: send it as 'Authorization: Bearer &lt;key&gt;' or the X-API-Key header"</span> } }</code></pre>
+    </div>
+    <div class="tbl"><table>
+      <thead><tr><th scope="col">Status</th><th scope="col">Codes</th></tr></thead>
+      <tbody>
+        <tr><td class="num">400</td><td><code>janice_key_required</code>, <code>invalid_request</code></td></tr>
+        <tr><td class="num">401</td><td><code>api_key_required</code>, <code>invalid_api_key</code></td></tr>
+        <tr><td class="num">403</td><td><code>tool_disabled</code>, <code>key_not_permitted</code></td></tr>
+        <tr><td class="num">413</td><td><code>payload_too_large</code>: 256 KiB on the fit routes, 64 KiB on the tool and MCP endpoints</td></tr>
+        <tr><td class="num">429</td><td><code>rate_limited</code>, with <code>Retry-After</code></td></tr>
+        <tr><td class="num">503</td><td><code>upstream_busy</code>, with <code>Retry-After</code></td></tr>
+      </tbody>
+    </table></div>
+    <p>The full list: <code>not_found</code>, <code>method_not_allowed</code>, <code>invalid_request</code>, <code>payload_too_large</code>, <code>rate_limited</code>, <code>unavailable</code>, <code>upstream_error</code>, <code>upstream_busy</code>, <code>unknown_tool</code>, <code>tool_disabled</code>, <code>api_key_required</code>, <code>invalid_api_key</code>, <code>key_not_permitted</code>, <code>janice_key_required</code>, <code>timeout</code>, <code>internal_error</code>.</p>
+
+    <nav class="pager" aria-label="Previous and next page">
+      <a href="/docs/mcp"><span class="pg-k"><svg class="ico" aria-hidden="true"><use href="#i-back"/></svg>Previous</span><span class="pg-t">MCP (any harness)</span></a>
+      <a class="next" href="/docs/tools"><span class="pg-k">Next<svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></span><span class="pg-t">Tools reference</span></a>
+    </nav>
+    <p class="doc-foot"><span>Questions or a mistake on this page? <a href="https://discord.gg/XZzkH38dt9">EVE-Cyno Discord</a></span><span>Generated from the route table · <span data-slot="version">{{.Version}}</span></span></p>
+  </div>
+</article>
+{{end}}

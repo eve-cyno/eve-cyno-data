@@ -26,7 +26,7 @@ const (
 	fuzzworkCSV    = fuzzworkLatest + "/csv"
 
 	// userAgent identifies the project to Fuzzwork.
-	userAgent = "EVE-Cyno/0.3 fetch-sde-go (+https://eve-cyno.dev; bythlak@eve-cyno.dev)"
+	userAgent = "EVE-Cyno/0.3 fetch-sde-go (+https://eve-cyno.dev; eve:Bythlak)"
 )
 
 // buildRE extracts the build id from a dated dump filename in the latest/ index,

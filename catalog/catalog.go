@@ -15,8 +15,12 @@
 package catalog
 
 import (
+	"bytes"
+	"encoding/json"
+	"net/http"
 	"reflect"
 	"slices"
+	"strings"
 	"sync"
 
 	"eve-cyno.dev/go/data/tools"
@@ -29,14 +33,24 @@ type Tool struct {
 	Name string
 	// Description is the tool description from tool_schemas.json.
 	Description string
+	// Summary is a one-line, human-written description for indexes and lists (the
+	// Description is written as a prompt for the model). TestEveryOfferedToolHasASummary
+	// fails when an offered tool has none.
+	Summary string
 	// Parameters is the JSON Schema (type object) of the call arguments.
 	Parameters map[string]any
+	// ParamOrder lists the argument names in the order tool_schemas.json declares them
+	// (Parameters is a map, which has no order).
+	ParamOrder []string
 	// Attribution names the upstreams behind the tool's answers.
 	Attribution []tools.Source
 	// Tier says who may run the tool on an internet-facing surface (see Tier). The
 	// local user's own surfaces (the native loopback mount, the chat, cmd/mcp -all)
 	// ignore it and run everything.
 	Tier Tier
+	// Upstream is true when a call can spend the project's shared ESI budget (a cache miss
+	// reaches ESI). Public surfaces give such tools their own, stricter per-caller limit.
+	Upstream bool
 	// Data is the typed result struct that tools.Result.Data carries for this tool (the
 	// "data" of the REST envelope, the structuredContent of an MCP result), or nil for a
 	// tool that has only the text answer. A call can still end text-only: an unknown id
@@ -51,6 +65,7 @@ func Tools() []Tool { return slices.Clone(registry()) }
 // registry builds the tool list once: tool_schemas.json is embedded and immutable.
 var registry = sync.OnceValue(func() []Tool {
 	schemas := tools.ToolSchemas()
+	raw := tools.ToolSchemasJSON()
 	out := make([]Tool, 0, len(schemas))
 	for _, entry := range schemas {
 		fn, _ := entry["function"].(map[string]any)
@@ -63,9 +78,12 @@ var registry = sync.OnceValue(func() []Tool {
 		out = append(out, Tool{
 			Name:        name,
 			Description: desc,
+			Summary:     summaryTable()[name],
 			Parameters:  params,
+			ParamOrder:  paramOrder(raw, name),
 			Attribution: tools.Attribution(name),
 			Tier:        tierOf(name),
+			Upstream:    upstreamTools[name],
 			Data:        dataType(name),
 		})
 	}
@@ -114,6 +132,18 @@ const (
 // never stored.
 const HeaderJaniceKey = "X-Janice-Key"
 
+// JaniceKeyFrom returns the caller's Janice key from h, trimmed, or "" when none was sent.
+// A value that is still an unexpanded config placeholder ("${...}", e.g. a Claude Code plugin
+// header whose variable is unset) counts as no key, so the caller gets the "send your own
+// key" answer instead of a failed upstream call with a bogus key.
+func JaniceKeyFrom(h http.Header) string {
+	v := strings.TrimSpace(h.Get(HeaderJaniceKey))
+	if strings.HasPrefix(v, "${") {
+		return ""
+	}
+	return v
+}
+
 // String returns the tier's name as the generated documents and error messages use it.
 func (t Tier) String() string {
 	switch t {
@@ -151,14 +181,19 @@ func tierTable() map[string]Tier {
 		"compute_fit_stats":      TierPublic,
 		"validate_fitting":       TierPublic,
 
-		// Corpus search (embedding cost) and the ESI / battle-report pass-throughs.
-		"get_fits":            TierKeyed,
-		"list_fits":           TierKeyed,
-		"get_market_price":    TierKeyed,
-		"get_type_info":       TierKeyed,
-		"get_sovereignty":     TierKeyed,
-		"get_system_activity": TierKeyed,
-		"analyze_battle":      TierKeyed,
+		// Public ESI pass-throughs: public,
+		// unauthenticated ESI routes served from the shared Expires cache, behind a stricter
+		// per-IP limit (Tool.Upstream) and the upstream budget guard. Moving these four back
+		// to TierKeyed is the rollback.
+		"get_market_price":    TierPublic,
+		"get_type_info":       TierPublic,
+		"get_sovereignty":     TierPublic,
+		"get_system_activity": TierPublic,
+
+		// Corpus search (embedding cost) and the battle-report pass-through.
+		"get_fits":       TierKeyed,
+		"list_fits":      TierKeyed,
+		"analyze_battle": TierKeyed,
 
 		// The caller's own Janice key.
 		"appraise_items": TierBYOKey,
@@ -167,6 +202,90 @@ func tierTable() map[string]Tier {
 		// keeps it.
 		"convert_isk_to_real": TierDisabled,
 	}
+}
+
+// upstreamTools are the tools whose cache misses reach ESI on a public surface (see
+// Tool.Upstream). analyze_battle also calls ESI (and zKillboard, WarBeacon) but is keyed.
+var upstreamTools = map[string]bool{
+	"get_market_price":    true,
+	"get_type_info":       true,
+	"get_sovereignty":     true,
+	"get_system_activity": true,
+}
+
+// summaryTable holds the one-line human summary of each tool (Tool.Summary). Keep each
+// to one sentence without a trailing period issue: it is shown in lists and the site search.
+func summaryTable() map[string]string {
+	return map[string]string{
+		"get_market_price":       "Best sell and buy price and order counts for an item in Jita (The Forge).",
+		"get_type_info":          "Name, description, volume, mass and group of an item.",
+		"search_item_by_name":    "Resolve item, ship and module names to type IDs.",
+		"get_ship_stats":         "Slot layout, hardpoints and resource limits of a ship.",
+		"get_ship_bonuses":       "Hull bonuses of a ship: per skill level, role bonuses and ship class.",
+		"find_canonical_module":  "Find the canonical module names of a module family.",
+		"get_hull_facts":         "A hull's fitting envelope: slots, hardpoints, drone bay, bonuses and weapon restrictions.",
+		"validate_fitting":       "Check an EFT fit against its slots, CPU and powergrid.",
+		"compute_fit_stats":      "DPS, EHP, speed, align time and capacitor of an EFT fit, from the Gofa engine.",
+		"get_production_chain":   "Full material breakdown to manufacture an item, down to base materials.",
+		"get_jumps_between":      "Jump count and route between two solar systems.",
+		"get_systems_in_region":  "Solar systems of a region, filtered by security band.",
+		"get_npc_stations":       "NPC stations in a solar system, with owner and operation.",
+		"get_reprocessing_yield": "Materials produced by reprocessing an item.",
+		"get_required_skills":    "Skills required to fly a ship or build an item.",
+		"get_sovereignty":        "The alliance and corporation holding sovereignty over a solar system.",
+		"get_system_activity":    "Recent kills and jumps in a solar system.",
+		"appraise_items":         "Appraise a list of items through Janice, with your own Janice key.",
+		"get_fits":               "Community fits for a ship, by activity, cost and source, with author credit.",
+		"list_fits":              "List community fits by exact filters: source, ship, tag or filament.",
+		"analyze_battle":         "Summarise a battle report from zKillboard, WarBeacon or br.evetools.org.",
+		"convert_isk_to_real":    "Convert an ISK amount to a real-money value (not offered on public surfaces).",
+	}
+}
+
+// paramOrder returns the argument names of the tool name in the order the raw
+// tool_schemas.json declares them. A malformed document yields nil; the caller falls back
+// to sorting.
+func paramOrder(raw []byte, name string) []string {
+	var doc []struct {
+		Function struct {
+			Name       string `json:"name"`
+			Parameters struct {
+				Properties orderedKeys `json:"properties"`
+			} `json:"parameters"`
+		} `json:"function"`
+	}
+	if err := json.Unmarshal(raw, &doc); err != nil {
+		return nil
+	}
+	for _, e := range doc {
+		if e.Function.Name == name {
+			return e.Function.Parameters.Properties
+		}
+	}
+	return nil
+}
+
+// orderedKeys decodes a JSON object into its keys, in document order.
+type orderedKeys []string
+
+func (o *orderedKeys) UnmarshalJSON(b []byte) error {
+	dec := json.NewDecoder(bytes.NewReader(b))
+	if _, err := dec.Token(); err != nil { // the opening brace
+		return err
+	}
+	for dec.More() {
+		k, err := dec.Token()
+		if err != nil {
+			return err
+		}
+		key, _ := k.(string)
+		*o = append(*o, key)
+		var skip json.RawMessage
+		if err := dec.Decode(&skip); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // tierOf returns a tool's tier; a tool missing from the table is disabled.
@@ -180,6 +299,8 @@ func dataType(name string) reflect.Type {
 		return reflect.TypeFor[tools.TypeInfo]()
 	case "get_market_price":
 		return reflect.TypeFor[tools.MarketPrice]()
+	case "get_jumps_between":
+		return reflect.TypeFor[tools.Route]()
 	case "get_ship_stats":
 		return reflect.TypeFor[tools.ShipStats]()
 	case "validate_fitting":

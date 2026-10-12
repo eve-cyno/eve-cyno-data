@@ -11,7 +11,7 @@ info:
     - Every response carries `X-Request-ID`: your value when it is a token of 1-64 characters from `[A-Za-z0-9._-]`, otherwise a generated one.
     - Requests are rate limited per caller (a sliding window; the budget is stated on each operation): per API key when one is sent, otherwise per client IP. A refused request is `429` with `Retry-After`.
     - Request bodies are capped (256 KiB on the fit routes, 64 KiB on tools and MCP); an oversize body is `413`.
-    - Tool tiers: each tool is *public* (no key), *keyed* (an API key), *byo-key* (your own Janice key) or *disabled*. Public: `search_item_by_name`, `get_ship_stats`, `get_ship_bonuses`, `find_canonical_module`, `get_hull_facts`, `validate_fitting`, `compute_fit_stats`, `get_production_chain`, `get_jumps_between`, `get_systems_in_region`, `get_npc_stations`, `get_reprocessing_yield`, `get_required_skills`. Keyed (send the key as `Authorization: Bearer <key>` or `X-API-Key`; `401 api_key_required` without one, `401 invalid_api_key` for a key that is not valid, on every tool): `get_market_price`, `get_type_info`, `get_fits`, `list_fits`, `analyze_battle`, `get_sovereignty`, `get_system_activity`. Byo-key (the `X-Janice-Key` request header, used for that request only and never logged or stored; `400 janice_key_required` without it): `appraise_items`. Disabled tools are not offered on this service (`403 tool_disabled` over REST, absent from the MCP tool list).
+    - Tool tiers: each tool is *public* (no key), *keyed* (an API key), *byo-key* (your own Janice key) or *disabled*. Public: `get_market_price`, `get_type_info`, `search_item_by_name`, `get_ship_stats`, `get_ship_bonuses`, `find_canonical_module`, `get_hull_facts`, `validate_fitting`, `compute_fit_stats`, `get_production_chain`, `get_jumps_between`, `get_systems_in_region`, `get_npc_stations`, `get_reprocessing_yield`, `get_required_skills`, `get_sovereignty`, `get_system_activity`. Keyed (send the key as `Authorization: Bearer <key>` or `X-API-Key`; `401 api_key_required` without one, `401 invalid_api_key` for a key that is not valid, on every tool): `get_fits`, `list_fits`, `analyze_battle`. Byo-key (the `X-Janice-Key` request header, used for that request only and never logged or stored; `400 janice_key_required` without it): `appraise_items`. Disabled tools are not offered on this service (`403 tool_disabled` over REST, absent from the MCP tool list).
 
     ## Attribution and licences
 
@@ -312,15 +312,14 @@ paths:
 
         Sources: ESI (EVE Swagger Interface). `result.data` is a `MarketPrice` object when the call succeeds.
 
-        Access tier: **keyed**. Send an API key (`Authorization: Bearer <key>` or `X-API-Key`); without one the answer is `401 api_key_required`.
+        Access tier: **public**. No key needed.
 
         Rate limit: 30 requests per minute per caller (per API key when one is sent, otherwise per client IP).
+
+        Reads live public data from EVE's ESI through a shared cache that follows ESI's `Expires`. Its own fair-use limit is 10 calls per minute per caller (REST and MCP together), on top of the route limit. When the shared ESI budget is nearly spent the call is refused with `503 upstream_busy` (MCP: an error result starting `upstream_busy`) and `Retry-After`; retry later.
       operationId: get_market_price
       parameters:
         - $ref: '#/components/parameters/RequestID'
-      security:
-        - bearerAuth: []
-        - apiKeyAuth: []
       requestBody:
         required: true
         content:
@@ -370,15 +369,14 @@ paths:
 
         Sources: ESI (EVE Swagger Interface). `result.data` is a `TypeInfo` object when the call succeeds.
 
-        Access tier: **keyed**. Send an API key (`Authorization: Bearer <key>` or `X-API-Key`); without one the answer is `401 api_key_required`.
+        Access tier: **public**. No key needed.
 
         Rate limit: 30 requests per minute per caller (per API key when one is sent, otherwise per client IP).
+
+        Reads live public data from EVE's ESI through a shared cache that follows ESI's `Expires`. Its own fair-use limit is 10 calls per minute per caller (REST and MCP together), on top of the route limit. When the shared ESI budget is nearly spent the call is refused with `503 upstream_busy` (MCP: an error result starting `upstream_busy`) and `Retry-After`; retry later.
       operationId: get_type_info
       parameters:
         - $ref: '#/components/parameters/RequestID'
-      security:
-        - bearerAuth: []
-        - apiKeyAuth: []
       requestBody:
         required: true
         content:
@@ -1148,7 +1146,7 @@ paths:
       description: |-
         Compute the number of jumps and the route between two EVE solar systems. Default route is shortest (any security). Set prefer_high_sec=true to prefer highsec-only paths (longer but safer).
 
-        Sources: EVE Static Data Export (via Fuzzwork).
+        Sources: EVE Static Data Export (via Fuzzwork). `result.data` is a `Route` object when the call succeeds.
 
         Access tier: **public**. No key needed.
 
@@ -1181,7 +1179,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ToolResponse'
+                $ref: '#/components/schemas/RouteToolResponse'
           headers:
             X-Request-ID:
               $ref: '#/components/headers/RequestID'
@@ -1435,15 +1433,14 @@ paths:
 
         Sources: EVE Static Data Export (via Fuzzwork); ESI (EVE Swagger Interface).
 
-        Access tier: **keyed**. Send an API key (`Authorization: Bearer <key>` or `X-API-Key`); without one the answer is `401 api_key_required`.
+        Access tier: **public**. No key needed.
 
         Rate limit: 30 requests per minute per caller (per API key when one is sent, otherwise per client IP).
+
+        Reads live public data from EVE's ESI through a shared cache that follows ESI's `Expires`. Its own fair-use limit is 10 calls per minute per caller (REST and MCP together), on top of the route limit. When the shared ESI budget is nearly spent the call is refused with `503 upstream_busy` (MCP: an error result starting `upstream_busy`) and `Retry-After`; retry later.
       operationId: get_sovereignty
       parameters:
         - $ref: '#/components/parameters/RequestID'
-      security:
-        - bearerAuth: []
-        - apiKeyAuth: []
       requestBody:
         required: true
         content:
@@ -1490,15 +1487,14 @@ paths:
 
         Sources: EVE Static Data Export (via Fuzzwork); ESI (EVE Swagger Interface).
 
-        Access tier: **keyed**. Send an API key (`Authorization: Bearer <key>` or `X-API-Key`); without one the answer is `401 api_key_required`.
+        Access tier: **public**. No key needed.
 
         Rate limit: 30 requests per minute per caller (per API key when one is sent, otherwise per client IP).
+
+        Reads live public data from EVE's ESI through a shared cache that follows ESI's `Expires`. Its own fair-use limit is 10 calls per minute per caller (REST and MCP together), on top of the route limit. When the shared ESI budget is nearly spent the call is refused with `503 upstream_busy` (MCP: an error result starting `upstream_busy`) and `Retry-After`; retry later.
       operationId: get_system_activity
       parameters:
         - $ref: '#/components/parameters/RequestID'
-      security:
-        - bearerAuth: []
-        - apiKeyAuth: []
       requestBody:
         required: true
         content:
@@ -1679,16 +1675,22 @@ components:
       properties:
         source:
           type: string
+          description: Source is the corpus source (workbench, abysstracker, ...) or, for wiki text, the page title.
         source_url:
           type: string
+          description: 'SourceURL is the link to the original page or fit. Never empty for a hit served by a fit path: the ingest writers refuse a fit without one.'
         author:
           type: string
+          description: Author is the person behind the fit when the corpus knows one.
         license:
           type: string
+          description: License is the short statement of the terms the data is used under.
         license_url:
           type: string
+          description: LicenseURL links the licence text, where there is one.
         credit:
           type: string
+          description: Credit is who must be credited next to the text ("EVE University" for wiki text).
       required:
         - source
         - source_url
@@ -1702,8 +1704,10 @@ components:
           type: boolean
         summary:
           type: string
+          description: Summary is "stable" or "lasts 442s", empty when there is nothing trustworthy to say (no capacitor data, or reps that run on charges).
         charge_fed:
           type: boolean
+          description: ChargeFed is true when an ancillary rep runs on charges, not on the capacitor, which makes the capacitor figures meaningless.
       required:
         - capacity_gj
         - stable
@@ -1747,6 +1751,7 @@ components:
           type: number
         eft:
           type: string
+          description: EFT is the fit text as stored (the markdown header some sources prepend included).
         attribution:
           $ref: '#/components/schemas/Attribution'
       required:
@@ -1765,6 +1770,7 @@ components:
           type: integer
         relaxed:
           type: boolean
+          description: Relaxed is true when tag filters were dropped to find these (the text says which).
         fits:
           type: array
           items:
@@ -1861,12 +1867,16 @@ components:
           type: number
         InBay:
           type: integer
+          description: total drones in the bay
         Active:
           type: integer
+          description: drones in space (bandwidth- and cap-limited)
         MaxActive:
           type: integer
+          description: hard cap on launched drones
         ActiveTypeIDs:
           type: array
+          description: unique typeIDs with at least one drone launched
           items:
             type: integer
       required:
@@ -1901,6 +1911,7 @@ components:
             - rate_limited
             - unavailable
             - upstream_error
+            - upstream_busy
             - unknown_tool
             - tool_disabled
             - api_key_required
@@ -1922,14 +1933,18 @@ components:
           type: string
         typeID:
           type: integer
+          description: for the fitting-window icon (image server)
         tier:
           type: string
+          description: '"T1" / "T2" / ""'
         empty:
           type: boolean
         canLoadCharge:
           type: boolean
+          description: true if the module accepts a charge (ammo)
         canOverheat:
           type: boolean
+          description: true if the module has an overload effect
       required:
         - name
         - tier
@@ -1963,12 +1978,15 @@ components:
             type: string
         valid:
           type: boolean
+          description: Valid is true when every module resolved and the fit has no Hard violation (slot overflow, group limit, CPU / PG beyond the 5 % implant allowance, a name that is not a module). When false the Resources totals are not the totals of a legal fit — with Unresolved set they are the totals of the resolved part only — and a consumer should show "—" rather than present them as the fit's numbers.
         unresolved:
           type: array
+          description: Unresolved are the module names the SDE could not resolve, once each in EFT order. They are missing from Slots and not counted in Resources. Never null.
           items:
             type: string
         violations:
           type: array
+          description: Violations are the Hard rule failures other than unresolved names; omitted when none.
           items:
             type: string
       required:
@@ -2124,6 +2142,7 @@ components:
           type: integer
         score:
           type: number
+          description: stored quality
         tested:
           type: boolean
         video:
@@ -2134,8 +2153,10 @@ components:
           type: string
         relevance:
           type: number
+          description: computed rank used for sort
         attribution:
           $ref: '#/components/schemas/Attribution'
+          description: Attribution is the credit the fit must carry wherever it is shown (R3.6).
       required:
         - ship_name
         - fit_name
@@ -2167,12 +2188,15 @@ components:
             $ref: '#/components/schemas/FitSearchHit'
         ship_counts:
           type: object
+          description: ShipCounts is the number of fits per ship_name in the candidate pool of the pass that produced Hits, before the page is trimmed. Set only when the query asked for PerShip grouping; nil otherwise.
           additionalProperties:
             type: integer
         limit:
           type: integer
+          description: Limit is the page size actually applied (the request's, clamped to FitPageMax).
         note:
           type: string
+          description: Note says so when the request asked for more than FitPageMax; omitted otherwise.
       required:
         - total
         - relaxed
@@ -2210,8 +2234,10 @@ components:
           type: string
         basis:
           type: string
+          description: Basis is "all-V", or "all-V, default ammo" when the engine loaded ammo.
         dps:
           type: number
+          description: DPS includes the drones; WeaponDPS and DroneDPS split it.
         weapon_dps:
           type: number
         drone_dps:
@@ -2232,6 +2258,7 @@ components:
           type: number
         prop_on:
           type: boolean
+          description: PropOn is true when an online afterburner / MWD is part of SpeedMS.
         align_s:
           type: number
         signature_m:
@@ -2239,19 +2266,23 @@ components:
         cap:
           $ref: '#/components/schemas/CapCard'
         load:
+          description: Load is the CPU / PG line, present on compute_fit_stats and nil inside a FitValidation (which carries them itself).
           oneOf:
             - $ref: '#/components/schemas/FitLoad'
             - type: "null"
         no_ammo:
           type: array
+          description: NoAmmo names weapons that ended up with no charge (counted as 0 DPS).
           items:
             type: string
         unresolved_charges:
           type: array
+          description: UnresolvedCharges are charge names written on the EFT that did not resolve.
           items:
             type: string
         unresolved_modules:
           type: array
+          description: UnresolvedModules are module names the engine could not resolve (not counted).
           items:
             type: string
       required:
@@ -2329,8 +2360,10 @@ components:
           $ref: '#/components/schemas/DroneStats'
         Estimated:
           type: boolean
+          description: Estimated is true when one or more values are approximations.
         Unmodelled:
           type: array
+          description: Unmodelled lists modules/effects the engine did not model.
           items:
             type: string
       required:
@@ -2383,28 +2416,35 @@ components:
           type: boolean
         cpu:
           $ref: '#/components/schemas/ResourceUsage'
+          description: CPU and PG are the skill-discounted loads against the hull's output with the fitting modifiers applied.
         pg:
           $ref: '#/components/schemas/ResourceUsage'
         slots:
           $ref: '#/components/schemas/ValidationSlots'
         violations:
           type: array
+          description: Violations are the lines under "VIOLATIONS:" in the text, without the bullet.
           items:
             type: string
         warnings:
           type: array
+          description: 'Warnings are the lines under "WARNINGS" in the text, without the bullet: a CPU or powergrid overage of at most 5 %, which a 5 % output implant closes. The fit is still Valid. Omitted when none.'
           items:
             type: string
         unresolved_modules:
           type: array
+          description: UnresolvedModules are module names found in neither the SDE nor ESI (not counted).
           items:
             type: string
         data_source:
           type: string
+          description: 'DataSource is where names and dogma came from: "SDE" (ESI as fallback) or "ESI".'
         alpha_unchecked:
           type: boolean
+          description: AlphaUnchecked is true when alpha=true was requested but the Alpha skill caps were unavailable (ESI-only mode), so clone legality was not checked. Omitted otherwise.
         stats:
           $ref: '#/components/schemas/FitStatCard'
+          description: 'Stats is the stat card the text appends for a valid fit validated at the model''s request (eft_text); nil otherwise. Its Load is nil: CPU and PG are above.'
       required:
         - ship
         - valid
@@ -2479,12 +2519,14 @@ components:
           type:
             - number
             - "null"
+          description: BestSellISK is the lowest sell price, null when there is no sell order.
         sell_orders:
           type: integer
         best_buy_isk:
           type:
             - number
             - "null"
+          description: BestBuyISK is the highest buy price, null when there is no buy order.
         buy_orders:
           type: integer
       required:
@@ -2539,16 +2581,22 @@ components:
           type: integer
         slot:
           type: string
+          description: high|mid|low|rig
         metaTier:
           type: string
+          description: '"T1"/"T2"/… or ""'
         cpu:
           type: number
+          description: attr 50
         pg:
           type: number
+          description: attr 30
         canLoadCharge:
           type: boolean
+          description: true if the module accepts a charge (ammo)
         canOverheat:
           type: boolean
+          description: true if the module has an overload effect
       required:
         - typeID
         - name
@@ -2626,12 +2674,97 @@ components:
           type: number
         unit:
           type: string
+          description: '"tf" for CPU, "MW" for powergrid'
         over:
           type: string
       required:
         - used
         - capacity
         - unit
+    Route:
+      type: object
+      properties:
+        from:
+          type: string
+        to:
+          type: string
+        prefer_high_sec:
+          type: boolean
+          description: PreferHighSec is the request flag; HighsecSatisfied is false when no pure-highsec route exists and the path is the any-sec fallback (the text says so).
+        highsec_satisfied:
+          type: boolean
+        jumps:
+          type: integer
+          description: Jumps is the hop count the text prints (len(systems)-1).
+        systems:
+          type: array
+          items:
+            $ref: '#/components/schemas/RouteSystem'
+      required:
+        - from
+        - to
+        - prefer_high_sec
+        - highsec_satisfied
+        - jumps
+        - systems
+    RouteSystem:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        region:
+          type: string
+          description: Region is the region name from the SDE, "" when the SDE has none.
+        security:
+          type: number
+        sec:
+          type: string
+          description: Sec is the security exactly as the text prints it ("+0.9", "-0.3").
+        class:
+          type: string
+          description: 'Class is the text''s band: "highsec", "lowsec" or "nullsec".'
+      required:
+        - id
+        - name
+        - region
+        - security
+        - sec
+        - class
+    RouteToolResponse:
+      type: object
+      properties:
+        tool:
+          type: string
+          description: The tool that ran.
+        version:
+          type: string
+          description: The build version of the service.
+        result:
+          type: object
+          properties:
+            text:
+              type: string
+              description: The answer as the chat assistant reads it.
+            data:
+              description: The typed answer, or null when the tool has none or the call ended in a text-only answer (an unknown id, a parse failure); `text` then says why.
+              oneOf:
+                - $ref: '#/components/schemas/Route'
+                - type: "null"
+          required:
+            - text
+            - data
+        attribution:
+          type: array
+          description: The upstreams behind the answer; attribution is a condition of several of their licences.
+          items:
+            $ref: '#/components/schemas/Source'
+      required:
+        - tool
+        - version
+        - result
+        - attribution
     ShipAttribute:
       type: object
       properties:
@@ -2654,6 +2787,7 @@ components:
           type: string
         attributes:
           type: array
+          description: Attributes is sorted by Name, the order of the text lines.
           items:
             $ref: '#/components/schemas/ShipAttribute'
       required:
@@ -2859,6 +2993,7 @@ components:
           type: string
         description:
           type: string
+          description: Description is the whole description, tags and all; Text cuts it at 400 bytes.
         volume_m3:
           type: number
         mass_kg:
@@ -2939,12 +3074,14 @@ components:
       properties:
         label:
           type: string
+          description: Label is the weapon with its charge, e.g. "Rocket Launcher II [Scourge Rocket]".
         count:
           type: integer
         dps:
           type: number
         default_ammo:
           type: boolean
+          description: DefaultAmmo is true when no charge was written on the EFT line and the engine's default was loaded.
       required:
         - label
         - count
@@ -3026,12 +3163,14 @@ components:
         X-Request-ID:
           $ref: '#/components/headers/RequestID'
     Unavailable:
-      description: A dependency this operation needs is not loaded, for example the SDE or the fit corpus (`unavailable`).
+      description: A dependency this operation needs is not loaded, for example the SDE or the fit corpus (`unavailable`), or the upstream a live-data tool reads (EVE's ESI) is near its rate limit and nothing was sent (`upstream_busy`; retry after the number of seconds in `Retry-After`).
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/Error'
       headers:
+        Retry-After:
+          $ref: '#/components/headers/RetryAfter'
         X-Request-ID:
           $ref: '#/components/headers/RequestID'
     UpstreamError:

@@ -35,6 +35,33 @@ type MarketPrice struct {
 	BuyOrders  int      `json:"buy_orders"`
 }
 
+// Route is the result of get_jumps_between: the path the text lists, system by system.
+// Data is nil when the text is an error (unknown system, no route, SDE not loaded).
+type Route struct {
+	From string `json:"from"`
+	To   string `json:"to"`
+	// PreferHighSec is the request flag; HighsecSatisfied is false when no pure-highsec
+	// route exists and the path is the any-sec fallback (the text says so).
+	PreferHighSec    bool `json:"prefer_high_sec"`
+	HighsecSatisfied bool `json:"highsec_satisfied"`
+	// Jumps is the hop count the text prints (len(systems)-1).
+	Jumps   int           `json:"jumps"`
+	Systems []RouteSystem `json:"systems"`
+}
+
+// RouteSystem is one stop on a Route, origin first.
+type RouteSystem struct {
+	ID   int    `json:"id"`
+	Name string `json:"name"`
+	// Region is the region name from the SDE, "" when the SDE has none.
+	Region   string  `json:"region"`
+	Security float64 `json:"security"`
+	// Sec is the security exactly as the text prints it ("+0.9", "-0.3").
+	Sec string `json:"sec"`
+	// Class is the text's band: "highsec", "lowsec" or "nullsec".
+	Class string `json:"class"`
+}
+
 // ShipStats is the result of get_ship_stats: a hull's key dogma attributes from the SDE.
 type ShipStats struct {
 	TypeID int    `json:"type_id"`

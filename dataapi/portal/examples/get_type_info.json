@@ -1,0 +1,31 @@
+{
+  "tool": "get_type_info",
+  "request": {
+    "type_id": 34
+  },
+  "prompt": "What is type 34 in EVE?",
+  "recorded": "2026-10-09",
+  "trimmed": true,
+  "response": {
+    "tool": "get_type_info",
+    "version": "sha-aa76146",
+    "result": {
+      "text": "Name: Tritanium\nVolume: 0.01 m³\nMass: 0.0 kg\nGroup ID: 18\nDescription: The main building block in space structures. A very hard, yet bendable metal. Cannot be used in human habitats due to its instability at atmospheric temperatures. Very common throughout the central regions of known universe.\r\n\r\nMay be obtained by reprocessing the following ores and their variations available in high security status star systems: <a href=showinfo:1230>veldspar</a>, <a href=showi...",
+      "data": {
+        "type_id": 34,
+        "name": "Tritanium",
+        "description": "The main building block in space structures. A very hard, yet bendable metal. Cannot be used in human habitats due to its instability at atmospheric temperatures. Very common throughout the central regions of known universe.\r\n\r\nMay be obtained by reprocessing the following ores and their variations available in high security status star systems: <a href=showinfo:1230>veldspar</a>, <a href=showinfo:1228>scordite</a>, and <a href=showinfo:18>plagioclase</a>.\r\n\r\nIt is also present in huge amounts in rare ores such as <a href=showinfo:19>spodumain</a>, <a href=showinfo:52316>bezdnacine</a>, <a href=showinfo:52315>rakovene</a> and <a href=showinfo:52306>talassonite</a>.\r\n\r\nTritanium can also be f…",
+        "volume_m3": 0.01,
+        "mass_kg": 0,
+        "group_id": 18
+      }
+    },
+    "attribution": [
+      {
+        "name": "ESI (EVE Swagger Interface)",
+        "url": "https://esi.evetech.net/",
+        "license": "EVE Developer License Agreement (CCP Games / Fenris Creations); non-commercial use"
+      }
+    ]
+  }
+}

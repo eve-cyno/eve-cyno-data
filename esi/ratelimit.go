@@ -134,10 +134,15 @@ type bucket struct {
 	inflight  int
 	spends    []spend
 	blocked   time.Time // Retry-After horizon
+	floorPct  int       // share of limit kept unspent; 0 means floorPercent
 }
 
 func (b *bucket) floor() int {
-	f := (b.limit*floorPercent + 99) / 100
+	pct := b.floorPct
+	if pct <= 0 {
+		pct = floorPercent
+	}
+	f := (b.limit*pct + 99) / 100
 	if f < 1 {
 		f = 1
 	}
@@ -262,6 +267,9 @@ type limiter struct {
 	routes  map[string]string    // route key -> group (learned)
 	blocks  map[string]time.Time // route key + scope -> Retry-After horizon (429 without a group)
 	next    time.Time            // MinInterval cursor
+	// floorPct is the kept-unspent share given to new buckets (Config.GuardPercent); 0 means
+	// floorPercent.
+	floorPct int
 
 	errMu       sync.Mutex
 	errorUntil  time.Time // legacy error limit: no requests before this
@@ -305,7 +313,7 @@ func (l *limiter) bucketForGroup(route, group, scope string) *bucket {
 		if len(l.buckets) >= maxTracked {
 			clear(l.buckets)
 		}
-		b = &bucket{}
+		b = &bucket{floorPct: l.floorPct}
 		l.buckets[k] = b
 	}
 	return b

@@ -120,7 +120,7 @@ func unlimited(Surface) Rate { return Rate{} }
 func errorCodes() []string {
 	return []string{
 		"not_found", "method_not_allowed", "invalid_request", "payload_too_large", "rate_limited",
-		"unavailable", "upstream_error", "unknown_tool", "tool_disabled", "api_key_required", "invalid_api_key",
+		"unavailable", "upstream_error", "upstream_busy", "unknown_tool", "tool_disabled", "api_key_required", "invalid_api_key",
 		"key_not_permitted", "janice_key_required", "timeout", "internal_error",
 	}
 }
@@ -332,6 +332,76 @@ func routeTable() []route {
 			rate:   func(s Surface) Rate { return s.Limits.Docs },
 			handle: (*API).serveIndex,
 			cache:  cacheDocs,
+		},
+		{
+			method: http.MethodGet, path: "/docs", root: true, when: docsOn,
+			rate:   func(s Surface) Rate { return s.Limits.Docs },
+			handle: (*API).docsRedirect,
+		},
+		{
+			method: http.MethodGet, path: "/docs/{$}", root: true, when: docsOn,
+			rate:   func(s Surface) Rate { return s.Limits.Docs },
+			handle: (*API).docsPage,
+			cache:  cacheDocs,
+		},
+		{
+			method: http.MethodGet, path: "/docs/claude-code", root: true, when: docsOn,
+			rate:   func(s Surface) Rate { return s.Limits.Docs },
+			handle: (*API).docsPage,
+			cache:  cacheDocs,
+		},
+		{
+			method: http.MethodGet, path: "/docs/mcp", root: true, when: docsOn,
+			rate:   func(s Surface) Rate { return s.Limits.Docs },
+			handle: (*API).docsPage,
+			cache:  cacheDocs,
+		},
+		{
+			method: http.MethodGet, path: "/docs/rest", root: true, when: docsOn,
+			rate:   func(s Surface) Rate { return s.Limits.Docs },
+			handle: (*API).docsPage,
+			cache:  cacheDocs,
+		},
+		{
+			method: http.MethodGet, path: "/docs/tools", root: true, when: docsOn,
+			rate:   func(s Surface) Rate { return s.Limits.Docs },
+			handle: (*API).docsPage,
+			cache:  cacheDocs,
+		},
+		{
+			method: http.MethodGet, path: "/docs/access", root: true, when: docsOn,
+			rate:   func(s Surface) Rate { return s.Limits.Docs },
+			handle: (*API).docsPage,
+			cache:  cacheDocs,
+		},
+		{
+			method: http.MethodGet, path: "/docs/attribution", root: true, when: docsOn,
+			rate:   func(s Surface) Rate { return s.Limits.Docs },
+			handle: (*API).docsPage,
+			cache:  cacheDocs,
+		},
+		{
+			method: http.MethodGet, path: "/docs/terms", root: true, when: docsOn,
+			rate:   func(s Surface) Rate { return s.Limits.Docs },
+			handle: (*API).docsPage,
+			cache:  cacheDocs,
+		},
+		{
+			method: http.MethodGet, path: "/docs/tools/{tool}", root: true, when: docsOn,
+			rate:   func(s Surface) Rate { return s.Limits.Docs },
+			handle: (*API).docsTool,
+			cache:  cacheDocs,
+		},
+		{
+			method: http.MethodGet, path: "/docs/search.json", root: true, when: docsOn,
+			rate:   func(s Surface) Rate { return s.Limits.Docs },
+			handle: (*API).docsSearch,
+			cache:  cacheDocs,
+		},
+		{
+			// Versioned static files of the portal: immutable, so no per-caller limit.
+			method: http.MethodGet, path: "/assets/{version}/{file}", root: true, when: docsOn, rate: unlimited,
+			handle: (*API).asset,
 		},
 		{
 			method: http.MethodGet, path: "/terms", root: true, when: docsOn,

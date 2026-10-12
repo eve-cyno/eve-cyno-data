@@ -48,6 +48,39 @@ type Client struct {
 	esiLazy *esi.Client
 }
 
+// PublicESIOptions tunes the ESI client of an internet-facing service (cmd/dataapi), where
+// the ESI budget is shared by anonymous callers: it never sleeps for a rate limit (the
+// tool answers "upstream busy" instead), keeps a larger share of every rate-limit group
+// unspent and reports every call to Observer. The zero value changes nothing.
+type PublicESIOptions struct {
+	// Observer receives one esi.CallEvent per cache hit, request sent and back-off.
+	Observer func(esi.CallEvent)
+	// FailFast makes a needed rate-limit wait an error (esi.ErrBackedOff) instead of a sleep.
+	FailFast bool
+	// GuardPercent is esi.Config.GuardPercent: the share of each group's tokens kept unspent.
+	GuardPercent int
+}
+
+// NewClientWithESI is NewClient with the ESI client adjusted by o. Request spacing
+// (esiMinInterval) is dropped when o.FailFast is set: the token buckets, the error-limit
+// floor and the concurrency cap already pace a service that refuses instead of waiting,
+// and a spacing queue would hold callers for seconds.
+func NewClientWithESI(o PublicESIOptions) *Client {
+	hc := &http.Client{Timeout: 30 * time.Second}
+	return &Client{
+		HTTP:     hc,
+		Throttle: NewThrottle(),
+		ESI: newESIWith(hc, func(cfg *esi.Config) {
+			cfg.Observer = o.Observer
+			cfg.GuardPercent = o.GuardPercent
+			if o.FailFast {
+				cfg.MaxWait = -1
+				cfg.MinInterval = 0
+			}
+		}),
+	}
+}
+
 // NewClient creates a Client with the real transport, a shared Throttle and an ESI client
 // configured from the environment (ESI_CONTACT, ESI_COMPATIBILITY_DATE; see esi.FromEnv)
 // and the build version (core/version).
@@ -82,12 +115,18 @@ func (c *Client) esiClient() *esi.Client {
 
 // newESI builds the ESI client for the tools. An invalid ESI_COMPATIBILITY_DATE is logged
 // and ignored (the pinned default is used) rather than taking every tool down.
-func newESI(hc *http.Client) *esi.Client {
+func newESI(hc *http.Client) *esi.Client { return newESIWith(hc, nil) }
+
+// newESIWith is newESI with a last adjustment of the configuration.
+func newESIWith(hc *http.Client, adjust func(*esi.Config)) *esi.Client {
 	cfg := esi.FromEnv(os.Getenv)
 	cfg.Version = version.Version()
 	cfg.HTTPClient = hc
 	cfg.MaxConcurrent = esiMaxConcurrent
 	cfg.MinInterval = esiMinInterval
+	if adjust != nil {
+		adjust(&cfg)
+	}
 	c, err := esi.New(cfg)
 	if err != nil {
 		slog.Warn("tools: invalid ESI configuration; using the pinned defaults", "err", err)

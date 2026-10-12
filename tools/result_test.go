@@ -243,7 +243,6 @@ func TestExecuteToolResult_DataIsNilForTextOnlyTools(t *testing.T) {
 		tool string
 		args map[string]any
 	}{
-		{"get_jumps_between", map[string]any{"from_system": "Jita", "to_system": "Amarr"}},
 		{"get_npc_stations", map[string]any{"system_name": "Jita"}},
 		{"search_item_by_name", map[string]any{"names": []any{"Rifter"}}},
 		{"appraise_items", map[string]any{"items": "Tritanium 10"}},

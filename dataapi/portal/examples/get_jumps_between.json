@@ -1,0 +1,57 @@
+{
+  "tool": "get_jumps_between",
+  "request": {
+    "from_system": "Jita",
+    "to_system": "Amarr"
+  },
+  "prompt": "How many jumps from Jita to Amarr?",
+  "recorded": "2026-10-09",
+  "trimmed": true,
+  "response": {
+    "tool": "get_jumps_between",
+    "version": "sha-aa76146",
+    "result": {
+      "text": "Route from **Jita** to **Amarr** (11 jumps):\n\n  ► Jita                     (+0.9, highsec)\n  → Ikuchi                   (+0.9, highsec)\n  → Ansila                   (+0.9, highsec)\n  → Hykkota                  (+0.8, highsec)\n  → Ahbazon                  (+0.4, lowsec)\n  → Shera                    (+0.6, highsec)\n  → Gensela                  (+0.7, highsec)\n  → Dresi                    (+0.6, highsec)\n  → Aphend                   (+0.6, highsec)\n  → Romi                     (+0.7, highsec)\n  → Bhizheba                 (+0.9, highsec)\n  ◄ Amarr                    (+0.9, highsec)",
+      "data": {
+        "from": "Jita",
+        "to": "Amarr",
+        "prefer_high_sec": false,
+        "highsec_satisfied": true,
+        "jumps": 11,
+        "systems": [
+          {
+            "id": 30000142,
+            "name": "Jita",
+            "region": "The Forge",
+            "security": 0.945913,
+            "sec": "+0.9",
+            "class": "highsec"
+          },
+          {
+            "id": 30000138,
+            "name": "Ikuchi",
+            "region": "The Forge",
+            "security": 0.949,
+            "sec": "+0.9",
+            "class": "highsec"
+          },
+          {
+            "id": 30000132,
+            "name": "Ansila",
+            "region": "The Forge",
+            "security": 0.912017,
+            "sec": "+0.9",
+            "class": "highsec"
+          }
+        ]
+      }
+    },
+    "attribution": [
+      {
+        "name": "EVE Static Data Export (via Fuzzwork)",
+        "url": "https://www.fuzzwork.co.uk/dump/",
+        "license": "CCP game data under the EVE Developer License Agreement; converted by Fuzzwork Enterprises"
+      }
+    ]
+  }
+}

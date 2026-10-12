@@ -73,8 +73,19 @@ type Config struct {
 	MinInterval time.Duration
 
 	// MaxWait is the longest the client sleeps for a rate limit or back-off before a
-	// request. Needing longer returns *BackoffError without sending. 0 means 10 s.
+	// request. Needing longer returns *BackoffError without sending. 0 means 10 s; a
+	// negative value means never sleep (a public service answers "busy" at once instead of
+	// holding the caller).
 	MaxWait time.Duration
+
+	// GuardPercent is the share of each rate-limit group's tokens kept unspent: a request
+	// that would dip into it waits or is refused (*BackoffError), like one that would
+	// overdraw. 0 means 5 %, the floor of "don't operate at the limit". Capped at 90.
+	GuardPercent int
+
+	// Observer, when set, is called for every cache hit, request sent and back-off (see
+	// CallEvent). It runs on the caller's goroutine and must not block.
+	Observer func(CallEvent)
 
 	// MaxRetries is how many times a 420/429 is retried (after waiting Retry-After, if that
 	// fits MaxWait). 0 means 2; a negative value disables retries.

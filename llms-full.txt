@@ -6,11 +6,11 @@ Machine-readable description: [/v1/openapi.yaml](/v1/openapi.yaml) (OpenAPI 3.1;
 
 ## Conventions
 
-- Errors are JSON, always: `{"error":{"code":"...","message":"..."}}`. Codes: `not_found`, `method_not_allowed`, `invalid_request`, `payload_too_large`, `rate_limited`, `unavailable`, `upstream_error`, `unknown_tool`, `tool_disabled`, `api_key_required`, `invalid_api_key`, `key_not_permitted`, `janice_key_required`, `timeout`, `internal_error`.
+- Errors are JSON, always: `{"error":{"code":"...","message":"..."}}`. Codes: `not_found`, `method_not_allowed`, `invalid_request`, `payload_too_large`, `rate_limited`, `unavailable`, `upstream_error`, `upstream_busy`, `unknown_tool`, `tool_disabled`, `api_key_required`, `invalid_api_key`, `key_not_permitted`, `janice_key_required`, `timeout`, `internal_error`.
 - Every response carries `X-Request-ID`: your value when it is a token of 1-64 characters from `[A-Za-z0-9._-]`, otherwise a generated one.
 - Requests are rate limited per caller (sliding window): per API key when one is sent, otherwise per client IP. A refused request is `429` with `Retry-After`.
 - Request bodies are capped: 256 KiB on the fit routes, 64 KiB on the tool and MCP endpoints (`413`).
-- Tool tiers: each tool is *public* (no key), *keyed* (an API key), *byo-key* (your own Janice key) or *disabled*. Public: `search_item_by_name`, `get_ship_stats`, `get_ship_bonuses`, `find_canonical_module`, `get_hull_facts`, `validate_fitting`, `compute_fit_stats`, `get_production_chain`, `get_jumps_between`, `get_systems_in_region`, `get_npc_stations`, `get_reprocessing_yield`, `get_required_skills`. Keyed (send the key as `Authorization: Bearer <key>` or `X-API-Key`; `401 api_key_required` without one, `401 invalid_api_key` for a key that is not valid, on every tool): `get_market_price`, `get_type_info`, `get_fits`, `list_fits`, `analyze_battle`, `get_sovereignty`, `get_system_activity`. Byo-key (the `X-Janice-Key` request header, used for that request only and never logged or stored; `400 janice_key_required` without it): `appraise_items`. Disabled tools are not offered on this service (`403 tool_disabled` over REST, absent from the MCP tool list).
+- Tool tiers: each tool is *public* (no key), *keyed* (an API key), *byo-key* (your own Janice key) or *disabled*. Public: `get_market_price`, `get_type_info`, `search_item_by_name`, `get_ship_stats`, `get_ship_bonuses`, `find_canonical_module`, `get_hull_facts`, `validate_fitting`, `compute_fit_stats`, `get_production_chain`, `get_jumps_between`, `get_systems_in_region`, `get_npc_stations`, `get_reprocessing_yield`, `get_required_skills`, `get_sovereignty`, `get_system_activity`. Keyed (send the key as `Authorization: Bearer <key>` or `X-API-Key`; `401 api_key_required` without one, `401 invalid_api_key` for a key that is not valid, on every tool): `get_fits`, `list_fits`, `analyze_battle`. Byo-key (the `X-Janice-Key` request header, used for that request only and never logged or stored; `400 janice_key_required` without it): `appraise_items`. Disabled tools are not offered on this service (`403 tool_disabled` over REST, absent from the MCP tool list).
 
 ## Endpoints
 
@@ -135,7 +135,8 @@ The same tools are MCP tools of the same name at `/v1/mcp`; over MCP, `content[0
 Get current market prices for an EVE Online item in The Forge region (Jita hub). Returns best sell price, best buy price, and order counts.
 
 - Call: `POST /v1/tool/get_market_price` or MCP tool `get_market_price`
-- Access: keyed. Send an API key as `Authorization: Bearer <key>` or `X-API-Key: <key>`; `401 api_key_required` without one, `401 invalid_api_key` for an invalid one.
+- Access: public. No key needed.
+- Live ESI data: Reads live public data from EVE's ESI through a shared cache that follows ESI's `Expires`. Its own fair-use limit is 10 calls per minute per caller (REST and MCP together), on top of the route limit. When the shared ESI budget is nearly spent the call is refused with `503 upstream_busy` (MCP: an error result starting `upstream_busy`) and `Retry-After`; retry later.
 - Arguments:
   - `type_id` (integer, required): The EVE type ID of the item (e.g. 34 for Tritanium, 44992 for PLEX)
   - `type_name` (string): Human-readable item name, for display only
@@ -147,7 +148,8 @@ Get current market prices for an EVE Online item in The Forge region (Jita hub).
 Get information about an EVE Online item: name, description, volume, mass, group.
 
 - Call: `POST /v1/tool/get_type_info` or MCP tool `get_type_info`
-- Access: keyed. Send an API key as `Authorization: Bearer <key>` or `X-API-Key: <key>`; `401 api_key_required` without one, `401 invalid_api_key` for an invalid one.
+- Access: public. No key needed.
+- Live ESI data: Reads live public data from EVE's ESI through a shared cache that follows ESI's `Expires`. Its own fair-use limit is 10 calls per minute per caller (REST and MCP together), on top of the route limit. When the shared ESI budget is nearly spent the call is refused with `503 upstream_busy` (MCP: an error result starting `upstream_busy`) and `Retry-After`; retry later.
 - Arguments:
   - `type_id` (integer, required): The EVE type ID
 - Typed result (`result.data`): TypeInfo with fields `type_id`, `name`, `description`, `volume_m3`, `mass_kg`, `group_id`
@@ -314,7 +316,7 @@ Compute the number of jumps and the route between two EVE solar systems. Default
   - `from_system` (string, required): Origin solar system name, e.g. 'Jita'
   - `to_system` (string, required): Destination solar system name, e.g. 'Amarr'
   - `prefer_high_sec` (boolean): If true, route via highsec only (default false)
-- Typed result: none; the answer is `result.text`
+- Typed result (`result.data`): Route with fields `from`, `to`, `prefer_high_sec`, `highsec_satisfied`, `jumps`, `systems`
 - Sources: EVE Static Data Export (via Fuzzwork)
 
 ### get_systems_in_region
@@ -371,7 +373,8 @@ List the skills required to fly a ship or build an item. Use for 'what skills to
 Get the alliance / corporation holding sovereignty over an EVE solar system. Live data from ESI. Use for 'who controls X' or 'sov holder of Y' questions.
 
 - Call: `POST /v1/tool/get_sovereignty` or MCP tool `get_sovereignty`
-- Access: keyed. Send an API key as `Authorization: Bearer <key>` or `X-API-Key: <key>`; `401 api_key_required` without one, `401 invalid_api_key` for an invalid one.
+- Access: public. No key needed.
+- Live ESI data: Reads live public data from EVE's ESI through a shared cache that follows ESI's `Expires`. Its own fair-use limit is 10 calls per minute per caller (REST and MCP together), on top of the route limit. When the shared ESI budget is nearly spent the call is refused with `503 upstream_busy` (MCP: an error result starting `upstream_busy`) and `Retry-After`; retry later.
 - Arguments:
   - `system_name` (string, required): Solar system name, e.g. 'Saranen'
 - Typed result: none; the answer is `result.text`
@@ -382,7 +385,8 @@ Get the alliance / corporation holding sovereignty over an EVE solar system. Liv
 Get recent killmail count and jump count for a solar system from ESI. Use for 'how many kills in X recently', 'is system Y active', 'is it safe to undock'.
 
 - Call: `POST /v1/tool/get_system_activity` or MCP tool `get_system_activity`
-- Access: keyed. Send an API key as `Authorization: Bearer <key>` or `X-API-Key: <key>`; `401 api_key_required` without one, `401 invalid_api_key` for an invalid one.
+- Access: public. No key needed.
+- Live ESI data: Reads live public data from EVE's ESI through a shared cache that follows ESI's `Expires`. Its own fair-use limit is 10 calls per minute per caller (REST and MCP together), on top of the route limit. When the shared ESI budget is nearly spent the call is refused with `503 upstream_busy` (MCP: an error result starting `upstream_busy`) and `Retry-After`; retry later.
 - Arguments:
   - `system_name` (string, required): Solar system name, e.g. 'Tama'
 - Typed result: none; the answer is `result.text`

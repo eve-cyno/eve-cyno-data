@@ -1,0 +1,8 @@
+{
+  "tool": "appraise_items",
+  "request": {
+    "items": "Tritanium x1000\nPyerite x500"
+  },
+  "prompt": "Appraise 1000 Tritanium and 500 Pyerite.",
+  "note": "Request only: the call runs with your own Janice key and the project never holds one, so no response is recorded."
+}

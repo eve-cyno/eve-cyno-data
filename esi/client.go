@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"golang.org/x/sync/semaphore"
+	"golang.org/x/sync/singleflight"
 )
 
 // Request describes one ESI call.
@@ -116,6 +117,8 @@ type Client struct {
 	maxBody     int64
 	cache       *cache
 	lim         *limiter
+	flights     singleflight.Group
+	observer    func(CallEvent)
 
 	// Clock and sleeper; tests replace them.
 	now   func() time.Time
@@ -164,9 +167,17 @@ func New(cfg Config) (*Client, error) {
 	c.sem = semaphore.NewWeighted(int64(maxConc))
 
 	c.minInterval = max(cfg.MinInterval, 0)
-	c.maxWait = cfg.MaxWait
-	if c.maxWait <= 0 {
+	switch {
+	case cfg.MaxWait == 0:
 		c.maxWait = defaultMaxWait
+	case cfg.MaxWait < 0:
+		c.maxWait = 0 // never wait: a needed wait is a *BackoffError
+	default:
+		c.maxWait = cfg.MaxWait
+	}
+	c.observer = cfg.Observer
+	if cfg.GuardPercent > 0 {
+		c.lim.floorPct = min(cfg.GuardPercent, 90)
 	}
 	switch {
 	case cfg.MaxRetries == 0:
@@ -289,13 +300,49 @@ func (c *Client) Do(ctx context.Context, req Request) (*Response, error) {
 	if err != nil {
 		return nil, err
 	}
-	var ent *entry
-	if p.key != "" {
-		if ent = c.cache.get(p.key); ent != nil && c.now().Before(ent.expires) {
-			return ent.response(p, true, false), nil
-		}
+	if p.key == "" {
+		return c.fetch(ctx, p, nil)
+	}
+	ent := c.cache.get(p.key)
+	if ent != nil && c.now().Before(ent.expires) {
+		c.observe(CallEvent{Route: p.route, Cache: CacheHit, RateRemaining: -1, RateLimit: -1, ErrorLimitRemain: -1})
+		return ent.response(p, true, false), nil
 	}
 
+	// Callers asking for the same expired or missing entry share one upstream request (a
+	// burst on a cold key costs ESI one call, not one per caller). The shared request runs
+	// detached from any single caller's context, bounded by flightTimeout; each caller
+	// still leaves when its own context ends.
+	ch := c.flights.DoChan(p.key, func() (any, error) {
+		fctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), flightTimeout)
+		defer cancel()
+		return c.fetch(fctx, p, ent)
+	})
+	select {
+	case <-ctx.Done():
+		return nil, &BackoffError{Until: c.now(), Reason: "context ended", Err: ctx.Err()}
+	case res := <-ch:
+		if res.Err != nil {
+			return nil, res.Err
+		}
+		return res.Val.(*Response).clone(), nil
+	}
+}
+
+// flightTimeout bounds one shared upstream request (waits for the rate limit included).
+const flightTimeout = 2 * time.Minute
+
+// clone returns a Response whose Header and Body the caller may modify.
+func (r *Response) clone() *Response {
+	cp := *r
+	cp.Header = cloneHeader(r.Header)
+	cp.Body = cloneBytes(r.Body)
+	return &cp
+}
+
+// fetch sends the request (after admission) and handles 304, 420/429 retries and caching.
+// ent is the expired cache entry to revalidate, nil when there is none.
+func (c *Client) fetch(ctx context.Context, p *prepared, ent *entry) (*Response, error) {
 	var last *Response
 	for attempt := 0; ; attempt++ {
 		tk, err := c.admit(ctx, p)
@@ -303,25 +350,33 @@ func (c *Client) Do(ctx context.Context, req Request) (*Response, error) {
 			if last != nil && errors.Is(err, ErrBackedOff) {
 				return last, nil // retrying a 429 would have to wait too long: hand back the 429
 			}
+			var be *BackoffError
+			if errors.As(err, &be) && be.Err == nil {
+				c.observe(CallEvent{Route: p.route, Cache: cacheLabel(p, ent), BackedOff: true, Reason: be.Reason, RateRemaining: -1, RateLimit: -1, ErrorLimitRemain: -1})
+			}
 			return nil, err
 		}
+		started := c.now()
 		r, err := c.exchange(ctx, p, ent, tk)
 		if err != nil {
 			return nil, err
 		}
 		now := c.now()
+		took := now.Sub(started)
 
 		switch {
 		case r.Status == http.StatusNotModified:
 			if ent == nil {
 				return nil, fmt.Errorf("%s %s: %w", p.method, p.path, ErrNotModifiedWithoutCache)
 			}
+			c.observe(sentEvent(p, ent, r, took))
 			ne := ent.revalidated(r.Header, now)
 			c.cache.put(ne)
 			return ne.response(p, true, true), nil
 
 		case r.Status == 420 || r.Status == http.StatusTooManyRequests:
 			c.onRateLimited(p, r, now)
+			c.observe(sentEvent(p, ent, r, took))
 			last = r
 			if attempt < c.maxRetries && r.RetryAfter <= c.maxWait {
 				continue
@@ -329,6 +384,7 @@ func (c *Client) Do(ctx context.Context, req Request) (*Response, error) {
 			return r, nil
 
 		default:
+			c.observe(sentEvent(p, ent, r, took))
 			if storable(p.method, r.Status, r.Header, r.Expires, now) && p.key != "" {
 				c.cache.put(&entry{
 					key: p.key, status: r.Status, header: cloneHeader(r.Header), body: cloneBytes(r.Body),
@@ -337,6 +393,18 @@ func (c *Client) Do(ctx context.Context, req Request) (*Response, error) {
 			}
 			return r, nil
 		}
+	}
+}
+
+// cacheLabel is the CallEvent.Cache of a request that has not been answered yet.
+func cacheLabel(p *prepared, ent *entry) string {
+	switch {
+	case p.key == "":
+		return CacheNone
+	case ent != nil:
+		return CacheStale
+	default:
+		return CacheMiss
 	}
 }
 

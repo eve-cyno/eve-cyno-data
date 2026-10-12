@@ -4,6 +4,7 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"net/http"
 	"strconv"
 	"testing"
 
@@ -47,11 +48,10 @@ func TestTiers_Policy(t *testing.T) {
 			"get_jumps_between", "get_systems_in_region", "get_npc_stations", "get_reprocessing_yield",
 			"get_required_skills", "get_production_chain", "find_canonical_module", "search_item_by_name",
 			"get_ship_stats", "get_hull_facts", "get_ship_bonuses", "compute_fit_stats", "validate_fitting",
+			// the public ESI pass-throughs
+			"get_market_price", "get_type_info", "get_sovereignty", "get_system_activity",
 		},
-		catalog.TierKeyed: {
-			"get_fits", "list_fits", "get_market_price", "get_type_info", "get_sovereignty",
-			"get_system_activity", "analyze_battle",
-		},
+		catalog.TierKeyed:    {"get_fits", "list_fits", "analyze_battle"},
 		catalog.TierBYOKey:   {"appraise_items"},
 		catalog.TierDisabled: {"convert_isk_to_real"},
 	}
@@ -70,6 +70,18 @@ func TestTiers_Policy(t *testing.T) {
 		require.ElementsMatch(t, names, got, tier.String())
 	}
 	require.Len(t, catalog.Tools(), total, "every registry tool is in exactly one tier")
+}
+
+// The tools that can spend the shared ESI budget are marked Upstream, and only they: the
+// public surfaces give exactly these the stricter per-IP limit.
+func TestUpstreamTools(t *testing.T) {
+	var got []string
+	for _, tl := range catalog.Tools() {
+		if tl.Upstream {
+			got = append(got, tl.Name)
+		}
+	}
+	require.ElementsMatch(t, []string{"get_market_price", "get_type_info", "get_sovereignty", "get_system_activity"}, got)
 }
 
 func TestTier_NamesAndOffered(t *testing.T) {
@@ -136,4 +148,54 @@ func TestDataTypesMatchDispatch(t *testing.T) {
 		}
 	}
 	require.Equal(t, typedCases, have, "catalog.dataType is out of step with tools.dispatch")
+}
+
+func TestJaniceKeyFrom(t *testing.T) {
+	cases := []struct {
+		name, header, want string
+		set                bool
+	}{
+		{name: "absent", want: ""},
+		{name: "empty", set: true, header: "", want: ""},
+		{name: "trimmed", set: true, header: "  janice-test-key  ", want: "janice-test-key"},
+		// An unset Claude Code plugin variable arrives as the literal placeholder text.
+		{name: "unexpanded placeholder", set: true, header: "${user_config.janice_api_key}", want: ""},
+		{name: "unexpanded env placeholder", set: true, header: "${JANICE_API_KEY}", want: ""},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			h := http.Header{}
+			if tc.set {
+				h.Set(catalog.HeaderJaniceKey, tc.header)
+			}
+			require.Equal(t, tc.want, catalog.JaniceKeyFrom(h))
+		})
+	}
+}
+
+// Every tool a public surface offers has a one-line human summary (the descriptions are
+// written as prompts for the model); the portal's tool index and site search show it.
+func TestEveryOfferedToolHasASummary(t *testing.T) {
+	for _, tl := range catalog.Tools() {
+		if !tl.Tier.Offered() {
+			continue
+		}
+		require.NotEmpty(t, tl.Summary, "%s is offered but has no Summary: add it to summaryTable in catalog.go", tl.Name)
+		require.NotContains(t, tl.Summary, "\n", tl.Name)
+		require.LessOrEqual(t, len(tl.Summary), 110, "%s: keep the summary to one short line", tl.Name)
+		require.NotEqual(t, tl.Description, tl.Summary, "%s: a summary is not the model-facing description", tl.Name)
+	}
+}
+
+func TestParamOrder_FollowsTheSchemaFile(t *testing.T) {
+	tl, ok := catalog.Lookup("get_production_chain")
+	require.True(t, ok)
+	require.Equal(t, []string{"item_name", "runs", "me_level", "station_rig_level", "system_cost_index", "industry_skills"}, tl.ParamOrder)
+	for _, tl := range catalog.Tools() {
+		props, _ := tl.Parameters["properties"].(map[string]any)
+		require.Len(t, tl.ParamOrder, len(props), "%s: ParamOrder lists every argument", tl.Name)
+		for _, name := range tl.ParamOrder {
+			require.Contains(t, props, name, tl.Name)
+		}
+	}
 }

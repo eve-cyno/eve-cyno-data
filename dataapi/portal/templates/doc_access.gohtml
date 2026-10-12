@@ -1,0 +1,57 @@
+{{define "article"}}<article class="doc" data-page="access">
+  <header class="doc-head">
+    <ol class="crumbs"><li><a href="/docs/">Docs</a></li><li>Reference</li><li aria-current="page">Access tiers &amp; rate limits</li></ol>
+    <h1>Access tiers &amp; rate limits</h1>
+    <p class="doc-lede">Free and non-commercial. Each tool has one access tier, the same over REST and MCP, and every route has a per-caller budget.</p>
+  </header>
+  <details class="toc" data-toc open>
+    <summary><svg class="ico" aria-hidden="true"><use href="#i-chev"/></svg>On this page</summary>
+    <ul>
+      <li><a href="#access-tiers">Tiers</a></li>
+      <li><a href="#access-limits">Rate limits</a></li>
+      <li><a href="#access-esi">Live ESI tools</a></li>
+      <li><a href="#access-caps">Body caps</a></li>
+      <li><a href="#access-keys">API keys</a></li>
+    </ul>
+    <div class="toc-more"><a href="https://discord.gg/XZzkH38dt9"><svg class="ico" aria-hidden="true"><use href="#i-discord"/></svg>Ask on Discord</a><a href="#top"><svg class="ico" aria-hidden="true"><use href="#i-up"/></svg>Back to top</a></div>
+  </details>
+  <div class="doc-body prose">
+    <h2 id="access-tiers">Tiers<a class="h-anchor" href="#access-tiers" aria-label="Link to this section">#</a></h2>
+    <div class="tbl"><table>
+      <thead><tr><th scope="col">Tier</th><th scope="col">Who can call</th><th scope="col" class="num">Tools</th></tr></thead>
+      <tbody>
+        <tr><td><span class="badge" data-tier="public">public</span></td><td>anyone, no key</td><td class="num">{{.Stats.Public}}</td></tr>
+        <tr><td><span class="badge" data-tier="byo-key">byo-key</span></td><td>your own Janice API key in <code>X-Janice-Key</code>, used for that request only, never stored or logged</td><td class="num">{{.Stats.BYO}}</td></tr>
+        <tr><td><span class="badge" data-tier="keyed">keyed</span></td><td>a valid API key: <code>Authorization: Bearer &lt;key&gt;</code> or <code>X-API-Key: &lt;key&gt;</code> {{if not .Auth}}(no keys are issued on this service yet){{end}}</td><td class="num">{{.Stats.Keyed}}</td></tr>
+        <tr><td><span class="badge badge-plain">disabled</span></td><td>not offered on this service</td><td class="num">{{.Stats.Disabled}}</td></tr>
+      </tbody>
+    </table></div>
+    <p>The tools in each tier are listed in the <a href="/docs/tools">Tools reference</a>.</p>
+
+    <h2 id="access-limits">Rate limits<a class="h-anchor" href="#access-limits" aria-label="Link to this section">#</a></h2>
+    <p>Per caller (per API key when one is sent, otherwise per client IP), sliding window. A refused request is a <code>429</code> with <code>Retry-After</code>.</p>
+    <div class="tbl"><table>
+      <thead><tr><th scope="col">Route</th><th scope="col" class="num">Limit</th></tr></thead>
+      <tbody>
+{{range .LimitRows}}        <tr><td>{{if .Code}}<code>{{.Route}}</code>{{else}}{{.Route}}{{end}}</td><td class="num">{{.Max}} per {{.Window}}</td></tr>
+{{end}}      </tbody>
+    </table></div>
+
+    <h2 id="access-esi">Live ESI tools<a class="h-anchor" href="#access-esi" aria-label="Link to this section">#</a></h2>
+    <p>{{.UpstreamNames}} read live public data from EVE's ESI through a shared cache that follows ESI's <code>Expires</code>. Their own fair-use limit is {{.Lim.UpstreamTool}} calls per minute per caller, on top of the route limit. When the shared ESI budget is nearly spent the call is refused with <code>503 upstream_busy</code> and <code>Retry-After</code>.</p>
+    <aside class="callout" data-kind="warning"><svg class="ico" aria-hidden="true"><use href="#i-warn"/></svg><div><p class="callout-title">Don't mirror ESI</p><p>Do not use these tools to mirror or bulk-collect ESI data: use ESI itself or a dataset such as EVE Ref for that.</p></div></aside>
+
+    <h2 id="access-caps">Body caps<a class="h-anchor" href="#access-caps" aria-label="Link to this section">#</a></h2>
+    <p>Request bodies are capped: 256 KiB on the fit routes, 64 KiB on the tool and MCP endpoints. Over the cap: <code>413 payload_too_large</code>.</p>
+
+    <h2 id="access-keys">API keys<a class="h-anchor" href="#access-keys" aria-label="Link to this section">#</a></h2>
+    <p>Keys are personal to you, are not to be shared or resold, and may be revoked at any time, for example for abuse. Keyed callers are rate limited per key.{{if not .Auth}} No keys are issued yet; news lands on{{else}} News lands on{{end}} the <a href="https://discord.gg/XZzkH38dt9">EVE-Cyno Discord</a> first.</p>
+
+    <nav class="pager" aria-label="Previous and next page">
+      <a href="/docs/tools"><span class="pg-k"><svg class="ico" aria-hidden="true"><use href="#i-back"/></svg>Previous</span><span class="pg-t">Tools reference</span></a>
+      <a class="next" href="/docs/attribution"><span class="pg-k">Next<svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></span><span class="pg-t">Attribution &amp; licences</span></a>
+    </nav>
+    <p class="doc-foot"><span>Questions or a mistake on this page? <a href="https://discord.gg/XZzkH38dt9">EVE-Cyno Discord</a></span><span>Generated from the route table · <span data-slot="version">{{.Version}}</span></span></p>
+  </div>
+</article>
+{{end}}

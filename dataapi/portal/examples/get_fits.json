@@ -1,0 +1,11 @@
+{
+  "tool": "get_fits",
+  "request": {
+    "ship_name": "Gila",
+    "activity": "pve",
+    "context": "abyss",
+    "limit": 3
+  },
+  "prompt": "Show me community Gila fits for the abyss.",
+  "note": "Request only: no API keys are issued yet, so there is no recorded response. Every fit in a response carries an attribution object (source, source_url, author, license): keep it where you show the fit."
+}

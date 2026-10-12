@@ -8,6 +8,7 @@ import "fmt"
 // run `go generate ./...` in the core module; TestGeneratedFilesAreCurrent fails until the
 // files are regenerated.
 //
+//go:generate go run ../internal/fielddocs/gen -root .. -out fielddocs.json
 //go:generate go run ../internal/apigen -out ..
 
 // GeneratedFiles returns the generated description files of PublicSurface, keyed by their

@@ -331,3 +331,80 @@ func fitReport(vs ...fit.Violation) fit.Report { return fit.Report{Violations: v
 func softViolation(msg string) fit.Violation {
 	return fit.Violation{Severity: fit.Soft, Message: msg}
 }
+
+// ── get_jumps_between ───────────────────────────────────────────────────────
+
+func TestTypedResult_GetJumpsBetween(t *testing.T) {
+	deps := testDeps(t)
+	for _, preferHS := range []bool{false, true} {
+		res, err := ExecuteToolResult(context.Background(), deps, "get_jumps_between",
+			map[string]any{"from_system": "Jita", "to_system": "Amarr", "prefer_high_sec": preferHS})
+		require.NoError(t, err)
+		route := requireDataIs[Route](t, res)
+
+		require.Equal(t, "Jita", route.From)
+		require.Equal(t, "Amarr", route.To)
+		require.Equal(t, preferHS, route.PreferHighSec)
+		require.Equal(t, len(route.Systems)-1, route.Jumps)
+		require.Contains(t, res.Text, strconv.Itoa(route.Jumps)+" jump")
+		require.Equal(t, "Jita", route.Systems[0].Name)
+		require.Equal(t, "The Forge", route.Systems[0].Region)
+		require.Equal(t, "Amarr", route.Systems[len(route.Systems)-1].Name)
+		for _, sys := range route.Systems {
+			require.Contains(t, res.Text, sys.Name)
+			require.Contains(t, res.Text, "("+sys.Sec+", "+sys.Class+")")
+			require.NotZero(t, sys.ID)
+		}
+		require.Equal(t, "highsec", route.Systems[0].Class)
+		require.Regexp(t, `^[+-]\d\.\d$`, route.Systems[0].Sec)
+		require.Contains(t, jsonOf(t, route), `"systems":[{"id":`)
+	}
+}
+
+// Regression: secClass cut highsec at a raw 0.5, so the 0.45–0.5 systems the game shows as 0.5
+// (and the highsec-only pathfinder routes through) were labelled lowsec, and the route card warned
+// about "low-security systems (0.5, 0.5, …)" on a highsec-only Jita → Amarr route.
+func TestSecClass_FollowsDisplayedSecurity(t *testing.T) {
+	cases := []struct {
+		sec   float64
+		shown string
+		class string
+	}{
+		{1.0, "+1.0", "highsec"},
+		{0.5, "+0.5", "highsec"},
+		{0.46, "+0.5", "highsec"},
+		{0.45, "+0.5", "highsec"},
+		{0.449, "+0.4", "lowsec"},
+		{0.1, "+0.1", "lowsec"},
+		{0.03, "+0.1", "lowsec"},
+		{0.0, "+0.0", "nullsec"},
+		{-0.04, "-0.0", "nullsec"},
+		{-0.5, "-0.5", "nullsec"},
+	}
+	for _, c := range cases {
+		require.Equal(t, c.shown, fmt.Sprintf("%+.1f", displaySec(c.sec)), "display of %v", c.sec)
+		require.Equal(t, c.class, secClass(c.sec), "class of %v", c.sec)
+	}
+}
+
+func TestTypedResult_GetJumpsBetween_HighsecRouteHasNoLowsecSystems(t *testing.T) {
+	deps := testDeps(t)
+	res, err := ExecuteToolResult(context.Background(), deps, "get_jumps_between",
+		map[string]any{"from_system": "Jita", "to_system": "Amarr", "prefer_high_sec": true})
+	require.NoError(t, err)
+	route := requireDataIs[Route](t, res)
+	require.True(t, route.HighsecSatisfied)
+	for _, sys := range route.Systems {
+		require.Equal(t, "highsec", sys.Class, "%s (%v) on a highsec-only route", sys.Name, sys.Security)
+	}
+	require.NotContains(t, res.Text, "lowsec)")
+}
+
+func TestTypedResult_GetJumpsBetween_TextOnlyAnswersHaveNoData(t *testing.T) {
+	deps := testDeps(t)
+	res, err := ExecuteToolResult(context.Background(), deps, "get_jumps_between",
+		map[string]any{"from_system": "Jita", "to_system": "UnknownSystem99"})
+	require.NoError(t, err)
+	require.Nil(t, res.Data)
+	require.Equal(t, "Unknown system: UnknownSystem99.", res.Text)
+}

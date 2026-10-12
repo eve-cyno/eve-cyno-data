@@ -17,7 +17,8 @@ import (
 // code does not send. It understands exactly the encoding/json rules the response types
 // use: field names from `json` tags (or the Go name), `omitempty` and `-`, embedded
 // structs, pointers, slices, maps, time.Time, any. Go doc comments are not reachable by
-// reflection, so a derived field has a type but no description.
+// reflection: a field's description comes from fielddocs.json, generated from the struct
+// comments (see fielddocs.go).
 
 // prop is one property of an object schema; propList keeps declaration order (a plain
 // map would be re-sorted alphabetically by encoding/json).
@@ -322,6 +323,9 @@ func (b *schemaBuilder) collect(t reflect.Type, props *propList, required *[]str
 			fs = schema{"type": "string"}
 		} else {
 			fs = b.of(ft)
+		}
+		if d := fieldDocs()[fieldDocKey(t, f)]; d != "" {
+			fs = describeField(fs, d)
 		}
 		*props = append(*props, prop{name: name, schema: fs})
 		if !omitEmpty {

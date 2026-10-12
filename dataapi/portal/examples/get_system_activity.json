@@ -1,0 +1,29 @@
+{
+  "tool": "get_system_activity",
+  "request": {
+    "system_name": "Tama"
+  },
+  "prompt": "How active is Tama right now?",
+  "recorded": "2026-10-09",
+  "trimmed": false,
+  "response": {
+    "tool": "get_system_activity",
+    "version": "sha-aa76146",
+    "result": {
+      "text": "System activity in **Tama** (last hour):\n  Ship kills: 7 | Pod kills: 7 | NPC kills: 49",
+      "data": null
+    },
+    "attribution": [
+      {
+        "name": "EVE Static Data Export (via Fuzzwork)",
+        "url": "https://www.fuzzwork.co.uk/dump/",
+        "license": "CCP game data under the EVE Developer License Agreement; converted by Fuzzwork Enterprises"
+      },
+      {
+        "name": "ESI (EVE Swagger Interface)",
+        "url": "https://esi.evetech.net/",
+        "license": "EVE Developer License Agreement (CCP Games / Fenris Creations); non-commercial use"
+      }
+    ]
+  }
+}

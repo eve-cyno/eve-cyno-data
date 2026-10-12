@@ -11,6 +11,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"eve-cyno.dev/go/data/esi"
 	"eve-cyno.dev/go/data/sde"
@@ -45,7 +46,10 @@ func marketFor(typeID int) (region int, market, where string) {
 // keeps every page until its Expires header (about 5 minutes for market orders) and
 // revalidates with If-None-Match afterwards. The MarketPrice is nil unless there are
 // orders to report; the text is the answer in every case.
-func getMarketPrice(ctx context.Context, c *Client, _ *sde.SDE, typeID int) (string, *MarketPrice, error) {
+func getMarketPrice(ctx context.Context, c *Client, s *sde.SDE, typeID int) (string, *MarketPrice, error) {
+	if msg, unknown := unknownTypeID(s, typeID); unknown {
+		return msg, nil, nil
+	}
 	region, market, where := marketFor(typeID)
 	pages, err := c.esiClient().GetAllPages(ctx, esi.Request{
 		Path:  fmt.Sprintf("/markets/%d/orders", region),
@@ -59,6 +63,8 @@ func getMarketPrice(ctx context.Context, c *Client, _ *sde.SDE, typeID int) (str
 		// Fewer pages than X-Pages announced: use what precedes the missing page.
 	case hasStatus:
 		return fmt.Sprintf("ISK price unavailable for type_id=%d — ESI returned %d.", typeID, status), nil, nil
+	case errors.Is(err, esi.ErrBackedOff) || ctx.Err() != nil:
+		return "", nil, err // not sent (rate-limit back-off) or cut off by the caller
 	default:
 		return fmt.Sprintf("ISK price unavailable for type_id=%d — ESI request failed.", typeID), nil, nil
 	}
@@ -105,6 +111,32 @@ func getMarketPrice(ctx context.Context, c *Client, _ *sde.SDE, typeID int) (str
 		lines = append(lines, "No buy orders.")
 	}
 	return strings.Join(lines, "\n"), price, nil
+}
+
+// unknownTypeID answers a type_id that is not in the SDE without calling ESI. A loaded SDE
+// knows every type ESI serves, and ESI answers an unknown id with a 404, which counts
+// against the application's error limit (100 per minute, then 420 on every route): the
+// ids a public caller makes up must not reach it. With no SDE loaded the check is skipped.
+func unknownTypeID(s *sde.SDE, typeID int) (string, bool) {
+	if s == nil || !s.Available() || s.GetTypeName(typeID) != nil {
+		return "", false
+	}
+	return fmt.Sprintf(
+		"Unknown type_id=%d. Do NOT invent a type_id. "+
+			"Call search_item_by_name with the actual item or ship name "+
+			"(e.g. 'PLEX', 'Tritanium', 'Vexor Navy Issue') to look up the correct id.",
+		typeID), true
+}
+
+// UpstreamBusy reports whether err means a tool did not run because the ESI client is
+// backing off (a rate limit or the error limit is near; nothing was sent), and how long
+// until it may be retried. A call cut off by its own context is not "busy".
+func UpstreamBusy(err error) (retryAfter time.Duration, busy bool) {
+	var be *esi.BackoffError
+	if !errors.As(err, &be) || be.Err != nil {
+		return 0, false
+	}
+	return max(time.Until(be.Until), time.Second), true
 }
 
 // esiError formats a consistent error message for ESI failures.
@@ -154,12 +186,18 @@ func esiGetJSON(ctx context.Context, c *Client, path string) ([]byte, error) {
 
 // getTypeInfo mirrors Python _get_type_info exactly. The TypeInfo is nil for every
 // text-only answer (ESI failure, unknown id, unparseable body).
-func getTypeInfo(ctx context.Context, c *Client, _ *sde.SDE, typeID int) (string, *TypeInfo, error) {
+func getTypeInfo(ctx context.Context, c *Client, s *sde.SDE, typeID int) (string, *TypeInfo, error) {
+	if msg, unknown := unknownTypeID(s, typeID); unknown {
+		return msg, nil, nil
+	}
 	resp, err := c.esiClient().Do(ctx, esi.Request{
 		Path:   fmt.Sprintf("/universe/types/%d", typeID),
 		Header: acceptEnglish(),
 	})
 	if err != nil {
+		if errors.Is(err, esi.ErrBackedOff) || ctx.Err() != nil {
+			return "", nil, err
+		}
 		return esiError("get_type_info", typeID, err), nil, nil
 	}
 	body, status := resp.Body, resp.Status

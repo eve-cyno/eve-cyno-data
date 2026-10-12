@@ -27,33 +27,33 @@ func TestIndex_HTML(t *testing.T) {
 	for _, want := range []string{
 		"https://data.example.test/v1/openapi.yaml", "https://data.example.test/v1/openapi.json",
 		"https://data.example.test/llms.txt", "https://data.example.test/llms-full.txt",
-		"https://data.example.test/v1/mcp", "https://data.example.test/terms",
-		"https://github.com/eve-cyno/eve-cyno-data",
-		"claude mcp add --transport http eve-cyno https://data.example.test/v1/mcp",
-		"Fenris Creations hf. All rights reserved", "CC BY-SA 4.0", "bythlak@eve-cyno.dev",
-		"60 per minute", // Limits.Docs
+		"https://data.example.test/terms", "https://github.com/eve-cyno/eve-cyno-data",
+		"/plugin marketplace add eve-cyno/claude-plugins",
+		"Fenris Creations hf. All rights reserved", "CC BY-SA 4.0", "https://discord.gg/XZzkH38dt9",
 	} {
 		require.Contains(t, body, want)
 	}
-	// The tier table lists every catalog tool under its tier, so it cannot drift.
+	// The tool overview lists every offered tool under its tier, so it cannot drift; a
+	// disabled tool is not on the page.
 	for _, tl := range catalog.Tools() {
-		require.Contains(t, body, "<code>"+tl.Name+"</code>", tl.Name)
+		link := `href="/docs/tools/` + tl.Name + `"`
+		if tl.Tier.Offered() {
+			require.Contains(t, body, link, tl.Name)
+		} else {
+			require.NotContains(t, body, link, tl.Name)
+		}
 	}
-	for _, tier := range []string{"public", "keyed", "byo-key", "disabled"} {
-		require.Contains(t, body, "<td>"+tier+"</td>")
+	for _, tier := range []string{"public", "keyed", "byo-key"} {
+		require.Contains(t, body, `<div class="tier-group" data-tier="`+tier+`">`)
 	}
-	require.NotContains(t, body, "<script")
 }
 
-func TestIndex_ReflectsConfiguredLimitsAndSurface(t *testing.T) {
+func TestIndex_ReflectsConfiguredLimits(t *testing.T) {
 	lim := dataapi.DefaultLimits()
 	lim.ItemsSearch = dataapi.Rate{Max: 7, Window: time.Hour}
-	api := newAPI(t, dataapi.Config{Docs: true, Limits: &lim}) // no MCP, no tool API
-	body := do(api, http.MethodGet, "/", "").Body.String()
+	api := newAPI(t, dataapi.Config{Docs: true, Limits: &lim})
+	body := do(api, http.MethodGet, "/docs/access", "").Body.String()
 	require.Contains(t, body, "7 per hour")
-	require.NotContains(t, body, "/v1/mcp")
-	require.NotContains(t, body, "claude mcp add")
-	require.NotContains(t, body, "/tool/{name}")
 }
 
 func TestIndex_JSON(t *testing.T) {
@@ -85,11 +85,14 @@ func TestIndex_JSON(t *testing.T) {
 	require.Len(t, doc.Tiers, 4)
 	require.NotEmpty(t, doc.RateLimits)
 	require.Contains(t, doc.Disclaimer, "Fenris Creations")
-	require.Equal(t, "bythlak@eve-cyno.dev", doc.Contact)
+	// Discord is the project's contact channel; the page carries no mailto (owner decision 2026-10-09).
+	require.Equal(t, "https://discord.gg/XZzkH38dt9", doc.Contact)
 
 	// A browser asks for HTML even if it lists JSON.
 	html := do(api, http.MethodGet, "/", "", "Accept", "text/html,application/json;q=0.9")
 	require.Equal(t, "text/html; charset=utf-8", html.Header().Get("Content-Type"))
+	require.Contains(t, html.Body.String(), `href="https://discord.gg/XZzkH38dt9"`)
+	require.NotContains(t, html.Body.String(), "mailto:")
 }
 
 func TestIndexAndTerms_OnlyWithDocs(t *testing.T) {
@@ -124,7 +127,8 @@ func TestTerms_HTMLAndMarkdown(t *testing.T) {
 	require.Contains(t, body, "<h1>EVE-Cyno Data API: terms of use</h1>")
 	require.Contains(t, body, "<li>")
 	require.Contains(t, body, `<a href="https://wiki.eveuniversity.org/">`)
-	require.Contains(t, body, "bythlak@eve-cyno.dev")
+	require.Contains(t, body, "https://discord.gg/XZzkH38dt9")
+	require.NotContains(t, body, "@eve-cyno.dev", "no e-mail contact: the project has no mailbox")
 	require.NotContains(t, body, "<!--", "no comment leaks into the page")
 }
 

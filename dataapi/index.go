@@ -2,8 +2,6 @@ package dataapi
 
 import (
 	"encoding/json"
-	"fmt"
-	"html"
 	"net/http"
 	"strings"
 
@@ -13,8 +11,9 @@ import (
 const (
 	// repoURL is the public MIT mirror of this module.
 	repoURL = "https://github.com/eve-cyno/eve-cyno-data"
-	// contactEmail is the operator contact.
-	contactEmail = "bythlak@eve-cyno.dev"
+	// contactURL is where people reach the project: the EVE-Cyno Discord (the main channel for support,
+	// feedback and announcements). The project has no mailbox.
+	contactURL = "https://discord.gg/XZzkH38dt9"
 	// hostedURL is the hosted service, used in examples when no PublicURL is configured.
 	hostedURL = "https://data.eve-cyno.dev"
 
@@ -24,14 +23,14 @@ const (
 		"loop, and every answer names its sources. Free, non-commercial, run by Bythlak, with no warranty."
 )
 
-// serveIndex handles GET /: HTML for people, JSON for Accept: application/json.
+// serveIndex handles GET /: the data portal for people, JSON for Accept: application/json.
 func (a *API) serveIndex(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Vary", "Accept")
 	if wantsJSON(r) {
 		serveDoc(w, "application/json", a.pages.indexJSON)
 		return
 	}
-	serveDoc(w, "text/html; charset=utf-8", a.pages.index)
+	writeHTMLPage(w, a.portal.pages["/"])
 }
 
 // wantsJSON reports whether the client asks for JSON and not for HTML.
@@ -121,7 +120,7 @@ func limitRows(s Surface) []limitRow {
 		{"GET " + p + "/items/search", l.ItemsSearch, true},
 		{"POST " + p + "/tool/{name}", l.Tool, s.ToolAPI == ToolAPIPublic},
 		{"POST " + p + "/mcp", l.MCP, s.MCP},
-		{"index, terms, llms*.txt, openapi.*", l.Docs, s.Docs},
+		{"index, docs, terms, llms*.txt, openapi.*", l.Docs, s.Docs},
 	}
 	var out []limitRow
 	for _, c := range cands {
@@ -157,7 +156,7 @@ func indexJSON(s Surface) []byte {
 		TermsDraft  bool        `json:"terms_draft"`
 	}{
 		Name: "EVE-Cyno Data API", Description: indexSummary, Links: indexLinks(s), Tiers: tierRows(s),
-		RateLimits: limitRows(s), Attribution: attributionText, Disclaimer: dlaNotice, Contact: contactEmail, TermsDraft: termsDraft,
+		RateLimits: limitRows(s), Attribution: attributionText, Disclaimer: dlaNotice, Contact: contactURL, TermsDraft: termsDraft,
 	}
 	if s.MCP {
 		doc.MCPExample = mcpExample(s)
@@ -167,53 +166,4 @@ func indexJSON(s Surface) []byte {
 		return []byte(`{"name":"EVE-Cyno Data API"}`) // unreachable: plain structs
 	}
 	return append(b, '\n')
-}
-
-// indexHTML is the plain, dependency-free index page.
-func indexHTML(s Surface) string {
-	esc := html.EscapeString
-	var b strings.Builder
-	b.WriteString(strings.Replace(pageHead, "%s", "EVE-Cyno Data API", 1))
-	b.WriteString("<h1>EVE-Cyno Data API</h1>\n<p>" + esc(indexSummary) + "</p>\n")
-
-	b.WriteString("<h2>Interfaces and links</h2>\n<ul>\n")
-	for _, l := range indexLinks(s) {
-		note := ""
-		if l.Note != "" {
-			note = ": " + esc(l.Note)
-		}
-		fmt.Fprintf(&b, "<li><a href=\"%s\">%s</a>%s</li>\n", esc(l.URL), esc(l.Name), note)
-	}
-	b.WriteString("</ul>\n")
-	if s.MCP {
-		b.WriteString("<p>Add the MCP server to Claude Code:</p>\n<pre>" + esc(mcpExample(s)) + "</pre>\n")
-	}
-
-	b.WriteString("<h2>Access tiers</h2>\n<table>\n<tr><th>Tier</th><th>Who can call</th><th>Tools</th></tr>\n")
-	for _, r := range tierRows(s) {
-		tools := "none"
-		if len(r.Tools) > 0 {
-			parts := make([]string, len(r.Tools))
-			for i, n := range r.Tools {
-				parts[i] = "<code>" + esc(n) + "</code>"
-			}
-			tools = strings.Join(parts, ", ")
-		}
-		fmt.Fprintf(&b, "<tr><td>%s</td><td>%s</td><td>%s</td></tr>\n", esc(r.Tier), esc(r.Access), tools)
-	}
-	b.WriteString("</table>\n")
-
-	b.WriteString("<h2>Rate limits</h2>\n<p>Per caller (per API key when one is sent, otherwise per client IP), sliding window. A refused request is a <code>429</code> with <code>Retry-After</code>.</p>\n<table>\n<tr><th>Route</th><th>Limit</th></tr>\n")
-	for _, r := range limitRows(s) {
-		fmt.Fprintf(&b, "<tr><td><code>%s</code></td><td>%d per %s</td></tr>\n", esc(r.Route), r.Max, esc(r.Window))
-	}
-	b.WriteString("</table>\n")
-
-	b.WriteString("<h2>Attribution</h2>\n<p>EVE Online game data and trademarks belong to Fenris Creations hf (developed by CCP Games); the required Fenris Creations notice is below. Some reference text comes from the <a href=\"https://wiki.eveuniversity.org/\">EVE University Wiki</a> " +
-		"(<a href=\"https://creativecommons.org/licenses/by-sa/4.0/\">CC BY-SA 4.0</a>). Community fits belong to their authors and sites: keep the " +
-		"<code>attribution</code> source link and credit wherever you show them. See the <a href=\"" + esc(s.PublicURL) + "/terms\">terms</a>.</p>\n")
-	b.WriteString("<p class=\"notice\">" + esc(dlaNotice) + "</p>\n")
-	b.WriteString("<p><small>Contact: <a href=\"mailto:" + contactEmail + "\">" + contactEmail + "</a></small></p>\n")
-	b.WriteString("</main></body></html>\n")
-	return b.String()
 }

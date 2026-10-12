@@ -6,6 +6,7 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"eve-cyno.dev/go/data/catalog"
@@ -30,7 +31,7 @@ func (a *API) toolGate(w http.ResponseWriter, r *http.Request, name string) (*to
 		writeError(w, r, http.StatusUnauthorized, "invalid_api_key", "the API key is not valid")
 		return nil, false
 	}
-	janice := strings.TrimSpace(r.Header.Get(HeaderJaniceKey))
+	janice := catalog.JaniceKeyFrom(r.Header)
 	if len(janice) > maxCredentialLen {
 		writeError(w, r, http.StatusBadRequest, "invalid_request", HeaderJaniceKey+" is too long")
 		return nil, false
@@ -81,8 +82,10 @@ type toolEnvelopeBody struct {
 //   - 403             disabled tool (tool_disabled) on a ToolAPIPublic service
 //   - 404             unknown tool name
 //   - 413             body over 64 KiB
-//   - 429             over the per-caller budget (ToolAPIPublic only)
-//   - 503             tool layer unavailable (SDE not loaded)
+//   - 429             over the per-caller budget (ToolAPIPublic only), or over the lower
+//     budget of a tool that reads live ESI data (Config.Upstream)
+//   - 503             tool layer unavailable (SDE not loaded), or upstream_busy: the ESI
+//     client is backing off a rate limit and sent nothing (Retry-After)
 //   - 504             the tool ran past Config.ToolTimeout
 //   - 500             tool execution error
 func (a *API) tool(w http.ResponseWriter, r *http.Request) {
@@ -96,6 +99,14 @@ func (a *API) tool(w http.ResponseWriter, r *http.Request) {
 	if a.toolMode == ToolAPIPublic {
 		var ok bool
 		if deps, ok = a.toolGate(w, r, name); !ok {
+			return
+		}
+		// Tools that read live ESI data have a stricter budget than the route's. It is
+		// charged after the gate, so a refused (keyed, disabled) call costs nothing.
+		if ok, retry := a.upstream.Allow(r, name); !ok {
+			w.Header().Set("Retry-After", strconv.Itoa(retrySeconds(retry)))
+			writeError(w, r, http.StatusTooManyRequests, "rate_limited",
+				"too many calls to "+name+", which reads live ESI data and has a lower limit; slow down")
 			return
 		}
 	}
@@ -125,6 +136,14 @@ func (a *API) tool(w http.ResponseWriter, r *http.Request) {
 		case errors.Is(err, context.DeadlineExceeded):
 			writeError(w, r, http.StatusGatewayTimeout, "timeout", "tool timed out")
 		default:
+			if retry, busy := tools.UpstreamBusy(err); busy {
+				// The ESI client refused to send: a rate limit or the error limit is near.
+				// Nothing was spent upstream; the caller may retry.
+				w.Header().Set("Retry-After", strconv.Itoa(retrySeconds(retry)))
+				writeError(w, r, http.StatusServiceUnavailable, "upstream_busy",
+					"the upstream (EVE ESI) budget is nearly spent; retry later")
+				return
+			}
 			logFrom(r.Context()).Warn("tool_failed", "tool", name, "error", err)
 			writeError(w, r, http.StatusInternalServerError, "internal_error", err.Error())
 		}

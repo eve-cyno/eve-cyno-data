@@ -22,9 +22,12 @@ Everything is one tool registry (`catalog`) published three ways, so the descrip
 | `llms.txt` | [`llms.txt`](llms.txt), [`llms-full.txt`](llms-full.txt); served at `/llms.txt`, `/llms-full.txt` | the same information in prose |
 
 A hosted instance runs at `https://data.eve-cyno.dev` (R3.5 stage 1: public tier only, rate limited per IP, no API keys yet;
-keyed tools answer 401, `appraise_items` needs your own `X-Janice-Key`). Its index page at
-[`https://data.eve-cyno.dev/`](https://data.eve-cyno.dev/) lists every entry point (JSON with `Accept: application/json`), and
-the [terms of use](https://data.eve-cyno.dev/terms) (draft, source in [`dataapi/terms.md`](dataapi/terms.md)) apply to it.
+keyed tools answer 401, `appraise_items` needs your own `X-Janice-Key`). Its portal at
+[`https://data.eve-cyno.dev/`](https://data.eve-cyno.dev/) (JSON index with `Accept: application/json`) links the developer docs under
+[`/docs/`](https://data.eve-cyno.dev/docs/): getting started, the Claude Code plugin, MCP, REST, one page per tool (17 public, 1 byo-key,
+3 keyed), access tiers and limits, attribution. The pages are generated from the tool registry and the route table (templates in
+[`dataapi/portal/`](dataapi/portal/)); the example responses are recorded from the live service. The
+[terms of use](https://data.eve-cyno.dev/terms) (source in [`dataapi/terms.md`](dataapi/terms.md)) apply to it.
 Everything below uses `http://localhost:8092`, a server
 you run yourself.
 
@@ -48,7 +51,7 @@ The server listens on `:8092`. Check it: `GET /v1/health` answers `{"status":"ok
 
 **SDE-only mode.** `DATAAPI_SDE_ONLY=true` builds the server without a fit-corpus client: Qdrant is never contacted.
 Everything that reads the SDE works: `/v1/items/search`, `/v1/fits/detail`, `/v1/fit/stats`, `/v1/fit/suggest` (ranked from the
-SDE alone), the 13 public tools, the OpenAPI and `llms.txt` routes and the MCP endpoint. `GET /v1/fits/search` answers
+SDE alone), the 13 SDE-only public tools (the four live-ESI tools also work, with network), the OpenAPI and `llms.txt` routes and the MCP endpoint. `GET /v1/fits/search` answers
 `503 unavailable`, `/v1/health` reports `"corpus": false`, and `get_fits` / `list_fits` answer that the corpus is not
 configured. Without the variable the server expects Qdrant: if it is configured but down, the process still starts, fit search
 answers `502 upstream_error` per request, and `/v1/health` probes Qdrant (`GET /collections/<name>`, 1 second timeout, the verdict
@@ -87,12 +90,21 @@ Every tool has one tier, enforced identically on REST and MCP:
 
 | Tier | Tools | Who may run it |
 |---|---|---|
-| public (13) | `get_jumps_between`, `get_systems_in_region`, `get_npc_stations`, `get_reprocessing_yield`, `get_required_skills`, `get_production_chain`, `find_canonical_module`, `search_item_by_name`, `get_ship_stats`, `get_hull_facts`, `get_ship_bonuses`, `compute_fit_stats`, `validate_fitting` | anyone |
-| keyed (7) | `get_fits`, `list_fits`, `get_market_price`, `get_type_info`, `get_sovereignty`, `get_system_activity`, `analyze_battle` | a valid API key |
+| public (17) | `get_jumps_between`, `get_systems_in_region`, `get_npc_stations`, `get_reprocessing_yield`, `get_required_skills`, `get_production_chain`, `find_canonical_module`, `search_item_by_name`, `get_ship_stats`, `get_hull_facts`, `get_ship_bonuses`, `compute_fit_stats`, `validate_fitting`; live ESI data: `get_market_price`, `get_type_info`, `get_sovereignty`, `get_system_activity` | anyone (the four ESI tools have a lower per-caller limit, see below) |
+| keyed (3) | `get_fits`, `list_fits`, `analyze_battle` | a valid API key |
 | byo-key (1) | `appraise_items` | anyone who sends their **own** Janice key in the `X-Janice-Key` header (used for that request only, never logged or stored) |
 | disabled (1) | `convert_isk_to_real` | nobody on a public surface |
 
 Arguments and result types of every tool are in [`llms-full.txt`](llms-full.txt).
+
+**Live ESI tools.** `get_market_price`, `get_type_info`, `get_sovereignty` and `get_system_activity` read public (unauthenticated)
+EVE ESI routes. They answer from a shared in-memory cache that follows ESI's `Expires`/`ETag` (concurrent callers share one upstream
+request), count against their own budget of `DATAAPI_UPSTREAM_TOOL_LIMIT` calls per minute per caller (default 10, REST and MCP
+together; 0 disables) on top of the route limits, never send a `type_id` the SDE does not know, and keep `DATAAPI_ESI_GUARD_PERCENT`
+(default 25) of every ESI rate-limit group unspent: below that a call is not sent and answers `503 upstream_busy` with `Retry-After`
+(MCP: an error result starting `upstream_busy`). Every ESI call is logged as `esi_call` (no caller, no payload). Set
+`ESI_CONTACT` so ESI can reach the operator. To take the four tools off the public tier, move them back to keyed in
+`catalog.tierTable`.
 
 ### Authentication
 
@@ -121,6 +133,7 @@ Errors are always `{"error":{"code":"...","message":"..."}}`:
 | 413 | `payload_too_large` | body over 256 KiB (fit routes) or 64 KiB (tool and MCP) |
 | 429 | `rate_limited` | over the limit; wait `Retry-After` seconds |
 | 502/503 | `upstream_error` / `unavailable` | an upstream (Qdrant, ESI) or a dependency is down |
+| 503 | `upstream_busy` | the ESI budget is nearly spent and nothing was sent; wait `Retry-After` seconds |
 
 Over MCP an invalid key is the same 401 before the protocol starts; a tool you may not use is simply not in `tools/list`.
 
@@ -134,7 +147,8 @@ Per caller (per API key when one is sent, otherwise per client IP), sliding wind
 | `POST /v1/fits/detail`, `/v1/fit/stats`, `/v1/fit/suggest` | 60 |
 | `POST /v1/tool/{name}` | 30 |
 | `POST /v1/mcp` (an MCP session is a few requests plus one per tool call) | 60 |
-| `GET /`, `/terms*`, `/v1/openapi.*`, `/llms*.txt` | 60 |
+| the four live-ESI tools (`get_market_price`, `get_type_info`, `get_sovereignty`, `get_system_activity`), REST and MCP together, on top of the two rows above | 10 (`DATAAPI_UPSTREAM_TOOL_LIMIT`) |
+| `GET /`, `/docs/*`, `/terms*`, `/v1/openapi.*`, `/llms*.txt` (the static files under `/assets/` are not limited) | 60 |
 
 The limiter takes the client IP from Cloudflare's `CF-Connecting-IP` header and falls back to the TCP peer, so run the
 service on loopback or behind a Cloudflare tunnel; do not expose it directly to the internet.
@@ -145,7 +159,7 @@ Ready-to-copy files are in [`examples/`](examples/).
 
 ### Claude Desktop and Claude Code, local stdio
 
-The stdio server needs no network and no keys; it reads the SDE from `EVE_CORE_SDE_PATH` and registers the 13 public tools
+The stdio server needs no keys; it reads the SDE from `EVE_CORE_SDE_PATH` and registers the 17 public tools (the four live-ESI ones need network)
 (`-all` or `MCP_EXPOSE_ALL=true` registers every tool, using the keys in your own environment: `JANICE_API_KEY`, `QDRANT_*`). `-sde-only` or
 `MCP_SDE_ONLY=true` builds no Qdrant client at all, so Qdrant is never contacted and `get_fits` / `list_fits` answer that the
 corpus is not configured; it is never inferred from a missing `QDRANT_URL`.

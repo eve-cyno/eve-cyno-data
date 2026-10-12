@@ -10,7 +10,7 @@
 //
 //   - Errors are JSON, always: {"error":{"code":"...","message":"..."}}. Codes
 //     are stable: not_found, method_not_allowed, invalid_request,
-//     payload_too_large, rate_limited, unavailable, upstream_error,
+//     payload_too_large, rate_limited, unavailable, upstream_error, upstream_busy,
 //     unknown_tool, tool_disabled, api_key_required, invalid_api_key, key_not_permitted,
 //     janice_key_required, timeout, internal_error.
 //   - Every response carries X-Request-ID: the caller's value when it is a safe
@@ -121,6 +121,11 @@ type Limits struct {
 	// MCP counts every request to the MCP endpoint (a session is a handful of requests
 	// plus one per tool call).
 	MCP Rate
+	// UpstreamTool is the fair-use budget per caller of the tools that read live ESI data
+	// (catalog.Tool.Upstream), REST and MCP together; build the limiter that enforces it
+	// with NewUpstreamLimiter(limits.UpstreamTool, ...) and pass it as Config.Upstream and
+	// to the MCP handler. It is stated in the generated documents.
+	UpstreamTool Rate
 	// Docs covers the description routes (OpenAPI, llms.txt).
 	Docs Rate
 }
@@ -136,6 +141,9 @@ func DefaultLimits() Limits {
 		Tool:        Rate{Max: 30, Window: time.Minute},  // raw tools, internet-facing only
 		MCP:         Rate{Max: 60, Window: time.Minute},  // handshake (3 requests) + tool calls
 		Docs:        Rate{Max: 60, Window: time.Minute},  // static bytes, but anonymous
+		// Live ESI reads share one IP-level ESI budget for the whole project, so each caller
+		// gets a fraction of the route limit.
+		UpstreamTool: Rate{Max: 10, Window: time.Minute},
 	}
 }
 
@@ -206,6 +214,15 @@ type Config struct {
 	// ToolAPI selects the raw tool endpoint mode; zero is off.
 	ToolAPI ToolAPIMode
 
+	// Upstream limits the tools that read live ESI data (ToolAPIPublic only; share the same
+	// *UpstreamLimiter with the MCP handler so REST and MCP spend one budget). Nil means no
+	// extra limit.
+	Upstream *UpstreamLimiter
+
+	// LogSalt keys the caller token of the access log (see callerHasher). Empty means a
+	// random salt per process.
+	LogSalt string
+
 	// ToolFormat selects the body of a successful tool call; zero is the JSON
 	// envelope. Errors are the JSON error shape in either format.
 	ToolFormat ToolFormat
@@ -252,9 +269,12 @@ type API struct {
 	toolFormat  ToolFormat
 	toolTimeout time.Duration
 	mcp         http.Handler
+	upstream    *UpstreamLimiter
+	hasher      callerHasher
 	surface     Surface
 	docs        renderedDocs
 	pages       renderedPages
+	portal      *portalSite
 	log         *slog.Logger
 	mux         *http.ServeMux
 	// corpusProbe is nil unless Deps.Retriever implements Pinger.
@@ -304,6 +324,8 @@ func New(cfg Config) (*API, error) {
 		toolFormat:  cfg.ToolFormat,
 		toolTimeout: cfg.ToolTimeout,
 		mcp:         cfg.MCP,
+		upstream:    cfg.Upstream,
+		hasher:      newCallerHasher(cfg.LogSalt),
 		log:         cfg.Logger,
 		mux:         http.NewServeMux(),
 	}
@@ -333,6 +355,11 @@ func New(cfg Config) (*API, error) {
 		}
 		a.docs = docs
 		a.pages = renderPages(a.surface)
+		portal, err := buildPortal(portalInput{Surface: a.surface, HaveSDE: a.sde() != nil})
+		if err != nil {
+			return nil, fmt.Errorf("dataapi: render the portal: %w", err)
+		}
+		a.portal = portal
 	}
 	a.mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		writeError(w, r, http.StatusNotFound, "not_found", "no such route")

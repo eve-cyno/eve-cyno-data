@@ -1,0 +1,29 @@
+{
+  "tool": "get_hull_facts",
+  "request": {
+    "ship_name": "Rifter"
+  },
+  "prompt": "What can a Rifter fit, and which weapons is it limited to?",
+  "recorded": "2026-10-09",
+  "trimmed": true,
+  "response": {
+    "tool": "get_hull_facts",
+    "version": "sha-aa76146",
+    "result": {
+      "text": "## Hull facts — Rifter\nType ID: 587 | Class: frigate | Group: Frigate | Category: Ship\n\n**Slots & hardpoints (hard caps):**\n- hi=3, mid=3, low=4, rig=3\n- turret hardpoints=3, launcher hardpoints=2\n- drone bay: none\n\n**Role & skill bonuses (from invTraits):**\n- [Minmatar Frigate] 7.5% — bonus to Small Projectile Turret rate of fire\n- [Minmatar Frigate] 10.0% — bonus to Small Projectile Turret falloff\n\n**Compatible weapons:** no per-hull lock — use weapons matching the bonused weapon family from role_bonuses (e.g. 'Small Hybrid Turret') and the turret/launcher hardpoint sizing implied by the hull class. Verify any individual module name via `search_item_by_name` before listing it.\n\n**Bonused m…",
+      "data": null
+    },
+    "attribution": [
+      {
+        "name": "EVE Static Data Export (via Fuzzwork)",
+        "url": "https://www.fuzzwork.co.uk/dump/",
+        "license": "CCP game data under the EVE Developer License Agreement; converted by Fuzzwork Enterprises"
+      },
+      {
+        "name": "EVE Workbench",
+        "url": "https://eveworkbench.com/",
+        "license": "No licence published"
+      }
+    ]
+  }
+}

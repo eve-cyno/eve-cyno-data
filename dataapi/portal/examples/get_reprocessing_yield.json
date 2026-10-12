@@ -1,0 +1,25 @@
+{
+  "tool": "get_reprocessing_yield",
+  "request": {
+    "item_name": "Veldspar",
+    "quantity": 1000
+  },
+  "prompt": "What does 1000 Veldspar reprocess into?",
+  "recorded": "2026-10-09",
+  "trimmed": false,
+  "response": {
+    "tool": "get_reprocessing_yield",
+    "version": "sha-aa76146",
+    "result": {
+      "text": "Reprocessing yield: **1000× Veldspar** at 50% efficiency\n\nMaterial                      Quantity\n---------------------------------------\nTritanium                      200,000",
+      "data": null
+    },
+    "attribution": [
+      {
+        "name": "EVE Static Data Export (via Fuzzwork)",
+        "url": "https://www.fuzzwork.co.uk/dump/",
+        "license": "CCP game data under the EVE Developer License Agreement; converted by Fuzzwork Enterprises"
+      }
+    ]
+  }
+}

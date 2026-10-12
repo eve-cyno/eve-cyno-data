@@ -117,6 +117,9 @@ type serverConfig struct {
 	// janiceFromHeader marks a per-request HTTP server: byo-key tools run with the
 	// caller's own key (already in the deps) and are refused without one.
 	janiceFromHeader bool
+	// allow, when set, is asked before each call of an Upstream tool (catalog.Tool.Upstream)
+	// whether the caller is within its budget for it; a refusal carries the wait.
+	allow func(tool string) (ok bool, retryAfter time.Duration)
 }
 
 // buildServer registers exposed on a new server over deps.
@@ -137,7 +140,7 @@ func buildServer(deps *tools.Deps, exposed []catalog.Tool, cfg serverConfig, exe
 		},
 		&mcp.ServerOptions{Instructions: instructions, Logger: quiet(log)},
 	)
-	h := &handler{deps: deps, exec: exec, timeout: timeout, log: log, janiceFromHeader: cfg.janiceFromHeader}
+	h := &handler{deps: deps, exec: exec, timeout: timeout, log: log, janiceFromHeader: cfg.janiceFromHeader, allow: cfg.allow}
 	for _, t := range exposed {
 		s.AddTool(mcpTool(t, cfg.janiceFromHeader), h.call(t))
 	}
@@ -179,6 +182,7 @@ type handler struct {
 	log     *slog.Logger
 	// janiceFromHeader: deps carries the caller's Janice key ("" when it sent none).
 	janiceFromHeader bool
+	allow            func(tool string) (bool, time.Duration)
 }
 
 // call returns the tools/call handler of one tool.
@@ -207,12 +211,23 @@ func (h *handler) call(t catalog.Tool) mcp.ToolHandler {
 			return failure(name + " runs with your own Janice API key: send it in the " + catalog.HeaderJaniceKey + " request header"), nil
 		}
 
+		if h.allow != nil && t.Upstream {
+			if ok, retry := h.allow(name); !ok {
+				return failure(fmt.Sprintf("rate_limited: %s reads live ESI data and has a lower per-caller limit; retry in %d seconds",
+					name, max(1, int((retry+time.Second-1)/time.Second)))), nil
+			}
+		}
+
 		ctx, cancel := context.WithTimeout(ctx, h.timeout)
 		defer cancel()
 		out, err := h.exec(ctx, h.deps, name, args)
 		if err != nil {
 			if errors.Is(err, context.DeadlineExceeded) {
 				return failure(fmt.Sprintf("%s timed out after %s", name, h.timeout)), nil
+			}
+			if retry, busy := tools.UpstreamBusy(err); busy {
+				return failure(fmt.Sprintf("upstream_busy: the upstream (EVE ESI) budget is nearly spent; retry in %d seconds",
+					max(1, int((retry+time.Second-1)/time.Second)))), nil
 			}
 			h.log.Warn("mcp_tool_failed", "tool", name, "error", err)
 			return failure(err.Error()), nil
@@ -304,6 +319,11 @@ type HTTPOptions struct {
 	// Authentication itself is the embedding service's job (dataapi authenticates before
 	// this handler runs and refuses an invalid key with 401).
 	Keyed func(*http.Request) bool
+	// Upstream, when set, is asked before every call of a tool that reads live ESI data
+	// (catalog.Tool.Upstream) whether the request's caller is within its budget for it
+	// (dataapi.UpstreamLimiter.Allow; the same limiter as the REST endpoint, so one budget
+	// covers both). A refusal is an isError result starting "rate_limited". Nil: no limit.
+	Upstream func(r *http.Request, tool string) (ok bool, retryAfter time.Duration)
 	// Timeout bounds one tool execution; zero means DefaultTimeout.
 	Timeout time.Duration
 	// Logger receives the transport's and the tools' diagnostics. Nil discards.
@@ -332,12 +352,15 @@ func httpHandler(deps *tools.Deps, o HTTPOptions, exec executor) http.Handler {
 			if o.Keyed != nil && o.Keyed(r) {
 				tiers = []catalog.Tier{catalog.TierPublic, catalog.TierKeyed, catalog.TierBYOKey}
 			}
-			janice := strings.TrimSpace(r.Header.Get(catalog.HeaderJaniceKey))
+			janice := catalog.JaniceKeyFrom(r.Header)
 			if len(janice) > maxJaniceKeyLen {
 				janice = "" // not a Janice key; treated as absent
 			}
-			return buildServer(deps.WithJaniceKey(janice), catalog.ToolsIn(tiers...),
-				serverConfig{timeout: o.Timeout, log: o.Logger, janiceFromHeader: true}, exec)
+			cfg := serverConfig{timeout: o.Timeout, log: o.Logger, janiceFromHeader: true}
+			if o.Upstream != nil {
+				cfg.allow = func(tool string) (bool, time.Duration) { return o.Upstream(r, tool) }
+			}
+			return buildServer(deps.WithJaniceKey(janice), catalog.ToolsIn(tiers...), cfg, exec)
 		},
 		&mcp.StreamableHTTPOptions{
 			Stateless:                  true,

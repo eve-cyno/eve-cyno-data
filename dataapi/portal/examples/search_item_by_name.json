@@ -1,0 +1,27 @@
+{
+  "tool": "search_item_by_name",
+  "request": {
+    "names": [
+      "Gila",
+      "Tritanium"
+    ]
+  },
+  "prompt": "What are the type IDs of Gila and Tritanium?",
+  "recorded": "2026-10-09",
+  "trimmed": false,
+  "response": {
+    "tool": "search_item_by_name",
+    "version": "sha-aa76146",
+    "result": {
+      "text": "Gila: type_id=17715\nTritanium: type_id=34",
+      "data": null
+    },
+    "attribution": [
+      {
+        "name": "EVE Static Data Export (via Fuzzwork)",
+        "url": "https://www.fuzzwork.co.uk/dump/",
+        "license": "CCP game data under the EVE Developer License Agreement; converted by Fuzzwork Enterprises"
+      }
+    ]
+  }
+}

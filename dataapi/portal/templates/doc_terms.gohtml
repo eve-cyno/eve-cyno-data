@@ -1,0 +1,39 @@
+{{define "article"}}<article class="doc" data-page="terms">
+  <header class="doc-head">
+    <ol class="crumbs"><li><a href="/docs/">Docs</a></li><li>Project</li><li aria-current="page">Terms of use</li></ol>
+    <h1>Terms of use</h1>
+    <div class="doc-badges"><span class="badge badge-plain">last updated <span data-slot="terms_updated">{{.TermsUpdated}}</span></span></div>
+    <p class="doc-lede">The short version. The full terms are at <a href="{{.URL}}/terms"><code>/terms</code></a>, and they are what counts.</p>
+  </header>
+  <details class="toc" data-toc open>
+    <summary><svg class="ico" aria-hidden="true"><use href="#i-chev"/></svg>On this page</summary>
+    <ul>
+      <li><a href="#terms-summary">In short</a></li>
+      <li><a href="#terms-full">Full terms</a></li>
+    </ul>
+    <div class="toc-more"><a href="{{.URL}}/terms"><svg class="ico" aria-hidden="true"><use href="#i-ext"/></svg>/terms</a><a href="#top"><svg class="ico" aria-hidden="true"><use href="#i-up"/></svg>Back to top</a></div>
+  </details>
+  <div class="doc-body prose">
+    <h2 id="terms-summary">In short<a class="h-anchor" href="#terms-summary" aria-label="Link to this section">#</a></h2>
+    <div class="terms-grid">
+      <div class="term"><h3>No warranty, no SLA</h3><p>Free, as is, no uptime promise. Data can be wrong or out of date, and the service may change or stop at any time.</p></div>
+      <div class="term"><h3>Attribution</h3><p>Keep the sources and credits that come with the data, community fits and wiki text included.</p></div>
+      <div class="term"><h3>Acceptable use</h3><p>Respect the limits, don't mirror ESI or scrape the fit corpus, no botting, client modification or real-money trading.</p></div>
+      <div class="term"><h3>Fenris Creations and the DLA</h3><p>The game data belongs to Fenris Creations. What you build must stay within the EVE Developer License Agreement.</p></div>
+      <div class="term"><h3>Your own keys (Janice)</h3><p>Forwarded to Janice for that one request only; never stored or logged. The project's key is never used for you.</p></div>
+      <div class="term"><h3>Privacy</h3><p>No cookies, no accounts, no analytics. Your IP is held in memory for the limiter only; access logs carry no IP, key or body and are kept 30 days.</p></div>
+    </div>
+    <aside class="callout" data-kind="note"><svg class="ico" aria-hidden="true"><use href="#i-info"/></svg><div><p class="callout-title">Contact</p><p>Questions, feedback and support: the <a href="https://discord.gg/XZzkH38dt9">EVE-Cyno Discord</a>.</p></div></aside>
+
+    <h2 id="terms-full">Full terms<a class="h-anchor" href="#terms-full" aria-label="Link to this section">#</a></h2>
+    <div class="linkcards">
+      <a class="linkcard" href="{{.URL}}/terms"><svg class="ico" aria-hidden="true"><use href="#i-doc"/></svg><span class="lc-t">/terms</span><svg class="go" aria-hidden="true"><use href="#i-ext"/></svg><span class="lc-s">EVE-Cyno Data API: terms of use.</span></a>
+    </div>
+
+    <nav class="pager" aria-label="Previous and next page">
+      <a href="/docs/attribution"><span class="pg-k"><svg class="ico" aria-hidden="true"><use href="#i-back"/></svg>Previous</span><span class="pg-t">Attribution &amp; licences</span></a>
+    </nav>
+    <p class="doc-foot"><span>Questions or a mistake on this page? <a href="https://discord.gg/XZzkH38dt9">EVE-Cyno Discord</a></span><span>Summary of terms.md</span></p>
+  </div>
+</article>
+{{end}}

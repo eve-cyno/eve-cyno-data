@@ -1,0 +1,92 @@
+package dataapi
+
+import (
+	"crypto/hmac"
+	"crypto/rand"
+	"crypto/sha256"
+	"encoding/hex"
+	"fmt"
+	"net/http"
+	"strings"
+	"time"
+
+	"eve-cyno.dev/go/data/catalog"
+)
+
+// UpstreamLimiter is the per-caller budget of the tools that can spend the project's
+// shared ESI budget (catalog.Tool.Upstream). It is stricter than the route limits and is
+// one budget across REST (/tool/{name}) and MCP: a caller cannot double it by using both.
+// The caller is named by a KeyResolver, like every other limit. A nil *UpstreamLimiter
+// allows everything.
+type UpstreamLimiter struct {
+	l    *WindowLimiter
+	keys KeyResolver
+}
+
+// NewUpstreamLimiter returns the limiter for rate, or nil when the rate is disabled. keys
+// nil means CallerKeys.
+func NewUpstreamLimiter(rate Rate, keys KeyResolver) *UpstreamLimiter {
+	l := limiterFor(rate)
+	if l == nil {
+		return nil
+	}
+	if keys == nil {
+		keys = CallerKeys{}
+	}
+	return &UpstreamLimiter{l: l, keys: keys}
+}
+
+// Allow records one call of tool by the caller of r and reports whether it is within
+// budget; when not, retryAfter is how long until the oldest counted call leaves the window.
+// Tools that cannot spend the ESI budget are never limited here.
+func (u *UpstreamLimiter) Allow(r *http.Request, tool string) (ok bool, retryAfter time.Duration) {
+	if u == nil {
+		return true, 0
+	}
+	if t, found := catalog.Lookup(tool); !found || !t.Upstream {
+		return true, 0
+	}
+	return u.l.Allow("upstream:" + u.keys.Key(r))
+}
+
+// retrySeconds renders a wait as whole seconds, at least 1 (Retry-After).
+func retrySeconds(d time.Duration) int {
+	return max(1, int((d+time.Second-1)/time.Second))
+}
+
+// upstreamSentence states the stricter limit and the busy answer of an Upstream tool in the
+// generated documents ("" for any other tool or an unlimited surface).
+func upstreamSentence(s Surface, t catalog.Tool) string {
+	if !t.Upstream || !tiered(s) {
+		return ""
+	}
+	var b strings.Builder
+	b.WriteString("Reads live public data from EVE's ESI through a shared cache that follows ESI's `Expires`.")
+	if r := s.Limits.UpstreamTool; r.Max > 0 && r.Window > 0 {
+		fmt.Fprintf(&b, " Its own fair-use limit is %d calls per %s per caller (REST and MCP together), on top of the route limit.", r.Max, windowWord(r))
+	}
+	b.WriteString(" When the shared ESI budget is nearly spent the call is refused with `503 upstream_busy` (MCP: an error result starting `upstream_busy`) and `Retry-After`; retry later.")
+	return b.String()
+}
+
+// callerHasher turns a rate-limit key (a client IP or "key:<id>") into the short opaque
+// token the access log carries, so abuse can be spotted per caller without logging
+// addresses: HMAC-SHA256 under a salt, truncated to 64 bits. The salt is random per
+// process unless Config.LogSalt is set, so by default a token cannot be linked across
+// restarts and the hash cannot be reversed by enumerating the IPv4 space.
+type callerHasher struct{ salt []byte }
+
+func newCallerHasher(salt string) callerHasher {
+	if salt != "" {
+		return callerHasher{salt: []byte(salt)}
+	}
+	b := make([]byte, 32)
+	_, _ = rand.Read(b) // crypto/rand.Read does not fail on supported platforms
+	return callerHasher{salt: b}
+}
+
+func (h callerHasher) hash(key string) string {
+	m := hmac.New(sha256.New, h.salt)
+	m.Write([]byte(key))
+	return hex.EncodeToString(m.Sum(nil)[:8])
+}

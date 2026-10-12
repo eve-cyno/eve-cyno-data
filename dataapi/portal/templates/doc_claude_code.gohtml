@@ -1,0 +1,90 @@
+{{define "article"}}<article class="doc" data-page="claude-code">
+  <header class="doc-head">
+    <ol class="crumbs"><li><a href="/docs/">Docs</a></li><li>Connect</li><li aria-current="page">Claude Code plugin</li></ol>
+    <h1>Claude Code plugin</h1>
+    <div class="doc-badges"><span class="badge badge-ok">available now</span><span class="badge badge-plain">MIT</span></div>
+    <p class="doc-lede">The <code>eve-cyno</code> plugin puts the public EVE-Cyno tools into Claude Code in one install: a remote MCP server, an <code>eve-data</code> skill that teaches the model which tool to use when, and three slash commands.</p>
+  </header>
+  <details class="toc" data-toc open>
+    <summary><svg class="ico" aria-hidden="true"><use href="#i-chev"/></svg>On this page</summary>
+    <ul>
+      <li><a href="#cc-install">Install</a></li>
+      <li><a href="#cc-what">What you get</a></li>
+      <li><a href="#cc-commands">Slash commands</a></li>
+      <li><a href="#cc-janice">The Janice key</a></li>
+      <li><a href="#cc-limits">Limits and privacy</a></li>
+    </ul>
+    <div class="toc-more"><a href="https://github.com/eve-cyno/claude-plugins"><svg class="ico" aria-hidden="true"><use href="#i-ext"/></svg>eve-cyno/claude-plugins</a><a href="#top"><svg class="ico" aria-hidden="true"><use href="#i-up"/></svg>Back to top</a></div>
+  </details>
+  <div class="doc-body prose">
+    <h2 id="cc-install">Install<a class="h-anchor" href="#cc-install" aria-label="Link to this section">#</a></h2>
+    <ol class="steps">
+      <li><span class="step-t">Add the marketplace</span>
+        <div class="cmd" data-copy-scope><pre><code>/plugin marketplace add eve-cyno/claude-plugins</code></pre><button class="code-copy" type="button" data-copy aria-label="Copy command"><svg class="ico" aria-hidden="true"><use href="#i-copy"/></svg><span data-copy-label>Copy</span></button></div></li>
+      <li><span class="step-t">Install the plugin</span>
+        <div class="cmd" data-copy-scope><pre><code>/plugin install eve-cyno@eve-cyno</code></pre><button class="code-copy" type="button" data-copy aria-label="Copy command"><svg class="ico" aria-hidden="true"><use href="#i-copy"/></svg><span data-copy-label>Copy</span></button></div></li>
+      <li><span class="step-t">Optional: your Janice key</span>
+        <p>Claude Code asks for a <b>Janice API key (optional)</b>. Leave it empty if you don't have one; everything but <code>appraise_items</code> works without it.</p></li>
+    </ol>
+    <aside class="callout" data-kind="tip"><svg class="ico" aria-hidden="true"><use href="#i-tip"/></svg><div><p class="callout-title">MCP server only</p><p>Without the skill and the commands: <code>claude mcp add --transport http eve-cyno {{.Origin}}{{.Prefix}}/mcp</code></p></div></aside>
+
+    <h2 id="cc-what">What you get<a class="h-anchor" href="#cc-what" aria-label="Link to this section">#</a></h2>
+    <dl class="facts">
+      <dt>MCP server</dt><dd><b>eve-cyno</b> at <code>{{.Origin}}{{.Prefix}}/mcp</code>: streamable HTTP, stateless. All public tools plus <code>appraise_items</code>.</dd>
+      <dt>Skill</dt><dd><b>eve-data</b>: tool selection, recommended flows (validate then compute), limits, what is not available, and the attribution rules.</dd>
+      <dt>Commands</dt><dd><code>/eve-fit</code>, <code>/eve-item</code>, <code>/eve-fits</code></dd>
+    </dl>
+
+    <h2 id="cc-commands">Slash commands<a class="h-anchor" href="#cc-commands" aria-label="Link to this section">#</a></h2>
+    <div class="tbl"><table>
+      <thead><tr><th scope="col">Command</th><th scope="col">What it does</th></tr></thead>
+      <tbody>
+        <tr><td><code>/eve-fit &lt;EFT block&gt;</code></td><td>Validate a fit and compute its stats.</td></tr>
+        <tr><td><code>/eve-item &lt;name&gt;</code></td><td>Look up an item or ship.</td></tr>
+        <tr><td><code>/eve-fits &lt;hull&gt; [activity]</code></td><td>Community fits for a hull, with author credit. Uses the public REST endpoint.</td></tr>
+      </tbody>
+    </table></div>
+    <div class="code" data-copy-scope>
+      <div class="code-head"><span class="code-label">Claude Code</span><button class="code-copy" type="button" data-copy aria-label="Copy"><svg class="ico" aria-hidden="true"><use href="#i-copy"/></svg><span data-copy-label>Copy</span></button></div>
+<pre><code><span class="tk-p" data-nocopy>&gt; </span>/eve-item Gila
+<span class="tk-p" data-nocopy>&gt; </span>/eve-fits Gila pve
+<span class="tk-p" data-nocopy>&gt; </span>/eve-fit [Rifter, Docs example]
+  Small Armor Repairer II
+  …</code></pre>
+    </div>
+
+    <h2 id="cc-janice">The Janice key<a class="h-anchor" href="#cc-janice" aria-label="Link to this section">#</a></h2>
+    <p><code>appraise_items</code> prices an item list through <a href="https://janice.e-351.com/">Janice</a>. It runs only with your own Janice key: the project's key is never used for you.</p>
+    <ul>
+      <li>At install, Claude Code asks for it and stores it as a sensitive value.</li>
+      <li>Add or change it later in the plugin settings under <code>/plugin</code>.</li>
+      <li>It is sent only to <code>data.eve-cyno.dev</code>, in the <code>X-Janice-Key</code> header, which forwards it to Janice for that one request and never stores or logs it.</li>
+    </ul>
+    <div class="code" data-copy-scope>
+      <div class="code-head"><span class="code-label">plugins/eve-cyno/.mcp.json</span><button class="code-copy" type="button" data-copy aria-label="Copy"><svg class="ico" aria-hidden="true"><use href="#i-copy"/></svg><span data-copy-label>Copy</span></button></div>
+<pre><code>{
+  <span class="tk-k">"mcpServers"</span>: {
+    <span class="tk-k">"eve-cyno"</span>: {
+      <span class="tk-k">"type"</span>: <span class="tk-s">"http"</span>,
+      <span class="tk-k">"url"</span>: <span class="tk-s">"{{.Origin}}{{.Prefix}}/mcp"</span>,
+      <span class="tk-k">"headers"</span>: {
+        <span class="tk-k">"X-Janice-Key"</span>: <span class="tk-s">"${user_config.janice_api_key}"</span>
+      }
+    }
+  }
+}</code></pre>
+    </div>
+    <aside class="callout" data-kind="note"><svg class="ico" aria-hidden="true"><use href="#i-info"/></svg><div><p class="callout-title">No key set?</p><p>An unset value counts as no key. <code>appraise_items</code> then answers with an error that names the <code>X-Janice-Key</code> header; every other tool works as usual.</p></div></aside>
+
+    <h2 id="cc-limits">Limits and privacy<a class="h-anchor" href="#cc-limits" aria-label="Link to this section">#</a></h2>
+    <p>No EVE-Cyno account and no API key. Requests are limited per client IP: <b>{{.Lim.MCP}} MCP requests per minute</b>, and {{.Lim.UpstreamTool}} calls per minute for the live ESI tools. What you send to a tool, such as an EFT block or a system name, is processed by the service. See the <a href="/docs/terms">terms</a>.</p>
+    <aside class="callout" data-kind="warning"><svg class="ico" aria-hidden="true"><use href="#i-warn"/></svg><div><p class="callout-title">Keyed tools are not in the list</p><p>{{.KeyedNames}} {{plural .Stats.Keyed "needs" "need"}} an API key{{if not .Auth}}, and no keys are issued yet{{end}}, so the MCP server does not list {{plural .Stats.Keyed "it" "them"}}. <code>/eve-fits</code> still works: it uses the public <code>{{.Prefix}}/fits/search</code> endpoint.</p></div></aside>
+
+    <nav class="pager" aria-label="Previous and next page">
+      <a href="/docs/"><span class="pg-k"><svg class="ico" aria-hidden="true"><use href="#i-back"/></svg>Previous</span><span class="pg-t">Getting started</span></a>
+      <a class="next" href="/docs/mcp"><span class="pg-k">Next<svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></span><span class="pg-t">MCP (any harness)</span></a>
+    </nav>
+    <p class="doc-foot"><span>Questions or a mistake on this page? <a href="https://discord.gg/XZzkH38dt9">EVE-Cyno Discord</a></span><span>Plugin source: <a href="https://github.com/eve-cyno/claude-plugins">eve-cyno/claude-plugins</a></span></p>
+  </div>
+</article>
+{{end}}

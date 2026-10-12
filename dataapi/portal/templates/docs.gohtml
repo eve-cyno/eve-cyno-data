@@ -1,0 +1,70 @@
+{{define "docs"}}{{template "head" .}}
+<body class="docs-page">
+<a class="skip" href="#main">Skip to content</a>
+
+{{template "sprite-docs" .}}
+{{template "topbar-docs" .}}
+<div class="docs">
+
+  <!-- ============ LEFT NAV (drawer <= 900px). Tool links generated from core/catalog. ============ -->
+  <aside class="docs-nav" data-drawer aria-label="Documentation">
+    <div class="nav-head">
+      <a class="lockup" href="/" aria-label="EVE-CYNO DATA home"><img class="lockup-img" src="{{.Assets}}/lockup-data.svg" alt="EVE-CYNO DATA" width="269" height="32"></a>
+      <button class="icon-btn" type="button" data-drawer-close aria-label="Close menu"><svg class="ico" aria-hidden="true"><use href="#i-close"/></svg></button>
+    </div>
+    <div class="nav-meta">
+      <span class="nav-ver">API v1</span>
+      <a class="nav-status" href="{{.URL}}{{.Prefix}}/health"><i aria-hidden="true"></i>status: <span data-slot="health">{{.Health}}</span></a>
+    </div>
+    <nav aria-label="Docs pages">
+      <p class="nav-cap">Get started</p>
+      <ul class="nav-list">
+        <li><a class="nav-link" href="/docs/" data-nav="start"{{if eq .Nav "start"}} aria-current="page"{{end}}>Getting started</a></li>
+      </ul>
+      <p class="nav-cap">Connect</p>
+      <ul class="nav-list">
+        <li><a class="nav-link" href="/docs/claude-code" data-nav="claude-code"{{if eq .Nav "claude-code"}} aria-current="page"{{end}}>Claude Code plugin<span class="nav-tag">now</span></a></li>
+        <li><a class="nav-link" href="/docs/mcp" data-nav="mcp"{{if eq .Nav "mcp"}} aria-current="page"{{end}}>MCP (any harness)</a></li>
+        <li><a class="nav-link" href="/docs/rest" data-nav="rest"{{if eq .Nav "rest"}} aria-current="page"{{end}}>REST &amp; OpenAPI</a></li>
+      </ul>
+      <p class="nav-cap">Reference</p>
+      <ul class="nav-list">
+        <li><a class="nav-link" href="/docs/tools" data-nav="tools"{{if eq .Nav "tools"}} aria-current="page"{{end}}>Tools reference</a>
+{{range .NavGroups}}          <details class="nav-sub"{{if .Open}} open{{end}}>
+            <summary><svg class="ico" aria-hidden="true"><use href="#i-chev"/></svg>{{.Label}}<span class="n">{{len .Tools}}</span></summary>
+            <ul>
+{{range .Tools}}              <li><a class="nav-tool" href="/docs/tools/{{.Name}}" data-nav="tools/{{.Name}}"{{if eq $.Nav (printf "tools/%s" .Name)}} aria-current="page"{{end}}>{{.Name}}{{if .Upstream}}<span class="dot" title="live ESI"></span>{{end}}</a></li>
+{{end}}            </ul>
+          </details>
+{{end}}        </li>
+        <li><a class="nav-link" href="/docs/access" data-nav="access"{{if eq .Nav "access"}} aria-current="page"{{end}}>Access tiers &amp; rate limits</a></li>
+      </ul>
+      <p class="nav-cap">Project</p>
+      <ul class="nav-list">
+        <li><a class="nav-link" href="/docs/attribution" data-nav="attribution"{{if eq .Nav "attribution"}} aria-current="page"{{end}}>Attribution &amp; licences</a></li>
+        <li><a class="nav-link" href="/docs/terms" data-nav="terms"{{if eq .Nav "terms"}} aria-current="page"{{end}}>Terms of use</a></li>
+        <li><a class="nav-link" href="/#credits">Hall of Fame<svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></a></li>
+      </ul>
+      <p class="nav-cap">Machine-readable</p>
+      <ul class="nav-list">
+        <li><a class="nav-link" href="{{.URL}}/llms.txt">llms.txt<svg class="ico" aria-hidden="true"><use href="#i-ext"/></svg></a></li>
+        <li><a class="nav-link" href="{{.URL}}/llms-full.txt">llms-full.txt<svg class="ico" aria-hidden="true"><use href="#i-ext"/></svg></a></li>
+        <li><a class="nav-link" href="{{.URL}}{{.Prefix}}/openapi.yaml">openapi.yaml<svg class="ico" aria-hidden="true"><use href="#i-ext"/></svg></a></li>
+        <li><a class="nav-link" href="{{.URL}}{{.Prefix}}/openapi.json">openapi.json<svg class="ico" aria-hidden="true"><use href="#i-ext"/></svg></a></li>
+      </ul>
+    </nav>
+    <a class="nav-discord" href="https://discord.gg/XZzkH38dt9"><svg class="ico" aria-hidden="true"><use href="#i-discord"/></svg><span><b>Questions?</b>Ask on the EVE-Cyno Discord</span></a>
+  </aside>
+
+  <main class="docs-main" id="main">
+
+{{template "article" .}}
+  </main>
+</div>
+
+{{template "footer" .}}
+
+{{template "search-index" .}}
+</body>
+</html>
+{{end}}

@@ -22,6 +22,8 @@ EVE Online and its game data are the property of CCP Games / Fenris Creations an
 
 ## Tools (public: no key needed)
 
+- [get_market_price](/llms-full.txt#get_market_price): Get current market prices for an EVE Online item in The Forge region (Jita hub).
+- [get_type_info](/llms-full.txt#get_type_info): Get information about an EVE Online item: name, description, volume, mass, group.
 - [search_item_by_name](/llms-full.txt#search_item_by_name): Resolve one or more EVE Online item, ship, or module names to their type_id.
 - [get_ship_stats](/llms-full.txt#get_ship_stats): Get slot layout, hardpoints, and resource limits for an EVE Online ship.
 - [get_ship_bonuses](/llms-full.txt#get_ship_bonuses): Get hull bonuses for an EVE Online ship — per-skill-level bonuses + role bonuses + ship class.
@@ -35,16 +37,14 @@ EVE Online and its game data are the property of CCP Games / Fenris Creations an
 - [get_npc_stations](/llms-full.txt#get_npc_stations): List NPC stations in a solar system, including their owning corporation and operation type.
 - [get_reprocessing_yield](/llms-full.txt#get_reprocessing_yield): Compute the materials produced by reprocessing an EVE item (ore, ice, salvage, modules).
 - [get_required_skills](/llms-full.txt#get_required_skills): List the skills required to fly a ship or build an item.
+- [get_sovereignty](/llms-full.txt#get_sovereignty): Get the alliance / corporation holding sovereignty over an EVE solar system.
+- [get_system_activity](/llms-full.txt#get_system_activity): Get recent killmail count and jump count for a solar system from ESI.
 
 ## Tools (keyed: send an API key)
 
-- [get_market_price](/llms-full.txt#get_market_price): Get current market prices for an EVE Online item in The Forge region (Jita hub).
-- [get_type_info](/llms-full.txt#get_type_info): Get information about an EVE Online item: name, description, volume, mass, group.
 - [get_fits](/llms-full.txt#get_fits): Retrieve community ship fits VERBATIM from the indexed fit database (EVE Workbench + Abysstracker + gustavmannfred.streamlit.app + caldarijoans.streamlit.app…
 - [list_fits](/llms-full.txt#list_fits): LIST / enumerate community fits from the indexed fit database by exact payload filters (NOT semantic search).
 - [analyze_battle](/llms-full.txt#analyze_battle): Analyze a battle report from zKillboard, WarBeacon, or br.evetools.org.
-- [get_sovereignty](/llms-full.txt#get_sovereignty): Get the alliance / corporation holding sovereignty over an EVE solar system.
-- [get_system_activity](/llms-full.txt#get_system_activity): Get recent killmail count and jump count for a solar system from ESI.
 
 ## Tools (byo-key: send your own Janice key in X-Janice-Key)
 

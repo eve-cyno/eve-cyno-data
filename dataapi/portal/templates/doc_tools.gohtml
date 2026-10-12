@@ -1,0 +1,55 @@
+{{define "article"}}<article class="doc" data-page="tools">
+  <header class="doc-head">
+    <ol class="crumbs"><li><a href="/docs/">Docs</a></li><li>Reference</li><li aria-current="page">Tools</li></ol>
+    <h1>Tools reference</h1>
+    <p class="doc-lede"><span data-slot="tools_offered">{{.Stats.Offered}}</span> tools on this service, the same on REST and MCP. Each page comes from the tool registry: description, arguments (JSON Schema), typed result and sources.</p>
+  </header>
+  <details class="toc" data-toc open>
+    <summary><svg class="ico" aria-hidden="true"><use href="#i-chev"/></svg>On this page</summary>
+    <ul>
+      <li><a href="#tools-public">Public</a></li>
+      <li><a href="#tools-byo">Byo-key</a></li>
+      <li><a href="#tools-keyed">Keyed</a></li>
+    </ul>
+    <div class="toc-more"><a href="{{.URL}}/llms-full.txt"><svg class="ico" aria-hidden="true"><use href="#i-ext"/></svg>llms-full.txt</a><a href="#top"><svg class="ico" aria-hidden="true"><use href="#i-up"/></svg>Back to top</a></div>
+  </details>
+  <div class="doc-body prose tools-index" data-filter-scope>
+    <div class="chips" role="group" aria-label="Filter tools">
+      <button class="chip" type="button" aria-pressed="true" data-filter="all">All <span class="n">{{.Stats.Offered}}</span></button>
+      <button class="chip" type="button" aria-pressed="false" data-filter="public">Public <span class="n">{{.Stats.Public}}</span></button>
+      <button class="chip" type="button" aria-pressed="false" data-filter="live">Live ESI <span class="n">{{.Stats.Upstream}}</span></button>
+      <button class="chip" type="button" aria-pressed="false" data-filter="byo-key">Byo-key <span class="n">{{.Stats.BYO}}</span></button>
+      <button class="chip" type="button" aria-pressed="false" data-filter="keyed">Keyed <span class="n">{{.Stats.Keyed}}</span></button>
+    </div>
+
+    <section class="tier-group" data-tier="public">
+      <div class="tier-head"><span class="badge" data-tier="public">public</span><h2 id="tools-public">No key</h2><span class="n">{{.Stats.Public}} {{plural .Stats.Public "tool"}}</span><p class="tier-rule">Anyone, anonymous included.</p></div>
+      <ul class="tool-list">
+{{range .Tools.Public}}        <li class="tool-row" data-tool="{{.Name}}" data-tier="public"{{if .Upstream}} data-upstream="true"{{end}}><a class="tool-name" href="/docs/tools/{{.Name}}">{{.Name}}</a><p class="tool-desc">{{.Summary}}</p>{{if .Upstream}}<span class="tool-badges"><span class="badge badge-live">live ESI</span></span>{{end}}</li>
+{{end}}      </ul>
+    </section>
+
+    <section class="tier-group" data-tier="byo-key">
+      <div class="tier-head"><span class="badge" data-tier="byo-key">byo-key</span><h2 id="tools-byo">Your own Janice key</h2><span class="n">{{.Stats.BYO}} {{plural .Stats.BYO "tool"}}</span><p class="tier-rule">Send your own Janice API key in <code>X-Janice-Key</code>, used for that request only, never stored or logged.</p></div>
+      <ul class="tool-list">
+{{range .Tools.BYO}}        <li class="tool-row" data-tool="{{.Name}}" data-tier="byo-key"{{if .Upstream}} data-upstream="true"{{end}}><a class="tool-name" href="/docs/tools/{{.Name}}">{{.Name}}</a><p class="tool-desc">{{.Summary}}</p>{{if .Upstream}}<span class="tool-badges"><span class="badge badge-live">live ESI</span></span>{{end}}</li>
+{{end}}      </ul>
+    </section>
+
+    <section class="tier-group" data-tier="keyed">
+      <div class="tier-head"><span class="badge" data-tier="keyed">keyed</span><h2 id="tools-keyed">API key</h2><span class="n">{{.Stats.Keyed}} {{plural .Stats.Keyed "tool"}}</span><p class="tier-rule">A valid API key: <code>Authorization: Bearer &lt;key&gt;</code> or <code>X-API-Key</code>. <span data-slot="keys_note">{{if .Auth}}Keys are personal and may be revoked for abuse.{{else}}No keys are issued on this service yet.{{end}}</span></p></div>
+      <ul class="tool-list">
+{{range .Tools.Keyed}}        <li class="tool-row" data-tool="{{.Name}}" data-tier="keyed"{{if .Upstream}} data-upstream="true"{{end}}><a class="tool-name" href="/docs/tools/{{.Name}}">{{.Name}}</a><p class="tool-desc">{{.Summary}}</p>{{if .Upstream}}<span class="tool-badges"><span class="badge badge-live">live ESI</span></span>{{end}}</li>
+{{end}}      </ul>
+    </section>
+
+    <aside class="callout" data-kind="note"><svg class="ico" aria-hidden="true"><use href="#i-info"/></svg><div><p class="callout-title">Disabled tools</p><p>A disabled tool is not offered on this service: it is absent from the MCP tool list and refused over REST with <code>403 tool_disabled</code>.</p></div></aside>
+
+    <nav class="pager" aria-label="Previous and next page">
+      <a href="/docs/rest"><span class="pg-k"><svg class="ico" aria-hidden="true"><use href="#i-back"/></svg>Previous</span><span class="pg-t">REST &amp; OpenAPI</span></a>
+      {{with .FirstTool}}<a class="next" href="/docs/tools/{{.}}"><span class="pg-k">Next<svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></span><span class="pg-t mono">{{.}}</span></a>{{end}}
+    </nav>
+    <p class="doc-foot"><span>Questions or a mistake on this page? <a href="https://discord.gg/XZzkH38dt9">EVE-Cyno Discord</a></span><span>Generated from the tool registry · <span data-slot="version">{{.Version}}</span></span></p>
+  </div>
+</article>
+{{end}}

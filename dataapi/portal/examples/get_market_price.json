@@ -1,0 +1,42 @@
+{
+  "tool": "get_market_price",
+  "request": {
+    "type_id": 34,
+    "type_name": "Tritanium"
+  },
+  "prompt": "What is Tritanium selling for in Jita?",
+  "recorded": "2026-10-09",
+  "trimmed": false,
+  "response": {
+    "tool": "get_market_price",
+    "version": "sha-aa76146",
+    "result": {
+      "text": "Market data (The Forge / Jita) — type_id=34:\nBest sell: 3.89 ISK  (41 orders)\nBest buy:  4.00 ISK  (63 orders)",
+      "data": {
+        "type_id": 34,
+        "region_id": 10000002,
+        "market": "The Forge / Jita",
+        "best_sell_isk": 3.89,
+        "sell_orders": 41,
+        "best_buy_isk": 4,
+        "buy_orders": 63
+      }
+    },
+    "attribution": [
+      {
+        "name": "ESI (EVE Swagger Interface)",
+        "url": "https://esi.evetech.net/",
+        "license": "EVE Developer License Agreement (CCP Games / Fenris Creations); non-commercial use"
+      }
+    ]
+  },
+  "callouts": [
+    {
+      "kind": "tip",
+      "title": "Only have a name?",
+      "text": "Resolve it to a type_id first with",
+      "see_tool": "search_item_by_name",
+      "after": "."
+    }
+  ]
+}

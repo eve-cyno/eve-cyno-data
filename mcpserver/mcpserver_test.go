@@ -79,7 +79,7 @@ func TestListTools_DefaultIsThePublicTier(t *testing.T) {
 	names := toolNames(t, cs)
 
 	require.Equal(t, registryNames(catalog.TierPublic), names)
-	for _, denied := range []string{"appraise_items", "get_fits", "list_fits", "get_market_price", "convert_isk_to_real"} {
+	for _, denied := range []string{"appraise_items", "get_fits", "list_fits", "analyze_battle", "convert_isk_to_real"} {
 		require.NotContains(t, names, denied)
 	}
 }
@@ -108,7 +108,7 @@ func TestListTools_DefinitionsComeFromTheRegistry(t *testing.T) {
 func TestCallTool_DeniedToolIsRefusedByDefault(t *testing.T) {
 	cs := connect(t, mcpserver.New(&tools.Deps{}, mcpserver.Options{}))
 
-	for _, name := range []string{"appraise_items", "get_fits", "list_fits", "get_market_price", "convert_isk_to_real"} {
+	for _, name := range []string{"appraise_items", "get_fits", "list_fits", "analyze_battle", "convert_isk_to_real"} {
 		_, err := cs.CallTool(t.Context(), &mcp.CallToolParams{Name: name, Arguments: map[string]any{}})
 		require.Error(t, err, name)
 		require.Contains(t, err.Error(), "unknown tool", name)

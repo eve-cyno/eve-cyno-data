@@ -1,0 +1,24 @@
+{
+  "tool": "get_npc_stations",
+  "request": {
+    "system_name": "Jita"
+  },
+  "prompt": "Which NPC stations are in Jita?",
+  "recorded": "2026-10-09",
+  "trimmed": true,
+  "response": {
+    "tool": "get_npc_stations",
+    "version": "sha-aa76146",
+    "result": {
+      "text": "NPC stations in **Jita** (18 total):\n\n  • Jita 2 - Sebiestor Tribe Trade Embassy\n    Services: Courier Missions, Reprocessing Plant, Market, Repair Facilities, Fitting, News\n  • Jita 3 - Moon 1 - Tash-Murkon Family Trade Embassy\n    Services: Courier Missions, Reprocessing Plant, Market, Repair Facilities, Fitting, News\n  • Jita 4 - Caldari Business Tribunal Information Center\n    Services: Bounty Missions, Courier Missions, Interbus, Reprocessing Plant, Market, Stock Exchange\n  • Jita 4 - Moon 10 - Caldari Business Tribunal Law School\n    Services: Bounty Missions, Courier Missions, Reprocessing Plant, Market, Stock Exchange, Cloning\n  • Jita 4 - Moon 10 - Caldari Constructions Production P…",
+      "data": null
+    },
+    "attribution": [
+      {
+        "name": "EVE Static Data Export (via Fuzzwork)",
+        "url": "https://www.fuzzwork.co.uk/dump/",
+        "license": "CCP game data under the EVE Developer License Agreement; converted by Fuzzwork Enterprises"
+      }
+    ]
+  }
+}

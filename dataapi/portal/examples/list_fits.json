@@ -1,0 +1,10 @@
+{
+  "tool": "list_fits",
+  "request": {
+    "ship_name": "Gila",
+    "source": "workbench",
+    "limit": 5
+  },
+  "prompt": "List the Workbench fits for the Gila.",
+  "note": "Request only: no API keys are issued yet, so there is no recorded response."
+}

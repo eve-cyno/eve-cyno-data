@@ -1,0 +1,104 @@
+{
+  "tool": "compute_fit_stats",
+  "request": {
+    "eft_text": "[Rifter, Docs example]\nSmall Armor Repairer II\nGyrostabilizer II\nMultispectrum Coating II\n\n1MN Afterburner II\nWarp Scrambler II\nStasis Webifier II\n\n200mm AutoCannon II, EMP S\n200mm AutoCannon II, EMP S\n200mm AutoCannon II, EMP S"
+  },
+  "prompt": "/eve-fit [Rifter, Docs example]\nSmall Armor Repairer II\nGyrostabilizer II\nMultispectrum Coating II\n\n1MN Afterburner II\nWarp Scrambler II\nStasis Webifier II\n\n200mm AutoCannon II, EMP S\n200mm AutoCannon II, EMP S\n200mm AutoCannon II, EMP S",
+  "recorded": "2026-10-09",
+  "trimmed": false,
+  "response": {
+    "tool": "compute_fit_stats",
+    "version": "sha-aa76146",
+    "result": {
+      "text": "Fit stats: Rifter (all-V)\nDPS 144 · volley 217\n  3x 200mm AutoCannon II [EMP S]: 144 DPS\nEHP 2460 (shield 776, armor 1031, hull 653) · active rep 20 HP/s\nResists EM/Th/Kin/Exp %: shield 0/50/40/20 · armor 68/27/39/47 · hull 33/33/33/33\nSpeed 1193 m/s (prop on) · align 4.7s · signature 35 m\nCap: lasts 101s · 312 GJ\nCPU 137.2/162.5 tf · PG 31.8/51.2 MW\nBasis: no implants or boosters; theoretical DPS (no reload); EHP at a uniform 25/25/25/25 damage profile.",
+      "data": {
+        "hull": "Rifter",
+        "basis": "all-V",
+        "dps": 143.6587709497207,
+        "weapon_dps": 143.6587709497207,
+        "drone_dps": 0,
+        "volley": 216.96963750000003,
+        "weapons": [
+          {
+            "label": "200mm AutoCannon II [EMP S]",
+            "count": 3,
+            "dps": 143.6587709497207,
+            "default_ammo": false
+          }
+        ],
+        "drones": null,
+        "tank": {
+          "ehp": 2460.200278905914,
+          "shield_ehp": 775.8620689655172,
+          "armor_ehp": 1031.3531353135313,
+          "hull_ehp": 652.9850746268656,
+          "active_rep_per_sec": 20.444444444444443,
+          "shield_resists": {
+            "em": 0,
+            "thermal": 0.5,
+            "kinetic": 0.4,
+            "explosive": 0.19999999999999996
+          },
+          "armor_resists": {
+            "em": 0.6768,
+            "thermal": 0.27279999999999993,
+            "kinetic": 0.3939999999999999,
+            "explosive": 0.4748
+          },
+          "hull_resists": {
+            "em": 0.32999999999999996,
+            "thermal": 0.32999999999999996,
+            "kinetic": 0.32999999999999996,
+            "explosive": 0.32999999999999996
+          }
+        },
+        "speed_ms": 1193.2524329929802,
+        "prop_on": true,
+        "align_s": 4.6922182499697165,
+        "signature_m": 35,
+        "cap": {
+          "capacity_gj": 312.5,
+          "stable": false,
+          "summary": "lasts 101s",
+          "charge_fed": false
+        },
+        "load": {
+          "cpu": {
+            "used": 137.25,
+            "capacity": 162.5,
+            "unit": "tf"
+          },
+          "pg": {
+            "used": 31.8,
+            "capacity": 51.25,
+            "unit": "MW"
+          }
+        },
+        "no_ammo": [],
+        "unresolved_charges": [],
+        "unresolved_modules": []
+      }
+    },
+    "attribution": [
+      {
+        "name": "EVE Static Data Export (via Fuzzwork)",
+        "url": "https://www.fuzzwork.co.uk/dump/",
+        "license": "CCP game data under the EVE Developer License Agreement; converted by Fuzzwork Enterprises"
+      }
+    ]
+  },
+  "callouts": [
+    {
+      "kind": "tip",
+      "title": "Validate, then compute",
+      "text": "Check CPU, powergrid and slots with",
+      "see_tool": "validate_fitting",
+      "after": " first. The same Gofa engine also answers POST /v1/fit/stats, with the full engine output."
+    },
+    {
+      "kind": "warning",
+      "title": "Unknown names are not errors",
+      "text": "A module or charge the engine cannot resolve is listed in unresolved_modules or unresolved_charges and left out of the numbers. Check both lists before you show the stats."
+    }
+  ]
+}

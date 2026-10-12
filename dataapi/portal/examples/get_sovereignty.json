@@ -1,0 +1,29 @@
+{
+  "tool": "get_sovereignty",
+  "request": {
+    "system_name": "1DQ1-A"
+  },
+  "prompt": "Who holds sovereignty in 1DQ1-A?",
+  "recorded": "2026-10-09",
+  "trimmed": false,
+  "response": {
+    "tool": "get_sovereignty",
+    "version": "sha-aa76146",
+    "result": {
+      "text": "Sovereignty in **1DQ1-A**:\n  Alliance: id=1900696668\n  Corporation: id=1639878825",
+      "data": null
+    },
+    "attribution": [
+      {
+        "name": "EVE Static Data Export (via Fuzzwork)",
+        "url": "https://www.fuzzwork.co.uk/dump/",
+        "license": "CCP game data under the EVE Developer License Agreement; converted by Fuzzwork Enterprises"
+      },
+      {
+        "name": "ESI (EVE Swagger Interface)",
+        "url": "https://esi.evetech.net/",
+        "license": "EVE Developer License Agreement (CCP Games / Fenris Creations); non-commercial use"
+      }
+    ]
+  }
+}

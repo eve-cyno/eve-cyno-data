@@ -1,0 +1,25 @@
+{
+  "tool": "find_canonical_module",
+  "request": {
+    "family": "Shield Extender",
+    "size": "Medium"
+  },
+  "prompt": "What are the exact names of the medium shield extenders?",
+  "recorded": "2026-10-09",
+  "trimmed": false,
+  "response": {
+    "tool": "find_canonical_module",
+    "version": "sha-aa76146",
+    "result": {
+      "text": "## Canonical Shield Extender variants (Medium)\n- Medium Shield Extender I\n- Medium Shield Extender II\n- Thukker Medium Shield Extender\n- Medium Abyssal Shield Extender\n- Medium 'Canyon' Shield Extender\n- Caldari Navy Medium Shield Extender\n- Republic Fleet Medium Shield Extender\n- Medium Azeotropic Restrained Shield Extender\n\nSource: data/sde/sde.sqlite (Fuzzwork latest dump)",
+      "data": null
+    },
+    "attribution": [
+      {
+        "name": "EVE Static Data Export (via Fuzzwork)",
+        "url": "https://www.fuzzwork.co.uk/dump/",
+        "license": "CCP game data under the EVE Developer License Agreement; converted by Fuzzwork Enterprises"
+      }
+    ]
+  }
+}

@@ -1,7 +1,9 @@
 package dataapi
 
 import (
+	"crypto/sha256"
 	_ "embed"
+	"encoding/base64"
 	"html"
 	"net/http"
 	"regexp"
@@ -18,14 +20,12 @@ var termsMarkdown string
 
 // renderedPages are the pages built once in New for a Surface.
 type renderedPages struct {
-	index     []byte
 	indexJSON []byte
 	terms     []byte
 }
 
 func renderPages(s Surface) renderedPages {
 	return renderedPages{
-		index:     []byte(indexHTML(s)),
 		indexJSON: indexJSON(s),
 		terms:     []byte(termsHTML(termsMarkdown, termsDraft, s.PublicURL)),
 	}
@@ -33,7 +33,17 @@ func renderPages(s Surface) renderedPages {
 
 // serveTerms handles GET /terms.
 func (a *API) serveTerms(w http.ResponseWriter, _ *http.Request) {
+	w.Header().Set("Content-Security-Policy", plainPageCSP())
+	w.Header().Set("X-Content-Type-Options", "nosniff")
 	serveDoc(w, "text/html; charset=utf-8", a.pages.terms)
+}
+
+// plainPageCSP is the Content-Security-Policy of the plain pages (pageHead): no script at
+// all, and the one inline stylesheet only by its hash.
+func plainPageCSP() string {
+	sum := sha256.Sum256([]byte(pageCSS))
+	return "default-src 'none'; style-src 'sha256-" + base64.StdEncoding.EncodeToString(sum[:]) + "'; " +
+		"base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
 }
 
 // serveTermsMarkdown handles GET /terms.md.

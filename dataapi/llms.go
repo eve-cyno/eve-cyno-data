@@ -218,7 +218,11 @@ func accessLine(s Surface, t catalog.Tool) string {
 	case catalog.TierBYOKey:
 		return "- Access: byo-key. Send your own Janice API key in the `" + HeaderJaniceKey + "` header (REST and MCP over HTTP); `400 janice_key_required` over REST, and an error result naming the header over MCP, without it. The key is used for that request only and never logged or stored.\n"
 	}
-	return "- Access: public. No key needed.\n"
+	line := "- Access: public. No key needed.\n"
+	if up := upstreamSentence(s, t); up != "" {
+		line += "- Live ESI data: " + up + "\n"
+	}
+	return line
 }
 
 // docTools is the tool set the generated documents describe for a Surface.

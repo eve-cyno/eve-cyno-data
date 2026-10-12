@@ -91,15 +91,30 @@ func (a *API) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				rec.status = http.StatusInternalServerError
 			}
 		}
-		log.Info("request",
+		attrs := []any{
 			"method", r.Method,
 			"route", r.Pattern, // the matched mux pattern: low cardinality, no query string
 			"status", rec.statusCode(),
 			"bytes", rec.bytes,
 			"duration_ms", time.Since(start).Milliseconds(),
-		)
+		}
+		if name := r.PathValue("name"); name != "" {
+			attrs = append(attrs, "tool", name)
+		}
+		if a.logsCaller(r) {
+			// An opaque, salted token (never the address) so a noisy caller shows up in
+			// the logs without the logs holding IPs.
+			attrs = append(attrs, "caller", a.hasher.hash(a.keys.Key(r)))
+		}
+		log.Info("request", attrs...)
 	}()
 	a.mux.ServeHTTP(rec, r)
+}
+
+// logsCaller reports whether the access log of r carries a caller token: only the routes that
+// run tools (REST and MCP), where per-caller volume is what abuse monitoring needs.
+func (a *API) logsCaller(r *http.Request) bool {
+	return r.PathValue("name") != "" || r.URL.Path == a.prefix+"/mcp"
 }
 
 // statusRecorder remembers the status and size of a response for the access log.

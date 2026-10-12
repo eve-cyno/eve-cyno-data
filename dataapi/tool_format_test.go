@@ -118,7 +118,10 @@ func TestTool_V1EnvelopeForARealSDETool(t *testing.T) {
 	require.Equal(t, "application/json", rec.Header().Get("Content-Type"))
 	env := decodeEnvelope(t, rec.Body.Bytes())
 	require.Contains(t, env.Result.Text, "Jita")
-	require.Equal(t, "null", string(env.Result.Data))
+	var route tools.Route
+	require.NoError(t, json.Unmarshal(env.Result.Data, &route))
+	require.Equal(t, "Jita", route.From)
+	require.Equal(t, "Amarr", route.Systems[len(route.Systems)-1].Name)
 }
 
 // Failures keep the JSON error shape in both formats.

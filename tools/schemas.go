@@ -23,3 +23,8 @@ func ToolSchemas() []map[string]any {
 	})
 	return schemasParsed
 }
+
+// ToolSchemasJSON returns the embedded tool_schemas.json document as is, for a caller that
+// needs what the decoded maps lose (the declaration order of the arguments). The slice is
+// shared: treat it as read-only.
+func ToolSchemasJSON() []byte { return toolSchemasJSON }

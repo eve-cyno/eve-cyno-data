@@ -117,7 +117,7 @@ func TestNewHandler_MCPIsOffByDefaultAndPublicSafeWhenOn(t *testing.T) {
 	require.NotEmpty(t, rec.Header().Get("X-Request-ID"))
 	require.Contains(t, rec.Body.String(), "get_jumps_between")
 	require.Contains(t, rec.Body.String(), `"appraise_items"`, "the byo-key tool is listed for everyone")
-	for _, denied := range []string{"get_fits", "list_fits", "get_market_price", "convert_isk_to_real"} {
+	for _, denied := range []string{"get_fits", "list_fits", "analyze_battle", "convert_isk_to_real"} {
 		require.NotContains(t, rec.Body.String(), `"`+denied+`"`)
 	}
 	require.Contains(t, get(on, "/v1/openapi.yaml").Body.String(), "/mcp:")

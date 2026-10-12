@@ -14,8 +14,8 @@ A custom GPT Action calls your API from OpenAI's servers, so it needs a **public
 4. The document's `servers` entry is the relative `/v1`. The editor needs an absolute URL: change it to
    `https://<your-host>/v1`.
 5. **Authentication**:
-   - **None** for the public tools (13 of them: SDE lookups, route planning, fit validation and stats).
-   - **API Key -> Bearer** with your key to also use the keyed tools (`get_fits`, `list_fits`, `get_market_price`, ...).
+   - **None** for the public tools (17 of them: SDE lookups, route planning, fit validation and stats, and the live ESI tools market price, type info, sovereignty and system activity).
+   - **API Key -> Bearer** with your key to also use the keyed tools (`get_fits`, `list_fits`, `analyze_battle`).
      The key is stored by ChatGPT in the Action's settings, never in the schema. The server accepts it as
      `Authorization: Bearer <key>` (keys are listed in the file named by `DATAAPI_API_KEYS_FILE`).
    - `appraise_items` needs a per-request `X-Janice-Key` header with the caller's own Janice key; a GPT Action cannot

@@ -396,6 +396,16 @@ func hasWeaponFamilyModule(eft, family string) bool {
 	return false
 }
 
+// MatchesWeaponFamily is the exported form of hasWeaponFamilyModule for callers
+// outside the retriever — chat/fitgen's role checks look for the requested weapon
+// family with the very markers retrieval ranked by. An empty or unrecognized
+// family never matches.
+func MatchesWeaponFamily(eft, family string) bool { return hasWeaponFamilyModule(eft, family) }
+
+// HasTackleModule is the exported form of hasTackleModule: a warp scrambler or
+// warp disruptor (a point) in eft.
+func HasTackleModule(eft string) bool { return hasTackleModule(eft) }
+
 // anyWeaponFamilyHit reports whether at least one hit carries the requested
 // weapon family's marker in its EFT text — the sufficiency test for a
 // weapon-family query (see SearchFits), mirroring anyTackleHit.

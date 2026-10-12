@@ -20,6 +20,7 @@ The service is provided as is, for free, with no warranty and no uptime promise.
 ## Acceptable use
 
 - Respect the rate limits. A refused request is a `429` with `Retry-After`; wait instead of retrying in a loop or rotating addresses.
+- The tools that read live game data from EVE's ESI (market price, type info, sovereignty, system activity) answer from a shared cache and have a lower limit per caller. Do not use them to mirror or bulk-collect ESI data: use ESI itself or a dataset such as EVE Ref for that. When they answer `503 upstream_busy`, the shared ESI budget is spent; wait for `Retry-After`.
 - Do not scrape the API to rebuild the community-fit corpus, and do not write automation that works around the access tiers (public, key, your own Janice key).
 - Do not use the service for botting, game-client modification, or real-money trading of in-game assets. Use that breaks the EVE Developer License Agreement is not allowed.
 - Do not attack the service or try to read data you are not meant to reach.
@@ -38,7 +39,7 @@ For price appraisals you send your own Janice API key in the `X-Janice-Key` head
 
 ## Privacy
 
-- The service writes one access-log line per request with: request ID, HTTP method, matched route, status, response size and duration. It does not log your IP address, API key, Janice key, query string or request body. A failed tool call also logs the tool name and the error text.
+- The service writes one access-log line per request with: request ID, HTTP method, matched route, status, response size and duration. It does not log your IP address, API key, Janice key, query string or request body. On tool and MCP requests the line also carries the tool name (REST) and an opaque caller token: a salted hash of your IP address or API key id, which cannot be turned back into either and is used only to spot a client that sends far more than the others. A failed tool call also logs the tool name and the error text.
 - Your IP address (or your API key id) is held in memory only, to apply the rate limit. The service sits behind Cloudflare, which sees traffic as any proxy does under its own terms.
 - Logs go to the operator's log store and are kept for a limited time (30 days).
 - Free-text you send to some tools (for example a community-fit search query) is forwarded to the upstream provider that answers it (an embedding provider, ESI, Janice), as each tool's description states.
@@ -46,7 +47,8 @@ For price appraisals you send your own Janice API key in the `X-Janice-Key` head
 
 ## Contact
 
-Bythlak, bythlak@eve-cyno.dev. Report abuse, takedown requests (including from fit authors) and questions there.
+The EVE-Cyno Discord, https://discord.gg/XZzkH38dt9, for questions, feedback, support, abuse reports and takedown
+requests (including from fit authors). In game: Bythlak.
 
 ## Changes
 

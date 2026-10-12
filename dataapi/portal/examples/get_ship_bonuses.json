@@ -1,0 +1,29 @@
+{
+  "tool": "get_ship_bonuses",
+  "request": {
+    "ship_name": "Gila"
+  },
+  "prompt": "What are the Gila's hull bonuses?",
+  "recorded": "2026-10-09",
+  "trimmed": true,
+  "response": {
+    "tool": "get_ship_bonuses",
+    "version": "sha-aa76146",
+    "result": {
+      "text": "## Hull facts — Gila\nType ID: 17715 | Class: cruiser | Group: Cruiser | Category: Ship\n\n**Slots & hardpoints (hard caps):**\n- hi=5, mid=6, low=3, rig=3\n- turret hardpoints=0, launcher hardpoints=4\n- drone bay: 100 m³, 20 Mbit bandwidth\n\n**Role & skill bonuses (from invTraits):**\n- [ROLE] 250.0% — bonus to Medium Combat Drone hitpoints\n- [ROLE] 500.0% — bonus to Medium Combat Drone damage\n- [Gallente Cruiser] 10.0% — bonus to kinetic and thermal missile damage\n- [Caldari Cruiser] 4.0% — bonus to all shield resistances\n\n**Compatible weapons:** no per-hull lock — use weapons matching the bonused weapon family from role_bonuses (e.g. 'Small Hybrid Turret') and the turret/launcher hardpoint sizin…",
+      "data": null
+    },
+    "attribution": [
+      {
+        "name": "EVE Static Data Export (via Fuzzwork)",
+        "url": "https://www.fuzzwork.co.uk/dump/",
+        "license": "CCP game data under the EVE Developer License Agreement; converted by Fuzzwork Enterprises"
+      },
+      {
+        "name": "EVE Workbench",
+        "url": "https://eveworkbench.com/",
+        "license": "No licence published"
+      }
+    ]
+  }
+}

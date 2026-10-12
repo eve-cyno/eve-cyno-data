@@ -1,0 +1,92 @@
+/* EVE-CYNO design tokens.
+   Palette derived from the cynosural beacon photo:
+   black-space void, ice-cyan brand (chat), red-hot beacon (PVP),
+   electric blue-violet beacon (PVE), faint green corona accent. */
+:root {
+  /* Space */
+  --c-void:         #06080c;
+  --c-void-2:       #0b0f17;
+  --c-nebula:       #121a28;
+  --c-nebula-2:     #1b2638;
+  --c-line:         #2a3a55;
+  --c-line-soft:    #19223340;
+
+  /* Text */
+  --c-fg:           #e8eef7;
+  --c-fg-muted:     #8595b0;
+  --c-fg-dim:       #7e8da9;
+
+  /* CYNO SPECTRUM — share chroma; vary hue.
+     ice (chat), blue (PVE), red (PVP), green (aux corona). */
+  --c-ice:          #4ad6f5;
+  --c-ice-2:        #00b6d9;
+  --c-ice-glow:     rgba(74, 214, 245, 0.45);
+
+  --c-red:          #ff8c3d;
+  --c-red-2:        #ffba6e;
+  --c-red-glow:     rgba(255, 140, 61, 0.55);
+
+  --c-blue:         #7d8bff;
+  --c-blue-2:       #a5b4ff;
+  --c-blue-glow:    rgba(125, 139, 255, 0.55);
+
+  --c-green:        #5fd0a8;
+  --c-green-glow:   rgba(95, 208, 168, 0.5);
+
+  --c-white-hot:    #f5fbff;
+
+  --c-ok:           #6ed878;
+  --c-warn:         #ffb84d;
+  --c-bad:          #ff5b6a;
+
+  /* Type */
+  --f-display: "Space Grotesk", system-ui, sans-serif;
+  --f-body:    "Space Grotesk", system-ui, sans-serif;
+  --f-mono:    "JetBrains Mono", ui-monospace, "SF Mono", Consolas, monospace;
+
+  /* Layout */
+  --maxw: 1200px;
+  --radius: 2px;
+
+  /* Motion */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  background: var(--c-void);
+  color: var(--c-fg);
+  font-family: var(--f-body);
+  font-size: 17px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  font-feature-settings: "ss01", "ss02", "cv11";
+}
+a { color: inherit; text-decoration: none; }
+img, svg { display: block; }
+button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; padding: 0; }
+
+/* Reusable cyno-marker — the rotated diamond crosshair from the icon */
+.cyno-mark {
+  display: inline-block;
+  width: 10px; height: 10px;
+  transform: rotate(45deg);
+  background: var(--c-ice);
+  box-shadow: 0 0 12px var(--c-ice-glow), 0 0 2px var(--c-ice);
+  position: relative;
+}
+.cyno-mark::after {
+  content: "";
+  position: absolute; inset: 3px;
+  background: var(--c-white-hot);
+  box-shadow: 0 0 4px var(--c-white-hot);
+}
+@keyframes cyno-pulse {
+  0%, 100% { opacity: 0.85; transform: rotate(45deg) scale(1); }
+  50%      { opacity: 1;    transform: rotate(45deg) scale(1.18); }
+}
+.cyno-mark.pulse { animation: cyno-pulse 3s var(--ease-in-out) infinite; }

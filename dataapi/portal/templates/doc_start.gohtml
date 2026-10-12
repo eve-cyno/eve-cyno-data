@@ -1,0 +1,72 @@
+{{define "article"}}<article class="doc" data-page="start">
+  <header class="doc-head">
+    <ol class="crumbs"><li><a href="/docs/">Docs</a></li><li aria-current="page">Getting started</li></ol>
+    <h1>Getting started</h1>
+    <p class="doc-lede">EVE-Cyno Data answers EVE Online questions with deterministic data and calculations: static-data lookups, fit validation and statistics from the Gofa dogma engine, live market prices, sovereignty and system activity, and a community-fit search. No language model is in the loop: the same input gives the same answer, and every answer names its sources.</p>
+  </header>
+  <details class="toc" data-toc open>
+    <summary><svg class="ico" aria-hidden="true"><use href="#i-chev"/></svg>On this page</summary>
+    <ul>
+      <li><a href="#start-connect">Choose how to connect</a></li>
+      <li><a href="#start-first-call">Make your first call</a></li>
+      <li><a href="#start-answer">Read the answer</a></li>
+      <li><a href="#start-limits">Limits in one line</a></li>
+      <li><a href="#start-next">Next steps</a></li>
+    </ul>
+    <div class="toc-more"><a href="https://discord.gg/XZzkH38dt9"><svg class="ico" aria-hidden="true"><use href="#i-discord"/></svg>Ask on Discord</a><a href="#top"><svg class="ico" aria-hidden="true"><use href="#i-up"/></svg>Back to top</a></div>
+  </details>
+  <div class="doc-body prose">
+    <h2 id="start-connect">Choose how to connect<a class="h-anchor" href="#start-connect" aria-label="Link to this section">#</a></h2>
+    <p>Three doors, one service. They reach the same tools under the same tiers and limits.</p>
+    <div class="doors">
+      <a class="door" href="/docs/claude-code" data-state="now">
+        <span class="door-top"><span class="glyph"><svg class="ico" aria-hidden="true"><use href="#i-terminal"/></svg></span><span class="badge badge-ok">recommended</span></span>
+        <b>Claude Code plugin</b>
+        <span class="t">Two commands. MCP server, the <code>eve-data</code> skill and three slash commands.</span>
+      </a>
+      <a class="door" href="/docs/mcp">
+        <span class="door-top"><span class="glyph"><svg class="ico" aria-hidden="true"><use href="#i-plug"/></svg></span></span>
+        <b>Any MCP client</b>
+        <span class="t">One URL, streamable HTTP: <code>{{.Host}}{{.Prefix}}/mcp</code>.</span>
+      </a>
+      <a class="door" href="/docs/rest">
+        <span class="door-top"><span class="glyph"><svg class="ico" aria-hidden="true"><use href="#i-braces"/></svg></span></span>
+        <b>REST &amp; OpenAPI</b>
+        <span class="t"><code>POST {{.Prefix}}/tool/{name}</code> with the arguments as JSON.</span>
+      </a>
+    </div>
+
+    <h2 id="start-first-call">Make your first call<a class="h-anchor" href="#start-first-call" aria-label="Link to this section">#</a></h2>
+    <p>Ask for the Jita price of Tritanium (type ID 34). <code>get_market_price</code> is public: no key, no account.</p>
+    {{template "request-tabs" .Example}}
+
+    <h2 id="start-answer">Read the answer<a class="h-anchor" href="#start-answer" aria-label="Link to this section">#</a></h2>
+    <p>REST wraps every tool answer in the same envelope:</p>
+    {{template "response-block" .Example}}
+    <p class="code-cap">{{.Example.Caption}}</p>
+    <dl class="fields">
+      <dt><code>tool</code></dt><dd>The tool that answered.</dd>
+      <dt><code>version</code></dt><dd>The build of the service.</dd>
+      <dt><code>result.text</code></dt><dd>The answer as the chat assistant reads it.</dd>
+      <dt><code>result.data</code></dt><dd>The typed result where the tool has one, otherwise <code>null</code>.</dd>
+      <dt><code>attribution</code></dt><dd>The upstreams behind the answer: <code>name</code>, <code>url</code>, <code>license</code>.</dd>
+    </dl>
+    <aside class="callout" data-kind="note"><svg class="ico" aria-hidden="true"><use href="#i-info"/></svg><div><p class="callout-title">Show the attribution</p><p>Keep the source and its licence wherever you show the data. Community fits carry their own <code>attribution</code> object with the author and a link: keep those too. See <a href="/docs/attribution">Attribution &amp; licences</a>.</p></div></aside>
+
+    <h2 id="start-limits">Limits in one line<a class="h-anchor" href="#start-limits" aria-label="Link to this section">#</a></h2>
+    <p>Requests are limited per caller (per API key when one is sent, otherwise per client IP) over a sliding window; a refused request is a <code>429</code> with <code>Retry-After</code>. The numbers per route are on <a href="/docs/access">Access tiers &amp; rate limits</a>.</p>
+    <aside class="callout" data-kind="tip"><svg class="ico" aria-hidden="true"><use href="#i-tip"/></svg><div><p class="callout-title">Tip</p><p><b>{{.Stats.Public}} tools are public.</b> {{.Stats.BYO}} more {{plural .Stats.BYO "runs" "run"}} with your own Janice key; {{.Stats.Keyed}} need an API key{{if not .Auth}}, and no keys are issued yet{{end}}.</p></div></aside>
+
+    <h2 id="start-next">Next steps<a class="h-anchor" href="#start-next" aria-label="Link to this section">#</a></h2>
+    <div class="linkcards">
+      <a class="linkcard" href="/docs/claude-code"><svg class="ico" aria-hidden="true"><use href="#i-terminal"/></svg><span class="lc-t">Claude Code plugin</span><svg class="go" aria-hidden="true"><use href="#i-arrow"/></svg><span class="lc-s">Install, slash commands, the Janice key.</span></a>
+      <a class="linkcard" href="/docs/tools"><svg class="ico" aria-hidden="true"><use href="#i-doc"/></svg><span class="lc-t">Tools reference</span><svg class="go" aria-hidden="true"><use href="#i-arrow"/></svg><span class="lc-s">Every tool, its arguments and result.</span></a>
+    </div>
+
+    <nav class="pager" aria-label="Previous and next page">
+      <a class="next" href="/docs/claude-code"><span class="pg-k">Next<svg class="ico" aria-hidden="true"><use href="#i-arrow"/></svg></span><span class="pg-t">Claude Code plugin</span></a>
+    </nav>
+    <p class="doc-foot"><span>Questions or a mistake on this page? <a href="https://discord.gg/XZzkH38dt9">EVE-Cyno Discord</a></span><span>Generated from the tool registry · <span data-slot="version">{{.Version}}</span></span></p>
+  </div>
+</article>
+{{end}}

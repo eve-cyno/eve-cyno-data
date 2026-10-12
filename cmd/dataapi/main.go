@@ -18,7 +18,8 @@
 //	GET  /terms, /terms.md   the service terms
 //
 // The tool endpoint and the MCP endpoint apply the same tool tiers (core/catalog): public
-// tools for anyone, keyed tools (get_fits, list_fits, the ESI pass-throughs, analyze_battle)
+// tools for anyone (the SDE lookups and the ESI pass-throughs, the latter with a lower
+// per-caller limit), keyed tools (get_fits, list_fits, analyze_battle)
 // only with a valid API key, appraise_items only with the caller's own Janice key in the
 // X-Janice-Key header (never the project's), and disabled tools (convert_isk_to_real) never.
 // An API key is sent as "Authorization: Bearer <key>" or "X-API-Key: <key>". Each document
@@ -41,6 +42,16 @@
 //	                          corpus is not configured. Unset (default): Qdrant is expected; if
 //	                          it is configured but down, fit search answers 502 "upstream_error"
 //	                          per request and /v1/health still reports corpus:true
+//	DATAAPI_UPSTREAM_TOOL_LIMIT  calls per minute per caller of the tools that read live ESI
+//	                          data (get_market_price, get_type_info, get_sovereignty,
+//	                          get_system_activity), REST and MCP together (default 10; 0 = no
+//	                          extra limit)
+//	DATAAPI_ESI_GUARD_PERCENT share (0-90, default 25) of every ESI rate-limit group's tokens
+//	                          kept unspent; below it a tool answers 503 upstream_busy instead
+//	                          of calling ESI. Every ESI call is logged as msg "esi_call"
+//	DATAAPI_LOG_SALT          salt of the opaque "caller" token in the tool/MCP access-log
+//	                          lines (default: random per process)
+//	ESI_CONTACT               contact for the ESI User-Agent (core/esi)
 //	DATAAPI_PUBLIC_URL        the public origin, e.g. https://data.eve-cyno.dev (https, no path or
 //	                          query; invalid is a startup error). Makes the OpenAPI servers entry
 //	                          and the llms.txt links absolute (ChatGPT Actions need that); unset
@@ -110,6 +121,10 @@ type exposure struct {
 	auth         dataapi.Authenticator
 	// publicURL is the validated DATAAPI_PUBLIC_URL ("" means relative links).
 	publicURL string
+	// upstream overrides the per-caller budget of the live-ESI tools (nil: the default).
+	upstream *dataapi.Rate
+	// logSalt is DATAAPI_LOG_SALT ("" means a random salt per process).
+	logSalt string
 }
 
 // publicURL resolves DATAAPI_PUBLIC_URL: unset is fine, a value that is not an https origin
@@ -141,11 +156,21 @@ func loadAuth(getenv func(string) string) (dataapi.Authenticator, error) {
 // internet-facing. The description routes (OpenAPI, llms.txt) are always on; they
 // describe whatever else is.
 func newHandler(d *bootstrap.Deps, ex exposure, log *slog.Logger) (http.Handler, error) {
+	limits := dataapi.DefaultLimits()
+	if ex.upstream != nil {
+		limits.UpstreamTool = *ex.upstream
+	}
+	// One budget for the tools that read live ESI data, shared by REST and MCP so using
+	// both does not double a caller's allowance.
+	upstream := dataapi.NewUpstreamLimiter(limits.UpstreamTool, nil)
 	cfg := dataapi.Config{
 		Deps:      dataapi.NewDeps(d.Tools, d.Retriever),
 		Docs:      true,
 		Auth:      ex.auth,
 		PublicURL: ex.publicURL,
+		Limits:    &limits,
+		Upstream:  upstream,
+		LogSalt:   ex.logSalt,
 		Logger:    log,
 	}
 	if ex.toolAPI {
@@ -159,6 +184,7 @@ func newHandler(d *bootstrap.Deps, ex exposure, log *slog.Logger) (http.Handler,
 		cfg.MCP = mcpserver.HTTPHandler(d.Tools, mcpserver.HTTPOptions{
 			DisableLocalhostProtection: true,
 			Keyed:                      func(r *http.Request) bool { return dataapi.CallerFrom(r.Context()).Allows(catalog.TierKeyed) },
+			Upstream:                   upstream.Allow,
 			Logger:                     log,
 		})
 	}
@@ -185,7 +211,18 @@ func run(log *slog.Logger) error {
 	// at all, so fit search is a clean 503.
 	cfg := coreconfig.Load()
 	onlySDE := sdeOnly(os.Getenv)
-	deps, err := bootstrap.BuildDepsWith(context.Background(), cfg, bootstrap.Options{NoRetriever: onlySDE})
+	guard, err := esiGuardPercent(os.Getenv)
+	if err != nil {
+		return err
+	}
+	upstream, err := upstreamToolRate(os.Getenv)
+	if err != nil {
+		return err
+	}
+	deps, err := bootstrap.BuildDepsWith(context.Background(), cfg, bootstrap.Options{
+		NoRetriever: onlySDE,
+		Client:      newToolsClient(log, guard),
+	})
 	if err != nil {
 		return fmt.Errorf("core deps (check EVE_CORE_SDE_PATH): %w", err)
 	}
@@ -203,7 +240,12 @@ func run(log *slog.Logger) error {
 	if err != nil {
 		return err
 	}
-	ex := exposure{toolAPI: exposeToolAPI(os.Getenv), mcp: exposeMCP(os.Getenv), auth: auth, publicURL: pub}
+	ex := exposure{
+		toolAPI: exposeToolAPI(os.Getenv), mcp: exposeMCP(os.Getenv), auth: auth, publicURL: pub,
+		upstream: &upstream, logSalt: os.Getenv("DATAAPI_LOG_SALT"),
+	}
+	log.Info("ESI pass-through tools: shared Expires cache, fail-fast budget guard",
+		"upstream_tool_limit_per_min", upstream.Max, "esi_guard_percent", guard)
 	if auth != nil {
 		log.Info("API keys loaded: the keyed tool tier is available", "env", "DATAAPI_API_KEYS_FILE")
 	}
