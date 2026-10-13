@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
-	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -96,8 +95,6 @@ func TestHTTPHandler_KeylessCallersAreToldItIsATrial(t *testing.T) {
 	o.KeyHint = ""
 	require.Equal(t, instructions, initInstructions(t, httpHandler(&tools.Deps{}, o, nil)), "no hint, no sentence")
 }
-
-func itoa(n int) string { return strconv.Itoa(n) }
 
 func jsonUnmarshal(s string, v any) error { return json.Unmarshal([]byte(s), v) }
 

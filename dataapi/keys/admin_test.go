@@ -484,11 +484,11 @@ func TestAdminOpsUsageAll(t *testing.T) {
 	e.store.Spend(k.ID)
 	e.store.Record(k.ID, "GET /v1/x", false)
 
-	code, hd, body := e.do(t, "GET", "/admin/v1/ops/usage", "", map[string]string{"Authorization": ""})
+	code, _, body := e.do(t, "GET", "/admin/v1/ops/usage", "", map[string]string{"Authorization": ""})
 	require.Equal(t, 401, code, body)
 	require.Equal(t, "admin_token_required", errCode(t, body))
 
-	code, hd, body = e.do(t, "GET", "/admin/v1/ops/usage", "", nil)
+	code, hd, body := e.do(t, "GET", "/admin/v1/ops/usage", "", nil)
 	require.Equal(t, 200, code, body)
 	require.Equal(t, "no-store", hd.Get("Cache-Control"))
 	var got struct {
