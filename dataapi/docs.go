@@ -1,7 +1,9 @@
 package dataapi
 
 import (
+	"bytes"
 	"fmt"
+	"io"
 	"net/http"
 )
 
@@ -64,6 +66,20 @@ func (a *API) mcpTransport(w http.ResponseWriter, r *http.Request) {
 		// A stale or mistyped key must not silently degrade to the anonymous tool list.
 		writeError(w, r, http.StatusUnauthorized, "invalid_api_key", "the API key is not valid")
 		return
+	}
+	if r.Method == http.MethodPost {
+		// The MCP SDK accepts JSON-RPC batch arrays from clients that send no (or an old)
+		// protocol version; one POST would then run many tool calls while the quota and the
+		// rate limits count one request. Refuse batches before the handler sees them.
+		body, ok := readBody(w, r, toolBodyMax)
+		if !ok {
+			return
+		}
+		if t := bytes.TrimLeft(body, " \t\r\n"); len(t) > 0 && t[0] == '[' {
+			writeError(w, r, http.StatusBadRequest, "invalid_request", "JSON-RPC batches are not accepted; send one message per request")
+			return
+		}
+		r.Body = io.NopCloser(bytes.NewReader(body))
 	}
 	a.mcp.ServeHTTP(w, r)
 }

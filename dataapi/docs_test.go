@@ -3,10 +3,12 @@ package dataapi_test
 import (
 	"bytes"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -22,7 +24,7 @@ import (
 // publicConfig is the Config of the internet-facing service: the one PublicSurface
 // describes.
 func publicConfig() dataapi.Config {
-	return dataapi.Config{ToolAPI: dataapi.ToolAPIPublic, Docs: true, MCP: http.NotFoundHandler(), Auth: fixedAuth{}} // keys on: the committed files describe PublicSurface
+	return dataapi.Config{ToolAPI: dataapi.ToolAPIPublic, Docs: true, MCP: http.NotFoundHandler(), Auth: fixedAuth{}, KeyedLimitFactor: dataapi.DefaultKeyedLimitFactor, KeyDailyCap: dataapi.DefaultKeyDailyCap, SelfServe: true} // keys on: the committed files describe PublicSurface
 }
 
 func TestDocs_ServedBytesAreTheCommittedFiles(t *testing.T) {
@@ -80,14 +82,14 @@ func TestDocs_DescribeTheConfiguredService(t *testing.T) {
 	require.Equal(t, http.StatusOK, rec.Code)
 	require.NotContains(t, rec.Body.String(), "/tool/")
 	require.NotContains(t, rec.Body.String(), "/mcp:")
-	require.NotContains(t, do(api, http.MethodGet, "/llms.txt", "").Body.String(), "## Tools")
+	require.NotContains(t, do(api, http.MethodGet, "/llms-full.txt", "").Body.String(), "## Tools")
 
 	// A different prefix is the server URL.
 	api = newAPI(t, dataapi.Config{Docs: true, Prefix: "/data"})
 	rec = do(api, http.MethodGet, "/data/openapi.yaml", "")
 	require.Equal(t, http.StatusOK, rec.Code)
 	require.Contains(t, rec.Body.String(), "- url: /data\n")
-	require.Contains(t, do(api, http.MethodGet, "/llms.txt", "").Body.String(), "(/data/openapi.yaml)")
+	require.Contains(t, do(api, http.MethodGet, "/llms-full.txt", "").Body.String(), "(/data/openapi.yaml)")
 }
 
 func TestDocs_RateLimited(t *testing.T) {
@@ -211,7 +213,46 @@ func TestMCP_OversizeBodyIsRefused(t *testing.T) {
 	require.Equal(t, http.StatusRequestEntityTooLarge, rec.Code)
 }
 
+func TestMCP_BatchesAreRefusedBeforeTheHandler(t *testing.T) {
+	var reached atomic.Int32
+	var seen atomic.Value
+	api := newAPI(t, dataapi.Config{MCP: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		reached.Add(1)
+		b, _ := io.ReadAll(r.Body)
+		seen.Store(string(b))
+		w.WriteHeader(http.StatusOK)
+	})})
+	call := `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"get_jumps_between","arguments":{}}}`
+
+	for _, body := range []string{"[" + call + "," + call + "]", "  \n\t[" + call + "]"} {
+		requireError(t, postMCP(t, api, body), http.StatusBadRequest, "invalid_request")
+	}
+	require.Zero(t, reached.Load(), "a batch never reaches the MCP handler")
+
+	rec := postMCP(t, api, call)
+	require.Equal(t, http.StatusOK, rec.Code)
+	require.EqualValues(t, 1, reached.Load())
+	require.Equal(t, call, seen.Load(), "the handler still reads the whole body of a single message")
+}
+
 func TestMCP_PanicInTheTransportIsContained(t *testing.T) {
 	api := newAPI(t, dataapi.Config{MCP: http.HandlerFunc(func(http.ResponseWriter, *http.Request) { panic("boom") })})
 	requireError(t, do(api, http.MethodPost, "/v1/mcp", "{}"), http.StatusInternalServerError, "internal_error")
+}
+
+func TestDocs_DailyCapSentenceFollowsKeyDailyCap(t *testing.T) {
+	body := func(cfg dataapi.Config) string {
+		return do(newAPI(t, cfg), http.MethodGet, "/llms-full.txt", "").Body.String()
+	}
+	cfg := publicConfig()
+	cfg.KeyDailyCap = 0
+	require.NotContains(t, body(cfg), "daily cap", "no cap configured: not stated")
+	require.Contains(t, body(cfg), "raises the budgets", "the factor sentence stays")
+
+	cfg.KeyDailyCap = 1234
+	require.Contains(t, body(cfg), "daily cap of 1234 requests")
+
+	cfg.KeyedLimitFactor = 1
+	require.NotContains(t, body(cfg), "raises the budgets")
+	require.Contains(t, body(cfg), "daily cap of 1234 requests", "gated on the cap, not on the factor")
 }

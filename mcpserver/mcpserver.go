@@ -120,6 +120,8 @@ type serverConfig struct {
 	// allow, when set, is asked before each call of an Upstream tool (catalog.Tool.Upstream)
 	// whether the caller is within its budget for it; a refusal carries the wait.
 	allow func(tool string) (ok bool, retryAfter time.Duration)
+	// called, when set, is told of every tools/call.
+	called func(tool string)
 }
 
 // buildServer registers exposed on a new server over deps.
@@ -140,7 +142,7 @@ func buildServer(deps *tools.Deps, exposed []catalog.Tool, cfg serverConfig, exe
 		},
 		&mcp.ServerOptions{Instructions: instructions, Logger: quiet(log)},
 	)
-	h := &handler{deps: deps, exec: exec, timeout: timeout, log: log, janiceFromHeader: cfg.janiceFromHeader, allow: cfg.allow}
+	h := &handler{deps: deps, exec: exec, timeout: timeout, log: log, janiceFromHeader: cfg.janiceFromHeader, allow: cfg.allow, called: cfg.called}
 	for _, t := range exposed {
 		s.AddTool(mcpTool(t, cfg.janiceFromHeader), h.call(t))
 	}
@@ -183,6 +185,7 @@ type handler struct {
 	// janiceFromHeader: deps carries the caller's Janice key ("" when it sent none).
 	janiceFromHeader bool
 	allow            func(tool string) (bool, time.Duration)
+	called           func(tool string)
 }
 
 // call returns the tools/call handler of one tool.
@@ -198,6 +201,9 @@ func (h *handler) call(t catalog.Tool) mcp.ToolHandler {
 			}
 		}()
 
+		if h.called != nil {
+			h.called(name)
+		}
 		args := map[string]any{}
 		if raw := req.Params.Arguments; len(raw) > 0 && string(raw) != "null" {
 			if err := json.Unmarshal(raw, &args); err != nil || args == nil {
@@ -324,6 +330,10 @@ type HTTPOptions struct {
 	// (dataapi.UpstreamLimiter.Allow; the same limiter as the REST endpoint, so one budget
 	// covers both). A refusal is an isError result starting "rate_limited". Nil: no limit.
 	Upstream func(r *http.Request, tool string) (ok bool, retryAfter time.Duration)
+	// ToolCalled, when set, is called once per tools/call with the HTTP request that carried
+	// it and the tool name, before the tool runs (also for a call that is then refused or
+	// fails). Nil: off. It must be cheap; the embedding service uses it for usage counting.
+	ToolCalled func(r *http.Request, tool string)
 	// Timeout bounds one tool execution; zero means DefaultTimeout.
 	Timeout time.Duration
 	// Logger receives the transport's and the tools' diagnostics. Nil discards.
@@ -359,6 +369,9 @@ func httpHandler(deps *tools.Deps, o HTTPOptions, exec executor) http.Handler {
 			cfg := serverConfig{timeout: o.Timeout, log: o.Logger, janiceFromHeader: true}
 			if o.Upstream != nil {
 				cfg.allow = func(tool string) (bool, time.Duration) { return o.Upstream(r, tool) }
+			}
+			if o.ToolCalled != nil {
+				cfg.called = func(tool string) { o.ToolCalled(r, tool) }
 			}
 			return buildServer(deps.WithJaniceKey(janice), catalog.ToolsIn(tiers...), cfg, exec)
 		},

@@ -110,13 +110,18 @@ func (l *WindowLimiter) sweep(now time.Time) {
 	}
 }
 
-// limited wraps h with l (nil l: no limit). A refused request is a 429 with
-// Retry-After (whole seconds, at least 1).
-func (a *API) limited(l *WindowLimiter, h http.HandlerFunc) http.HandlerFunc {
-	if l == nil {
+// limited wraps h with the limiter t picks for the caller (a disabled rate: no limit). A
+// refused request is a 429 with Retry-After (whole seconds, at least 1).
+func (a *API) limited(t tieredLimiter, h http.HandlerFunc) http.HandlerFunc {
+	if t.anon == nil {
 		return h
 	}
 	return func(w http.ResponseWriter, r *http.Request) {
+		l := t.pick(r)
+		if l == nil {
+			h(w, r)
+			return
+		}
 		ok, retry := l.Allow(a.keys.Key(r))
 		if !ok {
 			secs := int((retry + time.Second - 1) / time.Second)

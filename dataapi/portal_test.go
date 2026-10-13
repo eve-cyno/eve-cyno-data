@@ -231,7 +231,7 @@ func TestPortal_RendersTheCatalogAndLimits(t *testing.T) {
 	require.Contains(t, attribution, "https://www.fuzzwork.co.uk/dump/")
 	terms := do(api, http.MethodGet, "/docs/terms", "").Body.String()
 	require.Contains(t, terms, `/terms`)
-	require.Contains(t, terms, "2026-10-08", "the date comes from terms.md")
+	require.Contains(t, terms, "2026-10-13", "the date comes from terms.md")
 }
 
 // Without API keys the pages say so; with keys they do not.
@@ -243,6 +243,38 @@ func TestPortal_KeysNote(t *testing.T) {
 	cfg.Auth = nil
 	without := do(newAPI(t, cfg), http.MethodGet, "/docs/access", "").Body.String()
 	require.Contains(t, without, "no keys are issued on this service yet")
+}
+
+// With keys on, the pages explain how to get a key and state the limits and the daily cap
+// from the configuration, never from literals; without keys none of it appears.
+func TestPortal_KeysCopyFollowsConfig(t *testing.T) {
+	get := func(cfg dataapi.Config, path string) string {
+		return do(newAPI(t, cfg), http.MethodGet, path, "").Body.String()
+	}
+	def := get(publicConfig(), "/docs/access")
+	require.Contains(t, def, "Twice the per-minute route limits of an anonymous caller, and a daily cap of 10,000 requests per key (UTC day, resets at 00:00 UTC).")
+	cfg := publicConfig()
+	cfg.KeyedLimitFactor, cfg.KeyDailyCap = 3, 1234567
+	access := get(cfg, "/docs/access")
+	require.Contains(t, access, "/apikey create")
+	require.Contains(t, access, "3 times the per-minute route limits")
+	require.Contains(t, access, "daily cap of 1,234,567 requests per key")
+	require.Contains(t, access, "429 daily_quota_exceeded")
+	require.Contains(t, get(cfg, "/docs/mcp"), "daily cap of 1,234,567 requests per key")
+	require.Contains(t, get(cfg, "/"), "a cap of 1,234,567 requests a day per key")
+	require.Contains(t, get(cfg, "/"), "No cookies, no analytics. An account only if you create an API key.")
+
+	cfg.KeyDailyCap = 0
+	require.NotContains(t, get(cfg, "/docs/access"), "daily_quota_exceeded")
+	require.NotContains(t, get(cfg, "/docs/rest"), "daily_quota_exceeded")
+
+	cfg = publicConfig()
+	cfg.Auth = nil
+	require.NotContains(t, get(cfg, "/docs/access"), "/apikey create")
+	require.Contains(t, get(cfg, "/docs/access"), "per key. No keys are issued yet")
+	require.Contains(t, get(cfg, "/docs/mcp"), "calls per minute per caller, shared with REST")
+	require.Contains(t, get(publicConfig(), "/docs/mcp"), "calls per minute per caller, keyed or not, shared with REST")
+	require.Contains(t, get(cfg, "/"), "No cookies, no accounts, no analytics.")
 }
 
 // The search box reads a JSON index: every page and every offered tool, inline and at
@@ -308,4 +340,42 @@ func TestPortal_LimiterCoversPagesNotAssets(t *testing.T) {
 	for i := 0; i < 5; i++ {
 		require.Equal(t, http.StatusOK, doFrom(api, "192.0.2.1:1", http.MethodGet, "/assets/x/portal.css", "").Code)
 	}
+}
+
+// The terms say what an API key stores and that an account is needed only for a key.
+func TestTerms_DescribeKeyData(t *testing.T) {
+	md := do(portalAPI(t), http.MethodGet, "/terms.md", "").Body.String()
+	require.Contains(t, md, "Last updated: 2026-10-13")
+	require.Contains(t, md, "There are no cookies and no analytics. An account is needed only to create an API key")
+	require.Contains(t, md, "a hash of the key (never the key)")
+	require.NotContains(t, md, "no accounts")
+	require.NotContains(t, md, "(or your API key id) is held in memory")
+}
+
+// The hosted "how to get a key" copy (Discord /apikey, ai.eve-cyno.dev, 3 keys) is shown
+// only when the self-serve key store is wired; a key-file-only service says the operator
+// issues keys.
+func TestPortal_HostedKeyCopyNeedsSelfServe(t *testing.T) {
+	pages := []string{"/", "/docs/access", "/docs/tools", "/docs/mcp", "/docs/rest", "/docs/terms"}
+	hosted := []string{"/apikey", "ai.eve-cyno.dev", "3 active keys", "Data API keys", "An account only if you create"}
+	body := func(selfServe bool) string {
+		cfg := publicConfig()
+		cfg.PublicURL = "https://data.example.test"
+		cfg.SelfServe = selfServe
+		api := newAPI(t, cfg)
+		var all strings.Builder
+		for _, p := range pages {
+			rec := do(api, http.MethodGet, p, "")
+			require.Equal(t, http.StatusOK, rec.Code, p)
+			all.WriteString(rec.Body.String())
+		}
+		return all.String()
+	}
+	with, without := body(true), body(false)
+	for _, h := range hosted {
+		require.Contains(t, with, h)
+		require.NotContains(t, without, h)
+	}
+	require.Contains(t, without, "issued by the operator of this service")
+	require.Contains(t, without, "Keyed callers are rate limited per key.")
 }

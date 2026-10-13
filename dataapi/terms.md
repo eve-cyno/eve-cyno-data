@@ -1,6 +1,6 @@
 # EVE-Cyno Data API: terms of use
 
-Last updated: 2026-10-08
+Last updated: 2026-10-13
 
 ## What this is
 
@@ -39,11 +39,12 @@ For price appraisals you send your own Janice API key in the `X-Janice-Key` head
 
 ## Privacy
 
-- The service writes one access-log line per request with: request ID, HTTP method, matched route, status, response size and duration. It does not log your IP address, API key, Janice key, query string or request body. On tool and MCP requests the line also carries the tool name (REST) and an opaque caller token: a salted hash of your IP address or API key id, which cannot be turned back into either and is used only to spot a client that sends far more than the others. A failed tool call also logs the tool name and the error text.
-- Your IP address (or your API key id) is held in memory only, to apply the rate limit. The service sits behind Cloudflare, which sees traffic as any proxy does under its own terms.
+- The service writes one access-log line per request with: request ID, HTTP method, matched route, status, response size and duration. It does not log your IP address, API key, Janice key, query string or request body. On tool and MCP requests, and on a refused request over a key's daily quota, the line also carries the tool name (REST) and an opaque caller token: a salted hash of your IP address or API key id, which cannot be turned back into either and is used only to spot a client that sends far more than the others. A failed tool call also logs the tool name and the error text.
+- Your IP address is held in memory only, to apply the rate limit. Data kept for an API key is described below. The service sits behind Cloudflare, which sees traffic as any proxy does under its own terms.
 - Logs go to the operator's log store and are kept for a limited time (30 days).
 - Free-text you send to some tools (for example a community-fit search query) is forwarded to the upstream provider that answers it (an embedding provider, ESI, Janice), as each tool's description states.
-- There are no cookies, no accounts and no analytics.
+- There are no cookies and no analytics. An account is needed only to create an API key: sign in with EVE Online or Discord on ai.eve-cyno.dev, or run /apikey in our Discord server.
+- For each API key the service stores the key id, a hash of the key (never the key), your account id (EVE character id or Discord user id) and display name, the key name, created and last-used dates, and daily request counts per endpoint for 30 days. Revoking a key stops it at once; ask on Discord and the operator deletes your key records. If an account is blocked for abuse, its account id and display name stay on a block list until it is unblocked.
 
 ## Contact
 

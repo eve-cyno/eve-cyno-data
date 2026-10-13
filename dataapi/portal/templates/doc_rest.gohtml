@@ -74,7 +74,7 @@ console.log((<span class="tk-kw">await</span> r.json()).result.text);</code></pr
     <div class="tbl"><table>
       <thead><tr><th scope="col">Header</th><th scope="col">Use</th></tr></thead>
       <tbody>
-        <tr><td><code>Authorization: Bearer &lt;key&gt;</code> or <code>X-API-Key</code></td><td>Keyed tools.{{if not .Auth}} No keys are issued yet.{{end}}</td></tr>
+        <tr><td><code>Authorization: Bearer &lt;key&gt;</code> or <code>X-API-Key</code></td><td>Keyed tools.{{if .Auth}} {{if .SelfServe}}Keys are free: see{{else}}See{{end}} <a href="/docs/access#access-keys">API keys</a>.{{else}} No keys are issued yet.{{end}}</td></tr>
         <tr><td><code>X-Janice-Key</code></td><td>Your own Janice key for <code>appraise_items</code>. Used for that request only, never logged or stored.</td></tr>
         <tr><td><code>X-Request-ID</code></td><td>On every response: your value when it is a token of 1-64 characters from <code>[A-Za-z0-9._-]</code>, otherwise a generated one.</td></tr>
         <tr><td><code>Retry-After</code></td><td>On <code>429</code> and <code>503 upstream_busy</code>: seconds to wait.</td></tr>
@@ -94,11 +94,11 @@ console.log((<span class="tk-kw">await</span> r.json()).result.text);</code></pr
         <tr><td class="num">401</td><td><code>api_key_required</code>, <code>invalid_api_key</code></td></tr>
         <tr><td class="num">403</td><td><code>tool_disabled</code>, <code>key_not_permitted</code></td></tr>
         <tr><td class="num">413</td><td><code>payload_too_large</code>: 256 KiB on the fit routes, 64 KiB on the tool and MCP endpoints</td></tr>
-        <tr><td class="num">429</td><td><code>rate_limited</code>, with <code>Retry-After</code></td></tr>
+        <tr><td class="num">429</td><td><code>rate_limited</code>, with <code>Retry-After</code>{{if .KeyCap}}; or <code>daily_quota_exceeded</code> over a key's daily cap, where <code>Retry-After</code> is the seconds until 00:00 UTC{{end}}</td></tr>
         <tr><td class="num">503</td><td><code>upstream_busy</code>, with <code>Retry-After</code></td></tr>
       </tbody>
     </table></div>
-    <p>The full list: <code>not_found</code>, <code>method_not_allowed</code>, <code>invalid_request</code>, <code>payload_too_large</code>, <code>rate_limited</code>, <code>unavailable</code>, <code>upstream_error</code>, <code>upstream_busy</code>, <code>unknown_tool</code>, <code>tool_disabled</code>, <code>api_key_required</code>, <code>invalid_api_key</code>, <code>key_not_permitted</code>, <code>janice_key_required</code>, <code>timeout</code>, <code>internal_error</code>.</p>
+    <p>The full list: <code>not_found</code>, <code>method_not_allowed</code>, <code>invalid_request</code>, <code>payload_too_large</code>, <code>rate_limited</code>, {{if .KeyCap}}<code>daily_quota_exceeded</code>, {{end}}<code>unavailable</code>, <code>upstream_error</code>, <code>upstream_busy</code>, <code>unknown_tool</code>, <code>tool_disabled</code>, <code>api_key_required</code>, <code>invalid_api_key</code>, <code>key_not_permitted</code>, <code>janice_key_required</code>, <code>timeout</code>, <code>internal_error</code>.</p>
 
     <nav class="pager" aria-label="Previous and next page">
       <a href="/docs/mcp"><span class="pg-k"><svg class="ico" aria-hidden="true"><use href="#i-back"/></svg>Previous</span><span class="pg-t">MCP (any harness)</span></a>

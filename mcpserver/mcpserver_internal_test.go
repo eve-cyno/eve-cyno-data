@@ -244,3 +244,27 @@ func TestHTTPHandler_KeyedTierFollowsTheKeyedCallback(t *testing.T) {
 	require.Contains(t, keyed, `"appraise_items"`)
 	require.NotContains(t, keyed, `"convert_isk_to_real"`)
 }
+
+func TestHTTPHandler_ToolCalledFiresOncePerCallWithTheCarryingRequest(t *testing.T) {
+	var mu sync.Mutex
+	var got []string
+	o := HTTPOptions{DisableLocalhostProtection: true, ToolCalled: func(r *http.Request, tool string) {
+		mu.Lock()
+		defer mu.Unlock()
+		got = append(got, tool+"@"+r.Header.Get("X-Test-Caller"))
+	}}
+	exec := func(_ context.Context, _ *tools.Deps, name string, _ map[string]any) (tools.Result, error) {
+		return tools.Result{Tool: name, Text: "ok"}, nil
+	}
+	h := httpHandler(&tools.Deps{}, o, exec)
+	call := func(name string, hdr ...string) {
+		postRPC(t, h, `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"`+name+`","arguments":{}}}`, hdr...)
+	}
+	postRPC(t, h, `{"jsonrpc":"2.0","id":1,"method":"tools/list"}`, "X-Test-Caller", "a")
+	call("get_jumps_between", "X-Test-Caller", "a")
+	call("get_type_info", "X-Test-Caller", "b")
+
+	mu.Lock()
+	defer mu.Unlock()
+	require.Equal(t, []string{"get_jumps_between@a", "get_type_info@b"}, got, "tools/list does not fire it")
+}

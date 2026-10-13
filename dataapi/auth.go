@@ -66,7 +66,8 @@ func (c Caller) Allows(t catalog.Tier) bool {
 // Authenticator turns a request into a Caller. It returns the anonymous Caller and a nil
 // error when the request carries no API key, ErrInvalidAPIKey when it carries one that is
 // not accepted. Implementations must be safe for concurrent use and must never log or
-// return the key. R3.5's key store plugs in here.
+// return the key. R3.5's key store plugs in here, chained with others through AnyOf, which
+// hands an ErrInvalidAPIKey on to the next authenticator and passes any other error through.
 type Authenticator interface {
 	Authenticate(r *http.Request) (Caller, error)
 }
@@ -226,4 +227,44 @@ func writeKeyedRefusal(w http.ResponseWriter, r *http.Request, caller Caller) {
 		return
 	}
 	writeError(w, r, http.StatusUnauthorized, "api_key_required", "this tool needs an API key: send it as 'Authorization: Bearer <key>' or the X-API-Key header")
+}
+
+// AnyOf chains authenticators (nil entries are skipped). The first Caller that is
+// authenticated wins; an authenticator that answers ErrInvalidAPIKey hands the request to
+// the next one, and any other error ends the chain. When no key is presented the result is
+// the anonymous Caller; when a key is presented and nobody accepts it, ErrInvalidAPIKey.
+// With no non-nil entry AnyOf returns nil, the same as no authentication at all.
+func AnyOf(auths ...Authenticator) Authenticator {
+	var chain anyOf
+	for _, a := range auths {
+		if a != nil {
+			chain = append(chain, a)
+		}
+	}
+	if len(chain) == 0 {
+		return nil
+	}
+	return chain
+}
+
+type anyOf []Authenticator
+
+// Authenticate implements Authenticator.
+func (c anyOf) Authenticate(r *http.Request) (Caller, error) {
+	rejected := false
+	for _, a := range c {
+		caller, err := a.Authenticate(r)
+		switch {
+		case err == nil && caller.Authenticated():
+			return caller, nil
+		case errors.Is(err, ErrInvalidAPIKey):
+			rejected = true
+		case err != nil:
+			return Caller{}, err
+		}
+	}
+	if rejected {
+		return Caller{}, ErrInvalidAPIKey
+	}
+	return Caller{}, nil
 }

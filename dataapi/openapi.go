@@ -586,6 +586,22 @@ func rateSentence(r Rate) string {
 	return fmt.Sprintf("\n\nRate limit: %d requests per %s per caller (per API key when one is sent, otherwise per client IP).", r.Max, windowWord(r))
 }
 
+// keyConventions is the convention bullets on what an API key does: the raised budgets
+// (gated on the factor) and the daily cap (gated on KeyDailyCap). "" without keys.
+func keyConventions(s Surface) string {
+	if !s.Auth {
+		return ""
+	}
+	var b strings.Builder
+	if s.KeyedLimitFactor >= 2 {
+		fmt.Fprintf(&b, "- An API key raises the budgets stated on the operations to %d times as much, counted in the key's own window. The live-data tools keep their lower limit.\n", s.KeyedLimitFactor)
+	}
+	if s.KeyDailyCap > 0 {
+		fmt.Fprintf(&b, "- A new API key has a daily cap of %d requests per UTC day by default (a cap can be changed per key, 0 meaning none). Over its cap a key gets `429` `daily_quota_exceeded` with `Retry-After` set to the seconds until 00:00 UTC.\n", s.KeyDailyCap)
+	}
+	return b.String()
+}
+
 func windowWord(r Rate) string {
 	switch r.Window.Seconds() {
 	case 60:
@@ -636,6 +652,7 @@ func apiDescription(s Surface) string {
 	b.WriteString("- Errors are JSON, always: `{\"error\":{\"code\":\"...\",\"message\":\"...\"}}`. The codes are stable (see `ErrorDetail`).\n")
 	b.WriteString("- Every response carries `X-Request-ID`: your value when it is a token of 1-64 characters from `[A-Za-z0-9._-]`, otherwise a generated one.\n")
 	b.WriteString("- Requests are rate limited per caller (a sliding window; the budget is stated on each operation): per API key when one is sent, otherwise per client IP. A refused request is `429` with `Retry-After`.\n")
+	b.WriteString(keyConventions(s))
 	b.WriteString("- Request bodies are capped (256 KiB on the fit routes, 64 KiB on tools and MCP); an oversize body is `413`.\n")
 	if tiered(s) && (s.ToolAPI != ToolAPIOff || s.MCP) {
 		b.WriteString(tiersDescription(s))

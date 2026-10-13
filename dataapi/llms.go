@@ -105,6 +105,7 @@ func llmsFullTxt(s Surface) string {
 		"`" + strings.Join(errorCodes(), "`, `") + "`.\n")
 	w.WriteString("- Every response carries `X-Request-ID`: your value when it is a token of 1-64 characters from `[A-Za-z0-9._-]`, otherwise a generated one.\n")
 	w.WriteString("- Requests are rate limited per caller (sliding window): per API key when one is sent, otherwise per client IP. A refused request is `429` with `Retry-After`.\n")
+	w.WriteString(keyConventions(s))
 	w.WriteString("- Request bodies are capped: 256 KiB on the fit routes, 64 KiB on the tool and MCP endpoints (`413`).\n")
 	if tiered(s) && (s.ToolAPI != ToolAPIOff || s.MCP) {
 		w.WriteString(tiersDescription(s))
@@ -159,7 +160,7 @@ func llmsFullTxt(s Surface) string {
 
 	if s.MCP {
 		w.WriteString("## MCP\n\n")
-		fmt.Fprintf(&w, "- Hosted: streamable HTTP, stateless, JSON responses, at `%s/mcp` on this host.\n", p)
+		fmt.Fprintf(&w, "- Hosted: streamable HTTP, stateless, JSON responses, at `%s/mcp` on this host. One JSON-RPC message per request: batches are not accepted (`400 invalid_request`).\n", p)
 		w.WriteString("- Local: the `cmd/mcp` binary of the core module speaks MCP over stdio (`go run ./cmd/mcp`), for Claude Desktop, Claude Code and other stdio hosts; it reads the SDE from `EVE_CORE_SDE_PATH`.\n\n")
 	}
 

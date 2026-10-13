@@ -15,6 +15,8 @@ type healthResponse struct {
 	// CorpusConfigured is true when a corpus backend is wired at all, reachable or not.
 	CorpusConfigured bool `json:"corpus_configured"`
 	Stats            bool `json:"stats"`
+	// SDEBuild is the build id of the SDE the service reads, when known.
+	SDEBuild string `json:"sde_build,omitempty"`
 }
 
 func (a *API) health(w http.ResponseWriter, r *http.Request) {
@@ -29,5 +31,6 @@ func (a *API) health(w http.ResponseWriter, r *http.Request) {
 		Corpus:           corpus,
 		CorpusConfigured: configured,
 		Stats:            a.deps.Stats != nil,
+		SDEBuild:         a.sdeBuild,
 	})
 }

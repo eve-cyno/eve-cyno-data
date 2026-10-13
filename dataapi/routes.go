@@ -23,6 +23,18 @@ type Surface struct {
 	// Auth is true when the service accepts API keys, which makes the keyed tier
 	// available and documented.
 	Auth bool
+	// SelfServe is true when this service runs the key store behind self-serve issuance
+	// (Discord /apikey and the ai.eve-cyno.dev settings): only then do the pages show the
+	// hosted "how to get a key" copy. Auth alone (a key file) says keys are issued by the
+	// operator.
+	SelfServe bool
+	// KeyedLimitFactor is the multiple of the route limits an API key gets; the documents
+	// state it when Auth is on and it is at least 2.
+	KeyedLimitFactor int
+	// KeyDailyCap is the default daily request cap of a new API key (a key's own cap can
+	// differ); the documents state it (and the daily_quota_exceeded refusal) when Auth is
+	// on and it is above 0; 0 leaves both out.
+	KeyDailyCap int
 	// Docs is true when the description routes (openapi.yaml, openapi.json, /llms.txt,
 	// /llms-full.txt) are served.
 	Docs bool
@@ -34,11 +46,18 @@ type Surface struct {
 	PublicURL string
 }
 
+// DefaultKeyedLimitFactor is the multiple of the route limits an API key gets on the public
+// service (used by PublicSurface, the documents tests and cmd/dataapi).
+const DefaultKeyedLimitFactor = 2
+
+// DefaultKeyDailyCap is the daily request cap a new API key gets on the public service.
+const DefaultKeyDailyCap = 10000
+
 // PublicSurface is what the internet-facing cmd/dataapi serves with every optional part
 // switched on, at the default prefix and default limits. The committed generated files
 // (api/openapi.yaml, llms.txt, llms-full.txt) describe it.
 func PublicSurface() Surface {
-	return Surface{Prefix: DefaultPrefix, ToolAPI: ToolAPIPublic, MCP: true, Docs: true, Auth: true, Limits: DefaultLimits()}
+	return Surface{Prefix: DefaultPrefix, ToolAPI: ToolAPIPublic, MCP: true, Docs: true, Auth: true, SelfServe: true, KeyedLimitFactor: DefaultKeyedLimitFactor, KeyDailyCap: DefaultKeyDailyCap, Limits: DefaultLimits()}
 }
 
 func (s Surface) prefix() string {
@@ -120,7 +139,7 @@ func unlimited(Surface) Rate { return Rate{} }
 func errorCodes() []string {
 	return []string{
 		"not_found", "method_not_allowed", "invalid_request", "payload_too_large", "rate_limited",
-		"unavailable", "upstream_error", "upstream_busy", "unknown_tool", "tool_disabled", "api_key_required", "invalid_api_key",
+		"daily_quota_exceeded", "unavailable", "upstream_error", "upstream_busy", "unknown_tool", "tool_disabled", "api_key_required", "invalid_api_key",
 		"key_not_permitted", "janice_key_required", "timeout", "internal_error",
 	}
 }
@@ -299,7 +318,8 @@ func routeTable() []route {
 				description: "Always 200 while the process serves; a degraded dependency shows in the body, never in the status. The flags say which " +
 					"dependencies loaded, so a degraded service (no SDE, no fit corpus) can be told from a healthy one. `corpus` is true " +
 					"only when the fit corpus is configured and its backend answered a probe (cached for 30 seconds, 1 second timeout); " +
-					"`corpus_configured` is true when a corpus is wired at all, reachable or not.",
+					"`corpus_configured` is true when a corpus is wired at all, reachable or not. `sde_build` is the build id of the SDE " +
+					"the service reads, when known.",
 				ok: okDoc{description: "The service is up.", typ: reflect.TypeFor[healthResponse]()},
 			},
 		},

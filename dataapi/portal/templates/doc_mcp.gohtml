@@ -19,8 +19,8 @@
     <dl class="facts">
       <dt>Endpoint</dt><dd><code>{{.Origin}}{{.Prefix}}/mcp</code></dd>
       <dt>Transport</dt><dd>Streamable HTTP, stateless, JSON responses. One JSON-RPC 2.0 message per POST; <code>GET</code> and <code>DELETE</code> answer 405.</dd>
-      <dt>Auth</dt><dd>None for public tools. <code>X-Janice-Key</code> for <code>appraise_items</code>. An API key for keyed tools{{if not .Auth}} (none issued yet){{end}}.</dd>
-      <dt>Rate limit</dt><dd><b>{{.Lim.MCP}} requests per minute</b> per caller</dd>
+      <dt>Auth</dt><dd>None for public tools. <code>X-Janice-Key</code> for <code>appraise_items</code>. {{if .Auth}}{{if .SelfServe}}A free{{else}}An{{end}} API key for keyed tools, sent as <code>Authorization: Bearer ecd_...</code> or <code>X-API-Key: ecd_...</code>.{{else}}An API key for keyed tools (none issued yet).{{end}}</dd>
+      <dt>Rate limit</dt><dd><b>{{.Lim.MCP}} requests per minute</b> per caller{{if .KeyFactor}}, {{.KeyMCP}} with an API key{{end}}</dd>
     </dl>
 
     <h2 id="mcp-connect">Connect<a class="h-anchor" href="#mcp-connect" aria-label="Link to this section">#</a></h2>
@@ -74,7 +74,7 @@
     </div>
 
     <h2 id="mcp-limits">Limits<a class="h-anchor" href="#mcp-limits" aria-label="Link to this section">#</a></h2>
-    <p>{{.Lim.MCP}} requests per minute per caller. A session is a handful of requests (the handshake is three) plus one per tool call. The live ESI tools have their own {{.Lim.UpstreamTool}} calls per minute, shared with REST. Request bodies are capped at 64 KiB.</p>
+    <p>{{.Lim.MCP}} requests per minute per caller{{if .KeyFactor}}, or {{.KeyMCP}} with an API key{{if .KeyCap}} (which adds a daily cap of {{.KeyCap}} requests per key){{end}}{{end}}. A session is a handful of requests (the handshake is three) plus one per tool call. The live ESI tools have their own {{.Lim.UpstreamTool}} calls per minute per caller{{if .Auth}}, keyed or not{{end}}, shared with REST. Request bodies are capped at 64 KiB.</p>
 
     <nav class="pager" aria-label="Previous and next page">
       <a href="/docs/claude-code"><span class="pg-k"><svg class="ico" aria-hidden="true"><use href="#i-back"/></svg>Previous</span><span class="pg-t">Claude Code plugin</span></a>

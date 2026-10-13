@@ -14,6 +14,7 @@ import (
 	"reflect"
 	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 
 	"eve-cyno.dev/go/data/catalog"
@@ -148,6 +149,10 @@ type pageData struct {
 	Version            string
 	Health             string
 	Auth               bool
+	SelfServe          bool
+	KeyFactor          int    // multiple of the route limits a key gets; 0 unless keys are on and it is at least 2
+	KeyCap             string // daily cap of a new key as "10,000"; "" unless keys are on and the cap is above 0
+	KeyMCP             int    // the MCP request limit of a keyed caller
 	TermsUpdated       string
 	SearchIndex        template.JS
 
@@ -221,6 +226,46 @@ func codeNames(ts []catalog.Tool) template.HTML {
 
 func perMin(r Rate) int { return r.Max }
 
+// keyFactor is the key limit multiple the pages state: 0 without keys or below 2.
+func keyFactor(s Surface) int {
+	if s.Auth && s.KeyedLimitFactor >= 2 {
+		return s.KeyedLimitFactor
+	}
+	return 0
+}
+
+// keyCap is the daily cap of a new key as the pages print it ("10,000"); "" states none.
+func keyCap(s Surface) string {
+	if !s.Auth || s.KeyDailyCap <= 0 {
+		return ""
+	}
+	digits := strconv.Itoa(s.KeyDailyCap)
+	var b strings.Builder
+	for i, c := range digits {
+		if i > 0 && (len(digits)-i)%3 == 0 {
+			b.WriteByte(',')
+		}
+		b.WriteRune(c)
+	}
+	return b.String()
+}
+
+// KeyRaises is the verb phrase for the key limit multiple: "doubles" or "multiplies by N".
+func (d pageData) KeyRaises() string {
+	if d.KeyFactor == 2 {
+		return "doubles"
+	}
+	return fmt.Sprintf("multiplies by %d", d.KeyFactor)
+}
+
+// KeyTwice is the subject phrase for the key limit multiple: "Twice" or "N times".
+func (d pageData) KeyTwice() string {
+	if d.KeyFactor == 2 {
+		return "Twice"
+	}
+	return fmt.Sprintf("%d times", d.KeyFactor)
+}
+
 func windowUnit(r Rate) string {
 	if w := windowWord(r); w != "minute" {
 		return w
@@ -277,6 +322,9 @@ func newPageData(in portalInput, assetVersion string) pageData {
 		Version:      version.Version(),
 		Health:       health,
 		Auth:         s.Auth,
+		SelfServe:    s.Auth && s.SelfServe,
+		KeyFactor:    keyFactor(s),
+		KeyCap:       keyCap(s),
 		TermsUpdated: updated,
 		Stats: portalStats{
 			Offered: len(offered), Public: len(pub), BYO: len(byo), Keyed: len(keyed),
@@ -302,6 +350,7 @@ func newPageData(in portalInput, assetVersion string) pageData {
 	if len(d.Tools.Public) > 0 {
 		d.FirstTool = d.Tools.Public[0].Name
 	}
+	d.KeyMCP = d.Lim.MCP * d.KeyFactor
 	d.LimitCards = limitCards(s)
 	d.LimitRows = limitTable(s)
 	return d

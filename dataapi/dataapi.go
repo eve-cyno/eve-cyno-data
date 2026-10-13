@@ -3,16 +3,16 @@
 // search and the opt-in raw tool API) behind a stdlib http.ServeMux.
 //
 // It is a library, not a binary: cmd/dataapi serves it standalone on /v1/, and
-// services/native mounts the same handlers under its legacy /api/ paths (the
-// Prefix option) so the web UI and the desktop app keep working unchanged.
+// the native app mounts the same handlers under its legacy /api/ paths (the Prefix
+// option) so the web UI and the desktop app keep working unchanged.
 //
 // Contract (every route):
 //
 //   - Errors are JSON, always: {"error":{"code":"...","message":"..."}}. Codes
 //     are stable: not_found, method_not_allowed, invalid_request,
-//     payload_too_large, rate_limited, unavailable, upstream_error, upstream_busy,
-//     unknown_tool, tool_disabled, api_key_required, invalid_api_key, key_not_permitted,
-//     janice_key_required, timeout, internal_error.
+//     payload_too_large, rate_limited, daily_quota_exceeded, unavailable, upstream_error,
+//     upstream_busy, unknown_tool, tool_disabled, api_key_required, invalid_api_key,
+//     key_not_permitted, janice_key_required, timeout, internal_error.
 //   - Every response carries X-Request-ID: the caller's value when it is a safe
 //     token ([A-Za-z0-9._-], 1-64 chars), otherwise a generated one. The same ID
 //     is attached to every log line the request produces.
@@ -130,7 +130,7 @@ type Limits struct {
 	Docs Rate
 }
 
-// DefaultLimits are the budgets the endpoints had inside services/native.
+// DefaultLimits are the budgets the endpoints had before this package was split out of the web service.
 func DefaultLimits() Limits {
 	return Limits{
 		FitsSearch:  Rate{Max: 120, Window: time.Minute}, // read-only + cheap
@@ -182,7 +182,7 @@ const (
 	ToolFormatEnvelope ToolFormat = iota
 	// ToolFormatText answers the bare text, text/plain: the contract of the legacy
 	// native /api/tool/{name}, which the desktop app and any script written against it
-	// read as is. services/native sets it on its "/api" mount; nothing new should.
+	// read as is. The web service sets it on its "/api" mount; nothing new should.
 	ToolFormatText
 )
 
@@ -191,7 +191,7 @@ type Config struct {
 	Deps Deps
 
 	// Prefix is the route prefix; empty means DefaultPrefix ("/v1"). It must start
-	// with "/" and must not end with one. services/native sets "/api" to keep its
+	// with "/" and must not end with one. The web service sets "/api" to keep its
 	// legacy paths.
 	Prefix string
 
@@ -206,6 +206,35 @@ type Config struct {
 	// keys exist: every caller is anonymous and keyed tools answer 401 api_key_required.
 	// It applies to the tool endpoint and, through CallerFrom, to the MCP handler.
 	Auth Authenticator
+
+	// SelfServe tells the documents that keys are issued by a self-serve key store (set it
+	// only when one is wired in); without it a keyed service is described as issuing keys
+	// through its operator.
+	SelfServe bool
+
+	// KeyedLimitFactor multiplies the route limits (Max) of an authenticated caller, who
+	// also gets buckets of its own; below 2 the limits are unchanged. UpstreamTool is never
+	// multiplied: it protects the shared ESI budget, whoever calls.
+	KeyedLimitFactor int
+
+	// Quota, when non-nil, is spent once per request of an authenticated caller; a refused
+	// request is a 429 daily_quota_exceeded with Retry-After. Anonymous callers never
+	// touch it.
+	Quota Quota
+
+	// Usage, when non-nil, receives one record per request of an authenticated caller (see
+	// Usage). Nil means nothing is recorded.
+	Usage Usage
+
+	// KeyDailyCap is the default daily request cap of a new API key (a key's own cap can
+	// differ) that the generated documents state; 0 leaves the cap, and the
+	// daily_quota_exceeded refusal, out of them. It only feeds the documents: the enforcing
+	// budget is Quota, so set it only when Quota is.
+	KeyDailyCap int
+
+	// SDEBuild is the build id of the SDE the service reads, reported by /health when
+	// known.
+	SDEBuild string
 
 	// CorpusProbeTTL is how long /health reuses a corpus reachability verdict; zero
 	// means DefaultCorpusProbeTTL. Only a Retriever that implements Pinger is probed.
@@ -265,6 +294,10 @@ type API struct {
 	prefix      string
 	keys        KeyResolver
 	auth        Authenticator
+	keyedFactor int
+	quota       Quota
+	usage       Usage
+	sdeBuild    string
 	toolMode    ToolAPIMode
 	toolFormat  ToolFormat
 	toolTimeout time.Duration
@@ -320,6 +353,10 @@ func New(cfg Config) (*API, error) {
 		prefix:      prefix,
 		keys:        cfg.Keys,
 		auth:        cfg.Auth,
+		keyedFactor: cfg.KeyedLimitFactor,
+		quota:       cfg.Quota,
+		usage:       cfg.Usage,
+		sdeBuild:    cfg.SDEBuild,
 		toolMode:    cfg.ToolAPI,
 		toolFormat:  cfg.ToolFormat,
 		toolTimeout: cfg.ToolTimeout,
@@ -332,7 +369,7 @@ func New(cfg Config) (*API, error) {
 	if p, ok := cfg.Deps.Retriever.(Pinger); ok && p != nil {
 		a.corpusProbe = newCorpusProbe(p, cfg.CorpusProbeTTL)
 	}
-	a.surface = Surface{Prefix: prefix, ToolAPI: cfg.ToolAPI, MCP: cfg.MCP != nil, Docs: cfg.Docs, Auth: cfg.Auth != nil, Limits: limits, PublicURL: publicURL}
+	a.surface = Surface{Prefix: prefix, ToolAPI: cfg.ToolAPI, MCP: cfg.MCP != nil, Docs: cfg.Docs, Auth: cfg.Auth != nil, SelfServe: cfg.SelfServe, KeyedLimitFactor: cfg.KeyedLimitFactor, KeyDailyCap: cfg.KeyDailyCap, Limits: limits, PublicURL: publicURL}
 	if a.keys == nil {
 		a.keys = CallerKeys{}
 	}
@@ -376,7 +413,7 @@ func (a *API) register(rt route) {
 	if !rt.root {
 		full = a.prefix + rt.path
 	}
-	h := cached(rt.cache, a.limited(limiterFor(rt.rate(a.surface)), func(w http.ResponseWriter, r *http.Request) {
+	h := cached(rt.cache, a.limited(newTieredLimiter(rt.rate(a.surface), a.keyedFactor), func(w http.ResponseWriter, r *http.Request) {
 		rt.handle(a, w, r)
 	}))
 	if rt.anyMethod {

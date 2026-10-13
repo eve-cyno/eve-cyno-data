@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"runtime/debug"
 	"time"
+
+	"eve-cyno.dev/go/data/catalog"
 )
 
 // HeaderRequestID carries the request ID on both the request and the response.
@@ -56,8 +58,8 @@ func validRequestID(s string) bool {
 	return true
 }
 
-// ServeHTTP implements http.Handler: request ID, API-key authentication, panic recovery
-// and the access log around the route mux.
+// ServeHTTP implements http.Handler: request ID, API-key authentication, panic recovery,
+// the access log and the daily quota of keyed callers around the route mux.
 func (a *API) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	id := r.Header.Get(HeaderRequestID)
 	if !validRequestID(id) {
@@ -77,6 +79,7 @@ func (a *API) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	r = r.WithContext(ctx)
 
+	quotaRefused := false
 	rec := &statusRecorder{ResponseWriter: w}
 	start := time.Now()
 	defer func() {
@@ -101,14 +104,41 @@ func (a *API) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if name := r.PathValue("name"); name != "" {
 			attrs = append(attrs, "tool", name)
 		}
-		if a.logsCaller(r) {
+		if a.logsCaller(r) || quotaRefused {
 			// An opaque, salted token (never the address) so a noisy caller shows up in
 			// the logs without the logs holding IPs.
 			attrs = append(attrs, "caller", a.hasher.hash(a.keys.Key(r)))
 		}
 		log.Info("request", attrs...)
+		if c := CallerFrom(r.Context()); c.Authenticated() && a.usage != nil {
+			a.usage.Record(c.ID, usageEndpoint(r), rec.statusCode() == http.StatusTooManyRequests)
+		}
 	}()
+	if c := CallerFrom(r.Context()); c.Authenticated() && a.quota != nil {
+		if ok, retry := a.quota.Spend(c.ID); !ok {
+			quotaRefused = true // the mux never ran: the access log still names the caller
+			writeQuotaRefusal(rec, r, retry)
+			return
+		}
+	}
 	a.mux.ServeHTTP(rec, r)
+}
+
+// usageEndpoint is the Usage label of a served request: "tool:<name>" for the raw tool route ("tool:?" for a name that is no registered tool),
+// else the matched mux pattern, "-" when none matched.
+func usageEndpoint(r *http.Request) string {
+	if name := r.PathValue("name"); name != "" {
+		// The name is caller-controlled: only registered tools get their own label, so the
+		// label set stays bounded.
+		if _, ok := catalog.Lookup(name); ok {
+			return "tool:" + name
+		}
+		return "tool:?"
+	}
+	if r.Pattern == "" {
+		return "-"
+	}
+	return r.Pattern
 }
 
 // logsCaller reports whether the access log of r carries a caller token: only the routes that

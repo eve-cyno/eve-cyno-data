@@ -21,8 +21,8 @@ Everything is one tool registry (`catalog`) published three ways, so the descrip
 | MCP | stdio: `cmd/mcp`; streamable HTTP: `POST /v1/mcp` of `cmd/dataapi` | stateless, JSON responses |
 | `llms.txt` | [`llms.txt`](llms.txt), [`llms-full.txt`](llms-full.txt); served at `/llms.txt`, `/llms-full.txt` | the same information in prose |
 
-A hosted instance runs at `https://data.eve-cyno.dev` (R3.5 stage 1: public tier only, rate limited per IP, no API keys yet;
-keyed tools answer 401, `appraise_items` needs your own `X-Janice-Key`). Its portal at
+A hosted instance runs at `https://data.eve-cyno.dev` (anyone can call the public tools, rate limited per IP; free API keys unlock the keyed tools and
+higher limits; `appraise_items` needs your own `X-Janice-Key`). Its portal at
 [`https://data.eve-cyno.dev/`](https://data.eve-cyno.dev/) (JSON index with `Accept: application/json`) links the developer docs under
 [`/docs/`](https://data.eve-cyno.dev/docs/): getting started, the Claude Code plugin, MCP, REST, one page per tool (17 public, 1 byo-key,
 3 keyed), access tiers and limits, attribution. The pages are generated from the tool registry and the route table (templates in
@@ -108,8 +108,16 @@ together; 0 disables) on top of the route limits, never send a `type_id` the SDE
 
 ### Authentication
 
-Public tools need nothing. For the keyed tier, a server reads API keys from the file named by `DATAAPI_API_KEYS_FILE`: one
-`id:sha256hex` per line, `#` comments allowed. Only the SHA-256 of a key is stored.
+Public tools need nothing. The keyed tier takes API keys from two sources, which can be used together:
+
+- **A key file**, named by `DATAAPI_API_KEYS_FILE`: one `id:sha256hex` per line, `#` comments allowed. Only the SHA-256 of a key is stored.
+- **A self-serve key store**, a SQLite file named by `DATAAPI_KEYS_DB` (created if missing). Keys look like `ecd_` plus 64 hex
+  characters, are shown once when created and stored as a hash. One owner (an `eve:<id>` or `discord:<id>` account) may hold
+  3 active keys and may create at most 10 keys per UTC day; revoked key records are deleted after 30 days. Each key gets a
+  daily request cap (`DATAAPI_KEY_DAILY_CAP`) and its requests are counted per endpoint for 30 days. The store is
+  managed through the admin API below; the documents describe self-serve issuance only when the store is on.
+
+An `ecd_` key the store does not hold is refused as invalid; any other key is checked against the file.
 
 ```sh
 KEY=$(openssl rand -base64 32 | tr -d '=+/')
@@ -117,8 +125,28 @@ echo "me:$(printf %s "$KEY" | sha256sum | cut -d' ' -f1)" >> keys.txt
 DATAAPI_API_KEYS_FILE=keys.txt DATAAPI_EXPOSE_TOOL_API=true DATAAPI_EXPOSE_MCP=true go run ./cmd/dataapi
 ```
 
-A client sends the key as `Authorization: Bearer <key>` or `X-API-Key: <key>`. Without a key file there are no keys: keyed
-tools answer 401 and are left out of the documents and the MCP tool list.
+A client sends the key as `Authorization: Bearer <key>` or `X-API-Key: <key>`. With neither a key file nor a key store there
+are no keys: keyed tools answer 401 and are left out of the documents and the MCP tool list.
+
+#### Admin API (key store only)
+
+With `DATAAPI_KEYS_DB` and `DATAAPI_ADMIN_TOKEN` (at least 32 characters) set, a second listener (`DATAAPI_ADMIN_ADDR`,
+default `127.0.0.1:8093`) serves the admin API that a front end (a web app, a chat bot) calls to issue, list and revoke keys on
+behalf of signed-in users. It is for a private network only: never publish its port or route it through a tunnel (it refuses
+requests that carry `CF-Connecting-IP`). Every request needs `Authorization: Bearer <admin token>`. Owner routes take an
+`X-User-ID` header (`eve:<id>` or `discord:<id>`):
+
+| Route | Does |
+|---|---|
+| `GET /admin/v1/keys`, `POST /admin/v1/keys`, `DELETE /admin/v1/keys/{id}` | list, create (optional `X-User-Name`, percent-encoded) and revoke the owner's keys |
+| `GET`/`POST /admin/v1/ops/keys` | operator: every key plus the block list; issue a key for any owner (exempt from the per-day create limit) |
+| `PATCH`/`DELETE /admin/v1/ops/keys/{id}` | operator: change the daily cap; revoke any key |
+| `GET /admin/v1/ops/keys/{id}/usage` | operator: request history (`?days=1..30`) |
+| `PUT`/`DELETE /admin/v1/ops/owners/{owner}/block` | operator: block an owner and revoke their keys; unblock |
+| `DELETE /admin/v1/ops/owners/{owner}` | operator: delete all of an owner's key records, usage and block-list entry (`200 {"owner","keys_deleted"}`) |
+
+The admin API answers `429 create_limit` (with `Retry-After`) past the per-day create limit and `409 too_many_keys` past
+the active-key limit. Secrets, tokens and owner ids are never logged.
 
 Errors are always `{"error":{"code":"...","message":"..."}}`:
 
@@ -129,9 +157,10 @@ Errors are always `{"error":{"code":"...","message":"..."}}`:
 | 403 | `key_not_permitted` | a valid key without the keyed allowance |
 | 403 | `tool_disabled` | the tool is refused on purpose |
 | 400 | `janice_key_required` | `appraise_items` without `X-Janice-Key` |
-| 400 | `invalid_request` | malformed body or parameters |
+| 400 | `invalid_request` | malformed body or parameters; also a JSON-RPC batch sent to `POST /v1/mcp` (send one message per request) |
 | 413 | `payload_too_large` | body over 256 KiB (fit routes) or 64 KiB (tool and MCP) |
 | 429 | `rate_limited` | over the limit; wait `Retry-After` seconds |
+| 429 | `daily_quota_exceeded` | a key used its daily cap; wait `Retry-After` seconds (until 00:00 UTC) |
 | 502/503 | `upstream_error` / `unavailable` | an upstream (Qdrant, ESI) or a dependency is down |
 | 503 | `upstream_busy` | the ESI budget is nearly spent and nothing was sent; wait `Retry-After` seconds |
 
@@ -139,7 +168,9 @@ Over MCP an invalid key is the same 401 before the protocol starts; a tool you m
 
 ### Rate limits
 
-Per caller (per API key when one is sent, otherwise per client IP), sliding window, per minute:
+Per caller (per API key when one is sent, otherwise per client IP), sliding window, per minute. A key gets
+`DATAAPI_KEYED_LIMIT_FACTOR` times the route limits below (default 2) except on the live-ESI tools, and, with a key store,
+a daily request cap (`DATAAPI_KEY_DAILY_CAP`, default 10000, `0` = none; UTC day) that answers `429 daily_quota_exceeded`:
 
 | Route | Limit |
 |---|---|
@@ -251,6 +282,11 @@ Read from the process environment; the commands do not read a `.env` file.
 | `DATAAPI_EXPOSE_TOOL_API` | dataapi | `true` registers `POST /v1/tool/{name}` (default off) |
 | `DATAAPI_EXPOSE_MCP` | dataapi | `true` mounts `POST /v1/mcp` (default off) |
 | `DATAAPI_API_KEYS_FILE` | dataapi | API key file, see [Authentication](#authentication) |
+| `DATAAPI_KEYS_DB` | dataapi | path of the self-serve key store (SQLite, created if missing); unset: key file only |
+| `DATAAPI_KEY_DAILY_CAP` | dataapi | daily request cap copied into each new key (integer 0-10000000, default 10000, `0` = none) |
+| `DATAAPI_KEYED_LIMIT_FACTOR` | dataapi | multiple of the route limits a keyed caller gets (integer 1-10, default 2); the live-ESI budget is never multiplied |
+| `DATAAPI_ADMIN_TOKEN` | dataapi | bearer token of the admin API (at least 32 characters; never logged). Unset: no admin listener |
+| `DATAAPI_ADMIN_ADDR` | dataapi | admin listen address, default `127.0.0.1:8093`; served only when the key store and the token are both set |
 | `DATAAPI_PUBLIC_URL` | dataapi | the public origin, e.g. `https://data.eve-cyno.dev` (https, no path or query; invalid is a startup error). Makes the OpenAPI `servers` entry and the `llms*.txt` links absolute, which ChatGPT Actions need; unset keeps them relative |
 | `DATAAPI_SDE_ONLY` | dataapi | `true` runs without the fit corpus, see [SDE-only mode](#quick-start-sde-only-no-other-services) |
 | `MCP_EXPOSE_ALL` (or `-all`) | mcp | register every tool, for your own machine and keys |

@@ -65,8 +65,8 @@ func newToolsClient(log *slog.Logger, guardPercent int) *tools.Client {
 // esiObserver logs one structured line per ESI call: the route template, the rate-limit
 // group, cache outcome, status and the budget ESI reports. No caller identity, no query
 // string, no payload. A hit is a call served from the shared cache (nothing sent); a
-// back-off is a call refused to protect the budget. The dashboard
-// deploy/grafana/dashboards/data-api.json reads these lines (msg "esi_call").
+// back-off is a call refused to protect the budget. Dashboards
+// and alerts read these lines (msg "esi_call").
 func esiObserver(log *slog.Logger) func(esi.CallEvent) {
 	return func(ev esi.CallEvent) {
 		level := slog.LevelInfo

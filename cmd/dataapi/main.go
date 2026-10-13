@@ -34,8 +34,9 @@
 //	DATAAPI_EXPOSE_MCP        mount POST /v1/mcp (default false; 60 req/min/IP)
 //	DATAAPI_API_KEYS_FILE     path of the API key file: one "id:sha256hex" per line (only
 //	                          the SHA-256 of a key is stored; `printf %s "$KEY" | sha256sum`),
-//	                          # comments allowed. Unset means no keys: the keyed tier is
-//	                          unavailable. A keyed caller is rate limited per key id.
+//	                          # comments allowed. Unset means no file keys; self-serve keys from
+//	                          DATAAPI_KEYS_DB still authenticate. A keyed caller is rate limited
+//	                          per key id.
 //	DATAAPI_SDE_ONLY          true runs without the community-fit corpus: no Qdrant client is
 //	                          built or contacted, fit search answers 503 "unavailable",
 //	                          /v1/health reports corpus:false and get_fits / list_fits say the
@@ -56,26 +57,49 @@
 //	                          query; invalid is a startup error). Makes the OpenAPI servers entry
 //	                          and the llms.txt links absolute (ChatGPT Actions need that); unset
 //	                          keeps them relative
+//	DATAAPI_KEYS_DB           path of the self-serve key store (a SQLite file, created if
+//	                          missing). Keys issued through the admin API authenticate next to
+//	                          the key file, count against a daily quota and have their requests
+//	                          recorded per endpoint. Unset: no self-serve keys (key file only)
+//	DATAAPI_KEY_DAILY_CAP     daily request cap copied into each newly issued key (integer 0-10000000,
+//	                          default 10000; 0 = no cap); the day is the UTC calendar day
+//	DATAAPI_KEYED_LIMIT_FACTOR  multiple of the route limits a keyed caller gets (integer 1-10,
+//	                          default 2); the live-ESI tool budget is never multiplied
+//	DATAAPI_ADMIN_TOKEN       bearer token of the admin API that issues, revokes and audits
+//	                          keys. Unset: no admin listener. Never logged
+//	DATAAPI_ADMIN_ADDR        admin listen address (default 127.0.0.1:8093; the container
+//	                          setup sets :8093 so the internal network reaches it); served only
+//	                          when both the key store and the admin token are set. The token must
+//	                          be at least 32 characters, else startup fails
 //	EVE_CORE_*, QDRANT_*, DEEPINFRA_EMBED_*   the deterministic layer (core/config)
+//
+// The SDE build id that /v1/health reports is read from the file "<EVE_CORE_SDE_PATH>.build"
+// (trimmed; a missing file leaves it empty).
 //
 // Client IPs for the limiters come from Cloudflare's CF-Connecting-IP header and
 // fall back to the TCP peer, so the service must only be reachable through the
 // Cloudflare tunnel or on loopback. For the same reason the MCP transport's
 // DNS-rebinding guard (it refuses a loopback connection that carries a foreign Host
 // header, which is exactly what the tunnel's connector sends) is switched off.
-// It is not deployed yet: no compose service, tunnel route or release job exists
-// for it.
+// The service runs behind a Cloudflare tunnel that routes only the main listener. The admin
+// listener must never be routed by it: it must be reachable only on the private network
+// (never publish its port beyond loopback, never route it through the tunnel); its refusal
+// of requests that carry CF-Connecting-IP only stops tunnelled ones.
 package main
 
 import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
+	"regexp"
 	"strconv"
+	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -83,10 +107,108 @@ import (
 	"eve-cyno.dev/go/data/catalog"
 	coreconfig "eve-cyno.dev/go/data/config"
 	"eve-cyno.dev/go/data/dataapi"
+	"eve-cyno.dev/go/data/dataapi/keys"
 	"eve-cyno.dev/go/data/mcpserver"
 )
 
-const defaultAddr = ":8092"
+const (
+	defaultAddr      = ":8092"
+	defaultAdminAddr = "127.0.0.1:8093"
+
+	// minAdminTokenLen is the shortest DATAAPI_ADMIN_TOKEN the admin listener starts with.
+	minAdminTokenLen = 32
+
+	// shutdownBudget is the graceful-shutdown deadline; it stays under the 10 s default
+	// stop timeout of docker so the usage counters are flushed before a SIGKILL.
+	shutdownBudget = 8 * time.Second
+)
+
+// checkAdminToken refuses a DATAAPI_ADMIN_TOKEN too short to resist guessing. An empty
+// token is fine (no admin listener). The error names the variable, never the value.
+func checkAdminToken(token string) error {
+	if token != "" && len(token) < minAdminTokenLen {
+		return fmt.Errorf("DATAAPI_ADMIN_TOKEN: must be at least %d characters", minAdminTokenLen)
+	}
+	return nil
+}
+
+// adminAddr resolves DATAAPI_ADMIN_ADDR.
+func adminAddr(getenv func(string) string) string {
+	if v := getenv("DATAAPI_ADMIN_ADDR"); v != "" {
+		return v
+	}
+	return defaultAdminAddr
+}
+
+// keyedFactor resolves DATAAPI_KEYED_LIMIT_FACTOR: an integer from 1 to 10.
+func keyedFactor(getenv func(string) string) (int, error) {
+	v := strings.TrimSpace(getenv("DATAAPI_KEYED_LIMIT_FACTOR"))
+	if v == "" {
+		return dataapi.DefaultKeyedLimitFactor, nil
+	}
+	n, err := strconv.Atoi(v)
+	if err != nil || n < 1 || n > 10 {
+		return 0, fmt.Errorf("DATAAPI_KEYED_LIMIT_FACTOR: want 1-10, got %q", v)
+	}
+	return n, nil
+}
+
+// dailyCap resolves DATAAPI_KEY_DAILY_CAP: an integer 0..keys.MaxDailyCap (0 = no cap).
+func dailyCap(getenv func(string) string) (int, error) {
+	v := strings.TrimSpace(getenv("DATAAPI_KEY_DAILY_CAP"))
+	if v == "" {
+		return dataapi.DefaultKeyDailyCap, nil
+	}
+	n, err := strconv.Atoi(v)
+	if err != nil || n < 0 || n > keys.MaxDailyCap {
+		return 0, fmt.Errorf("DATAAPI_KEY_DAILY_CAP: want an integer 0-%d, got %q", keys.MaxDailyCap, v)
+	}
+	return n, nil
+}
+
+var sdeBuildID = regexp.MustCompile(`^[0-9A-Za-z_.-]{1,64}$`)
+
+// sdeBuild reads the SDE build id from "<sdePath>.build": at most 64 bytes, trimmed, and only
+// letters, digits, "_", "." and "-" (the value is served on the public /v1/health). A missing
+// file or path, or anything else, is "" (a read error other than a missing file is logged).
+func sdeBuild(sdePath string, log *slog.Logger) string {
+	if sdePath == "" {
+		return ""
+	}
+	f, err := os.Open(sdePath + ".build")
+	if err != nil {
+		if !errors.Is(err, os.ErrNotExist) {
+			log.Warn("read SDE build file", "error", err)
+		}
+		return ""
+	}
+	defer f.Close()
+	b, err := io.ReadAll(io.LimitReader(f, 65))
+	if err != nil {
+		log.Warn("read SDE build file", "error", err)
+		return ""
+	}
+	id := strings.TrimSpace(string(b))
+	if !sdeBuildID.MatchString(id) {
+		return ""
+	}
+	return id
+}
+
+// adminServer builds the admin listener, or nil when there is no key store or no token.
+func adminServer(store *keys.Store, token, addr string, log *slog.Logger) *http.Server {
+	if store == nil || token == "" {
+		return nil
+	}
+	return &http.Server{
+		Addr:              addr,
+		Handler:           keys.AdminHandler(store, token, log),
+		ReadHeaderTimeout: 10 * time.Second,
+		ReadTimeout:       30 * time.Second,
+		WriteTimeout:      30 * time.Second,
+		IdleTimeout:       120 * time.Second,
+	}
+}
 
 // listenAddr resolves DATAAPI_ADDR.
 func listenAddr(getenv func(string) string) string {
@@ -125,6 +247,15 @@ type exposure struct {
 	upstream *dataapi.Rate
 	// logSalt is DATAAPI_LOG_SALT ("" means a random salt per process).
 	logSalt string
+	// store is the self-serve key store (nil: none). Its keys authenticate next to auth, and
+	// it enforces the daily quota and records usage.
+	store *keys.Store
+	// keyedFactor is DATAAPI_KEYED_LIMIT_FACTOR (0: the dataapi default).
+	keyedFactor int
+	// dailyCap is the cap new keys get; it only feeds the generated documents.
+	dailyCap int
+	// sdeBuild is the SDE build id /v1/health reports ("" when unknown).
+	sdeBuild string
 }
 
 // publicURL resolves DATAAPI_PUBLIC_URL: unset is fine, a value that is not an https origin
@@ -163,15 +294,30 @@ func newHandler(d *bootstrap.Deps, ex exposure, log *slog.Logger) (http.Handler,
 	// One budget for the tools that read live ESI data, shared by REST and MCP so using
 	// both does not double a caller's allowance.
 	upstream := dataapi.NewUpstreamLimiter(limits.UpstreamTool, nil)
+	// Untyped nil for an absent side: a nil pointer inside the interface would not be skipped.
+	var fileKeys, storeKeys dataapi.Authenticator
+	fileKeys = ex.auth
+	if ex.store != nil {
+		storeKeys = ex.store
+	}
 	cfg := dataapi.Config{
-		Deps:      dataapi.NewDeps(d.Tools, d.Retriever),
-		Docs:      true,
-		Auth:      ex.auth,
-		PublicURL: ex.publicURL,
-		Limits:    &limits,
-		Upstream:  upstream,
-		LogSalt:   ex.logSalt,
-		Logger:    log,
+		Deps:             dataapi.NewDeps(d.Tools, d.Retriever),
+		Docs:             true,
+		Auth:             dataapi.AnyOf(fileKeys, storeKeys),
+		PublicURL:        ex.publicURL,
+		Limits:           &limits,
+		Upstream:         upstream,
+		LogSalt:          ex.logSalt,
+		Logger:           log,
+		KeyedLimitFactor: ex.keyedFactor,
+		SDEBuild:         ex.sdeBuild,
+	}
+	if ex.store != nil {
+		cfg.SelfServe = true
+		cfg.Quota = ex.store
+		cfg.Usage = ex.store
+		// The documents promise a daily cap only when something enforces it.
+		cfg.KeyDailyCap = ex.dailyCap
 	}
 	if ex.toolAPI {
 		cfg.ToolAPI = dataapi.ToolAPIPublic
@@ -181,12 +327,21 @@ func newHandler(d *bootstrap.Deps, ex exposure, log *slog.Logger) (http.Handler,
 		// public Host header: the SDK's DNS-rebinding guard would refuse every request.
 		// dataapi authenticates before the handler runs; the handler only asks whether the
 		// caller may use the keyed tier.
-		cfg.MCP = mcpserver.HTTPHandler(d.Tools, mcpserver.HTTPOptions{
+		opts := mcpserver.HTTPOptions{
 			DisableLocalhostProtection: true,
 			Keyed:                      func(r *http.Request) bool { return dataapi.CallerFrom(r.Context()).Allows(catalog.TierKeyed) },
 			Upstream:                   upstream.Allow,
 			Logger:                     log,
-		})
+		}
+		if ex.store != nil {
+			store := ex.store
+			opts.ToolCalled = func(r *http.Request, tool string) {
+				if c := dataapi.CallerFrom(r.Context()); c.Authenticated() {
+					store.RecordTool(c.ID, tool)
+				}
+			}
+		}
+		cfg.MCP = mcpserver.HTTPHandler(d.Tools, opts)
 	}
 	api, err := dataapi.New(cfg)
 	if err != nil {
@@ -240,9 +395,32 @@ func run(log *slog.Logger) error {
 	if err != nil {
 		return err
 	}
+	factor, err := keyedFactor(os.Getenv)
+	if err != nil {
+		return err
+	}
+	dayCap, err := dailyCap(os.Getenv)
+	if err != nil {
+		return err
+	}
+	var store *keys.Store
+	if path := os.Getenv("DATAAPI_KEYS_DB"); path != "" {
+		store, err = keys.Open(path, keys.Options{DailyCap: dayCap, Logger: log})
+		if err != nil {
+			return fmt.Errorf("DATAAPI_KEYS_DB: %w", err)
+		}
+		// Runs last (after both servers stop), flushing the usage counters.
+		defer func() {
+			if err := store.Close(); err != nil {
+				log.Error("close key store", "error", err)
+			}
+		}()
+		log.Info("self-serve key store open", "env", "DATAAPI_KEYS_DB", "daily_cap", dayCap)
+	}
 	ex := exposure{
 		toolAPI: exposeToolAPI(os.Getenv), mcp: exposeMCP(os.Getenv), auth: auth, publicURL: pub,
 		upstream: &upstream, logSalt: os.Getenv("DATAAPI_LOG_SALT"),
+		store: store, keyedFactor: factor, dailyCap: dayCap, sdeBuild: sdeBuild(cfg.SDEPath, log),
 	}
 	log.Info("ESI pass-through tools: shared Expires cache, fail-fast budget guard",
 		"upstream_tool_limit_per_min", upstream.Max, "esi_guard_percent", guard)
@@ -276,25 +454,68 @@ func run(log *slog.Logger) error {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
-	errc := make(chan error, 1)
-	go func() {
-		log.Info("dataapi listening", "addr", srv.Addr)
-		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			errc <- err
-		}
-	}()
-
-	select {
-	case err := <-errc:
-		return fmt.Errorf("serve: %w", err)
-	case <-ctx.Done():
+	if err := checkAdminToken(os.Getenv("DATAAPI_ADMIN_TOKEN")); err != nil {
+		return err
 	}
-	log.Info("shutdown signal received")
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	if err := srv.Shutdown(shutdownCtx); err != nil {
-		return fmt.Errorf("graceful shutdown: %w", err)
+	servers := []*http.Server{srv}
+	if adm := adminServer(store, os.Getenv("DATAAPI_ADMIN_TOKEN"), adminAddr(os.Getenv), log); adm != nil {
+		servers = append(servers, adm)
+	} else if os.Getenv("DATAAPI_ADMIN_TOKEN") != "" {
+		log.Warn("admin token set but no key store: the admin API is not served", "env", "DATAAPI_KEYS_DB")
+	}
+
+	errc := make(chan error, len(servers))
+	for i, s := range servers {
+		go func() {
+			if i == 0 {
+				log.Info("dataapi listening", "addr", s.Addr)
+			} else {
+				log.Info("admin API listening", "addr", s.Addr)
+			}
+			if err := s.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+				errc <- err
+			}
+		}()
+	}
+
+	var serveErr error
+	select {
+	case serveErr = <-errc:
+		log.Error("server failed; stopping the other listener", "error", serveErr)
+	case <-ctx.Done():
+		log.Info("shutdown signal received")
+	}
+	// Stop accepting on every server (in parallel, sharing one deadline) before the deferred
+	// store.Close flushes the usage counters.
+	if err := shutdownAll(servers, shutdownBudget); err != nil {
+		if serveErr == nil {
+			return err
+		}
+		log.Error("graceful shutdown", "error", err)
+	}
+	if serveErr != nil {
+		return fmt.Errorf("serve: %w", serveErr)
 	}
 	log.Info("dataapi stopped")
 	return nil
+}
+
+// shutdownAll gracefully shuts the servers down concurrently within one timeout and returns
+// the first error.
+func shutdownAll(servers []*http.Server, timeout time.Duration) error {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	errs := make([]error, len(servers))
+	var wg sync.WaitGroup
+	for i, s := range servers {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			if err := s.Shutdown(ctx); err != nil {
+				errs[i] = fmt.Errorf("graceful shutdown %s: %w", s.Addr, err)
+			}
+		}()
+	}
+	wg.Wait()
+	return errors.Join(errs...)
 }

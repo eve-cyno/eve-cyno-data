@@ -37,7 +37,7 @@
     </section>
 
     <section class="tier-group" data-tier="keyed">
-      <div class="tier-head"><span class="badge" data-tier="keyed">keyed</span><h2 id="tools-keyed">API key</h2><span class="n">{{.Stats.Keyed}} {{plural .Stats.Keyed "tool"}}</span><p class="tier-rule">A valid API key: <code>Authorization: Bearer &lt;key&gt;</code> or <code>X-API-Key</code>. <span data-slot="keys_note">{{if .Auth}}Keys are personal and may be revoked for abuse.{{else}}No keys are issued on this service yet.{{end}}</span></p></div>
+      <div class="tier-head"><span class="badge" data-tier="keyed">keyed</span><h2 id="tools-keyed">API key</h2><span class="n">{{.Stats.Keyed}} {{plural .Stats.Keyed "tool"}}</span><p class="tier-rule">A valid API key: <code>Authorization: Bearer &lt;key&gt;</code> or <code>X-API-Key</code>. <span data-slot="keys_note">{{if .SelfServe}}Free: run <code>/apikey create</code> in our Discord server, or sign in on ai.eve-cyno.dev → Settings → Data API keys.{{else if .Auth}}Keys are issued by the operator of this service.{{else}}No keys are issued on this service yet.{{end}}</span></p></div>
       <ul class="tool-list">
 {{range .Tools.Keyed}}        <li class="tool-row" data-tool="{{.Name}}" data-tier="keyed"{{if .Upstream}} data-upstream="true"{{end}}><a class="tool-name" href="/docs/tools/{{.Name}}">{{.Name}}</a><p class="tool-desc">{{.Summary}}</p>{{if .Upstream}}<span class="tool-badges"><span class="badge badge-live">live ESI</span></span>{{end}}</li>
 {{end}}      </ul>

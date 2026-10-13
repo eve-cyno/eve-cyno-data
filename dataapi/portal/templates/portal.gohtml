@@ -20,7 +20,7 @@
         <a class="btn" href="/docs/">Read the docs</a>
         <a class="btn" href="https://discord.gg/XZzkH38dt9"><svg class="ico" aria-hidden="true"><use href="#i-discord"/></svg>Discord</a>
       </div>
-      <p class="hero-note">Free · non-commercial · no account · <span data-slot="tools_public">{{.Stats.Public}}</span> tools need no key</p>
+      <p class="hero-note">Free · non-commercial · {{if not .Auth}}no account · {{end}}<span data-slot="tools_public">{{.Stats.Public}}</span> tools need no key{{if .SelfServe}}. No account needed. A free key (Discord or ai.eve-cyno.dev sign-in) unlocks more.{{else if .Auth}}. A key from the operator unlocks more.{{end}}</p>
     </div>
 
     <div class="install reveal-2" role="group" aria-label="Install the Claude Code plugin">
@@ -144,7 +144,7 @@
 {{end}}{{if .Tools.Keyed}}        <div class="tier-group" data-tier="keyed">
           <div class="tier-head">
             <span class="badge" data-tier="keyed">keyed</span><h3>API key</h3><span class="n">{{len .Tools.Keyed}} {{plural (len .Tools.Keyed) "tool"}}</span>
-            <p class="tier-rule">A valid API key. <span data-slot="keys_note">{{if .Auth}}Keys are personal and may be revoked for abuse.{{else}}No keys are issued yet; these answer <code>401 api_key_required</code>.{{end}}</span></p>
+            <p class="tier-rule">A valid API key. <span data-slot="keys_note">{{if .SelfServe}}Free: run <code>/apikey create</code> in the <a href="https://discord.gg/XZzkH38dt9">EVE-Cyno Discord</a>, or sign in on ai.eve-cyno.dev → Settings → Data API keys. Without a key these answer <code>401 api_key_required</code>.{{else if .Auth}}Keys are issued by the operator of this service. Without a key these answer <code>401 api_key_required</code>.{{else}}No keys are issued yet; these answer <code>401 api_key_required</code>.{{end}}</span></p>
           </div>
           <ul class="tool-list">
 {{range .Tools.Keyed}}            <li class="tool-row" data-tier="keyed"><a class="tool-name" href="/docs/tools/{{.Name}}">{{.Name}}</a><p class="tool-desc">{{.Summary}}</p></li>
@@ -190,12 +190,12 @@
     <div class="access">
       <div class="access-card"><div class="top"><span class="badge" data-tier="public">public</span><span class="big">{{.Stats.Public}}<small>{{plural .Stats.Public "tool"}}</small></span></div><p>Anyone, no key.</p></div>
       <div class="access-card"><div class="top"><span class="badge" data-tier="byo-key">byo-key</span><span class="big">{{len .Tools.BYO}}<small>{{plural (len .Tools.BYO) "tool"}}</small></span></div><p>Your own Janice API key in <code>X-Janice-Key</code>, used for that request only, never stored or logged.</p></div>
-      <div class="access-card"><div class="top"><span class="badge" data-tier="keyed">keyed</span><span class="big">{{len .Tools.Keyed}}<small>{{plural (len .Tools.Keyed) "tool"}}</small></span></div><p>A valid API key: <code>Authorization: Bearer &lt;key&gt;</code> or <code>X-API-Key</code>.{{if not .Auth}} No keys are issued on this service yet.{{end}}</p></div>
+      <div class="access-card"><div class="top"><span class="badge" data-tier="keyed">keyed</span><span class="big">{{len .Tools.Keyed}}<small>{{plural (len .Tools.Keyed) "tool"}}</small></span></div><p>A valid API key: <code>Authorization: Bearer &lt;key&gt;</code> or <code>X-API-Key</code>.{{if .SelfServe}} Free: run <code>/apikey create</code> in the <a href="https://discord.gg/XZzkH38dt9">EVE-Cyno Discord</a>, or sign in on ai.eve-cyno.dev → Settings → Data API keys. <a href="/docs/access#access-keys">How keys work</a>{{else if .Auth}} Keys are issued by the operator of this service. <a href="/docs/access#access-keys">How keys work</a>{{else}} No keys are issued on this service yet.{{end}}</p></div>
     </div>
     <div class="limits-row" aria-label="Rate limits per minute">
 {{range .LimitCards}}      <div class="limit"><b>{{.Max}}<small>/{{.Unit}}</small></b><span>{{.Label}}</span></div>
 {{end}}    </div>
-    <p class="pledge">Over a limit you get <code>429</code> with <code>Retry-After</code>. <span>No cookies, no accounts, no analytics. Your IP is held in memory for the limiter only. <a href="/docs/access">Every limit</a> · <a href="{{.URL}}/terms">Terms</a></span></p>
+    <p class="pledge">Over a limit you get <code>429</code> with <code>Retry-After</code>. {{template "keyLimits" .}}<span>{{if .SelfServe}}No cookies, no analytics. An account only if you create an API key.{{else}}No cookies, no accounts, no analytics.{{end}} Your IP is held in memory for the limiter only. <a href="/docs/access">Every limit</a> · <a href="{{.URL}}/terms">Terms</a></span></p>
   </div>
 </section>
 
@@ -226,3 +226,5 @@
 </body>
 </html>
 {{end}}
+
+{{define "keyLimits"}}{{if .Auth}}{{if .KeyFactor}}A key {{.KeyRaises}} the per-minute limits{{end}}{{if .KeyCap}}{{if .KeyFactor}} and adds{{else}}A key adds{{end}} a cap of {{.KeyCap}} requests a day per key (UTC day): over it, <code>429 daily_quota_exceeded</code>, with <code>Retry-After</code> set to the seconds until 00:00 UTC{{end}}{{if or .KeyFactor .KeyCap}}. {{end}}Live ESI tools stay at {{.Lim.UpstreamTool}} calls/min per caller, key or not. {{end}}{{end}}

@@ -1,6 +1,7 @@
 package dataapi_test
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -381,4 +382,41 @@ func TestCallerKeys_FallsBackToTheClientIP(t *testing.T) {
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
 	r.RemoteAddr = "203.0.113.7:1"
 	require.Equal(t, "203.0.113.7", dataapi.CallerKeys{}.Key(r), "no caller in the context: the client IP")
+}
+
+func TestAnyOfFallsThroughOnInvalidKey(t *testing.T) {
+	a, err := dataapi.ParseKeyFile(strings.NewReader("a:" + dataapi.HashKey("ecd_test_a") + "\n"))
+	require.NoError(t, err)
+	b, err := dataapi.ParseKeyFile(strings.NewReader("b:" + dataapi.HashKey("ecd_test_b") + "\n"))
+	require.NoError(t, err)
+	chain := dataapi.AnyOf(nil, a, b)
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	r.Header.Set("X-API-Key", "ecd_test_b")
+	c, err := chain.Authenticate(r)
+	require.NoError(t, err)
+	require.Equal(t, "b", c.ID)
+	r.Header.Set("X-API-Key", "ecd_test_nobody")
+	_, err = chain.Authenticate(r)
+	require.ErrorIs(t, err, dataapi.ErrInvalidAPIKey)
+	require.True(t, dataapi.AnyOf(nil, nil) == nil, "an untyped nil, not a nil-valued chain")
+
+	// no key presented: anonymous, no error
+	c, err = chain.Authenticate(httptest.NewRequest(http.MethodGet, "/", nil))
+	require.NoError(t, err)
+	require.False(t, c.Authenticated())
+}
+
+type failingAuth struct{}
+
+func (failingAuth) Authenticate(*http.Request) (dataapi.Caller, error) {
+	return dataapi.Caller{}, errors.New("store down")
+}
+
+func TestAnyOfReturnsOtherErrors(t *testing.T) {
+	a, err := dataapi.ParseKeyFile(strings.NewReader("a:" + dataapi.HashKey("ecd_test_a") + "\n"))
+	require.NoError(t, err)
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	r.Header.Set("X-API-Key", "ecd_test_a")
+	_, err = dataapi.AnyOf(failingAuth{}, a).Authenticate(r)
+	require.EqualError(t, err, "store down")
 }
