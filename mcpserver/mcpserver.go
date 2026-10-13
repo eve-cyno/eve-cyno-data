@@ -28,8 +28,11 @@
 //     malformed request (arguments that are not a JSON object) or an unregistered tool is
 //     a JSON-RPC error.
 //
-// Arguments are not validated against the schema (parity with the REST tool endpoint):
-// the tools tolerate missing and mistyped arguments and say so in their text.
+// Arguments are checked against the schema's "required" list only (catalog.Tool.CheckArgs;
+// the REST tool endpoint does the same): a call that lacks a required argument, or sends
+// it blank, is an isError result naming the missing and the unexpected argument names and
+// never reaches the tool. Types are not checked: the tools tolerate mistyped arguments and
+// say so in their text.
 package mcpserver
 
 import (
@@ -122,6 +125,8 @@ type serverConfig struct {
 	allow func(tool string) (ok bool, retryAfter time.Duration)
 	// called, when set, is told of every tools/call.
 	called func(tool string)
+	// instructions is the initialize text; empty means the package default.
+	instructions string
 }
 
 // buildServer registers exposed on a new server over deps.
@@ -134,13 +139,17 @@ func buildServer(deps *tools.Deps, exposed []catalog.Tool, cfg serverConfig, exe
 	if timeout <= 0 {
 		timeout = DefaultTimeout
 	}
+	text := cfg.instructions
+	if text == "" {
+		text = instructions
+	}
 	s := mcp.NewServer(
 		&mcp.Implementation{
 			Name:    ServerName,
 			Title:   "EVE-Cyno data tools",
 			Version: version.Version(),
 		},
-		&mcp.ServerOptions{Instructions: instructions, Logger: quiet(log)},
+		&mcp.ServerOptions{Instructions: text, Logger: quiet(log)},
 	)
 	h := &handler{deps: deps, exec: exec, timeout: timeout, log: log, janiceFromHeader: cfg.janiceFromHeader, allow: cfg.allow, called: cfg.called}
 	for _, t := range exposed {
@@ -209,6 +218,9 @@ func (h *handler) call(t catalog.Tool) mcp.ToolHandler {
 			if err := json.Unmarshal(raw, &args); err != nil || args == nil {
 				return nil, &jsonrpc.Error{Code: jsonrpc.CodeInvalidParams, Message: "arguments must be a JSON object"}
 			}
+		}
+		if err := t.CheckArgs(args); err != nil {
+			return failure("invalid arguments for " + name + ": " + err.Error() + ". See the tool's inputSchema in tools/list."), nil
 		}
 		if h.deps == nil {
 			return failure("deterministic layer unavailable (SDE not loaded)"), nil
@@ -334,6 +346,15 @@ type HTTPOptions struct {
 	// it and the tool name, before the tool runs (also for a call that is then refused or
 	// fails). Nil: off. It must be cheap; the embedding service uses it for usage counting.
 	ToolCalled func(r *http.Request, tool string)
+	// KeyHint is appended to the server instructions for callers without an API key, after
+	// a sentence saying the service is for trying out without one and naming the keyed tools
+	// and the free-text fit search they do not get (how to get a key, ideally a URL).
+	// Empty: no hint, and the instructions are the same for everyone.
+	KeyHint string
+	// AnonDailyCap is the requests per UTC day a client without an API key gets (the
+	// embedding service's Config.AnonDailyCap); the keyless instructions state it. 0: the
+	// instructions do not state a daily number.
+	AnonDailyCap int
 	// Timeout bounds one tool execution; zero means DefaultTimeout.
 	Timeout time.Duration
 	// Logger receives the transport's and the tools' diagnostics. Nil discards.
@@ -359,7 +380,8 @@ func httpHandler(deps *tools.Deps, o HTTPOptions, exec executor) http.Handler {
 	return mcp.NewStreamableHTTPHandler(
 		func(r *http.Request) *mcp.Server {
 			tiers := []catalog.Tier{catalog.TierPublic, catalog.TierBYOKey}
-			if o.Keyed != nil && o.Keyed(r) {
+			keyed := o.Keyed != nil && o.Keyed(r)
+			if keyed {
 				tiers = []catalog.Tier{catalog.TierPublic, catalog.TierKeyed, catalog.TierBYOKey}
 			}
 			janice := catalog.JaniceKeyFrom(r.Header)
@@ -367,6 +389,9 @@ func httpHandler(deps *tools.Deps, o HTTPOptions, exec executor) http.Handler {
 				janice = "" // not a Janice key; treated as absent
 			}
 			cfg := serverConfig{timeout: o.Timeout, log: o.Logger, janiceFromHeader: true}
+			if !keyed && o.KeyHint != "" {
+				cfg.instructions = keylessInstructions(o.AnonDailyCap, o.KeyHint)
+			}
 			if o.Upstream != nil {
 				cfg.allow = func(tool string) (bool, time.Duration) { return o.Upstream(r, tool) }
 			}
@@ -383,4 +408,33 @@ func httpHandler(deps *tools.Deps, o HTTPOptions, exec executor) http.Handler {
 			MaxRequestBodyBytes:        httpBodyMax,
 		},
 	)
+}
+
+// keylessInstructions is the base instructions plus what a caller without an API key needs
+// to know: the service is for trying it out, which tools and search it does not get, and
+// hint (how to get a key).
+func keylessInstructions(daily int, hint string) string {
+	keyed := catalog.ToolsIn(catalog.TierKeyed)
+	names := make([]string, len(keyed))
+	for i, t := range keyed {
+		names[i] = t.Name
+	}
+	return keylessText(names, daily, hint)
+}
+
+// keylessText formats the keyless-caller sentence for the given keyed tool names; daily is
+// the requests per day a client without a key gets (0: the sentence does not state one).
+// Free-text fit search needs a key too, so the subject is always plural.
+func keylessText(names []string, daily int, hint string) string {
+	var limits string
+	if daily > 0 {
+		limits = fmt.Sprintf("%d requests a day per client and lower per-minute limits", daily)
+	} else {
+		limits = "lower per-minute limits"
+	}
+	need := "free-text fit search needs"
+	if len(names) > 0 {
+		need = strings.Join(names, ", ") + " and free-text fit search need"
+	}
+	return fmt.Sprintf("%s Without an API key this server is for trying it out: %s; %s a key. A free key: %s", instructions, limits, need, hint)
 }

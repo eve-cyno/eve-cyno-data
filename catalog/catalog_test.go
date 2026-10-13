@@ -6,6 +6,7 @@ import (
 	"go/token"
 	"net/http"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -40,8 +41,8 @@ func TestLookup(t *testing.T) {
 	require.False(t, ok)
 }
 
-// The tier table is the policy owners approved (roadmap R3.4); a change here is a
-// deliberate policy change.
+// The tier table is the policy owners approved; a change here is a deliberate policy
+// change. Owner 2026-10-13: fit lookups (get_fits, list_fits) are public with trial limits.
 func TestTiers_Policy(t *testing.T) {
 	want := map[catalog.Tier][]string{
 		catalog.TierPublic: {
@@ -50,8 +51,10 @@ func TestTiers_Policy(t *testing.T) {
 			"get_ship_stats", "get_hull_facts", "get_ship_bonuses", "compute_fit_stats", "validate_fitting",
 			// the public ESI pass-throughs
 			"get_market_price", "get_type_info", "get_sovereignty", "get_system_activity",
+			// the fit lookups
+			"get_fits", "list_fits",
 		},
-		catalog.TierKeyed:    {"get_fits", "list_fits", "analyze_battle"},
+		catalog.TierKeyed:    {"analyze_battle"},
 		catalog.TierBYOKey:   {"appraise_items"},
 		catalog.TierDisabled: {"convert_isk_to_real"},
 	}
@@ -198,4 +201,17 @@ func TestParamOrder_FollowsTheSchemaFile(t *testing.T) {
 			require.Contains(t, props, name, tl.Name)
 		}
 	}
+}
+
+// get_system_activity reads /universe/system_kills only: ship, pod and NPC kills of the
+// last hour. Jumps are not part of the answer, so neither text may promise them.
+func TestSystemActivityTextsDescribeKillsOnly(t *testing.T) {
+	tool, ok := catalog.Lookup("get_system_activity")
+	require.True(t, ok)
+	for _, text := range []string{tool.Description, tool.Summary} {
+		require.NotContains(t, strings.ToLower(text), "jump count")
+		require.NotContains(t, strings.ToLower(text), "kills and jumps")
+		require.Contains(t, text, "kills")
+	}
+	require.Contains(t, tool.Summary, "last hour")
 }

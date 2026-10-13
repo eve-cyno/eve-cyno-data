@@ -284,20 +284,12 @@ func (s *Store) Usage(ctx context.Context, id string, days int) (KeyUsage, error
 	if err := s.flush(); err != nil { // so the read below sees the in-memory counts
 		return KeyUsage{}, fmt.Errorf("keys: usage: %w", err)
 	}
-	s.lockCurrent()
-	day := s.day
-	s.usageMu.Unlock()
-	end, err := time.Parse(time.DateOnly, day)
-	if err != nil {
+	var err error
+	out := KeyUsage{ID: id, Endpoints: []EndpointUsage{}}
+	var day string
+	var idx map[string]int
+	if out.Days, day, idx, err = s.dayWindow(days); err != nil {
 		return KeyUsage{}, fmt.Errorf("keys: usage: %w", err)
-	}
-	start := end.AddDate(0, 0, -(days - 1))
-	out := KeyUsage{ID: id, Days: make([]DayUsage, days), Endpoints: []EndpointUsage{}}
-	idx := map[string]int{}
-	for i := range out.Days {
-		d := start.AddDate(0, 0, i).Format(time.DateOnly)
-		out.Days[i].Day = d
-		idx[d] = i
 	}
 	from := out.Days[0].Day
 
@@ -339,4 +331,69 @@ func (s *Store) Usage(ctx context.Context, id string, days int) (KeyUsage, error
 		out.Endpoints = append(out.Endpoints, e)
 	}
 	return out, eps.Err()
+}
+
+// dayWindow returns the empty day rows of the last days UTC days, oldest first, ending with
+// the day the counters are on, that day, and each row's index by its date.
+func (s *Store) dayWindow(days int) ([]DayUsage, string, map[string]int, error) {
+	s.lockCurrent()
+	day := s.day
+	s.usageMu.Unlock()
+	end, err := time.Parse(time.DateOnly, day)
+	if err != nil {
+		return nil, "", nil, err
+	}
+	start := end.AddDate(0, 0, -(days - 1))
+	out := make([]DayUsage, days)
+	idx := make(map[string]int, days)
+	for i := range out {
+		d := start.AddDate(0, 0, i).Format(time.DateOnly)
+		out[i].Day = d
+		idx[d] = i
+	}
+	return out, day, idx, nil
+}
+
+// UsageAll returns the day history of every key that has usage rows in the last days UTC
+// days (1..30), keyed by key id (active or revoked). Each key gets the same day rows Usage
+// returns: oldest first, one entry per day, zero-filled. Keys without rows are absent.
+func (s *Store) UsageAll(ctx context.Context, days int) (map[string][]DayUsage, error) {
+	if days < 1 || days > retainDays {
+		return nil, ErrBadDays
+	}
+	if err := s.flush(); err != nil { // so the read below sees the in-memory counts
+		return nil, fmt.Errorf("keys: usage all: %w", err)
+	}
+	tmpl, day, idx, err := s.dayWindow(days)
+	if err != nil {
+		return nil, fmt.Errorf("keys: usage all: %w", err)
+	}
+	rows, err := s.db.QueryContext(ctx,
+		`SELECT key_id, day, count, served, refused FROM key_usage WHERE day >= ? AND day <= ?`, tmpl[0].Day, day)
+	if err != nil {
+		return nil, fmt.Errorf("keys: usage all: %w", err)
+	}
+	defer rows.Close()
+	out := map[string][]DayUsage{}
+	for rows.Next() {
+		var id, d string
+		var c, sv, r int
+		if err := rows.Scan(&id, &d, &c, &sv, &r); err != nil {
+			return nil, fmt.Errorf("keys: usage all: %w", err)
+		}
+		i, ok := idx[d]
+		if !ok {
+			continue
+		}
+		du, ok := out[id]
+		if !ok {
+			du = append([]DayUsage(nil), tmpl...)
+			out[id] = du
+		}
+		du[i].Count, du[i].Refused, du[i].Charged = sv, r, c
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("keys: usage all: %w", err)
+	}
+	return out, nil
 }

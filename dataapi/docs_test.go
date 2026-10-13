@@ -24,7 +24,7 @@ import (
 // publicConfig is the Config of the internet-facing service: the one PublicSurface
 // describes.
 func publicConfig() dataapi.Config {
-	return dataapi.Config{ToolAPI: dataapi.ToolAPIPublic, Docs: true, MCP: http.NotFoundHandler(), Auth: fixedAuth{}, KeyedLimitFactor: dataapi.DefaultKeyedLimitFactor, KeyDailyCap: dataapi.DefaultKeyDailyCap, SelfServe: true} // keys on: the committed files describe PublicSurface
+	return dataapi.Config{ToolAPI: dataapi.ToolAPIPublic, Docs: true, MCP: http.NotFoundHandler(), Auth: fixedAuth{}, KeyedLimitFactor: dataapi.DefaultKeyedLimitFactor, KeyDailyCap: dataapi.DefaultKeyDailyCap, AnonDailyCap: dataapi.DefaultAnonDailyCap, SelfServe: true} // keys on: the committed files describe PublicSurface
 }
 
 func TestDocs_ServedBytesAreTheCommittedFiles(t *testing.T) {
@@ -154,7 +154,7 @@ func TestMCP_ClientSessionThroughTheDataAPI(t *testing.T) {
 	require.False(t, res.IsError)
 	require.Contains(t, res.Content[0].(*mcp.TextContent).Text, "Amarr")
 
-	_, err = cs.CallTool(t.Context(), &mcp.CallToolParams{Name: "get_fits", Arguments: map[string]any{}})
+	_, err = cs.CallTool(t.Context(), &mcp.CallToolParams{Name: "analyze_battle", Arguments: map[string]any{}})
 	require.Error(t, err, "a keyed tool is not callable by an anonymous MCP client")
 }
 
@@ -247,12 +247,14 @@ func TestDocs_DailyCapSentenceFollowsKeyDailyCap(t *testing.T) {
 	cfg := publicConfig()
 	cfg.KeyDailyCap = 0
 	require.NotContains(t, body(cfg), "daily cap", "no cap configured: not stated")
-	require.Contains(t, body(cfg), "raises the budgets", "the factor sentence stays")
+	require.Contains(t, body(cfg), "raises the per-minute budgets", "the keyed budgets sentence stays")
 
 	cfg.KeyDailyCap = 1234
 	require.Contains(t, body(cfg), "daily cap of 1234 requests")
 
 	cfg.KeyedLimitFactor = 1
-	require.NotContains(t, body(cfg), "raises the budgets")
+	flat := dataapi.DefaultLimits().WithoutKeys() // no explicit keyed maxima: only the factor could raise a budget
+	cfg.Limits = &flat
+	require.NotContains(t, body(cfg), "raises the per-minute budgets")
 	require.Contains(t, body(cfg), "daily cap of 1234 requests", "gated on the cap, not on the factor")
 }

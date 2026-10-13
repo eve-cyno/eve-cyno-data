@@ -377,3 +377,56 @@ func TestRecordToolAloneSurvivesAReopen(t *testing.T) {
 	require.Equal(t, []keys.EndpointUsage{{Endpoint: "mcp:get_fits", Count: 1}}, u.Endpoints)
 	require.Equal(t, 0, u.Days[0].Count)
 }
+
+func TestUsageAllBatchesEveryKeyWithRows(t *testing.T) {
+	now := time.Date(2026, 10, 10, 12, 0, 0, 0, time.UTC)
+	s := openTest(t, keys.Options{Now: clockAt(&now)})
+	a, _, err := s.Create(bg, "eve:1", "", "a")
+	require.NoError(t, err)
+	b, _, err := s.Create(bg, "eve:2", "", "b")
+	require.NoError(t, err)
+	idle, _, err := s.Create(bg, "eve:3", "", "idle")
+	require.NoError(t, err)
+	s.Spend(a.ID)
+	s.Record(a.ID, "GET /v1/a", false)
+	s.Spend(b.ID)
+	s.Record(b.ID, "GET /v1/a", true)
+	now = now.Add(48 * time.Hour) // gap day 2026-10-11
+	s.Spend(a.ID)
+	s.Record(a.ID, "GET /v1/a", false)
+
+	all, err := s.UsageAll(bg, 4)
+	require.NoError(t, err)
+	require.Len(t, all, 2)
+	require.NotContains(t, all, idle.ID)
+	require.Equal(t, []keys.DayUsage{
+		{Day: "2026-10-09"},
+		{Day: "2026-10-10", Count: 1, Charged: 1},
+		{Day: "2026-10-11"},
+		{Day: "2026-10-12", Count: 1, Charged: 1},
+	}, all[a.ID])
+	require.Equal(t, []keys.DayUsage{
+		{Day: "2026-10-09"},
+		{Day: "2026-10-10", Refused: 1, Charged: 1},
+		{Day: "2026-10-11"},
+		{Day: "2026-10-12"},
+	}, all[b.ID])
+
+	// The batch is the per-key answer's days, key for key.
+	for _, k := range []keys.Key{a, b} {
+		u, err := s.Usage(bg, k.ID, 4)
+		require.NoError(t, err)
+		require.Equal(t, u.Days, all[k.ID])
+	}
+
+	// Window bounds: 2 days drops 2026-10-10 and keeps the key that still has a row in the window.
+	two, err := s.UsageAll(bg, 2)
+	require.NoError(t, err)
+	require.Equal(t, []keys.DayUsage{{Day: "2026-10-11"}, {Day: "2026-10-12", Count: 1, Charged: 1}}, two[a.ID])
+	require.NotContains(t, two, b.ID)
+
+	for _, bad := range []int{0, 31} {
+		_, err = s.UsageAll(bg, bad)
+		require.ErrorIs(t, err, keys.ErrBadDays)
+	}
+}

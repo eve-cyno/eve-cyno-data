@@ -59,7 +59,8 @@ func validRequestID(s string) bool {
 }
 
 // ServeHTTP implements http.Handler: request ID, API-key authentication, panic recovery,
-// the access log and the daily quota of keyed callers around the route mux.
+// the access log, the daily quota of keyed callers and the daily cap of callers without a key
+// around the route mux.
 func (a *API) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	id := r.Header.Get(HeaderRequestID)
 	if !validRequestID(id) {
@@ -121,7 +122,23 @@ func (a *API) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	if a.anon != nil && !CallerFrom(r.Context()).Authenticated() && !a.isTrialFree(r) {
+		// The same client key the per-minute limiter uses for a caller without a key. An
+		// invalid key is an anonymous caller too.
+		if ok, retry := a.anon.Spend(a.keys.Key(r)); !ok {
+			quotaRefused = true
+			writeAnonQuotaRefusal(rec, r, retry, a.anon.cap, a.surface.PublicURL)
+			return
+		}
+	}
 	a.mux.ServeHTTP(rec, r)
+}
+
+// isTrialFree reports whether r is a request the anonymous daily cap does not count (see
+// route.trialFree).
+func (a *API) isTrialFree(r *http.Request) bool {
+	_, pattern := a.mux.Handler(r)
+	return a.trialFree[pattern]
 }
 
 // usageEndpoint is the Usage label of a served request: "tool:<name>" for the raw tool route ("tool:?" for a name that is no registered tool),

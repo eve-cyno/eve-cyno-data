@@ -105,11 +105,19 @@ type Deps struct {
 // Rate is one sliding-window budget per caller key: at most Max requests in any
 // Window. A Max or Window <= 0 disables the limit (the zero Rate is unlimited).
 type Rate struct {
-	Max    int
-	Window time.Duration
+	// Max is the budget of a caller without an API key (the trial budget on a service
+	// that accepts keys).
+	Max int
+	// KeyedMax is the budget of a caller with an API key. Zero means Config.KeyedLimitFactor
+	// times Max (Max itself below a factor of 2); a positive value is used as it is,
+	// whatever the factor. On a service that accepts no keys nobody can have one, so
+	// Limits.WithoutKeys turns KeyedMax into the budget of everyone.
+	KeyedMax int
+	Window   time.Duration
 }
 
-// Limits holds the per-route budgets.
+// Limits holds the per-route budgets. Where a route has a KeyedMax, a caller without an
+// API key gets the lower Max (the trial) and a caller with one gets KeyedMax.
 type Limits struct {
 	FitsSearch  Rate
 	FitsDetail  Rate
@@ -124,27 +132,48 @@ type Limits struct {
 	// UpstreamTool is the fair-use budget per caller of the tools that read live ESI data
 	// (catalog.Tool.Upstream), REST and MCP together; build the limiter that enforces it
 	// with NewUpstreamLimiter(limits.UpstreamTool, ...) and pass it as Config.Upstream and
-	// to the MCP handler. It is stated in the generated documents.
+	// to the MCP handler. It is stated in the generated documents. KeyedMax is never a
+	// multiple of Max: it protects the shared ESI budget, so it is set explicitly.
 	UpstreamTool Rate
 	// Docs covers the description routes (OpenAPI, llms.txt).
 	Docs Rate
 }
 
-// DefaultLimits are the budgets the endpoints had before this package was split out of the web service.
+// DefaultLimits are the budgets of the public service. Without an API key a caller gets the
+// trial numbers on the routes that cost the most (MCP, tools, fit search, live ESI tools);
+// the other routes keep one budget that a key multiplies by Config.KeyedLimitFactor.
 func DefaultLimits() Limits {
 	return Limits{
-		FitsSearch:  Rate{Max: 120, Window: time.Minute}, // read-only + cheap
-		FitsDetail:  Rate{Max: 60, Window: time.Minute},  // a few SDE + optional Janice round-trips
-		FitStats:    Rate{Max: 60, Window: time.Minute},  // EFT parse + Gofa resolver
-		FitSuggest:  Rate{Max: 60, Window: time.Minute},  // RAG scroll + SDE pool
-		ItemsSearch: Rate{Max: 120, Window: time.Minute}, // one indexed SDE query
-		Tool:        Rate{Max: 30, Window: time.Minute},  // raw tools, internet-facing only
-		MCP:         Rate{Max: 60, Window: time.Minute},  // handshake (3 requests) + tool calls
-		Docs:        Rate{Max: 60, Window: time.Minute},  // static bytes, but anonymous
+		FitsSearch:  Rate{Max: 30, KeyedMax: 240, Window: time.Minute}, // read-only + cheap; a key also unlocks q
+		FitsDetail:  Rate{Max: 60, Window: time.Minute},                // a few SDE + optional Janice round-trips
+		FitStats:    Rate{Max: 60, Window: time.Minute},                // EFT parse + Gofa resolver
+		FitSuggest:  Rate{Max: 60, Window: time.Minute},                // RAG scroll + SDE pool
+		ItemsSearch: Rate{Max: 120, Window: time.Minute},               // one indexed SDE query
+		Tool:        Rate{Max: 10, KeyedMax: 60, Window: time.Minute},  // raw tools, internet-facing only
+		MCP:         Rate{Max: 20, KeyedMax: 120, Window: time.Minute}, // handshake (3 requests) + tool calls
+		Docs:        Rate{Max: 60, Window: time.Minute},                // static bytes, but anonymous
 		// Live ESI reads share one IP-level ESI budget for the whole project, so each caller
 		// gets a fraction of the route limit.
-		UpstreamTool: Rate{Max: 10, Window: time.Minute},
+		UpstreamTool: Rate{Max: 5, KeyedMax: 10, Window: time.Minute},
 	}
+}
+
+// WithoutKeys returns l as a service that accepts no API keys must serve it: nobody can get
+// a key there, so every KeyedMax becomes the budget of everyone. New does this itself when
+// Config.Auth is nil; call it for a limiter built outside New (NewUpstreamLimiter) on such
+// a service.
+func (l Limits) WithoutKeys() Limits {
+	open := func(r Rate) Rate {
+		if r.KeyedMax > 0 && r.Max > 0 {
+			r.Max = r.KeyedMax
+		}
+		r.KeyedMax = 0
+		return r
+	}
+	l.FitsSearch, l.FitsDetail, l.FitStats, l.FitSuggest = open(l.FitsSearch), open(l.FitsDetail), open(l.FitStats), open(l.FitSuggest)
+	l.ItemsSearch, l.Tool, l.MCP = open(l.ItemsSearch), open(l.Tool), open(l.MCP)
+	l.UpstreamTool, l.Docs = open(l.UpstreamTool), open(l.Docs)
+	return l
 }
 
 // ToolAPIMode controls the raw tool endpoint POST {prefix}/tool/{name}.
@@ -213,9 +242,22 @@ type Config struct {
 	SelfServe bool
 
 	// KeyedLimitFactor multiplies the route limits (Max) of an authenticated caller, who
-	// also gets buckets of its own; below 2 the limits are unchanged. UpstreamTool is never
-	// multiplied: it protects the shared ESI budget, whoever calls.
+	// also gets buckets of its own; below 2 the limits are unchanged. A route with an
+	// explicit Rate.KeyedMax uses that instead, and UpstreamTool is never multiplied: it
+	// protects the shared ESI budget, whoever calls.
 	KeyedLimitFactor int
+
+	// AnonDailyCap is the number of requests a client without an API key may make per UTC
+	// day (counted per rate-limit key, see KeyResolver, in memory only); over it the API
+	// answers 429 daily_quota_exceeded until 00:00 UTC. The documentation routes, the
+	// portal assets and /health are not counted. 0 means no cap, and the cap, like the
+	// trial limits and the key-only fit search, applies only when Auth is set: a service
+	// that issues no keys has nothing to point the client at.
+	AnonDailyCap int
+
+	// Now returns the current time (nil means time.Now). It is a test seam for the daily
+	// caps.
+	Now func() time.Time
 
 	// Quota, when non-nil, is spent once per request of an authenticated caller; a refused
 	// request is a 429 daily_quota_exceeded with Retry-After. Anonymous callers never
@@ -296,6 +338,7 @@ type API struct {
 	auth        Authenticator
 	keyedFactor int
 	quota       Quota
+	anon        *anonQuota
 	usage       Usage
 	sdeBuild    string
 	toolMode    ToolAPIMode
@@ -310,6 +353,8 @@ type API struct {
 	portal      *portalSite
 	log         *slog.Logger
 	mux         *http.ServeMux
+	// trialFree holds the mux patterns whose requests the anonymous daily cap does not count.
+	trialFree map[string]bool
 	// corpusProbe is nil unless Deps.Retriever implements Pinger.
 	corpusProbe *corpusProbe
 }
@@ -348,6 +393,9 @@ func New(cfg Config) (*API, error) {
 	if cfg.Limits != nil {
 		limits = *cfg.Limits
 	}
+	if cfg.Auth == nil {
+		limits = limits.WithoutKeys()
+	}
 	a := &API{
 		deps:        cfg.Deps,
 		prefix:      prefix,
@@ -365,11 +413,16 @@ func New(cfg Config) (*API, error) {
 		hasher:      newCallerHasher(cfg.LogSalt),
 		log:         cfg.Logger,
 		mux:         http.NewServeMux(),
+		trialFree:   map[string]bool{},
 	}
 	if p, ok := cfg.Deps.Retriever.(Pinger); ok && p != nil {
 		a.corpusProbe = newCorpusProbe(p, cfg.CorpusProbeTTL)
 	}
-	a.surface = Surface{Prefix: prefix, ToolAPI: cfg.ToolAPI, MCP: cfg.MCP != nil, Docs: cfg.Docs, Auth: cfg.Auth != nil, SelfServe: cfg.SelfServe, KeyedLimitFactor: cfg.KeyedLimitFactor, KeyDailyCap: cfg.KeyDailyCap, Limits: limits, PublicURL: publicURL}
+	anonCap := cfg.AnonDailyCap
+	if cfg.Auth == nil || anonCap < 0 {
+		anonCap = 0
+	}
+	a.surface = Surface{Prefix: prefix, ToolAPI: cfg.ToolAPI, MCP: cfg.MCP != nil, Docs: cfg.Docs, Auth: cfg.Auth != nil, SelfServe: cfg.SelfServe, KeyedLimitFactor: cfg.KeyedLimitFactor, KeyDailyCap: cfg.KeyDailyCap, AnonDailyCap: anonCap, Limits: limits, PublicURL: publicURL}
 	if a.keys == nil {
 		a.keys = CallerKeys{}
 	}
@@ -378,6 +431,9 @@ func New(cfg Config) (*API, error) {
 	}
 	if a.log == nil {
 		a.log = slog.New(slog.DiscardHandler)
+	}
+	if anonCap > 0 {
+		a.anon = newAnonQuota(anonCap, maxAnonClients, cfg.Now, a.log)
 	}
 
 	for _, rt := range routeTable() {
@@ -416,6 +472,10 @@ func (a *API) register(rt route) {
 	h := cached(rt.cache, a.limited(newTieredLimiter(rt.rate(a.surface), a.keyedFactor), func(w http.ResponseWriter, r *http.Request) {
 		rt.handle(a, w, r)
 	}))
+	if rt.trialFree {
+		a.trialFree[full] = true
+		a.trialFree[rt.method+" "+full] = true
+	}
 	if rt.anyMethod {
 		a.mux.HandleFunc(full, h)
 		return

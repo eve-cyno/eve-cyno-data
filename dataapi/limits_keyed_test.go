@@ -66,7 +66,7 @@ func TestUpstreamToolLimitIsNotMultiplied(t *testing.T) {
 		KeyedLimitFactor: 2,
 	})
 	call := func() *httptest.ResponseRecorder {
-		return do(api, http.MethodPost, "/v1/tool/get_market_price", `{}`, "X-API-Key", "ecd_test_key_one")
+		return do(api, http.MethodPost, "/v1/tool/get_market_price", `{"type_id":0}`, "X-API-Key", "ecd_test_key_one")
 	}
 	require.Equal(t, http.StatusOK, call().Code)
 	requireError(t, call(), http.StatusTooManyRequests, "rate_limited")

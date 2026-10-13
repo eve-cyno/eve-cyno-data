@@ -20,39 +20,40 @@
     <div class="tbl"><table>
       <thead><tr><th scope="col">Tier</th><th scope="col">Who can call</th><th scope="col" class="num">Tools</th></tr></thead>
       <tbody>
-        <tr><td><span class="badge" data-tier="public">public</span></td><td>anyone, no key</td><td class="num">{{.Stats.Public}}</td></tr>
+        <tr><td><span class="badge" data-tier="public">public</span></td><td>anyone, no key{{if .Auth}} (trial limits){{end}}</td><td class="num">{{.Stats.Public}}</td></tr>
         <tr><td><span class="badge" data-tier="byo-key">byo-key</span></td><td>your own Janice API key in <code>X-Janice-Key</code>, used for that request only, never stored or logged</td><td class="num">{{.Stats.BYO}}</td></tr>
-        <tr><td><span class="badge" data-tier="keyed">keyed</span></td><td>a valid API key: <code>Authorization: Bearer &lt;key&gt;</code> or <code>X-API-Key: &lt;key&gt;</code> {{if .SelfServe}}(free: from Discord or ai.eve-cyno.dev, see <a href="#access-keys">API keys</a>){{else if .Auth}}(issued by the operator of this service, see <a href="#access-keys">API keys</a>){{else}}(no keys are issued on this service yet){{end}}</td><td class="num">{{.Stats.Keyed}}</td></tr>
+        <tr><td><span class="badge" data-tier="keyed">keyed</span></td><td>a valid API key: <code>Authorization: Bearer &lt;key&gt;</code> or <code>X-API-Key: &lt;key&gt;</code> {{if .SelfServe}}(free: from Discord or ai.eve-cyno.dev, see <a href="#access-keys">API keys</a>){{else if .Auth}}(issued by the operator of this service, see <a href="#access-keys">API keys</a>){{else}}(no keys are issued on this service yet){{end}}{{if .Auth}}; also for free-text fit search, <code>q</code> on <code>{{.Prefix}}/fits/search</code> (the filters need no key){{end}}</td><td class="num">{{.Stats.Keyed}}</td></tr>
         <tr><td><span class="badge badge-plain">disabled</span></td><td>not offered on this service</td><td class="num">{{.Stats.Disabled}}</td></tr>
       </tbody>
     </table></div>
     <p>The tools in each tier are listed in the <a href="/docs/tools">Tools reference</a>.</p>
 
     <h2 id="access-limits">Rate limits<a class="h-anchor" href="#access-limits" aria-label="Link to this section">#</a></h2>
-    <p>Per caller (per API key when one is sent, otherwise per client IP), sliding window. A refused request is a <code>429</code> with <code>Retry-After</code>.{{if .KeyFactor}} A free API key {{.KeyRaises}} the per-minute limits{{if .KeyCap}} and adds a daily cap{{end}}: see <a href="#access-keys">API keys</a>.{{end}}</p>
+    <p>Per caller (per API key when one is sent, otherwise per client IP), sliding window.{{if .KeysRaise}} Without a key the API is for trying it out, so the limits are lower; {{if .SelfServe}}a free API key{{else}}an API key{{end}} raises them for daily use: see <a href="#access-keys">API keys</a>.{{end}} A refused request is a <code>429</code> with <code>Retry-After</code>.{{if .AnonCap}} Without a key there is also a daily trial limit of {{.AnonCap}} requests per client (UTC day; docs pages do not count): over it, <code>429 daily_quota_exceeded</code> with <code>Retry-After</code> set to the seconds until 00:00 UTC.{{end}}</p>
     <div class="tbl"><table>
-      <thead><tr><th scope="col">Route</th><th scope="col" class="num">Limit</th></tr></thead>
+      <thead><tr><th scope="col">Route</th><th scope="col" class="num">{{if .KeysRaise}}Without a key (trial){{else}}Limit{{end}}</th>{{if .KeysRaise}}<th scope="col" class="num">With a key</th>{{end}}</tr></thead>
       <tbody>
-{{range .LimitRows}}        <tr><td>{{if .Code}}<code>{{.Route}}</code>{{else}}{{.Route}}{{end}}</td><td class="num">{{.Max}} per {{.Window}}</td></tr>
+{{range .LimitRows}}        <tr><td>{{if .Code}}<code>{{.Route}}</code>{{else}}{{.Route}}{{end}}</td><td class="num">{{.Max}} per {{.Window}}</td>{{if $.KeysRaise}}<td class="num">{{if .KeyMax}}{{.KeyMax}} per {{.Window}}{{else}}the same{{end}}</td>{{end}}</tr>
+{{end}}{{if or .AnonCap (and .KeysRaise .KeyCap)}}        <tr><td>Per day</td><td class="num">{{if .AnonCap}}{{.AnonCap}} requests per client (UTC day; docs pages do not count){{else}}none{{end}}</td>{{if .KeysRaise}}<td class="num">{{if .KeyCap}}{{.KeyCap}} per key{{else}}none{{end}}</td>{{end}}</tr>
 {{end}}      </tbody>
     </table></div>
 
     <h2 id="access-esi">Live ESI tools<a class="h-anchor" href="#access-esi" aria-label="Link to this section">#</a></h2>
-    <p>{{.UpstreamNames}} read live public data from EVE's ESI through a shared cache that follows ESI's <code>Expires</code>. Their own fair-use limit is {{.Lim.UpstreamTool}} calls per minute per caller, on top of the route limit.{{if .Auth}} A key does not raise it: the ESI budget is shared.{{end}} When the shared ESI budget is nearly spent the call is refused with <code>503 upstream_busy</code> and <code>Retry-After</code>.</p>
+    <p>{{.UpstreamNames}} read live public data from EVE's ESI through a shared cache that follows ESI's <code>Expires</code>. Their own fair-use limit is {{.Lim.UpstreamTool}} calls per minute per caller{{if ne .KeyLim.UpstreamTool .Lim.UpstreamTool}} without a key and {{.KeyLim.UpstreamTool}} with one{{end}}, on top of the route limit.{{if .Auth}} The ESI budget is shared, so a key raises it only a little.{{end}} When the shared ESI budget is nearly spent the call is refused with <code>503 upstream_busy</code> and <code>Retry-After</code>.</p>
     <aside class="callout" data-kind="warning"><svg class="ico" aria-hidden="true"><use href="#i-warn"/></svg><div><p class="callout-title">Don't mirror ESI</p><p>Do not use these tools to mirror or bulk-collect ESI data: use ESI itself or a dataset such as EVE Ref for that.</p></div></aside>
 
     <h2 id="access-caps">Body caps<a class="h-anchor" href="#access-caps" aria-label="Link to this section">#</a></h2>
     <p>Request bodies are capped: 256 KiB on the fit routes, 64 KiB on the tool and MCP endpoints. Over the cap: <code>413 payload_too_large</code>.</p>
 
     <h2 id="access-keys">API keys<a class="h-anchor" href="#access-keys" aria-label="Link to this section">#</a></h2>
-{{if .Auth}}{{if .SelfServe}}    <p>API keys are free. They are personal to you, are not to be shared or resold, and may be revoked at any time, for example for abuse.</p>{{else}}    <p>Keys are personal to you, are not to be shared or resold, and may be revoked at any time, for example for abuse. Keyed callers are rate limited per key. Keys are issued by the operator of this service.</p>{{end}}
+{{if .Auth}}{{if .SelfServe}}    <p>Without a key the API is for trying it out. A free key is for connecting it to Claude Code, your own model or a bot, and it lets the operator see who sends what. API keys are free. They are personal to you, are not to be shared or resold, and may be revoked at any time, for example for abuse.</p>{{else}}    <p>Without a key the API is for trying it out. A key is for connecting it to Claude Code, your own model or a bot, and it lets the operator see who sends what. Keys are personal to you, are not to be shared or resold, and may be revoked at any time, for example for abuse. Keyed callers are rate limited per key. Keys are issued by the operator of this service.</p>{{end}}
     <dl class="facts">
 {{if .SelfServe}}      <dt>Get a key</dt><dd>Run <code>/apikey create</code> in our <a href="https://discord.gg/XZzkH38dt9">Discord server</a>, or sign in on <a href="https://ai.eve-cyno.dev">ai.eve-cyno.dev</a> (EVE SSO or Discord) → <b>Settings</b> → <b>Data API keys</b> → <b>Create</b>.</dd>
       <dt>How many</dt><dd>At most 3 active keys per person. A key belongs to one person across both places: the same Discord account has the same 3-key limit.</dd>
       <dt>The secret</dt><dd><code>ecd_</code> followed by 64 hex characters, shown once, when you create the key. Copy it then: it cannot be shown again.</dd>
-{{end}}      <dt>What it unlocks</dt><dd>The keyed tools: {{.KeyedNames}}.</dd>
-{{if or .KeyFactor .KeyCap}}      <dt>Limits</dt><dd>{{if .KeyFactor}}{{.KeyTwice}} the per-minute route limits of an anonymous caller{{end}}{{if and .KeyFactor .KeyCap}}, and a {{end}}{{if .KeyCap}}{{if not .KeyFactor}}A {{end}}daily cap of {{.KeyCap}} requests per key (UTC day, resets at 00:00 UTC){{end}}.</dd>
-{{end}}      <dt>Live ESI tools</dt><dd>Still {{.Lim.UpstreamTool}} calls per minute per caller, keyed or not: the ESI budget is shared.</dd>
+{{end}}      <dt>What it unlocks</dt><dd>The keyed {{plural .Stats.Keyed "tool" "tools"}} {{.KeyedNames}}{{if .KeysRaise}}, free-text fit search (<code>q</code> on <code>{{.Prefix}}/fits/search</code>) and the higher limits for daily use{{else}} and free-text fit search (<code>q</code> on <code>{{.Prefix}}/fits/search</code>){{end}}.</dd>
+{{if or .KeysRaise .KeyCap}}      <dt>Limits</dt><dd>{{if .KeysRaise}}The per-minute route limits in the "With a key" column above{{end}}{{if and .KeysRaise .KeyCap}}, and a {{end}}{{if .KeyCap}}{{if not .KeysRaise}}A {{end}}daily cap of {{.KeyCap}} requests per key (UTC day, resets at 00:00 UTC){{end}}.</dd>
+{{end}}      <dt>Live ESI tools</dt><dd>{{if ne .KeyLim.UpstreamTool .Lim.UpstreamTool}}{{.Lim.UpstreamTool}} calls per minute per caller without a key, {{.KeyLim.UpstreamTool}} with one{{else}}{{.KeyLim.UpstreamTool}} calls per minute per caller{{end}}: the ESI budget is shared.</dd>
 {{if .SelfServe}}      <dt>Revoking</dt><dd>Run <code>/apikey revoke</code> in Discord, or use Revoke in the ai.eve-cyno.dev settings, at any time. A revoked key stops working at once.</dd>
 {{end}}    </dl>
     <p>Send the key in the <code>Authorization</code> header, or as <code>X-API-Key: ecd_...</code>:</p>
@@ -60,7 +61,7 @@
       <div class="code-head"><span class="code-label">Request header</span><button class="code-copy" type="button" data-copy aria-label="Copy"><svg class="ico" aria-hidden="true"><use href="#i-copy"/></svg><span data-copy-label>Copy</span></button></div>
 <pre><code>Authorization: Bearer ecd_...</code></pre>
     </div>
-{{if .KeyCap}}    <aside class="callout" data-kind="warning"><svg class="ico" aria-hidden="true"><use href="#i-warn"/></svg><div><p class="callout-title">Over the daily cap</p><p>When a key has used its {{.KeyCap}} requests for the UTC day, the API answers <code>429 daily_quota_exceeded</code> with a <code>Retry-After</code> header: the number of seconds until 00:00 UTC, when the cap resets. The per-minute limits still answer <code>rate_limited</code>. Keep the secret private: anyone who has it can spend your quota.</p></div></aside>
+{{if .KeyCap}}    <aside class="callout" data-kind="warning"><svg class="ico" aria-hidden="true"><use href="#i-warn"/></svg><div><p class="callout-title">Over the daily cap</p><p>When a key has used its {{.KeyCap}} requests for the UTC day{{if .AnonCap}} (or, without a key, a client its {{.AnonCap}} trial requests){{end}}, the API answers <code>429 daily_quota_exceeded</code> with a <code>Retry-After</code> header: the number of seconds until 00:00 UTC, when the cap resets. The per-minute limits still answer <code>rate_limited</code>. Keep the secret private: anyone who has it can spend your quota.</p></div></aside>
 {{end}}    <p>Questions about keys, or a key that does not work: the <a href="https://discord.gg/XZzkH38dt9">EVE-Cyno Discord</a>.</p>
 {{else}}    <p>Keys are personal to you, are not to be shared or resold, and may be revoked at any time, for example for abuse. Keyed callers are rate limited per key. No keys are issued yet; news lands on the <a href="https://discord.gg/XZzkH38dt9">EVE-Cyno Discord</a> first.</p>
 {{end}}

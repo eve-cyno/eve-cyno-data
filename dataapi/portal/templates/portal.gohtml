@@ -20,7 +20,7 @@
         <a class="btn" href="/docs/">Read the docs</a>
         <a class="btn" href="https://discord.gg/XZzkH38dt9"><svg class="ico" aria-hidden="true"><use href="#i-discord"/></svg>Discord</a>
       </div>
-      <p class="hero-note">Free · non-commercial · {{if not .Auth}}no account · {{end}}<span data-slot="tools_public">{{.Stats.Public}}</span> tools need no key{{if .SelfServe}}. No account needed. A free key (Discord or ai.eve-cyno.dev sign-in) unlocks more.{{else if .Auth}}. A key from the operator unlocks more.{{end}}</p>
+      <p class="hero-note">Free · non-commercial · {{if .Auth}}Try it without a key or an account{{if .AnonCap}} (trial limits, {{.AnonCap}} requests a day){{else}} (trial limits){{end}}{{else}}no account · <span data-slot="tools_public">{{.Stats.Public}}</span> tools need no key{{end}}{{if .SelfServe}}. A free key (Discord or ai.eve-cyno.dev sign-in) connects it to your own client: Claude Code, your own model or a bot.{{else if .Auth}}. A key from the operator connects it to your own client: Claude Code, your own model or a bot.{{end}}</p>
     </div>
 
     <div class="install reveal-2" role="group" aria-label="Install the Claude Code plugin">
@@ -58,8 +58,8 @@
   <div class="wrap">
     <dl>
       <div class="stat"><dt><i aria-hidden="true"></i>Tools offered</dt><dd><span data-slot="tools_offered">{{.Stats.Offered}}</span><small><span data-slot="tools_public">{{.Stats.Public}}</span> public, no key</small></dd></div>
-      <div class="stat"><dt><i aria-hidden="true"></i>Live ESI tools</dt><dd><span data-slot="tools_upstream">{{.Stats.Upstream}}</span><small>shared cache, {{.Lim.UpstreamTool}} calls/min</small></dd></div>
-      <div class="stat"><dt><i aria-hidden="true"></i>MCP budget</dt><dd><span data-slot="limit_mcp">{{.Lim.MCP}}</span><small>requests/min per caller</small></dd></div>
+      <div class="stat"><dt><i aria-hidden="true"></i>Live ESI tools</dt><dd><span data-slot="tools_upstream">{{.Stats.Upstream}}</span><small>shared cache, {{.Lim.UpstreamTool}} calls/min{{if ne .KeyLim.UpstreamTool .Lim.UpstreamTool}} ({{.KeyLim.UpstreamTool}} with a key){{end}}</small></dd></div>
+      <div class="stat"><dt><i aria-hidden="true"></i>MCP budget</dt><dd><span data-slot="limit_mcp">{{.Lim.MCP}}</span><small>requests/min per caller{{if ne .KeyLim.MCP .Lim.MCP}} ({{.KeyLim.MCP}} with a key){{end}}</small></dd></div>
       <div class="stat"><dt><i aria-hidden="true"></i>Status</dt><dd><span data-slot="health">{{.Health}}</span><small>{{.Prefix}}/health</small></dd></div>
     </dl>
   </div>
@@ -114,7 +114,7 @@
     <ul class="sources">
       <li class="source"><svg class="ico" aria-hidden="true"><use href="#i-db"/></svg><h3>Static data (SDE)</h3><p>Items, ships, skills, stations, regions, routes, reprocessing and production chains from the official export.</p><div class="meta">via <b>Fuzzwork</b> · EVE Developer License</div></li>
       <li class="source" data-acc="blue"><svg class="ico" aria-hidden="true"><use href="#i-gear"/></svg><h3>Gofa fit engine</h3><p>A Go dogma engine. Validate an EFT fit, then get DPS, EHP, speed, align and capacitor. All-V skills, no implants.</p><div class="meta"><b>validate_fitting</b> · <b>compute_fit_stats</b></div></li>
-      <li class="source" data-acc="green"><svg class="ico" aria-hidden="true"><use href="#i-live"/></svg><h3>Live ESI</h3><p>Jita prices, type info, sovereignty and system activity, through a shared cache that follows ESI's <code>Expires</code>.</p><div class="meta"><b data-slot="tools_upstream">{{.Stats.Upstream}}</b> tools · {{.Lim.UpstreamTool}} calls/min per caller</div></li>
+      <li class="source" data-acc="green"><svg class="ico" aria-hidden="true"><use href="#i-live"/></svg><h3>Live ESI</h3><p>Jita prices, type info, sovereignty and system activity, through a shared cache that follows ESI's <code>Expires</code>.</p><div class="meta"><b data-slot="tools_upstream">{{.Stats.Upstream}}</b> tools · {{.Lim.UpstreamTool}} calls/min per caller{{if ne .KeyLim.UpstreamTool .Lim.UpstreamTool}} ({{.KeyLim.UpstreamTool}} with a key){{end}}</div></li>
       <li class="source" data-acc="red"><svg class="ico" aria-hidden="true"><use href="#i-fit"/></svg><h3>Community fits</h3><p>Searchable fits from public fitting sites. Every fit keeps its source link and author credit. Not a dataset to republish.</p><div class="meta">at most <b>{{.Stats.FitMax}}</b> fits per answer</div></li>
       <li class="source" data-acc="muted"><svg class="ico" aria-hidden="true"><use href="#i-book"/></svg><h3>EVE University wiki</h3><p>Condensed reference text for questions the SDE cannot answer. Keep the credit, share alike.</p><div class="meta"><b>CC BY-SA 4.0</b></div></li>
     </ul>
@@ -125,7 +125,7 @@
       <div class="tier-group" data-tier="public">
         <div class="tier-head">
           <span class="badge" data-tier="public">public</span><h3>No key</h3><span class="n">{{.Stats.Public}} {{plural .Stats.Public "tool"}}</span>
-          <p class="tier-rule">Anyone, anonymous included: SDE lookups, the fit engine and {{.Stats.Upstream}} live ESI reads.</p>
+          <p class="tier-rule">Anyone, anonymous included: SDE lookups, the fit engine, community fits and {{.Stats.Upstream}} live ESI reads.</p>
         </div>
         <ul class="tool-list">
 {{range .Tools.Public}}          <li class="tool-row" data-tier="public"{{if .Upstream}} data-upstream="true"{{end}}><a class="tool-name" href="/docs/tools/{{.Name}}">{{.Name}}</a>{{if .Upstream}}<span class="tool-badges"><span class="badge badge-live">live ESI</span></span>{{end}}<p class="tool-desc">{{.Summary}}</p></li>
@@ -144,7 +144,7 @@
 {{end}}{{if .Tools.Keyed}}        <div class="tier-group" data-tier="keyed">
           <div class="tier-head">
             <span class="badge" data-tier="keyed">keyed</span><h3>API key</h3><span class="n">{{len .Tools.Keyed}} {{plural (len .Tools.Keyed) "tool"}}</span>
-            <p class="tier-rule">A valid API key. <span data-slot="keys_note">{{if .SelfServe}}Free: run <code>/apikey create</code> in the <a href="https://discord.gg/XZzkH38dt9">EVE-Cyno Discord</a>, or sign in on ai.eve-cyno.dev → Settings → Data API keys. Without a key these answer <code>401 api_key_required</code>.{{else if .Auth}}Keys are issued by the operator of this service. Without a key these answer <code>401 api_key_required</code>.{{else}}No keys are issued yet; these answer <code>401 api_key_required</code>.{{end}}</span></p>
+            <p class="tier-rule">A valid API key. <span data-slot="keys_note">{{if .SelfServe}}Free: run <code>/apikey create</code> in the <a href="https://discord.gg/XZzkH38dt9">EVE-Cyno Discord</a>, or sign in on ai.eve-cyno.dev → Settings → Data API keys. Without a key {{if eq (len .Tools.Keyed) 1}}this answers{{else}}these answer{{end}} <code>401 api_key_required</code>.{{else if .Auth}}Keys are issued by the operator of this service. Without a key {{if eq (len .Tools.Keyed) 1}}this answers{{else}}these answer{{end}} <code>401 api_key_required</code>.{{else}}No keys are issued yet; {{if eq (len .Tools.Keyed) 1}}this answers{{else}}these answer{{end}} <code>401 api_key_required</code>.{{end}}{{if .Auth}} Free-text fit search (<code>q</code> on <code>/v1/fits/search</code>) needs a key too; the filters do not.{{end}}</span></p>
           </div>
           <ul class="tool-list">
 {{range .Tools.Keyed}}            <li class="tool-row" data-tier="keyed"><a class="tool-name" href="/docs/tools/{{.Name}}">{{.Name}}</a><p class="tool-desc">{{.Summary}}</p></li>
@@ -184,18 +184,19 @@
   <div class="wrap">
     <div class="s-head">
       <p class="eyebrow">Access &amp; limits</p>
-      <h2>Free. Non-commercial. No key for public tools.</h2>
-      <p>Hobby-run, no SLA. Limits are per caller: per API key when one is sent, otherwise per client IP, over a sliding window.</p>
+      <h2>Free. Non-commercial. {{if .Auth}}Try it without a key.{{else}}No key for public tools.{{end}}</h2>
+      <p>Hobby-run, no SLA. {{if .Auth}}Without a key the API is for trying it out; a free key is for connecting it to Claude Code, your own model or a bot. {{end}}Limits are per caller: per API key when one is sent, otherwise per client IP, over a sliding window.</p>
     </div>
     <div class="access">
-      <div class="access-card"><div class="top"><span class="badge" data-tier="public">public</span><span class="big">{{.Stats.Public}}<small>{{plural .Stats.Public "tool"}}</small></span></div><p>Anyone, no key.</p></div>
+      <div class="access-card"><div class="top"><span class="badge" data-tier="public">public</span><span class="big">{{.Stats.Public}}<small>{{plural .Stats.Public "tool"}}</small></span></div><p>Anyone, no key{{if .Auth}} (trial limits){{end}}.</p></div>
       <div class="access-card"><div class="top"><span class="badge" data-tier="byo-key">byo-key</span><span class="big">{{len .Tools.BYO}}<small>{{plural (len .Tools.BYO) "tool"}}</small></span></div><p>Your own Janice API key in <code>X-Janice-Key</code>, used for that request only, never stored or logged.</p></div>
-      <div class="access-card"><div class="top"><span class="badge" data-tier="keyed">keyed</span><span class="big">{{len .Tools.Keyed}}<small>{{plural (len .Tools.Keyed) "tool"}}</small></span></div><p>A valid API key: <code>Authorization: Bearer &lt;key&gt;</code> or <code>X-API-Key</code>.{{if .SelfServe}} Free: run <code>/apikey create</code> in the <a href="https://discord.gg/XZzkH38dt9">EVE-Cyno Discord</a>, or sign in on ai.eve-cyno.dev → Settings → Data API keys. <a href="/docs/access#access-keys">How keys work</a>{{else if .Auth}} Keys are issued by the operator of this service. <a href="/docs/access#access-keys">How keys work</a>{{else}} No keys are issued on this service yet.{{end}}</p></div>
+      <div class="access-card"><div class="top"><span class="badge" data-tier="keyed">keyed</span><span class="big">{{len .Tools.Keyed}}<small>{{plural (len .Tools.Keyed) "tool"}}</small></span></div><p>{{if .Auth}}Plus free-text fit search. {{end}}A valid API key: <code>Authorization: Bearer &lt;key&gt;</code> or <code>X-API-Key</code>.{{if .SelfServe}} Free: run <code>/apikey create</code> in the <a href="https://discord.gg/XZzkH38dt9">EVE-Cyno Discord</a>, or sign in on ai.eve-cyno.dev → Settings → Data API keys. <a href="/docs/access#access-keys">How keys work</a>{{else if .Auth}} Keys are issued by the operator of this service. <a href="/docs/access#access-keys">How keys work</a>{{else}} No keys are issued on this service yet.{{end}}</p></div>
     </div>
     <div class="limits-row" aria-label="Rate limits per minute">
-{{range .LimitCards}}      <div class="limit"><b>{{.Max}}<small>/{{.Unit}}</small></b><span>{{.Label}}</span></div>
+{{range .LimitCards}}      <div class="limit"><b>{{.Max}}<small>/{{.Unit}}</small></b><span>{{.Label}}{{if .KeyMax}} · {{.KeyMax}} with a key{{end}}</span></div>
+{{end}}{{if .AnonCap}}      <div class="limit"><b>{{.AnonCap}}<small>/day</small></b><span>without a key, per client{{if .KeyCap}} · {{.KeyCap}} per key{{end}}</span></div>
 {{end}}    </div>
-    <p class="pledge">Over a limit you get <code>429</code> with <code>Retry-After</code>. {{template "keyLimits" .}}<span>{{if .SelfServe}}No cookies, no analytics. An account only if you create an API key.{{else}}No cookies, no accounts, no analytics.{{end}} Your IP is held in memory for the limiter only. <a href="/docs/access">Every limit</a> · <a href="{{.URL}}/terms">Terms</a></span></p>
+    <p class="pledge">Over a limit you get <code>429</code> with <code>Retry-After</code>. {{template "keyLimits" .}}<span>{{if .SelfServe}}No cookies, no analytics. An account only if you create an API key.{{else}}No cookies, no accounts, no analytics.{{end}} Your IP is held in memory for the limits only{{if .AnonCap}}, including the daily trial count{{end}}. <a href="/docs/access">Every limit</a> · <a href="{{.URL}}/terms">Terms</a></span></p>
   </div>
 </section>
 
@@ -227,4 +228,4 @@
 </html>
 {{end}}
 
-{{define "keyLimits"}}{{if .Auth}}{{if .KeyFactor}}A key {{.KeyRaises}} the per-minute limits{{end}}{{if .KeyCap}}{{if .KeyFactor}} and adds{{else}}A key adds{{end}} a cap of {{.KeyCap}} requests a day per key (UTC day): over it, <code>429 daily_quota_exceeded</code>, with <code>Retry-After</code> set to the seconds until 00:00 UTC{{end}}{{if or .KeyFactor .KeyCap}}. {{end}}Live ESI tools stay at {{.Lim.UpstreamTool}} calls/min per caller, key or not. {{end}}{{end}}
+{{define "keyLimits"}}{{if .Auth}}{{if .KeysRaise}}A key raises the limits for daily use: the numbers above are the trial limit, the key limit follows. {{end}}{{if or .AnonCap .KeyCap}}The daily cap is {{if .AnonCap}}{{.AnonCap}} requests per client without a key{{if .KeyCap}} and {{.KeyCap}} per key{{end}}{{else}}{{.KeyCap}} requests per key{{end}} (UTC day{{if .AnonCap}}; docs pages do not count{{end}}): over it, <code>429 daily_quota_exceeded</code>, with <code>Retry-After</code> set to the seconds until 00:00 UTC. {{end}}{{end}}{{end}}

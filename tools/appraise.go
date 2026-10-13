@@ -31,6 +31,7 @@ func appraiseItems(ctx context.Context, c *Client, items string, janiceAPIKey st
 	}
 	req.Header.Set("Content-Type", "text/plain")
 	req.Header.Set("X-ApiKey", janiceAPIKey)
+	req.Header.Set("User-Agent", c.userAgent())
 	req.Header.Set("accept-encoding", "")
 
 	resp, err := c.HTTP.Do(req)

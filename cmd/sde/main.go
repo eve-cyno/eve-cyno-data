@@ -34,7 +34,9 @@ import (
 	"syscall"
 
 	coreconfig "eve-cyno.dev/go/data/config"
+	"eve-cyno.dev/go/data/esi"
 	"eve-cyno.dev/go/data/sde/build"
+	"eve-cyno.dev/go/data/version"
 )
 
 // refresher is the part of *build.Builder this command uses; tests inject a fake.
@@ -121,7 +123,7 @@ func main() {
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
-	if err := run(ctx, build.New(opts.out), opts, log); err != nil {
+	if err := run(ctx, build.New(opts.out, esi.ProjectUserAgent(version.Version(), os.Getenv)), opts, log); err != nil {
 		log.Error("sde failed", "error", err)
 		os.Exit(1)
 	}

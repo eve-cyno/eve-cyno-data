@@ -232,7 +232,12 @@ func TestOpenAPI_StatesTheConfiguredRateLimit(t *testing.T) {
 	s.Limits.FitStats = Rate{Max: 7, Window: s.Limits.FitStats.Window}
 	y, err := OpenAPIYAML(s)
 	require.NoError(t, err)
-	require.Contains(t, string(y), "Rate limit: 7 requests per minute per caller (per API key when one is sent, otherwise per client IP).")
+	require.Contains(t, string(y), "Rate limit: 7 requests per minute per client IP without an API key, 14 per minute per API key with one.")
+
+	s.Auth = false
+	y, err = OpenAPIYAML(s)
+	require.NoError(t, err)
+	require.Contains(t, string(y), "Rate limit: 7 requests per minute per caller (per API key when one is sent, otherwise per client IP).", "a service without keys states one number")
 
 	s.Limits.FitStats = Rate{}
 	y, err = OpenAPIYAML(s)

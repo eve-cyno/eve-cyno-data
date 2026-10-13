@@ -1,6 +1,11 @@
 package rag
 
-import "eve-cyno.dev/go/data/corpus"
+import (
+	"net/url"
+	"strings"
+
+	"eve-cyno.dev/go/data/corpus"
+)
 
 // Per-hit attribution (roadmap R3.6). Every corpus hit Product A serves carries an
 // Attribution: where the text came from, the link to the original, who made it
@@ -16,6 +21,16 @@ const (
 	WikiLicense    = "CC BY-SA 4.0"
 	WikiLicenseURL = "https://creativecommons.org/licenses/by-sa/4.0/"
 	WikiCredit     = "EVE University"
+)
+
+// SDECredit and SDELicenseURL are what a curated doc built from the EVE Static Data
+// Export carries: the data is Fenris Creations' (formerly CCP Games), used under the EVE
+// Developer License Agreement. A doc is SDE-derived when its url is the static-data page
+// (see isSDEURL); it does not matter which source type it is filed under.
+const (
+	SDELicense    = "EVE Developer License Agreement (EVE Static Data Export, Fenris Creations game data)"
+	SDELicenseURL = "https://developers.eveonline.com/license-agreement"
+	SDECredit     = "Fenris Creations (EVE Static Data Export)"
 )
 
 // SourceWiki is the licence-table key of EVE University wiki chunks. They carry the
@@ -67,7 +82,8 @@ var sourceLicenses = map[string]SourceLicense{
 		License: "Public API under zKillboard's usage etiquette; killmails are CCP game data (EVE Developer License Agreement)",
 	},
 	// Curated docs written for this project; the wiki_supplement ones rework EVE
-	// University material, so they carry the wiki's share-alike terms.
+	// University material, so they carry the wiki's share-alike terms, unless their
+	// url is the SDE static-data page: AttributionFor then credits Fenris Creations.
 	corpus.SourceTypeUIGuide:        {License: "Project documentation (EVE-Cyno)"},
 	corpus.SourceTypeWikiSupplement: {License: WikiLicense, LicenseURL: WikiLicenseURL, Credit: WikiCredit},
 	SourceWiki:                      {License: WikiLicense, LicenseURL: WikiLicenseURL, Credit: WikiCredit},
@@ -94,6 +110,10 @@ func LicenseSourceKeys() []string {
 // gets the most restrictive wording instead of an empty licence.
 func AttributionFor(source, sourceURL string) Attribution {
 	l, ok := sourceLicenses[source]
+	if ok && isSourceType(source) && isSDEURL(sourceURL) {
+		// Filed as wiki_supplement (or another curated type) but built from the SDE.
+		l = SourceLicense{License: SDELicense, LicenseURL: SDELicenseURL, Credit: SDECredit}
+	}
 	if !ok {
 		l = SourceLicense{License: "Licence unknown; do not redistribute"}
 	}
@@ -112,4 +132,26 @@ func WikiAttribution(pageTitle, pageURL string) Attribution {
 func (a Attribution) withSource(s string) Attribution {
 	a.Source = s
 	return a
+}
+
+// isSourceType reports whether key is a curated-doc type (corpus.SourceTypes), the only
+// corpus entries whose terms depend on what the doc was built from.
+func isSourceType(key string) bool {
+	for _, t := range corpus.SourceTypes() {
+		if t == key {
+			return true
+		}
+	}
+	return false
+}
+
+// isSDEURL reports whether u is the EVE developer portal's static-data page, the url a
+// curated doc built from the Static Data Export carries in its frontmatter.
+func isSDEURL(u string) bool {
+	p, err := url.Parse(strings.TrimSpace(u))
+	if err != nil || !strings.EqualFold(p.Hostname(), "developers.eveonline.com") {
+		return false
+	}
+	path := strings.ToLower(strings.TrimRight(p.Path, "/"))
+	return path == "/static-data" || strings.HasPrefix(path, "/static-data/")
 }

@@ -373,3 +373,38 @@ func TestSDEOnly_FitSearchIs503AndHealthSaysNoCorpus(t *testing.T) {
 
 	require.JSONEq(t, `{"status":"ok","sde":false,"corpus":false,"corpus_configured":false,"stats":false}`, do(a, "GET", "/v1/health", "").Body.String())
 }
+
+// A call that lacks a required argument is refused before the tool runs: the schema's
+// "required" list is the contract, and a model should be told what it got wrong.
+func TestTool_MissingRequiredArgumentsIs400(t *testing.T) {
+	a := newAPI(t, dataapi.Config{
+		Deps:    dataapi.Deps{Tools: &tools.Deps{SDE: realSDE(t)}},
+		ToolAPI: dataapi.ToolAPILoopback,
+	})
+	rec := do(a, "POST", "/v1/tool/get_jumps_between", `{}`)
+	requireError(t, rec, http.StatusBadRequest, "invalid_arguments")
+	require.Contains(t, rec.Body.String(), "from_system, to_system")
+
+	rec = do(a, "POST", "/v1/tool/get_jumps_between", `{"from":"Jita","to":"Amarr"}`)
+	requireError(t, rec, http.StatusBadRequest, "invalid_arguments")
+	require.Contains(t, rec.Body.String(), "unexpected argument(s): from, to")
+
+	require.Equal(t, http.StatusOK, do(a, "POST", "/v1/tool/get_jumps_between", `{"from_system":"Jita","to_system":"Amarr"}`).Code)
+}
+
+// A malformed call is refused before the upstream budget is charged: with a budget of
+// one, the bad call must not make the next valid one a 429.
+func TestTool_InvalidArgumentsDoNotSpendTheUpstreamBudget(t *testing.T) {
+	limits := dataapi.DefaultLimits()
+	limits.Tool = dataapi.Rate{}
+	limits.UpstreamTool = dataapi.Rate{Max: 1, Window: time.Minute}
+	a := newAPI(t, dataapi.Config{
+		Deps:     dataapi.Deps{Tools: &tools.Deps{}},
+		ToolAPI:  dataapi.ToolAPIPublic,
+		Limits:   &limits,
+		Upstream: dataapi.NewUpstreamLimiter(limits.UpstreamTool, nil),
+	})
+	requireError(t, do(a, "POST", "/v1/tool/get_market_price", `{}`), http.StatusBadRequest, "invalid_arguments")
+	require.Equal(t, http.StatusOK, do(a, "POST", "/v1/tool/get_market_price", `{"type_id":0}`).Code)
+	requireError(t, do(a, "POST", "/v1/tool/get_market_price", `{"type_id":0}`), http.StatusTooManyRequests, "rate_limited")
+}

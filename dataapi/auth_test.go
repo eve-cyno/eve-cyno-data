@@ -258,9 +258,9 @@ func TestToolTiers_MatrixCoversEveryTier(t *testing.T) {
 
 func TestToolTiers_ServiceWithoutKeysRefusesKeyedTools(t *testing.T) {
 	api, _ := tierAPI(t, dataapi.ToolAPIPublic, nil)
-	requireError(t, do(api, "POST", "/v1/tool/get_fits", `{}`), http.StatusUnauthorized, "api_key_required")
+	requireError(t, do(api, "POST", "/v1/tool/analyze_battle", `{}`), http.StatusUnauthorized, "api_key_required")
 	// A key header is not an error when there is nothing to check it against.
-	requireError(t, do(api, "POST", "/v1/tool/get_fits", `{}`, "X-API-Key", keyAlpha), http.StatusUnauthorized, "api_key_required")
+	requireError(t, do(api, "POST", "/v1/tool/analyze_battle", `{}`, "X-API-Key", keyAlpha), http.StatusUnauthorized, "api_key_required")
 	require.Empty(t, gateCode(t, do(api, "POST", "/v1/tool/get_jumps_between", `{}`)))
 }
 
@@ -270,7 +270,7 @@ func TestToolTiers_KeyWithoutTheKeyedAllowanceIsForbidden(t *testing.T) {
 		ToolAPI: dataapi.ToolAPIPublic,
 		Auth:    fixedAuth{c: dataapi.NewCaller("limited")}, // authenticated, no keyed allowance
 	})
-	requireError(t, do(api, "POST", "/v1/tool/get_fits", `{}`, "X-API-Key", "whatever"), http.StatusForbidden, "key_not_permitted")
+	requireError(t, do(api, "POST", "/v1/tool/analyze_battle", `{}`, "X-API-Key", "whatever"), http.StatusForbidden, "key_not_permitted")
 }
 
 type fixedAuth struct{ c dataapi.Caller }
@@ -329,10 +329,10 @@ func TestJaniceKey_NeverAppearsInLogsOrResponses(t *testing.T) {
 	}{
 		{"/v1/tool/appraise_items", []string{"X-Janice-Key", secret}},
 		{"/v1/tool/get_jumps_between", []string{"X-Janice-Key", secret}},
-		{"/v1/tool/get_fits", []string{"X-Janice-Key", secret}},                              // refused: 401
-		{"/v1/tool/convert_isk_to_real", []string{"X-Janice-Key", secret}},                   // refused: 403
-		{"/v1/tool/get_fits", []string{"X-Janice-Key", secret, "X-API-Key", keyAlpha}},       // runs
-		{"/v1/tool/get_fits", []string{"X-Janice-Key", secret, "Authorization", "Bearer x"}}, // invalid key
+		{"/v1/tool/analyze_battle", []string{"X-Janice-Key", secret}},                              // refused: 401
+		{"/v1/tool/convert_isk_to_real", []string{"X-Janice-Key", secret}},                         // refused: 403
+		{"/v1/tool/analyze_battle", []string{"X-Janice-Key", secret, "X-API-Key", keyAlpha}},       // runs
+		{"/v1/tool/analyze_battle", []string{"X-Janice-Key", secret, "Authorization", "Bearer x"}}, // invalid key
 	}
 	for _, c := range calls {
 		rec := do(api, "POST", c.path, `{"items":"Tritanium 1"}`, c.hdr...)

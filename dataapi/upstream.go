@@ -16,24 +16,30 @@ import (
 // UpstreamLimiter is the per-caller budget of the tools that can spend the project's
 // shared ESI budget (catalog.Tool.Upstream). It is stricter than the route limits and is
 // one budget across REST (/tool/{name}) and MCP: a caller cannot double it by using both.
-// The caller is named by a KeyResolver, like every other limit. A nil *UpstreamLimiter
-// allows everything.
+// The caller is named by a KeyResolver, like every other limit. A caller with an API key
+// gets the rate's KeyedMax (the same as Max when it sets none), one without gets Max. A nil
+// *UpstreamLimiter allows everything.
 type UpstreamLimiter struct {
-	l    *WindowLimiter
-	keys KeyResolver
+	anon, keyed *WindowLimiter
+	keys        KeyResolver
 }
 
 // NewUpstreamLimiter returns the limiter for rate, or nil when the rate is disabled. keys
-// nil means CallerKeys.
+// nil means CallerKeys. Build it from the limits the service really serves: on a service
+// that accepts no keys pass Limits.WithoutKeys().UpstreamTool, so everyone gets KeyedMax.
 func NewUpstreamLimiter(rate Rate, keys KeyResolver) *UpstreamLimiter {
-	l := limiterFor(rate)
-	if l == nil {
+	anon := limiterFor(rate.forAnon())
+	if anon == nil {
 		return nil
 	}
 	if keys == nil {
 		keys = CallerKeys{}
 	}
-	return &UpstreamLimiter{l: l, keys: keys}
+	u := &UpstreamLimiter{anon: anon, keyed: anon, keys: keys}
+	if k := rate.forKey(1); k != rate.forAnon() {
+		u.keyed = limiterFor(k)
+	}
+	return u
 }
 
 // Allow records one call of tool by the caller of r and reports whether it is within
@@ -46,7 +52,11 @@ func (u *UpstreamLimiter) Allow(r *http.Request, tool string) (ok bool, retryAft
 	if t, found := catalog.Lookup(tool); !found || !t.Upstream {
 		return true, 0
 	}
-	return u.l.Allow("upstream:" + u.keys.Key(r))
+	l := u.anon
+	if CallerFrom(r.Context()).Authenticated() {
+		l = u.keyed
+	}
+	return l.Allow("upstream:" + u.keys.Key(r))
 }
 
 // retrySeconds renders a wait as whole seconds, at least 1 (Retry-After).
@@ -63,7 +73,11 @@ func upstreamSentence(s Surface, t catalog.Tool) string {
 	var b strings.Builder
 	b.WriteString("Reads live public data from EVE's ESI through a shared cache that follows ESI's `Expires`.")
 	if r := s.Limits.UpstreamTool; r.Max > 0 && r.Window > 0 {
-		fmt.Fprintf(&b, " Its own fair-use limit is %d calls per %s per caller (REST and MCP together), on top of the route limit.", r.Max, windowWord(r))
+		if k := s.keyedRate(r); s.Auth && k.Max != r.Max {
+			fmt.Fprintf(&b, " Its own fair-use limit is %d calls per %s per caller without an API key and %d with one (REST and MCP together), on top of the route limit.", r.Max, windowWord(r), k.Max)
+		} else {
+			fmt.Fprintf(&b, " Its own fair-use limit is %d calls per %s per caller (REST and MCP together), on top of the route limit.", r.Max, windowWord(r))
+		}
 	}
 	b.WriteString(" When the shared ESI budget is nearly spent the call is refused with `503 upstream_busy` (MCP: an error result starting `upstream_busy`) and `Retry-After`; retry later.")
 	return b.String()

@@ -21,11 +21,11 @@ Everything is one tool registry (`catalog`) published three ways, so the descrip
 | MCP | stdio: `cmd/mcp`; streamable HTTP: `POST /v1/mcp` of `cmd/dataapi` | stateless, JSON responses |
 | `llms.txt` | [`llms.txt`](llms.txt), [`llms-full.txt`](llms-full.txt); served at `/llms.txt`, `/llms-full.txt` | the same information in prose |
 
-A hosted instance runs at `https://data.eve-cyno.dev` (anyone can call the public tools, rate limited per IP; free API keys unlock the keyed tools and
-higher limits; `appraise_items` needs your own `X-Janice-Key`). Its portal at
+A hosted instance runs at `https://data.eve-cyno.dev` (anyone can try the public tools without a key, on trial limits: a few requests a minute and 200 a day per client; a free API
+key is for real use, with higher limits, the keyed tool and free-text fit search; `appraise_items` needs your own `X-Janice-Key`). Its portal at
 [`https://data.eve-cyno.dev/`](https://data.eve-cyno.dev/) (JSON index with `Accept: application/json`) links the developer docs under
-[`/docs/`](https://data.eve-cyno.dev/docs/): getting started, the Claude Code plugin, MCP, REST, one page per tool (17 public, 1 byo-key,
-3 keyed), access tiers and limits, attribution. The pages are generated from the tool registry and the route table (templates in
+[`/docs/`](https://data.eve-cyno.dev/docs/): getting started, the Claude Code plugin, MCP, REST, one page per tool (19 public, 1 byo-key,
+1 keyed), access tiers and limits, attribution. The pages are generated from the tool registry and the route table (templates in
 [`dataapi/portal/`](dataapi/portal/)); the example responses are recorded from the live service. The
 [terms of use](https://data.eve-cyno.dev/terms) (source in [`dataapi/terms.md`](dataapi/terms.md)) apply to it.
 Everything below uses `http://localhost:8092`, a server
@@ -90,8 +90,8 @@ Every tool has one tier, enforced identically on REST and MCP:
 
 | Tier | Tools | Who may run it |
 |---|---|---|
-| public (17) | `get_jumps_between`, `get_systems_in_region`, `get_npc_stations`, `get_reprocessing_yield`, `get_required_skills`, `get_production_chain`, `find_canonical_module`, `search_item_by_name`, `get_ship_stats`, `get_hull_facts`, `get_ship_bonuses`, `compute_fit_stats`, `validate_fitting`; live ESI data: `get_market_price`, `get_type_info`, `get_sovereignty`, `get_system_activity` | anyone (the four ESI tools have a lower per-caller limit, see below) |
-| keyed (3) | `get_fits`, `list_fits`, `analyze_battle` | a valid API key |
+| public (19) | `get_jumps_between`, `get_systems_in_region`, `get_npc_stations`, `get_reprocessing_yield`, `get_required_skills`, `get_production_chain`, `find_canonical_module`, `search_item_by_name`, `get_ship_stats`, `get_hull_facts`, `get_ship_bonuses`, `compute_fit_stats`, `validate_fitting`; community fits: `get_fits`, `list_fits` (a payload-filtered corpus scroll, no embedding call); live ESI data: `get_market_price`, `get_type_info`, `get_sovereignty`, `get_system_activity` | anyone (on a service that issues keys, without one the limits below are trial limits; the four ESI tools have a lower per-caller limit) |
+| keyed (1) | `analyze_battle` | a valid API key |
 | byo-key (1) | `appraise_items` | anyone who sends their **own** Janice key in the `X-Janice-Key` header (used for that request only, never logged or stored) |
 | disabled (1) | `convert_isk_to_real` | nobody on a public surface |
 
@@ -99,12 +99,16 @@ Arguments and result types of every tool are in [`llms-full.txt`](llms-full.txt)
 
 **Live ESI tools.** `get_market_price`, `get_type_info`, `get_sovereignty` and `get_system_activity` read public (unauthenticated)
 EVE ESI routes. They answer from a shared in-memory cache that follows ESI's `Expires`/`ETag` (concurrent callers share one upstream
-request), count against their own budget of `DATAAPI_UPSTREAM_TOOL_LIMIT` calls per minute per caller (default 10, REST and MCP
-together; 0 disables) on top of the route limits, never send a `type_id` the SDE does not know, and keep `DATAAPI_ESI_GUARD_PERCENT`
+request), count against their own budget of `DATAAPI_UPSTREAM_TOOL_LIMIT` calls per minute per caller without an API key (default 5; a
+caller with a key gets twice as many; REST and MCP together; 0 disables) on top of the route limits, never send a `type_id` the SDE does not know, and keep `DATAAPI_ESI_GUARD_PERCENT`
 (default 25) of every ESI rate-limit group unspent: below that a call is not sent and answers `503 upstream_busy` with `Retry-After`
 (MCP: an error result starting `upstream_busy`). Every ESI call is logged as `esi_call` (no caller, no payload). Set
 `ESI_CONTACT` so ESI can reach the operator. To take the four tools off the public tier, move them back to keyed in
 `catalog.tierTable`.
+
+**Fit search and keys.** `GET /v1/fits/search` filters the corpus by payload fields and works without a key. With `q` it runs a
+vector search (the query is embedded through a paid provider), so on a service that accepts keys `q` needs one: a keyless
+request with a non-empty `q` is `401 api_key_required` (`401 invalid_api_key` for a key that is not valid).
 
 ### Authentication
 
@@ -126,7 +130,8 @@ DATAAPI_API_KEYS_FILE=keys.txt DATAAPI_EXPOSE_TOOL_API=true DATAAPI_EXPOSE_MCP=t
 ```
 
 A client sends the key as `Authorization: Bearer <key>` or `X-API-Key: <key>`. With neither a key file nor a key store there
-are no keys: keyed tools answer 401 and are left out of the documents and the MCP tool list.
+are no keys: keyed tools answer 401 and are left out of the documents and the MCP tool list. Such a service has nobody to give a
+key to, so it serves everyone the keyed numbers of the table below, has no daily cap for clients and leaves `q` open.
 
 #### Admin API (key store only)
 
@@ -142,6 +147,7 @@ requests that carry `CF-Connecting-IP`). Every request needs `Authorization: Bea
 | `GET`/`POST /admin/v1/ops/keys` | operator: every key plus the block list; issue a key for any owner (exempt from the per-day create limit) |
 | `PATCH`/`DELETE /admin/v1/ops/keys/{id}` | operator: change the daily cap; revoke any key |
 | `GET /admin/v1/ops/keys/{id}/usage` | operator: request history (`?days=1..30`) |
+| `GET /admin/v1/ops/usage` | operator: day history of every key with usage (`?days=1..30`; `{"days","keys":{id:[day rows]}}`) |
 | `PUT`/`DELETE /admin/v1/ops/owners/{owner}/block` | operator: block an owner and revoke their keys; unblock |
 | `DELETE /admin/v1/ops/owners/{owner}` | operator: delete all of an owner's key records, usage and block-list entry (`200 {"owner","keys_deleted"}`) |
 
@@ -168,18 +174,31 @@ Over MCP an invalid key is the same 401 before the protocol starts; a tool you m
 
 ### Rate limits
 
-Per caller (per API key when one is sent, otherwise per client IP), sliding window, per minute. A key gets
-`DATAAPI_KEYED_LIMIT_FACTOR` times the route limits below (default 2) except on the live-ESI tools, and, with a key store,
-a daily request cap (`DATAAPI_KEY_DAILY_CAP`, default 10000, `0` = none; UTC day) that answers `429 daily_quota_exceeded`:
+Per caller (per API key when one is sent, otherwise per client IP), sliding window, per minute. Without a key the service is for
+trying it out; a free key is for real use (connecting Claude Code, a model or a bot) and tells the operator who sends what.
+The numbers:
 
-| Route | Limit |
-|---|---|
-| `GET /v1/fits/search`, `GET /v1/items/search` | 120 |
-| `POST /v1/fits/detail`, `/v1/fit/stats`, `/v1/fit/suggest` | 60 |
-| `POST /v1/tool/{name}` | 30 |
-| `POST /v1/mcp` (an MCP session is a few requests plus one per tool call) | 60 |
-| the four live-ESI tools (`get_market_price`, `get_type_info`, `get_sovereignty`, `get_system_activity`), REST and MCP together, on top of the two rows above | 10 (`DATAAPI_UPSTREAM_TOOL_LIMIT`) |
-| `GET /`, `/docs/*`, `/terms*`, `/v1/openapi.*`, `/llms*.txt` (the static files under `/assets/` are not limited) | 60 |
+| Route | Without a key | With a key |
+|---|---|---|
+| `POST /v1/mcp` (an MCP session is a few requests plus one per tool call) | 20 | 120 |
+| `POST /v1/tool/{name}` | 10 | 60 |
+| `GET /v1/fits/search` | 30 | 240 |
+| the four live-ESI tools (`get_market_price`, `get_type_info`, `get_sovereignty`, `get_system_activity`), REST and MCP together, on top of the rows above | 5 (`DATAAPI_UPSTREAM_TOOL_LIMIT`) | 10 |
+| `GET /v1/items/search` | 120 | `DATAAPI_KEYED_LIMIT_FACTOR` times (default 2): 240 |
+| `POST /v1/fits/detail`, `/v1/fit/stats`, `/v1/fit/suggest` | 60 | 120 |
+| `GET /`, `/docs/*`, `/terms*`, `/v1/openapi.*`, `/llms*.txt` (the static files under `/assets/` are not limited) | 60 | 120 |
+
+The keyed number of a route is `Rate.KeyedMax` in `dataapi.Limits` (`dataapi.DefaultLimits()` holds the table); a route without
+one gets `DATAAPI_KEYED_LIMIT_FACTOR` times its limit. Daily caps, all in UTC days and answering `429 daily_quota_exceeded` with
+`Retry-After` set to the seconds until 00:00 UTC:
+
+- a client without a key: 200 requests a day (`DATAAPI_ANON_DAILY_CAP`, `0` = none), counted in memory per client IP, never persisted
+  or logged. The documentation pages, the portal assets and `/health` are not counted, so browsing the docs never spends the trial.
+  The table is bounded (100,000 clients a day; beyond that new clients are served uncounted and a warning is logged once a day);
+- a key: 10,000 requests a day with a key store (`DATAAPI_KEY_DAILY_CAP`, default 10000, `0` = none).
+
+The trial limits, the anonymous daily cap and the key-only `q` apply only on a service that accepts keys (a key file or a key
+store); without one everyone gets the "With a key" column and no daily cap.
 
 The limiter takes the client IP from Cloudflare's `CF-Connecting-IP` header and falls back to the TCP peer, so run the
 service on loopback or behind a Cloudflare tunnel; do not expose it directly to the internet.
@@ -254,7 +273,8 @@ curl -s -X POST $BASE/v1/fit/stats   -H 'Content-Type: application/json' \
 curl -s -X POST $BASE/v1/tool/get_jumps_between -H 'Content-Type: application/json' \
   -d '{"from_system":"Jita","to_system":"Amarr"}'
 
-# a keyed tool
+# free-text fit search, and any tool with a higher budget, need an API key
+curl -s "$BASE/v1/fits/search?q=cheap+armor+gila" -H "Authorization: Bearer $EVE_CYNO_API_KEY"
 curl -s -X POST $BASE/v1/tool/get_market_price -H "Authorization: Bearer $EVE_CYNO_API_KEY" \
   -H 'Content-Type: application/json' -d '{"type_id":34}'
 
@@ -284,7 +304,9 @@ Read from the process environment; the commands do not read a `.env` file.
 | `DATAAPI_API_KEYS_FILE` | dataapi | API key file, see [Authentication](#authentication) |
 | `DATAAPI_KEYS_DB` | dataapi | path of the self-serve key store (SQLite, created if missing); unset: key file only |
 | `DATAAPI_KEY_DAILY_CAP` | dataapi | daily request cap copied into each new key (integer 0-10000000, default 10000, `0` = none) |
-| `DATAAPI_KEYED_LIMIT_FACTOR` | dataapi | multiple of the route limits a keyed caller gets (integer 1-10, default 2); the live-ESI budget is never multiplied |
+| `DATAAPI_KEYED_LIMIT_FACTOR` | dataapi | multiple of the route limits a keyed caller gets on the routes with no explicit keyed figure (integer 1-10, default 2); MCP, tools, fit search and the live-ESI budget have their own keyed numbers |
+| `DATAAPI_ANON_DAILY_CAP` | dataapi | requests per UTC day for a client without an API key (integer 0-10000000, default 200, `0` = none); only where keys exist |
+| `DATAAPI_UPSTREAM_TOOL_LIMIT` | dataapi | live-ESI calls per minute per caller without a key (default 5; a key gets twice as many; `0` = no extra limit) |
 | `DATAAPI_ADMIN_TOKEN` | dataapi | bearer token of the admin API (at least 32 characters; never logged). Unset: no admin listener |
 | `DATAAPI_ADMIN_ADDR` | dataapi | admin listen address, default `127.0.0.1:8093`; served only when the key store and the token are both set |
 | `DATAAPI_PUBLIC_URL` | dataapi | the public origin, e.g. `https://data.eve-cyno.dev` (https, no path or query; invalid is a startup error). Makes the OpenAPI `servers` entry and the `llms*.txt` links absolute, which ChatGPT Actions need; unset keeps them relative |

@@ -7,8 +7,9 @@
 // Stdout is the protocol channel and carries nothing else; logs go to stderr as JSON.
 //
 // By default only the public tier is registered (the tools the hosted /v1/mcp endpoint
-// serves to anyone). Every other tool (the keyed ones: get_fits, list_fits, the ESI
-// pass-throughs, analyze_battle; appraise_items, which spends a Janice key; and
+// serves to anyone: the SDE and fit tools, the community-fit lookups and the four live ESI
+// tools get_market_price, get_type_info, get_sovereignty and get_system_activity). Every
+// other tool (the keyed one, analyze_battle; appraise_items, which spends a Janice key; and
 // convert_isk_to_real, disabled on public surfaces) is registered only with -all or
 // MCP_EXPOSE_ALL=true, for a process that runs on its owner's machine with the owner's
 // keys from the environment (JANICE_API_KEY, QDRANT_*, ...). The X-Janice-Key header

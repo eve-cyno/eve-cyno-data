@@ -40,6 +40,13 @@ const (
 type Client struct {
 	HTTP     *http.Client
 	Throttle *Throttle
+	// UserAgent is the project User-Agent sent to Janice, Frankfurter, zKillboard,
+	// br.evetools.org and WarBeacon (esi.ProjectUserAgent). Empty means "build it from
+	// the environment on use", so a Client literal with only HTTP and Throttle works.
+	UserAgent string
+	// brCache keeps br.evetools.org responses for a few minutes (zero value is ready).
+	brCache responseCache
+
 	// ESI is the shared ESI client. Nil means "build one from HTTP on first use", so a
 	// Client literal with only HTTP and Throttle still works.
 	ESI *esi.Client
@@ -68,8 +75,9 @@ type PublicESIOptions struct {
 func NewClientWithESI(o PublicESIOptions) *Client {
 	hc := &http.Client{Timeout: 30 * time.Second}
 	return &Client{
-		HTTP:     hc,
-		Throttle: NewThrottle(),
+		HTTP:      hc,
+		Throttle:  NewThrottle(),
+		UserAgent: projectUserAgent(),
 		ESI: newESIWith(hc, func(cfg *esi.Config) {
 			cfg.Observer = o.Observer
 			cfg.GuardPercent = o.GuardPercent
@@ -87,9 +95,10 @@ func NewClientWithESI(o PublicESIOptions) *Client {
 func NewClient() *Client {
 	hc := &http.Client{Timeout: 30 * time.Second}
 	return &Client{
-		HTTP:     hc,
-		Throttle: NewThrottle(),
-		ESI:      newESI(hc),
+		HTTP:      hc,
+		Throttle:  NewThrottle(),
+		UserAgent: projectUserAgent(),
+		ESI:       newESI(hc),
 	}
 }
 
@@ -98,10 +107,23 @@ func NewClient() *Client {
 func WithTransport(rt http.RoundTripper) *Client {
 	hc := &http.Client{Transport: rt}
 	return &Client{
-		HTTP:     hc,
-		Throttle: NewThrottle(),
-		ESI:      newESI(hc),
+		HTTP:      hc,
+		Throttle:  NewThrottle(),
+		UserAgent: projectUserAgent(),
+		ESI:       newESI(hc),
 	}
+}
+
+// projectUserAgent is the project User-Agent for this process: build version plus the
+// ESI_CONTACT contact, the same string the ESI client sends.
+func projectUserAgent() string { return esi.ProjectUserAgent(version.Version(), os.Getenv) }
+
+// userAgent returns the User-Agent for non-ESI requests.
+func (c *Client) userAgent() string {
+	if c.UserAgent != "" {
+		return c.UserAgent
+	}
+	return projectUserAgent()
 }
 
 // esiClient returns the ESI client, building it from c.HTTP on first use when c.ESI is nil.

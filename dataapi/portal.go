@@ -88,12 +88,14 @@ type navGroup struct {
 
 type limitCard struct {
 	Max         int
+	KeyMax      int // the budget with an API key; 0 when a key does not raise it
 	Unit, Label string
 }
 
 type limitRowView struct {
 	Route  string
 	Max    int
+	KeyMax int // the budget with an API key; 0 when a key does not raise it
 	Window string
 	Code   bool
 }
@@ -150,14 +152,16 @@ type pageData struct {
 	Health             string
 	Auth               bool
 	SelfServe          bool
-	KeyFactor          int    // multiple of the route limits a key gets; 0 unless keys are on and it is at least 2
+	KeysRaise          bool   // an API key raises the per-minute limit of at least one route
 	KeyCap             string // daily cap of a new key as "10,000"; "" unless keys are on and the cap is above 0
-	KeyMCP             int    // the MCP request limit of a keyed caller
+	AnonCap            string // daily cap of a caller without a key as "200"; "" unless keys are on and the cap is above 0
+	KeyMCP             int    // the MCP request limit of a keyed caller (KeyLim.MCP)
 	TermsUpdated       string
 	SearchIndex        template.JS
 
 	Stats      portalStats
-	Lim        portalLimits
+	Lim        portalLimits // per-minute limits without an API key (everyone's, on a service without keys)
+	KeyLim     portalLimits // per-minute limits with an API key (the same as Lim where a key does not raise them)
 	Tools      toolGroups
 	NavGroups  []navGroup
 	LimitCards []limitCard
@@ -226,20 +230,46 @@ func codeNames(ts []catalog.Tool) template.HTML {
 
 func perMin(r Rate) int { return r.Max }
 
-// keyFactor is the key limit multiple the pages state: 0 without keys or below 2.
-func keyFactor(s Surface) int {
-	if s.Auth && s.KeyedLimitFactor >= 2 {
-		return s.KeyedLimitFactor
+// limitsView is the per-minute limits of the Surface as the pages print them, for a caller
+// without an API key or (keyed) with one.
+func limitsView(s Surface, keyed bool) portalLimits {
+	l := s.Limits
+	at := func(r Rate) int {
+		if keyed {
+			return perMin(s.keyedRate(r))
+		}
+		return perMin(r)
 	}
-	return 0
+	return portalLimits{
+		MCP: at(l.MCP), Tool: at(l.Tool), UpstreamTool: at(l.UpstreamTool), FitsSearch: at(l.FitsSearch),
+		FitsDetail: at(l.FitsDetail), FitStats: at(l.FitStats), FitSuggest: at(l.FitSuggest),
+		ItemsSearch: at(l.ItemsSearch), Docs: at(l.Docs),
+	}
 }
 
 // keyCap is the daily cap of a new key as the pages print it ("10,000"); "" states none.
 func keyCap(s Surface) string {
-	if !s.Auth || s.KeyDailyCap <= 0 {
+	if !s.Auth {
 		return ""
 	}
-	digits := strconv.Itoa(s.KeyDailyCap)
+	return thousands(s.KeyDailyCap)
+}
+
+// anonCap is the daily cap of a caller without a key as the pages print it ("200"); ""
+// states none.
+func anonCap(s Surface) string {
+	if !s.Auth {
+		return ""
+	}
+	return thousands(s.AnonDailyCap)
+}
+
+// thousands prints n with comma separators; "" for n <= 0.
+func thousands(n int) string {
+	if n <= 0 {
+		return ""
+	}
+	digits := strconv.Itoa(n)
 	var b strings.Builder
 	for i, c := range digits {
 		if i > 0 && (len(digits)-i)%3 == 0 {
@@ -248,22 +278,6 @@ func keyCap(s Surface) string {
 		b.WriteRune(c)
 	}
 	return b.String()
-}
-
-// KeyRaises is the verb phrase for the key limit multiple: "doubles" or "multiplies by N".
-func (d pageData) KeyRaises() string {
-	if d.KeyFactor == 2 {
-		return "doubles"
-	}
-	return fmt.Sprintf("multiplies by %d", d.KeyFactor)
-}
-
-// KeyTwice is the subject phrase for the key limit multiple: "Twice" or "N times".
-func (d pageData) KeyTwice() string {
-	if d.KeyFactor == 2 {
-		return "Twice"
-	}
-	return fmt.Sprintf("%d times", d.KeyFactor)
 }
 
 func windowUnit(r Rate) string {
@@ -300,7 +314,6 @@ func newPageData(in portalInput, assetVersion string) pageData {
 			upstream = append(upstream, t)
 		}
 	}
-	l := s.Limits
 	origin := s.PublicURL
 	if origin == "" {
 		origin = hostedURL
@@ -323,18 +336,16 @@ func newPageData(in portalInput, assetVersion string) pageData {
 		Health:       health,
 		Auth:         s.Auth,
 		SelfServe:    s.Auth && s.SelfServe,
-		KeyFactor:    keyFactor(s),
+		KeysRaise:    s.Auth && s.keysRaise(),
 		KeyCap:       keyCap(s),
+		AnonCap:      anonCap(s),
 		TermsUpdated: updated,
 		Stats: portalStats{
 			Offered: len(offered), Public: len(pub), BYO: len(byo), Keyed: len(keyed),
 			Disabled: len(catalog.ToolsIn(catalog.TierDisabled)), Upstream: up, FitMax: rag.FitPageMax,
 		},
-		Lim: portalLimits{
-			MCP: perMin(l.MCP), Tool: perMin(l.Tool), UpstreamTool: perMin(l.UpstreamTool), FitsSearch: perMin(l.FitsSearch),
-			FitsDetail: perMin(l.FitsDetail), FitStats: perMin(l.FitStats), FitSuggest: perMin(l.FitSuggest),
-			ItemsSearch: perMin(l.ItemsSearch), Docs: perMin(l.Docs),
-		},
+		Lim:           limitsView(s, false),
+		KeyLim:        limitsView(s, true),
 		Tools:         toolGroups{Public: rowsOf(pub), BYO: rowsOf(byo), Keyed: rowsOf(keyed)},
 		Credits:       credits(),
 		Sources:       sourcesOf(offered),
@@ -350,25 +361,30 @@ func newPageData(in portalInput, assetVersion string) pageData {
 	if len(d.Tools.Public) > 0 {
 		d.FirstTool = d.Tools.Public[0].Name
 	}
-	d.KeyMCP = d.Lim.MCP * d.KeyFactor
+	d.KeyMCP = d.KeyLim.MCP
 	d.LimitCards = limitCards(s)
 	d.LimitRows = limitTable(s)
 	return d
 }
 
-// limitCards are the four budgets the landing page shows, from the configured limits.
+// limitCards are the budgets the landing page shows, from the configured limits.
 func limitCards(s Surface) []limitCard {
 	l, p := s.Limits, s.prefix()
 	var out []limitCard
 	add := func(on bool, r Rate, label string) {
 		if on && r.Max > 0 && r.Window > 0 {
-			out = append(out, limitCard{Max: r.Max, Unit: windowUnit(r), Label: label})
+			c := limitCard{Max: r.Max, Unit: windowUnit(r), Label: label}
+			if k := s.keyedRate(r); k.Max > r.Max {
+				c.KeyMax = k.Max
+			}
+			out = append(out, c)
 		}
 	}
 	add(s.MCP, l.MCP, "POST "+p+"/mcp")
 	add(s.ToolAPI == ToolAPIPublic, l.Tool, "POST "+p+"/tool/{name}")
 	add(s.ToolAPI != ToolAPIOff || s.MCP, l.UpstreamTool, "live ESI tools, REST + MCP")
-	add(true, l.FitsSearch, "GET "+p+"/fits/search, "+p+"/items/search")
+	add(true, l.FitsSearch, "GET "+p+"/fits/search")
+	add(true, l.ItemsSearch, "GET "+p+"/items/search")
 	return out
 }
 
@@ -376,10 +392,14 @@ func limitCards(s Surface) []limitCard {
 func limitTable(s Surface) []limitRowView {
 	var out []limitRowView
 	for _, r := range limitRows(s) {
-		out = append(out, limitRowView{Route: r.Route, Max: r.Max, Window: r.Window, Code: true})
+		out = append(out, limitRowView{Route: r.Route, Max: r.Max, KeyMax: r.KeyMax, Window: r.Window, Code: true})
 	}
 	if u := s.Limits.UpstreamTool; u.Max > 0 && u.Window > 0 && (s.ToolAPI != ToolAPIOff || s.MCP) {
-		out = append(out, limitRowView{Route: "Live ESI tools, REST and MCP together", Max: u.Max, Window: windowWord(u)})
+		row := limitRowView{Route: "Live ESI tools, REST and MCP together", Max: u.Max, Window: windowWord(u)}
+		if k := s.keyedRate(u); k.Max > u.Max {
+			row.KeyMax = k.Max
+		}
+		out = append(out, row)
 	}
 	return out
 }
@@ -447,9 +467,20 @@ func accessAndRate(d pageData, t catalog.Tool) (access, rate template.HTML) {
 			access += " No keys are issued on this service yet."
 		}
 	}
-	r := fmt.Sprintf("%d/min over REST, %d/min over MCP", d.Lim.Tool, d.Lim.MCP)
+	r := fmt.Sprintf("%d/min over REST", d.Lim.Tool)
+	if d.KeyLim.Tool != d.Lim.Tool {
+		r += fmt.Sprintf(" (%d with a key)", d.KeyLim.Tool)
+	}
+	r += fmt.Sprintf(", %d/min over MCP", d.Lim.MCP)
+	if d.KeyLim.MCP != d.Lim.MCP {
+		r += fmt.Sprintf(" (%d with a key)", d.KeyLim.MCP)
+	}
 	if t.Upstream {
-		r += fmt.Sprintf(", plus <b>%d calls/min</b> for live ESI tools (REST and MCP together)", d.Lim.UpstreamTool)
+		r += fmt.Sprintf(", plus <b>%d calls/min</b> for live ESI tools (", d.Lim.UpstreamTool)
+		if d.KeyLim.UpstreamTool != d.Lim.UpstreamTool {
+			r += fmt.Sprintf("%d with a key; ", d.KeyLim.UpstreamTool)
+		}
+		r += "REST and MCP together)"
 	}
 	return access, template.HTML(r)
 }
@@ -466,9 +497,15 @@ func errorRows(d pageData, t catalog.Tool) []errorRow {
 		rows = append(rows, errorRow{401, "<code>api_key_required</code> or <code>invalid_api_key</code>: this tool needs a valid API key."})
 	}
 	rows = append(rows, errorRow{413, "<code>payload_too_large</code>: the body is over 64 KiB."})
-	limit := fmt.Sprintf("<code>rate_limited</code>: over %d calls per minute. Wait for <code>Retry-After</code>.", d.Lim.Tool)
+	limit := fmt.Sprintf("<code>rate_limited</code>: over %d calls per minute without a key (%d with one). Wait for <code>Retry-After</code>.", d.Lim.Tool, d.KeyLim.Tool)
+	if d.KeyLim.Tool == d.Lim.Tool {
+		limit = fmt.Sprintf("<code>rate_limited</code>: over %d calls per minute. Wait for <code>Retry-After</code>.", d.Lim.Tool)
+	}
 	if t.Upstream {
 		limit = fmt.Sprintf("<code>rate_limited</code>: over the route limit or the %d calls/min ESI budget. Wait for <code>Retry-After</code>.", d.Lim.UpstreamTool)
+		if d.KeyLim.UpstreamTool != d.Lim.UpstreamTool {
+			limit = fmt.Sprintf("<code>rate_limited</code>: over the route limit or the ESI budget (%d calls/min without a key, %d with one). Wait for <code>Retry-After</code>.", d.Lim.UpstreamTool, d.KeyLim.UpstreamTool)
+		}
 	}
 	rows = append(rows, errorRow{429, template.HTML(limit)})
 	if t.Upstream {
@@ -578,7 +615,7 @@ func docsPages() []docsPage {
 		{"mcp", "doc_mcp", "MCP (any harness)", desc, "Streamable HTTP endpoint for any MCP client."},
 		{"rest", "doc_rest", "REST & OpenAPI", desc, "POST /v1/tool/{name}, endpoints, headers, errors."},
 		{"tools", "doc_tools", "Tools reference", desc, "Every tool on this service, by access tier."},
-		{"access", "doc_access", "Access tiers & rate limits", desc, "Public, keyed, byo-key; limits per minute; 429 and Retry-After."},
+		{"access", "doc_access", "Access tiers & rate limits", desc, "Public, keyed, byo-key; trial and key limits; 429 and Retry-After."},
 		{"attribution", "doc_attribution", "Attribution & licences", desc, "The Fenris Creations notice, CC BY-SA, community fit credits."},
 		{"terms", "doc_terms", "Terms of use", desc, "Summary of the terms; full text at /terms."},
 	}
@@ -600,10 +637,14 @@ type searchEntry struct {
 	S    string `json:"s,omitempty"`
 }
 
-func searchIndex(order []catalog.Tool) ([]byte, error) {
+func searchIndex(order []catalog.Tool, keys bool) ([]byte, error) {
 	var idx []searchEntry
 	for _, p := range docsPages() {
-		idx = append(idx, searchEntry{T: p.title, U: pagePath(p.slug), K: "page", S: p.summary})
+		summary := p.summary
+		if p.slug == "access" && !keys {
+			summary = "Public, keyed, byo-key; limits per minute; 429 and Retry-After."
+		}
+		idx = append(idx, searchEntry{T: p.title, U: pagePath(p.slug), K: "page", S: summary})
 	}
 	idx = append(idx, searchEntry{T: "Hall of Fame", U: "/#credits", K: "page", S: "The sources and projects behind the data."})
 	for _, t := range order {
@@ -648,7 +689,7 @@ func buildPortal(in portalInput) (*portalSite, error) {
 
 	d := newPageData(in, ver)
 	order := slices.Concat(catalog.ToolsIn(catalog.TierPublic), catalog.ToolsIn(catalog.TierBYOKey), catalog.ToolsIn(catalog.TierKeyed))
-	if site.search, err = searchIndex(order); err != nil {
+	if site.search, err = searchIndex(order, d.Auth); err != nil {
 		return nil, err
 	}
 	d.SearchIndex = template.JS(site.search) // #nosec G203 -- json.Marshal output, <>& escaped

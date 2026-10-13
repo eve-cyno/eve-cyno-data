@@ -56,17 +56,17 @@ console.log((<span class="tk-kw">await</span> r.json()).result.text);</code></pr
 
     <h2 id="rest-endpoints">Endpoints<a class="h-anchor" href="#rest-endpoints" aria-label="Link to this section">#</a></h2>
     <div class="tbl"><table>
-      <thead><tr><th scope="col">Route</th><th scope="col">What it does</th><th scope="col" class="num">Limit / min</th></tr></thead>
+      <thead><tr><th scope="col">Route</th><th scope="col">What it does</th><th scope="col" class="num">Limit / min{{if .KeysRaise}} (trial / with a key){{end}}</th></tr></thead>
       <tbody>
-        <tr><td><code>POST {{.Prefix}}/tool/{name}</code></td><td>Run one tool; the body is its arguments.</td><td class="num">{{.Lim.Tool}}</td></tr>
-        <tr><td><code>POST {{.Prefix}}/mcp</code></td><td>Streamable-HTTP MCP server.</td><td class="num">{{.Lim.MCP}}</td></tr>
-        <tr><td><code>GET {{.Prefix}}/fits/search</code></td><td>Search community fits.</td><td class="num">{{.Lim.FitsSearch}}</td></tr>
-        <tr><td><code>POST {{.Prefix}}/fits/detail</code></td><td>Describe a fit: slots, CPU / powergrid / calibration, ship class.</td><td class="num">{{.Lim.FitsDetail}}</td></tr>
-        <tr><td><code>POST {{.Prefix}}/fit/stats</code></td><td>Compute fit statistics with the Gofa engine.</td><td class="num">{{.Lim.FitStats}}</td></tr>
-        <tr><td><code>POST {{.Prefix}}/fit/suggest</code></td><td>Suggest modules for an empty slot.</td><td class="num">{{.Lim.FitSuggest}}</td></tr>
-        <tr><td><code>GET {{.Prefix}}/items/search</code></td><td>Search modules, charges and drones.</td><td class="num">{{.Lim.ItemsSearch}}</td></tr>
+        <tr><td><code>POST {{.Prefix}}/tool/{name}</code></td><td>Run one tool; the body is its arguments.</td><td class="num">{{.Lim.Tool}}{{if $.KeysRaise}} / {{.KeyLim.Tool}}{{end}}</td></tr>
+        <tr><td><code>POST {{.Prefix}}/mcp</code></td><td>Streamable-HTTP MCP server.</td><td class="num">{{.Lim.MCP}}{{if $.KeysRaise}} / {{.KeyLim.MCP}}{{end}}</td></tr>
+        <tr><td><code>GET {{.Prefix}}/fits/search</code></td><td>Search community fits.</td><td class="num">{{.Lim.FitsSearch}}{{if $.KeysRaise}} / {{.KeyLim.FitsSearch}}{{end}}</td></tr>
+        <tr><td><code>POST {{.Prefix}}/fits/detail</code></td><td>Describe a fit: slots, CPU / powergrid / calibration, ship class.</td><td class="num">{{.Lim.FitsDetail}}{{if $.KeysRaise}} / {{.KeyLim.FitsDetail}}{{end}}</td></tr>
+        <tr><td><code>POST {{.Prefix}}/fit/stats</code></td><td>Compute fit statistics with the Gofa engine.</td><td class="num">{{.Lim.FitStats}}{{if $.KeysRaise}} / {{.KeyLim.FitStats}}{{end}}</td></tr>
+        <tr><td><code>POST {{.Prefix}}/fit/suggest</code></td><td>Suggest modules for an empty slot.</td><td class="num">{{.Lim.FitSuggest}}{{if $.KeysRaise}} / {{.KeyLim.FitSuggest}}{{end}}</td></tr>
+        <tr><td><code>GET {{.Prefix}}/items/search</code></td><td>Search modules, charges and drones.</td><td class="num">{{.Lim.ItemsSearch}}{{if $.KeysRaise}} / {{.KeyLim.ItemsSearch}}{{end}}</td></tr>
         <tr><td><code>GET {{.Prefix}}/health</code></td><td>Liveness probe and which dependencies loaded.</td><td class="num">–</td></tr>
-        <tr><td><code>GET {{.Prefix}}/openapi.yaml</code>, <code>.json</code></td><td>The OpenAPI 3.1 document.</td><td class="num">{{.Lim.Docs}}</td></tr>
+        <tr><td><code>GET {{.Prefix}}/openapi.yaml</code>, <code>.json</code></td><td>The OpenAPI 3.1 document.</td><td class="num">{{.Lim.Docs}}{{if $.KeysRaise}} / {{.KeyLim.Docs}}{{end}}</td></tr>
       </tbody>
     </table></div>
 
@@ -74,7 +74,7 @@ console.log((<span class="tk-kw">await</span> r.json()).result.text);</code></pr
     <div class="tbl"><table>
       <thead><tr><th scope="col">Header</th><th scope="col">Use</th></tr></thead>
       <tbody>
-        <tr><td><code>Authorization: Bearer &lt;key&gt;</code> or <code>X-API-Key</code></td><td>Keyed tools.{{if .Auth}} {{if .SelfServe}}Keys are free: see{{else}}See{{end}} <a href="/docs/access#access-keys">API keys</a>.{{else}} No keys are issued yet.{{end}}</td></tr>
+        <tr><td><code>Authorization: Bearer &lt;key&gt;</code> or <code>X-API-Key</code></td><td>{{if .Auth}}The keyed {{plural .Stats.Keyed "tool" "tools"}}, free-text fit search and the higher limits.{{else}}Keyed tools.{{end}}{{if .Auth}} {{if .SelfServe}}Keys are free: see{{else}}See{{end}} <a href="/docs/access#access-keys">API keys</a>.{{else}} No keys are issued yet.{{end}}</td></tr>
         <tr><td><code>X-Janice-Key</code></td><td>Your own Janice key for <code>appraise_items</code>. Used for that request only, never logged or stored.</td></tr>
         <tr><td><code>X-Request-ID</code></td><td>On every response: your value when it is a token of 1-64 characters from <code>[A-Za-z0-9._-]</code>, otherwise a generated one.</td></tr>
         <tr><td><code>Retry-After</code></td><td>On <code>429</code> and <code>503 upstream_busy</code>: seconds to wait.</td></tr>
@@ -94,11 +94,11 @@ console.log((<span class="tk-kw">await</span> r.json()).result.text);</code></pr
         <tr><td class="num">401</td><td><code>api_key_required</code>, <code>invalid_api_key</code></td></tr>
         <tr><td class="num">403</td><td><code>tool_disabled</code>, <code>key_not_permitted</code></td></tr>
         <tr><td class="num">413</td><td><code>payload_too_large</code>: 256 KiB on the fit routes, 64 KiB on the tool and MCP endpoints</td></tr>
-        <tr><td class="num">429</td><td><code>rate_limited</code>, with <code>Retry-After</code>{{if .KeyCap}}; or <code>daily_quota_exceeded</code> over a key's daily cap, where <code>Retry-After</code> is the seconds until 00:00 UTC{{end}}</td></tr>
+        <tr><td class="num">429</td><td><code>rate_limited</code>, with <code>Retry-After</code>{{if or .KeyCap .AnonCap}}; or <code>daily_quota_exceeded</code> over the daily cap ({{if .AnonCap}}{{.AnonCap}} a day without a key{{if .KeyCap}}, {{.KeyCap}} per key{{end}}{{else}}{{.KeyCap}} per key{{end}}), where <code>Retry-After</code> is the seconds until 00:00 UTC{{end}}</td></tr>
         <tr><td class="num">503</td><td><code>upstream_busy</code>, with <code>Retry-After</code></td></tr>
       </tbody>
     </table></div>
-    <p>The full list: <code>not_found</code>, <code>method_not_allowed</code>, <code>invalid_request</code>, <code>payload_too_large</code>, <code>rate_limited</code>, {{if .KeyCap}}<code>daily_quota_exceeded</code>, {{end}}<code>unavailable</code>, <code>upstream_error</code>, <code>upstream_busy</code>, <code>unknown_tool</code>, <code>tool_disabled</code>, <code>api_key_required</code>, <code>invalid_api_key</code>, <code>key_not_permitted</code>, <code>janice_key_required</code>, <code>timeout</code>, <code>internal_error</code>.</p>
+    <p>The full list: <code>not_found</code>, <code>method_not_allowed</code>, <code>invalid_request</code>, <code>payload_too_large</code>, <code>rate_limited</code>, {{if or .KeyCap .AnonCap}}<code>daily_quota_exceeded</code>, {{end}}<code>unavailable</code>, <code>upstream_error</code>, <code>upstream_busy</code>, <code>unknown_tool</code>, <code>tool_disabled</code>, <code>api_key_required</code>, <code>invalid_api_key</code>, <code>key_not_permitted</code>, <code>janice_key_required</code>, <code>timeout</code>, <code>internal_error</code>.</p>
 
     <nav class="pager" aria-label="Previous and next page">
       <a href="/docs/mcp"><span class="pg-k"><svg class="ico" aria-hidden="true"><use href="#i-back"/></svg>Previous</span><span class="pg-t">MCP (any harness)</span></a>

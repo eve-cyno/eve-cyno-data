@@ -292,3 +292,41 @@ func TestScrollListFits_PageIsCapped(t *testing.T) {
 	require.Len(t, res.Points, FitPageMax, "the default page is the cap")
 	require.False(t, res.Clamped)
 }
+
+// --- SDE-derived curated docs ----------------------------------------------------
+
+func TestAttributionFor_SDEDerivedDocIsCreditedToFenrisCreations(t *testing.T) {
+	// A wiki_supplement doc whose url is the static-data page is built from the SDE,
+	// not from the EVE University wiki: no share-alike licence, no EVE University credit.
+	for _, u := range []string{
+		"https://developers.eveonline.com/static-data",
+		"https://developers.eveonline.com/static-data/",
+		"HTTPS://Developers.EveOnline.com/static-data#abyss",
+	} {
+		a := AttributionFor(corpus.SourceTypeWikiSupplement, u)
+		require.Equal(t, u, a.SourceURL)
+		require.Equal(t, SDECredit, a.Credit, u)
+		require.Contains(t, a.License, "EVE Developer License Agreement", u)
+		require.Equal(t, SDELicenseURL, a.LicenseURL, u)
+		require.NotContains(t, a.License, "CC BY-SA", u)
+	}
+	require.Equal(t, "Fenris Creations (EVE Static Data Export)", SDECredit)
+	require.Equal(t, "https://developers.eveonline.com/license-agreement", SDELicenseURL)
+}
+
+func TestAttributionFor_WikiDerivedDocsKeepTheWikiTerms(t *testing.T) {
+	for _, u := range []string{
+		"https://wiki.eveuniversity.org/Drake",
+		"", // a doc without a url
+		"https://developers.eveonline.com/docs/services/esi/", // a developer page that is not the SDE
+	} {
+		a := AttributionFor(corpus.SourceTypeWikiSupplement, u)
+		require.Equal(t, WikiLicense, a.License, u)
+		require.Equal(t, WikiCredit, a.Credit, u)
+	}
+}
+
+func TestAttributionFor_SDEURLDoesNotChangeFitSources(t *testing.T) {
+	a := AttributionFor(corpus.SourceWorkbench, "https://developers.eveonline.com/static-data")
+	require.Equal(t, "No licence published", a.License)
+}

@@ -109,7 +109,8 @@ func TestLLMs_GroupToolsByTierAndSayHowToAuthenticate(t *testing.T) {
 	byo := strings.Index(short, "## Tools (byo-key")
 	require.True(t, pub < keyed && keyed < byo, "public, keyed, byo-key in that order")
 	require.True(t, strings.Index(short, "[get_jumps_between]") < keyed)
-	require.True(t, strings.Index(short, "[get_fits]") > keyed && strings.Index(short, "[get_fits]") < byo)
+	require.True(t, strings.Index(short, "[get_fits]") < keyed, "the fit lookups are public")
+	require.True(t, strings.Index(short, "[analyze_battle]") > keyed && strings.Index(short, "[analyze_battle]") < byo)
 	require.Contains(t, short[byo:], "[appraise_items]")
 
 	require.Contains(t, full, "Authorization: Bearer <key>")
@@ -125,8 +126,8 @@ func TestLLMs_GroupToolsByTierAndSayHowToAuthenticate(t *testing.T) {
 
 	// Without API keys the keyed tools are not offered.
 	s.Auth = false
-	require.NotContains(t, LLMsTxt(s), "[get_fits]")
-	require.NotContains(t, LLMsFullTxt(s), "### get_fits\n")
+	require.NotContains(t, LLMsTxt(s), "[analyze_battle]")
+	require.NotContains(t, LLMsFullTxt(s), "### analyze_battle\n")
 
 	// Loopback states no tiers.
 	loop := PublicSurface()

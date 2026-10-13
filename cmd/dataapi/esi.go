@@ -15,9 +15,10 @@ import (
 )
 
 const (
-	// defaultUpstreamToolLimit is DATAAPI_UPSTREAM_TOOL_LIMIT: calls per minute per caller of
-	// the tools that read live ESI data (dataapi.DefaultLimits().UpstreamTool).
-	defaultUpstreamToolLimit = 10
+	// defaultUpstreamToolLimit is DATAAPI_UPSTREAM_TOOL_LIMIT: calls per minute per caller
+	// without an API key of the tools that read live ESI data
+	// (dataapi.DefaultLimits().UpstreamTool.Max); a caller with a key gets twice as many.
+	defaultUpstreamToolLimit = 5
 	// defaultESIGuardPercent is DATAAPI_ESI_GUARD_PERCENT: the share of every ESI rate-limit
 	// group's tokens kept unspent, on top of which the client answers "busy" instead of
 	// waiting. ESI's own advice is "don't operate at the limit"; the public service keeps a
@@ -25,8 +26,9 @@ const (
 	defaultESIGuardPercent = 25
 )
 
-// upstreamToolRate resolves DATAAPI_UPSTREAM_TOOL_LIMIT (calls per minute per caller; 0
-// disables the extra limit). Unset means defaultUpstreamToolLimit; garbage is an error.
+// upstreamToolRate resolves DATAAPI_UPSTREAM_TOOL_LIMIT (calls per minute per caller without
+// an API key, twice that with one; 0 disables the extra limit). Unset means
+// defaultUpstreamToolLimit; garbage is an error.
 func upstreamToolRate(getenv func(string) string) (dataapi.Rate, error) {
 	n := defaultUpstreamToolLimit
 	if v := strings.TrimSpace(getenv("DATAAPI_UPSTREAM_TOOL_LIMIT")); v != "" {
@@ -35,7 +37,7 @@ func upstreamToolRate(getenv func(string) string) (dataapi.Rate, error) {
 			return dataapi.Rate{}, fmt.Errorf("DATAAPI_UPSTREAM_TOOL_LIMIT: want a non-negative number of calls per minute, got %q", v)
 		}
 	}
-	return dataapi.Rate{Max: n, Window: time.Minute}, nil
+	return dataapi.Rate{Max: n, KeyedMax: 2 * n, Window: time.Minute}, nil
 }
 
 // esiGuardPercent resolves DATAAPI_ESI_GUARD_PERCENT (0-90).

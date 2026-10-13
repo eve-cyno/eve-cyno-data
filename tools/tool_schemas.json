@@ -267,7 +267,7 @@
               "summary",
               "full"
             ],
-            "description": "Output level. 'summary' (default) — high-level battle report only. 'full' — also includes top-10 damage by weapon type per side and top-10 destroyed modules per slot per side. Slower (~5-15 s) since it fan-outs ESI killmail fetches; the result is cached for 30 min so a follow-up turn is fast."
+            "description": "Output level. 'summary' (default) — high-level battle report only. 'full' — also includes top-10 damage by weapon type per side and top-10 destroyed modules per slot per side. Slower (~5-15 s) since it fetches individual killmails; for br.evetools.org reports only the 25 most valuable are read, one at a time. The result is cached for 30 min so a follow-up turn is fast."
           }
         },
         "required": [
@@ -530,7 +530,7 @@
     "type": "function",
     "function": {
       "name": "get_system_activity",
-      "description": "Get recent killmail count and jump count for a solar system from ESI. Use for 'how many kills in X recently', 'is system Y active', 'is it safe to undock'.",
+      "description": "Get the ship, pod and NPC kills of a solar system in the last hour from ESI (jumps are not included). Use for 'how many kills in X recently', 'is system Y active', 'is it safe to undock'.",
       "parameters": {
         "type": "object",
         "properties": {

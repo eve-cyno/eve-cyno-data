@@ -83,7 +83,9 @@ func TestMCPTiers_ToolsListIsChosenPerCaller(t *testing.T) {
 	for _, list := range [][]string{anonymous, keyed} {
 		require.NotContains(t, list, "convert_isk_to_real", "a disabled tool is never listed")
 	}
-	require.NotContains(t, anonymous, "get_fits")
+	require.NotContains(t, anonymous, "analyze_battle")
+	require.Contains(t, anonymous, "get_fits", "the fit lookups are public")
+	require.Contains(t, anonymous, "list_fits")
 	require.Contains(t, anonymous, "appraise_items", "the byo-key tool is listed for everyone")
 }
 
@@ -105,7 +107,7 @@ func callTool(t *testing.T, api http.Handler, name string, args map[string]any, 
 
 func TestMCPTiers_KeyedToolIsUnknownWithoutAKey(t *testing.T) {
 	api, _ := tieredMCP(t)
-	rec := callTool(t, api, "get_fits", map[string]any{})
+	rec := callTool(t, api, "analyze_battle", map[string]any{})
 	require.Contains(t, rec.Body.String(), "unknown tool")
 
 	rec = callTool(t, api, "convert_isk_to_real", map[string]any{}, "X-API-Key", keyAlpha)

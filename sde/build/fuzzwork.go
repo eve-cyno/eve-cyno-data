@@ -24,9 +24,6 @@ const (
 	fuzzworkBase   = "https://www.fuzzwork.co.uk/dump"
 	fuzzworkLatest = fuzzworkBase + "/latest"
 	fuzzworkCSV    = fuzzworkLatest + "/csv"
-
-	// userAgent identifies the project to Fuzzwork.
-	userAgent = "EVE-Cyno/0.3 fetch-sde-go (+https://eve-cyno.dev; eve:Bythlak)"
 )
 
 // buildRE extracts the build id from a dated dump filename in the latest/ index,
@@ -37,13 +34,16 @@ var buildRE = regexp.MustCompile(`(\d+_\d{8})_\d{6}\.(?:db\.gz|sql\.gz|bak|pgdum
 // Fuzzwork is a thin HTTP client for the Fuzzwork SDE dump server.
 // It is safe to share across goroutines.
 type Fuzzwork struct {
-	http *http.Client
+	http      *http.Client
+	userAgent string
 }
 
 // NewFuzzwork returns a Fuzzwork client with a generous timeout for large downloads.
-func NewFuzzwork() *Fuzzwork {
+// userAgent is the project User-Agent (esi.ProjectUserAgent) sent with every request.
+func NewFuzzwork(userAgent string) *Fuzzwork {
 	return &Fuzzwork{
-		http: &http.Client{Timeout: 20 * time.Minute},
+		http:      &http.Client{Timeout: 20 * time.Minute},
+		userAgent: userAgent,
 	}
 }
 
@@ -100,7 +100,7 @@ func (f *Fuzzwork) DownloadTable(ctx context.Context, name string) (io.ReadClose
 	if err != nil {
 		return nil, fmt.Errorf("fuzzwork DownloadTable %q: build request: %w", name, err)
 	}
-	req.Header.Set("User-Agent", userAgent)
+	req.Header.Set("User-Agent", f.userAgent)
 
 	resp, err := f.http.Do(req)
 	if err != nil {
@@ -141,7 +141,7 @@ func (f *Fuzzwork) getText(ctx context.Context, url string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	req.Header.Set("User-Agent", userAgent)
+	req.Header.Set("User-Agent", f.userAgent)
 
 	resp, err := f.http.Do(req)
 	if err != nil {

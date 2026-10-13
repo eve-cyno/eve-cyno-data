@@ -138,6 +138,14 @@ func UserAgent(version, contact string) string {
 	return "EVE-Cyno/" + v + " (" + parts + ")"
 }
 
+// ProjectUserAgent is the User-Agent every outbound request of the project carries,
+// whichever upstream it goes to: UserAgent(version, ESI_CONTACT). It is the one builder,
+// so ESI, the tool clients, the ingest sources, the SDE download and the headless
+// browser all identify themselves the same way.
+func ProjectUserAgent(version string, getenv func(string) string) string {
+	return UserAgent(version, FromEnv(getenv).Contact)
+}
+
 var tokenRE = regexp.MustCompile(`[^A-Za-z0-9._+-]`)
 
 // sanitizeToken keeps a product-version token to header-safe characters.

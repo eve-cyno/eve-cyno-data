@@ -17,15 +17,16 @@ import (
 func TestUpstreamToolRate(t *testing.T) {
 	r, err := upstreamToolRate(env(nil))
 	require.NoError(t, err)
-	require.Equal(t, dataapi.Rate{Max: 10, Window: time.Minute}, r, "default: 10 per minute")
+	require.Equal(t, dataapi.Rate{Max: 5, KeyedMax: 10, Window: time.Minute}, r, "default: 5 per minute without a key, 10 with one")
 
 	r, err = upstreamToolRate(env(map[string]string{"DATAAPI_UPSTREAM_TOOL_LIMIT": " 4 "}))
 	require.NoError(t, err)
-	require.Equal(t, 4, r.Max)
+	require.Equal(t, dataapi.Rate{Max: 4, KeyedMax: 8, Window: time.Minute}, r, "the variable is the keyless budget; a key gets twice")
 
 	r, err = upstreamToolRate(env(map[string]string{"DATAAPI_UPSTREAM_TOOL_LIMIT": "0"}))
 	require.NoError(t, err)
 	require.Zero(t, r.Max, "0 disables the extra limit")
+	require.Zero(t, r.KeyedMax)
 
 	for _, bad := range []string{"-1", "ten", "1.5"} {
 		_, err := upstreamToolRate(env(map[string]string{"DATAAPI_UPSTREAM_TOOL_LIMIT": bad}))

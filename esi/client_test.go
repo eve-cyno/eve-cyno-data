@@ -13,6 +13,13 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestProjectUserAgentReadsESIContact(t *testing.T) {
+	env := map[string]string{"ESI_CONTACT": " eve:Bythlak "}
+	get := func(k string) string { return env[k] }
+	require.Equal(t, "EVE-Cyno/2.0 (+https://eve-cyno.dev; eve:Bythlak)", ProjectUserAgent("2.0", get))
+	require.Equal(t, "EVE-Cyno/2.0 (+https://eve-cyno.dev)", ProjectUserAgent("2.0", func(string) string { return "" }))
+}
+
 func TestUserAgent(t *testing.T) {
 	require.Equal(t, "EVE-Cyno/1.2.3 (+https://eve-cyno.dev)", UserAgent("1.2.3", ""))
 	require.Equal(t, "EVE-Cyno/1.2.3 (+https://eve-cyno.dev; ops@example.org)", UserAgent("1.2.3", "ops@example.org"))

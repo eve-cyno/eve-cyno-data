@@ -149,7 +149,7 @@ func TestRefresh_PublishGateRejection_KeepsLiveFile(t *testing.T) {
 }
 
 func TestNew_UsesProductionPublishGate(t *testing.T) {
-	require.Equal(t, DefaultGate(), New("x").gate)
+	require.Equal(t, DefaultGate(), New("x", "ua").gate)
 }
 
 // writeOldSchemaSDE writes an SDE file as the Python->Go port left it: row counts

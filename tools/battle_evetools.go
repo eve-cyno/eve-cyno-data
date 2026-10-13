@@ -28,9 +28,13 @@ import (
 )
 
 const (
-	eveToolsBase        = "https://br.evetools.org/newapi"
-	eveToolsCacheTTL    = 30 * time.Minute
-	eveToolsMaxKMFanout = 80 // mirrors Python capped_kms slice
+	eveToolsBase     = "https://br.evetools.org/newapi"
+	eveToolsCacheTTL = 30 * time.Minute
+	// eveToolsMaxKMFanout caps the /killmail/{id} calls of one detail="full" report:
+	// br.evetools.org is a community site, so only the most valuable killmails are read.
+	eveToolsMaxKMFanout = 25
+	// eveToolsKMConcurrency is how many of those calls are in flight at once.
+	eveToolsKMConcurrency = 1
 )
 
 // eveToolsCacheEntry holds a cached render result and its timestamp.
@@ -546,8 +550,8 @@ func etFullBreakdown(
 	}
 	resultsCh := make(chan itemsResult, len(entries))
 	var wg sync.WaitGroup
-	// Use a semaphore to limit to evetools domain concurrency (2).
-	sem := make(chan struct{}, 2)
+	// One killmail request at a time (the domain throttle enforces the same).
+	sem := make(chan struct{}, eveToolsKMConcurrency)
 	for _, e := range entries {
 		wg.Add(1)
 		go func(kid int) {
@@ -762,13 +766,30 @@ func eveToolsTeamForVictim(victim KillmailVictim, membership map[string]int) *in
 
 // etGetJSON performs a throttled GET against a non-ESI URL (br.evetools.org, WarBeacon)
 // and returns the raw JSON body. ESI calls use esiGetJSON.
+//
+// br.evetools.org responses are kept in the Client's response cache for
+// brResponseTTL, so asking for the same report twice does not fetch it again.
 func etGetJSON(ctx context.Context, c *Client, url string) ([]byte, error) {
+	cacheable := strings.HasPrefix(url, EveToolsBase)
+	if cacheable {
+		if body, ok := c.brCache.get(url); ok {
+			return body, nil
+		}
+	}
+	body, err := etGetJSONUncached(ctx, c, url)
+	if err == nil && cacheable {
+		c.brCache.put(url, body)
+	}
+	return body, err
+}
+
+func etGetJSONUncached(ctx context.Context, c *Client, url string) ([]byte, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
 	}
 	req.Header.Set("Accept", "application/json")
-	req.Header.Set("User-Agent", "EVE-Cyno/1.0 (+https://eve-cyno.dev)")
+	req.Header.Set("User-Agent", c.userAgent())
 
 	rel, err := c.Throttle.Acquire(ctx, url)
 	if err != nil {

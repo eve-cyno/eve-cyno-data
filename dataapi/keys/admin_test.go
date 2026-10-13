@@ -474,3 +474,41 @@ func TestAdminUnknownRouteAnswersNoRoute(t *testing.T) {
 		require.Equal(t, "no_route", errCode(t, body), c)
 	}
 }
+
+func TestAdminOpsUsageAll(t *testing.T) {
+	e := newAdmin(t, keys.Options{}, nil)
+	k, _, err := e.store.Create(context.Background(), "eve:1", "", "a")
+	require.NoError(t, err)
+	_, _, err = e.store.Create(context.Background(), "eve:2", "", "idle")
+	require.NoError(t, err)
+	e.store.Spend(k.ID)
+	e.store.Record(k.ID, "GET /v1/x", false)
+
+	code, hd, body := e.do(t, "GET", "/admin/v1/ops/usage", "", map[string]string{"Authorization": ""})
+	require.Equal(t, 401, code, body)
+	require.Equal(t, "admin_token_required", errCode(t, body))
+
+	code, hd, body = e.do(t, "GET", "/admin/v1/ops/usage", "", nil)
+	require.Equal(t, 200, code, body)
+	require.Equal(t, "no-store", hd.Get("Cache-Control"))
+	var got struct {
+		Days int                        `json:"days"`
+		Keys map[string][]keys.DayUsage `json:"keys"`
+	}
+	require.NoError(t, json.Unmarshal([]byte(body), &got))
+	require.Equal(t, 30, got.Days)
+	require.Len(t, got.Keys, 1)
+	require.Len(t, got.Keys[k.ID], 30)
+	require.Equal(t, 1, got.Keys[k.ID][29].Count)
+
+	_, _, body = e.do(t, "GET", "/admin/v1/ops/usage?days=7", "", nil)
+	require.NoError(t, json.Unmarshal([]byte(body), &got))
+	require.Equal(t, 7, got.Days)
+	require.Len(t, got.Keys[k.ID], 7)
+
+	for _, q := range []string{"0", "31", "abc", "-1", ""} {
+		code, _, body = e.do(t, "GET", "/admin/v1/ops/usage?days="+q, "", nil)
+		require.Equal(t, 400, code, q)
+		require.Equal(t, "invalid_days", errCode(t, body))
+	}
+}

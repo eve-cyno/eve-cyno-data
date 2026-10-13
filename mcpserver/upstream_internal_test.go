@@ -35,7 +35,7 @@ func TestHTTPHandler_UpstreamToolsHaveTheirOwnPerCallerBudget(t *testing.T) {
 	}
 	h := httpHandler(&tools.Deps{}, o, exec)
 	call := func(who, name string) string {
-		return postRPC(t, h, `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"`+name+`","arguments":{}}}`, "X-Who", who)
+		return postRPC(t, h, `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"`+name+`","arguments":`+validArgs[name]+`}}`, "X-Who", who)
 	}
 
 	require.Contains(t, call("a", "get_market_price"), `"text":"ok"`)

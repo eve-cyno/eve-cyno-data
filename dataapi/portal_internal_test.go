@@ -129,3 +129,25 @@ func TestTypedFields_CarryTheStructDocs(t *testing.T) {
 	require.Equal(t, "number | null", byName["best_sell_isk"].Type)
 	require.Contains(t, byName["best_sell_isk"].Desc, "lowest sell price")
 }
+
+// Community fits are served only through the API, with attribution, and never committed:
+// the fit examples are synthetic. No example may name a community-fit source site, and the
+// two fit-lookup examples may not name any upstream site either.
+func TestExamples_NoRealCommunityFits(t *testing.T) {
+	entries, err := portalExamples.ReadDir("portal/examples")
+	require.NoError(t, err)
+	for _, e := range entries {
+		b, err := portalExamples.ReadFile("portal/examples/" + e.Name())
+		require.NoError(t, err)
+		body := string(b)
+		for _, d := range []string{"abysstracker.com", "streamlit.app"} {
+			require.NotContains(t, body, d, e.Name())
+		}
+		if e.Name() == "get_fits.json" || e.Name() == "list_fits.json" {
+			for _, d := range []string{"eveworkbench.com", "zkillboard.com"} {
+				require.NotContains(t, body, d, e.Name())
+			}
+			require.Contains(t, body, "Example", e.Name())
+		}
+	}
+}

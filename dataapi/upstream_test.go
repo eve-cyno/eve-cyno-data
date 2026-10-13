@@ -37,22 +37,22 @@ func TestUpstreamTools_HaveAStricterPerIPLimitThanSDETools(t *testing.T) {
 	a := upstreamAPI(t, 2, &tools.Deps{})
 
 	for range 2 {
-		rec := do(a, "POST", "/v1/tool/get_market_price", `{}`, fromIP("198.51.100.1")...)
+		rec := do(a, "POST", "/v1/tool/get_market_price", `{"type_id":0}`, fromIP("198.51.100.1")...)
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	}
-	rec := do(a, "POST", "/v1/tool/get_market_price", `{}`, fromIP("198.51.100.1")...)
+	rec := do(a, "POST", "/v1/tool/get_market_price", `{"type_id":0}`, fromIP("198.51.100.1")...)
 	requireError(t, rec, http.StatusTooManyRequests, "rate_limited")
 	require.NotEmpty(t, rec.Header().Get("Retry-After"))
 	require.Contains(t, rec.Body.String(), "get_market_price")
 
 	// One budget for all four live tools, per caller: another tool of the same IP is refused
 	// too, another IP is not.
-	requireError(t, do(a, "POST", "/v1/tool/get_sovereignty", `{}`, fromIP("198.51.100.1")...), http.StatusTooManyRequests, "rate_limited")
-	require.Equal(t, http.StatusOK, do(a, "POST", "/v1/tool/get_market_price", `{}`, fromIP("198.51.100.2")...).Code)
+	requireError(t, do(a, "POST", "/v1/tool/get_sovereignty", `{"system_name":"Jita"}`, fromIP("198.51.100.1")...), http.StatusTooManyRequests, "rate_limited")
+	require.Equal(t, http.StatusOK, do(a, "POST", "/v1/tool/get_market_price", `{"type_id":0}`, fromIP("198.51.100.2")...).Code)
 
 	// An SDE tool of the refused IP still runs: only the live tools have the lower limit.
 	for range 5 {
-		rec := do(a, "POST", "/v1/tool/get_jumps_between", `{}`, fromIP("198.51.100.1")...)
+		rec := do(a, "POST", "/v1/tool/get_jumps_between", `{"from_system":"Jita","to_system":"Amarr"}`, fromIP("198.51.100.1")...)
 		require.NotEqual(t, http.StatusTooManyRequests, rec.Code)
 	}
 }
@@ -98,9 +98,9 @@ func TestAccessLog_CarriesAnOpaqueCallerTokenForToolRoutesOnly(t *testing.T) {
 	a := newAPI(t, dataapi.Config{
 		Deps: emptyToolDeps(), ToolAPI: dataapi.ToolAPIPublic, Limits: &limits, LogSalt: "test-salt", Logger: log,
 	})
-	do(a, "POST", "/v1/tool/get_jumps_between", `{}`, fromIP("203.0.113.7")...)
-	do(a, "POST", "/v1/tool/get_jumps_between", `{}`, fromIP("203.0.113.7")...)
-	do(a, "POST", "/v1/tool/get_jumps_between", `{}`, fromIP("203.0.113.8")...)
+	do(a, "POST", "/v1/tool/get_jumps_between", `{"from_system":"Jita","to_system":"Amarr"}`, fromIP("203.0.113.7")...)
+	do(a, "POST", "/v1/tool/get_jumps_between", `{"from_system":"Jita","to_system":"Amarr"}`, fromIP("203.0.113.7")...)
+	do(a, "POST", "/v1/tool/get_jumps_between", `{"from_system":"Jita","to_system":"Amarr"}`, fromIP("203.0.113.8")...)
 	do(a, "GET", "/v1/health", "", fromIP("203.0.113.7")...)
 
 	var callers []string
@@ -128,7 +128,7 @@ func TestGeneratedDocs_StateTheLiveToolsLimitAndBusyAnswer(t *testing.T) {
 	files, err := dataapi.GeneratedFiles()
 	require.NoError(t, err)
 	full := string(files["llms-full.txt"])
-	require.Contains(t, full, "fair-use limit is 10 calls per minute per caller")
+	require.Contains(t, full, "fair-use limit is 5 calls per minute per caller without an API key and 10 with one")
 	require.Contains(t, full, "upstream_busy")
 	yaml := string(files["api/openapi.yaml"])
 	require.Contains(t, yaml, "upstream_busy")

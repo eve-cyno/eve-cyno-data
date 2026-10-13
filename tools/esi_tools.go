@@ -469,6 +469,7 @@ func doGet(ctx context.Context, c *Client, url string) ([]byte, int, error) {
 	if err != nil {
 		return nil, 0, err
 	}
+	req.Header.Set("User-Agent", c.userAgent())
 	resp, err := c.HTTP.Do(req)
 	if err != nil {
 		return nil, 0, err

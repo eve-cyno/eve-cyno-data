@@ -23,7 +23,8 @@ var domainConfigs = map[string]domainConfig{
 	"janice":      {2, 100 * time.Millisecond},
 	"frankfurter": {1, 0},
 	"warbeacon":   {2, 100 * time.Millisecond},
-	"evetools":    {2, 100 * time.Millisecond},
+	// br.evetools.org is a community site with no published limit: one request at a time.
+	"evetools": {1, 100 * time.Millisecond},
 }
 
 // Throttle is a per-domain rate limiter (semaphore + min-spacing).

@@ -10,10 +10,11 @@ info:
     - Errors are JSON, always: `{"error":{"code":"...","message":"..."}}`. The codes are stable (see `ErrorDetail`).
     - Every response carries `X-Request-ID`: your value when it is a token of 1-64 characters from `[A-Za-z0-9._-]`, otherwise a generated one.
     - Requests are rate limited per caller (a sliding window; the budget is stated on each operation): per API key when one is sent, otherwise per client IP. A refused request is `429` with `Retry-After`.
-    - An API key raises the budgets stated on the operations to 2 times as much, counted in the key's own window. The live-data tools keep their lower limit.
+    - Without an API key the API is for trying it out: 200 requests per UTC day per client (counted per client IP; the documentation routes are not counted) and the lower per-minute limits stated on the operations. Over the day's budget a client gets `429` `daily_quota_exceeded` with `Retry-After` set to the seconds until 00:00 UTC. A free API key is for real use.
+    - An API key raises the per-minute budgets: every operation states its limit without a key and with one, counted in the key's own window. The live-data tools keep a lower limit than the route.
     - A new API key has a daily cap of 10000 requests per UTC day by default (a cap can be changed per key, 0 meaning none). Over its cap a key gets `429` `daily_quota_exceeded` with `Retry-After` set to the seconds until 00:00 UTC.
     - Request bodies are capped (256 KiB on the fit routes, 64 KiB on tools and MCP); an oversize body is `413`.
-    - Tool tiers: each tool is *public* (no key), *keyed* (an API key), *byo-key* (your own Janice key) or *disabled*. Public: `get_market_price`, `get_type_info`, `search_item_by_name`, `get_ship_stats`, `get_ship_bonuses`, `find_canonical_module`, `get_hull_facts`, `validate_fitting`, `compute_fit_stats`, `get_production_chain`, `get_jumps_between`, `get_systems_in_region`, `get_npc_stations`, `get_reprocessing_yield`, `get_required_skills`, `get_sovereignty`, `get_system_activity`. Keyed (send the key as `Authorization: Bearer <key>` or `X-API-Key`; `401 api_key_required` without one, `401 invalid_api_key` for a key that is not valid, on every tool): `get_fits`, `list_fits`, `analyze_battle`. Byo-key (the `X-Janice-Key` request header, used for that request only and never logged or stored; `400 janice_key_required` without it): `appraise_items`. Disabled tools are not offered on this service (`403 tool_disabled` over REST, absent from the MCP tool list).
+    - Tool tiers: each tool is *public* (no key), *keyed* (an API key), *byo-key* (your own Janice key) or *disabled*. Public: `get_market_price`, `get_type_info`, `search_item_by_name`, `get_ship_stats`, `get_ship_bonuses`, `find_canonical_module`, `get_hull_facts`, `get_fits`, `list_fits`, `validate_fitting`, `compute_fit_stats`, `get_production_chain`, `get_jumps_between`, `get_systems_in_region`, `get_npc_stations`, `get_reprocessing_yield`, `get_required_skills`, `get_sovereignty`, `get_system_activity`. Keyed (send the key as `Authorization: Bearer <key>` or `X-API-Key`; `401 api_key_required` without one, `401 invalid_api_key` for a key that is not valid, on every tool): `analyze_battle`. Byo-key (the `X-Janice-Key` request header, used for that request only and never logged or stored; `400 janice_key_required` without it): `appraise_items`. Disabled tools are not offered on this service (`403 tool_disabled` over REST, absent from the MCP tool list).
 
     ## Attribution and licences
 
@@ -42,9 +43,9 @@ paths:
         - fits
       summary: Search community fits
       description: |-
-        Searches the community-fit corpus (EVE Workbench, Abysstracker and other sources named in each hit). The facet parameters filter the corpus; with `q` a filtered vector search ranks the hits. When the facets match nothing they are relaxed one at a time, last first: `relaxed` is then true and `dropped` names what was removed. `ship` may be a loose hull name (`megath` finds Megathron). No language model is involved. Every hit carries an `attribution` object (`source`, `source_url`, `author` when known, `license`, `credit` and `license_url` when the terms require them); show it wherever you show the fit. The fits are community data served ranked and capped, not for bulk export.
+        Searches the community-fit corpus (EVE Workbench, Abysstracker and other sources named in each hit). The facet parameters filter the corpus; with `q` a filtered vector search ranks the hits. When the facets match nothing they are relaxed one at a time, last first: `relaxed` is then true and `dropped` names what was removed. `ship` may be a loose hull name (`megath` finds Megathron). No language model is involved. Every hit carries an `attribution` object (`source`, `source_url`, `author` when known, `license`, `credit` and `license_url` when the terms require them); show it wherever you show the fit. The fits are community data served ranked and capped, not for bulk export. Free-text search (`q`) needs an API key (`401 api_key_required` without one; `401 invalid_api_key` for a key that is not valid) because it embeds the query; the filters work without a key.
 
-        Rate limit: 120 requests per minute per caller (per API key when one is sent, otherwise per client IP).
+        Rate limit: 30 requests per minute per client IP without an API key, 240 per minute per API key with one.
       operationId: searchFits
       parameters:
         - $ref: '#/components/parameters/RequestID'
@@ -106,6 +107,10 @@ paths:
           schema:
             type: integer
             default: 24
+      security:
+        - {}
+        - bearerAuth: []
+        - apiKeyAuth: []
       responses:
         "200":
           description: The ranked fits.
@@ -118,6 +123,8 @@ paths:
               $ref: '#/components/headers/RequestID'
         "400":
           $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
         "429":
           $ref: '#/components/responses/RateLimited'
         "502":
@@ -132,7 +139,7 @@ paths:
       description: |-
         Parses an EFT block and returns its slots, CPU / powergrid / calibration use and ship class. Deterministic; DPS and EHP are not part of this view (see `/fit/stats`).
 
-        Rate limit: 60 requests per minute per caller (per API key when one is sent, otherwise per client IP).
+        Rate limit: 60 requests per minute per client IP without an API key, 120 per minute per API key with one.
       operationId: fitDetail
       parameters:
         - $ref: '#/components/parameters/RequestID'
@@ -170,7 +177,7 @@ paths:
       description: |-
         Parses an EFT block and returns the Gofa engine's DPS, tank, capacitor, navigation, targeting and drone numbers. Deterministic; the same engine produces the numbers of the `compute_fit_stats` tool.
 
-        Rate limit: 60 requests per minute per caller (per API key when one is sent, otherwise per client IP).
+        Rate limit: 60 requests per minute per client IP without an API key, 120 per minute per API key with one.
       operationId: fitStats
       parameters:
         - $ref: '#/components/parameters/RequestID'
@@ -208,7 +215,7 @@ paths:
       description: |-
         Ranks the modules that can fill a slot tier of the given fit: how often similar community fits carry them (when the corpus is up), their meta tier, and whether they fit the remaining CPU and powergrid. Without the corpus the ranking falls back to the SDE alone.
 
-        Rate limit: 60 requests per minute per caller (per API key when one is sent, otherwise per client IP).
+        Rate limit: 60 requests per minute per client IP without an API key, 120 per minute per API key with one.
       operationId: fitSuggest
       parameters:
         - $ref: '#/components/parameters/RequestID'
@@ -246,7 +253,7 @@ paths:
       description: |-
         Name search over the SDE's fittable modules, charges or drones (the fitting palette's search).
 
-        Rate limit: 120 requests per minute per caller (per API key when one is sent, otherwise per client IP).
+        Rate limit: 120 requests per minute per client IP without an API key, 240 per minute per API key with one.
       operationId: searchItems
       parameters:
         - $ref: '#/components/parameters/RequestID'
@@ -316,9 +323,9 @@ paths:
 
         Access tier: **public**. No key needed.
 
-        Rate limit: 30 requests per minute per caller (per API key when one is sent, otherwise per client IP).
+        Rate limit: 10 requests per minute per client IP without an API key, 60 per minute per API key with one.
 
-        Reads live public data from EVE's ESI through a shared cache that follows ESI's `Expires`. Its own fair-use limit is 10 calls per minute per caller (REST and MCP together), on top of the route limit. When the shared ESI budget is nearly spent the call is refused with `503 upstream_busy` (MCP: an error result starting `upstream_busy`) and `Retry-After`; retry later.
+        Reads live public data from EVE's ESI through a shared cache that follows ESI's `Expires`. Its own fair-use limit is 5 calls per minute per caller without an API key and 10 with one (REST and MCP together), on top of the route limit. When the shared ESI budget is nearly spent the call is refused with `503 upstream_busy` (MCP: an error result starting `upstream_busy`) and `Retry-After`; retry later.
       operationId: get_market_price
       parameters:
         - $ref: '#/components/parameters/RequestID'
@@ -373,9 +380,9 @@ paths:
 
         Access tier: **public**. No key needed.
 
-        Rate limit: 30 requests per minute per caller (per API key when one is sent, otherwise per client IP).
+        Rate limit: 10 requests per minute per client IP without an API key, 60 per minute per API key with one.
 
-        Reads live public data from EVE's ESI through a shared cache that follows ESI's `Expires`. Its own fair-use limit is 10 calls per minute per caller (REST and MCP together), on top of the route limit. When the shared ESI budget is nearly spent the call is refused with `503 upstream_busy` (MCP: an error result starting `upstream_busy`) and `Retry-After`; retry later.
+        Reads live public data from EVE's ESI through a shared cache that follows ESI's `Expires`. Its own fair-use limit is 5 calls per minute per caller without an API key and 10 with one (REST and MCP together), on top of the route limit. When the shared ESI budget is nearly spent the call is refused with `503 upstream_busy` (MCP: an error result starting `upstream_busy`) and `Retry-After`; retry later.
       operationId: get_type_info
       parameters:
         - $ref: '#/components/parameters/RequestID'
@@ -427,7 +434,7 @@ paths:
 
         Access tier: **public**. No key needed.
 
-        Rate limit: 30 requests per minute per caller (per API key when one is sent, otherwise per client IP).
+        Rate limit: 10 requests per minute per client IP without an API key, 60 per minute per API key with one.
       operationId: search_item_by_name
       parameters:
         - $ref: '#/components/parameters/RequestID'
@@ -481,7 +488,7 @@ paths:
 
         Access tier: **public**. No key needed.
 
-        Rate limit: 30 requests per minute per caller (per API key when one is sent, otherwise per client IP).
+        Rate limit: 10 requests per minute per client IP without an API key, 60 per minute per API key with one.
       operationId: get_ship_stats
       parameters:
         - $ref: '#/components/parameters/RequestID'
@@ -533,7 +540,7 @@ paths:
 
         Access tier: **public**. No key needed.
 
-        Rate limit: 30 requests per minute per caller (per API key when one is sent, otherwise per client IP).
+        Rate limit: 10 requests per minute per client IP without an API key, 60 per minute per API key with one.
       operationId: get_ship_bonuses
       parameters:
         - $ref: '#/components/parameters/RequestID'
@@ -585,7 +592,7 @@ paths:
 
         Access tier: **public**. No key needed.
 
-        Rate limit: 30 requests per minute per caller (per API key when one is sent, otherwise per client IP).
+        Rate limit: 10 requests per minute per client IP without an API key, 60 per minute per API key with one.
       operationId: find_canonical_module
       parameters:
         - $ref: '#/components/parameters/RequestID'
@@ -640,7 +647,7 @@ paths:
 
         Access tier: **public**. No key needed.
 
-        Rate limit: 30 requests per minute per caller (per API key when one is sent, otherwise per client IP).
+        Rate limit: 10 requests per minute per client IP without an API key, 60 per minute per API key with one.
       operationId: get_hull_facts
       parameters:
         - $ref: '#/components/parameters/RequestID'
@@ -690,15 +697,12 @@ paths:
 
         Sources: EVE Workbench; Abysstracker; gustavmannfred (abyss fits); caldarijoans (abyss fits); zKillboard. `result.data` is a `CommunityFits` object when the call succeeds.
 
-        Access tier: **keyed**. Send an API key (`Authorization: Bearer <key>` or `X-API-Key`); without one the answer is `401 api_key_required`.
+        Access tier: **public**. No key needed.
 
-        Rate limit: 30 requests per minute per caller (per API key when one is sent, otherwise per client IP).
+        Rate limit: 10 requests per minute per client IP without an API key, 60 per minute per API key with one.
       operationId: get_fits
       parameters:
         - $ref: '#/components/parameters/RequestID'
-      security:
-        - bearerAuth: []
-        - apiKeyAuth: []
       requestBody:
         required: false
         content:
@@ -783,15 +787,12 @@ paths:
 
         Sources: EVE Workbench; Abysstracker; gustavmannfred (abyss fits); caldarijoans (abyss fits); zKillboard. `result.data` is a `FitListing` object when the call succeeds.
 
-        Access tier: **keyed**. Send an API key (`Authorization: Bearer <key>` or `X-API-Key`); without one the answer is `401 api_key_required`.
+        Access tier: **public**. No key needed.
 
-        Rate limit: 30 requests per minute per caller (per API key when one is sent, otherwise per client IP).
+        Rate limit: 10 requests per minute per client IP without an API key, 60 per minute per API key with one.
       operationId: list_fits
       parameters:
         - $ref: '#/components/parameters/RequestID'
-      security:
-        - bearerAuth: []
-        - apiKeyAuth: []
       requestBody:
         required: false
         content:
@@ -856,7 +857,7 @@ paths:
 
         Access tier: **keyed**. Send an API key (`Authorization: Bearer <key>` or `X-API-Key`); without one the answer is `401 api_key_required`.
 
-        Rate limit: 30 requests per minute per caller (per API key when one is sent, otherwise per client IP).
+        Rate limit: 10 requests per minute per client IP without an API key, 60 per minute per API key with one.
       operationId: analyze_battle
       parameters:
         - $ref: '#/components/parameters/RequestID'
@@ -875,7 +876,7 @@ paths:
                   description: 'Full battle URL. Supported formats: https://zkillboard.com/related/30003067/202501071700/ or https://zkillboard.com/br/4885/ or https://warbeacon.net/br/report/78f57bba-34b0-4e0b-b0e6-53119ab32fbc or https://br.evetools.org/br/69f7d88dcbe9de00126eb5a5'
                 detail:
                   type: string
-                  description: Output level. 'summary' (default) — high-level battle report only. 'full' — also includes top-10 damage by weapon type per side and top-10 destroyed modules per slot per side. Slower (~5-15 s) since it fan-outs ESI killmail fetches; the result is cached for 30 min so a follow-up turn is fast.
+                  description: Output level. 'summary' (default) — high-level battle report only. 'full' — also includes top-10 damage by weapon type per side and top-10 destroyed modules per slot per side. Slower (~5-15 s) since it fetches individual killmails; for br.evetools.org reports only the 25 most valuable are read, one at a time. The result is cached for 30 min so a follow-up turn is fast.
                   enum:
                     - summary
                     - full
@@ -917,7 +918,7 @@ paths:
 
         Access tier: **public**. No key needed.
 
-        Rate limit: 30 requests per minute per caller (per API key when one is sent, otherwise per client IP).
+        Rate limit: 10 requests per minute per client IP without an API key, 60 per minute per API key with one.
       operationId: validate_fitting
       parameters:
         - $ref: '#/components/parameters/RequestID'
@@ -969,7 +970,7 @@ paths:
 
         Access tier: **public**. No key needed.
 
-        Rate limit: 30 requests per minute per caller (per API key when one is sent, otherwise per client IP).
+        Rate limit: 10 requests per minute per client IP without an API key, 60 per minute per API key with one.
       operationId: compute_fit_stats
       parameters:
         - $ref: '#/components/parameters/RequestID'
@@ -1026,7 +1027,7 @@ paths:
 
         Access tier: **byo-key**. Runs only with your own Janice API key in the `X-Janice-Key` header (`400 janice_key_required` without it); the key is used for this request only and never logged or stored.
 
-        Rate limit: 30 requests per minute per caller (per API key when one is sent, otherwise per client IP).
+        Rate limit: 10 requests per minute per client IP without an API key, 60 per minute per API key with one.
       operationId: appraise_items
       parameters:
         - $ref: '#/components/parameters/RequestID'
@@ -1085,7 +1086,7 @@ paths:
 
         Access tier: **public**. No key needed.
 
-        Rate limit: 30 requests per minute per caller (per API key when one is sent, otherwise per client IP).
+        Rate limit: 10 requests per minute per client IP without an API key, 60 per minute per API key with one.
       operationId: get_production_chain
       parameters:
         - $ref: '#/components/parameters/RequestID'
@@ -1152,7 +1153,7 @@ paths:
 
         Access tier: **public**. No key needed.
 
-        Rate limit: 30 requests per minute per caller (per API key when one is sent, otherwise per client IP).
+        Rate limit: 10 requests per minute per client IP without an API key, 60 per minute per API key with one.
       operationId: get_jumps_between
       parameters:
         - $ref: '#/components/parameters/RequestID'
@@ -1211,7 +1212,7 @@ paths:
 
         Access tier: **public**. No key needed.
 
-        Rate limit: 30 requests per minute per caller (per API key when one is sent, otherwise per client IP).
+        Rate limit: 10 requests per minute per client IP without an API key, 60 per minute per API key with one.
       operationId: get_systems_in_region
       parameters:
         - $ref: '#/components/parameters/RequestID'
@@ -1269,7 +1270,7 @@ paths:
 
         Access tier: **public**. No key needed.
 
-        Rate limit: 30 requests per minute per caller (per API key when one is sent, otherwise per client IP).
+        Rate limit: 10 requests per minute per client IP without an API key, 60 per minute per API key with one.
       operationId: get_npc_stations
       parameters:
         - $ref: '#/components/parameters/RequestID'
@@ -1321,7 +1322,7 @@ paths:
 
         Access tier: **public**. No key needed.
 
-        Rate limit: 30 requests per minute per caller (per API key when one is sent, otherwise per client IP).
+        Rate limit: 10 requests per minute per client IP without an API key, 60 per minute per API key with one.
       operationId: get_reprocessing_yield
       parameters:
         - $ref: '#/components/parameters/RequestID'
@@ -1379,7 +1380,7 @@ paths:
 
         Access tier: **public**. No key needed.
 
-        Rate limit: 30 requests per minute per caller (per API key when one is sent, otherwise per client IP).
+        Rate limit: 10 requests per minute per client IP without an API key, 60 per minute per API key with one.
       operationId: get_required_skills
       parameters:
         - $ref: '#/components/parameters/RequestID'
@@ -1437,9 +1438,9 @@ paths:
 
         Access tier: **public**. No key needed.
 
-        Rate limit: 30 requests per minute per caller (per API key when one is sent, otherwise per client IP).
+        Rate limit: 10 requests per minute per client IP without an API key, 60 per minute per API key with one.
 
-        Reads live public data from EVE's ESI through a shared cache that follows ESI's `Expires`. Its own fair-use limit is 10 calls per minute per caller (REST and MCP together), on top of the route limit. When the shared ESI budget is nearly spent the call is refused with `503 upstream_busy` (MCP: an error result starting `upstream_busy`) and `Retry-After`; retry later.
+        Reads live public data from EVE's ESI through a shared cache that follows ESI's `Expires`. Its own fair-use limit is 5 calls per minute per caller without an API key and 10 with one (REST and MCP together), on top of the route limit. When the shared ESI budget is nearly spent the call is refused with `503 upstream_busy` (MCP: an error result starting `upstream_busy`) and `Retry-After`; retry later.
       operationId: get_sovereignty
       parameters:
         - $ref: '#/components/parameters/RequestID'
@@ -1483,17 +1484,17 @@ paths:
     post:
       tags:
         - tools
-      summary: Get recent killmail count and jump count for a solar system from ESI.
+      summary: Get the ship, pod and NPC kills of a solar system in the last hour from ESI (jumps are not included).
       description: |-
-        Get recent killmail count and jump count for a solar system from ESI. Use for 'how many kills in X recently', 'is system Y active', 'is it safe to undock'.
+        Get the ship, pod and NPC kills of a solar system in the last hour from ESI (jumps are not included). Use for 'how many kills in X recently', 'is system Y active', 'is it safe to undock'.
 
         Sources: EVE Static Data Export (via Fuzzwork); ESI (EVE Swagger Interface).
 
         Access tier: **public**. No key needed.
 
-        Rate limit: 30 requests per minute per caller (per API key when one is sent, otherwise per client IP).
+        Rate limit: 10 requests per minute per client IP without an API key, 60 per minute per API key with one.
 
-        Reads live public data from EVE's ESI through a shared cache that follows ESI's `Expires`. Its own fair-use limit is 10 calls per minute per caller (REST and MCP together), on top of the route limit. When the shared ESI budget is nearly spent the call is refused with `503 upstream_busy` (MCP: an error result starting `upstream_busy`) and `Retry-After`; retry later.
+        Reads live public data from EVE's ESI through a shared cache that follows ESI's `Expires`. Its own fair-use limit is 5 calls per minute per caller without an API key and 10 with one (REST and MCP together), on top of the route limit. When the shared ESI budget is nearly spent the call is refused with `503 upstream_busy` (MCP: an error result starting `upstream_busy`) and `Retry-After`; retry later.
       operationId: get_system_activity
       parameters:
         - $ref: '#/components/parameters/RequestID'
@@ -1541,7 +1542,7 @@ paths:
       description: |-
         Streamable-HTTP MCP server (stateless, JSON responses): the same tools as `/tool/{name}`, for MCP clients such as Claude Desktop or Claude Code. POST one JSON-RPC 2.0 message per request (`initialize`, `tools/list`, `tools/call`, ...); a notification is answered `202` with no body. `GET` and `DELETE` are not supported in stateless mode (405). Point a client at this URL; it is not meant to be called by hand.
 
-        Rate limit: 60 requests per minute per caller (per API key when one is sent, otherwise per client IP).
+        Rate limit: 20 requests per minute per client IP without an API key, 120 per minute per API key with one.
       operationId: mcp
       parameters:
         - $ref: '#/components/parameters/RequestID'
@@ -1630,7 +1631,7 @@ paths:
       description: |-
         The OpenAPI 3.1 document of this service, generated from its route table and tool registry.
 
-        Rate limit: 60 requests per minute per caller (per API key when one is sent, otherwise per client IP).
+        Rate limit: 60 requests per minute per client IP without an API key, 120 per minute per API key with one.
       operationId: openapiYaml
       parameters:
         - $ref: '#/components/parameters/RequestID'
@@ -1654,7 +1655,7 @@ paths:
       description: |-
         The same OpenAPI 3.1 document as JSON.
 
-        Rate limit: 60 requests per minute per caller (per API key when one is sent, otherwise per client IP).
+        Rate limit: 60 requests per minute per client IP without an API key, 120 per minute per API key with one.
       operationId: openapiJson
       parameters:
         - $ref: '#/components/parameters/RequestID'
@@ -1921,6 +1922,7 @@ components:
             - invalid_api_key
             - key_not_permitted
             - janice_key_required
+            - invalid_arguments
             - timeout
             - internal_error
         message:
@@ -3094,7 +3096,7 @@ components:
         - default_ammo
   responses:
     BadRequest:
-      description: 'The request is malformed: invalid JSON, or a missing or invalid parameter or header (`invalid_request`, `janice_key_required`).'
+      description: 'The request is malformed: invalid JSON, or a missing or invalid parameter or header, or a tool call without a required argument (`invalid_request`, `janice_key_required`, `invalid_arguments`).'
       content:
         application/json:
           schema:

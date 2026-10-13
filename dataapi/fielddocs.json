@@ -93,6 +93,7 @@
   "tools.CapCard.ChargeFed": "ChargeFed is true when an ancillary rep runs on charges, not on the capacitor, which makes the capacitor figures meaningless.",
   "tools.CapCard.Summary": "Summary is \"stable\" or \"lasts 442s\", empty when there is nothing trustworthy to say (no capacitor data, or reps that run on charges).",
   "tools.Client.ESI": "ESI is the shared ESI client. Nil means \"build one from HTTP on first use\", so a Client literal with only HTTP and Throttle still works.",
+  "tools.Client.UserAgent": "UserAgent is the project User-Agent sent to Janice, Frankfurter, zKillboard, br.evetools.org and WarBeacon (esi.ProjectUserAgent). Empty means \"build it from the environment on use\", so a Client literal with only HTTP and Throttle works.",
   "tools.CommunityFit.EFT": "EFT is the fit text as stored (the markdown header some sources prepend included).",
   "tools.CommunityFits.Relaxed": "Relaxed is true when tag filters were dropped to find these (the text says which).",
   "tools.Deps.JaniceAPIKey": "JaniceAPIKey is set from config for appraise_items.",

@@ -36,9 +36,10 @@ type Builder struct {
 }
 
 // New creates a Builder using the real Fuzzwork HTTP client, the production
-// publish gate (DefaultGate) and the SDE destination path.
-func New(path string) *Builder {
-	return &Builder{remote: NewFuzzwork(), path: path, gate: DefaultGate()}
+// publish gate (DefaultGate) and the SDE destination path. userAgent is the project
+// User-Agent (esi.ProjectUserAgent) the Fuzzwork requests carry.
+func New(path, userAgent string) *Builder {
+	return &Builder{remote: NewFuzzwork(userAgent), path: path, gate: DefaultGate()}
 }
 
 // NewWithRemote is New with an injected Remote and publish gate. Tests use tiny

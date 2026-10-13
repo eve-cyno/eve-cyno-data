@@ -17,6 +17,18 @@ var pagingParams = []string{"offset", "page", "cursor", "skip", "start"}
 // search. Facet params filter the corpus; an optional q runs a filtered vector
 // search. Returns the rag.FitSearchResult JSON.
 func (a *API) fitsSearch(w http.ResponseWriter, r *http.Request) {
+	// Free-text search embeds the query (a paid call), so on a service that issues keys it is
+	// for key holders; the filters scroll the corpus by payload and stay open.
+	if a.surface.Auth && strings.TrimSpace(r.URL.Query().Get("q")) != "" {
+		if authErrorFrom(r.Context()) != nil {
+			writeError(w, r, http.StatusUnauthorized, "invalid_api_key", "the API key is not valid")
+			return
+		}
+		if !CallerFrom(r.Context()).Authenticated() {
+			writeError(w, r, http.StatusUnauthorized, "api_key_required", "free-text fit search (q) needs an API key; the filters work without one")
+			return
+		}
+	}
 	if a.deps.Retriever == nil {
 		writeError(w, r, http.StatusServiceUnavailable, "unavailable", "fit search unavailable (corpus not loaded)")
 		return

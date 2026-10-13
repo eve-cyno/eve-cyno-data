@@ -114,12 +114,13 @@ const (
 	// documents, not in the MCP tool list, refused by the REST endpoint. They stay
 	// available to the chat and to the local user's own surfaces.
 	TierDisabled Tier = iota
-	// TierPublic tools run for any caller, anonymous included: pure SDE lookups and the
-	// Gofa fit calculations (no per-call cost to the project).
+	// TierPublic tools run for any caller, anonymous included: pure SDE lookups, the Gofa
+	// fit calculations, the community-fit lookups (a payload-filtered corpus scroll) and the
+	// ESI pass-throughs behind a stricter limit. The hosted service gives keyless callers
+	// trial limits.
 	TierPublic
-	// TierKeyed tools need a valid API key: they cost the project something per call
-	// (corpus search embeds the query through a paid provider) or lean on a shared
-	// upstream (ESI, the battle-report backends).
+	// TierKeyed tools need a valid API key: they lean on shared upstreams the project pays
+	// for or must not hammer (the battle-report backends).
 	TierKeyed
 	// TierBYOKey tools run only with the caller's own credential for the upstream: the
 	// project's key is never used for them on a public surface. appraise_items takes the
@@ -190,9 +191,11 @@ func tierTable() map[string]Tier {
 		"get_sovereignty":     TierPublic,
 		"get_system_activity": TierPublic,
 
-		// Corpus search (embedding cost) and the battle-report pass-through.
-		"get_fits":       TierKeyed,
-		"list_fits":      TierKeyed,
+		// Community-fit lookups: they scroll the corpus by payload filters (no embedding call),
+		// so they are public with trial limits; the free-text search path (q) is what needs a
+		// key, and the HTTP layer enforces that. The battle-report pass-through stays keyed.
+		"get_fits":       TierPublic,
+		"list_fits":      TierPublic,
 		"analyze_battle": TierKeyed,
 
 		// The caller's own Janice key.
@@ -233,7 +236,7 @@ func summaryTable() map[string]string {
 		"get_reprocessing_yield": "Materials produced by reprocessing an item.",
 		"get_required_skills":    "Skills required to fly a ship or build an item.",
 		"get_sovereignty":        "The alliance and corporation holding sovereignty over a solar system.",
-		"get_system_activity":    "Recent kills and jumps in a solar system.",
+		"get_system_activity":    "Ship, pod and NPC kills in a solar system in the last hour.",
 		"appraise_items":         "Appraise a list of items through Janice, with your own Janice key.",
 		"get_fits":               "Community fits for a ship, by activity, cost and source, with author credit.",
 		"list_fits":              "List community fits by exact filters: source, ship, tag or filament.",

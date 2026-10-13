@@ -100,9 +100,9 @@ func TestCall_TextOnlyResultHasNoStructuredContent(t *testing.T) {
 
 func TestCall_NoArgumentsRunsWithEmptyMap(t *testing.T) {
 	f := &fakeExec{res: tools.Result{Text: "ok"}}
-	cs := connect(t, newServer(&tools.Deps{}, Options{}, f.exec))
+	cs := connect(t, newServer(&tools.Deps{}, Options{All: true}, f.exec))
 
-	_, err := cs.CallTool(t.Context(), &mcp.CallToolParams{Name: "get_npc_stations"})
+	_, err := cs.CallTool(t.Context(), &mcp.CallToolParams{Name: "list_fits"}) // no required arguments
 	require.NoError(t, err)
 	require.NotNil(t, f.args)
 	require.Empty(t, f.args)
@@ -205,6 +205,16 @@ func postRPC(t *testing.T, h http.Handler, body string, hdr ...string) string {
 	return rec.Body.String()
 }
 
+// validArgs satisfies the required arguments of the tools the tests call.
+var validArgs = map[string]string{
+	"appraise_items":      `{"items":"Tritanium"}`,
+	"get_jumps_between":   `{"from_system":"Jita","to_system":"Amarr"}`,
+	"get_type_info":       `{"type_id":587}`,
+	"get_market_price":    `{"type_id":34}`,
+	"get_sovereignty":     `{"system_name":"Jita"}`,
+	"get_system_activity": `{"system_name":"Jita"}`,
+}
+
 func TestHTTPHandler_PerRequestDepsCarryOnlyTheCallersJaniceKey(t *testing.T) {
 	shared := &tools.Deps{JaniceAPIKey: "project-key"}
 	var mu sync.Mutex
@@ -217,7 +227,7 @@ func TestHTTPHandler_PerRequestDepsCarryOnlyTheCallersJaniceKey(t *testing.T) {
 	}
 	h := httpHandler(shared, HTTPOptions{DisableLocalhostProtection: true}, exec)
 	call := func(name string, hdr ...string) string {
-		return postRPC(t, h, `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"`+name+`","arguments":{}}}`, hdr...)
+		return postRPC(t, h, `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"`+name+`","arguments":`+validArgs[name]+`}}`, hdr...)
 	}
 
 	require.Contains(t, call("appraise_items"), "X-Janice-Key", "no header: an error result that names it")
@@ -235,12 +245,12 @@ func TestHTTPHandler_KeyedTierFollowsTheKeyedCallback(t *testing.T) {
 		return postRPC(t, httpHandler(&tools.Deps{}, o, nil), `{"jsonrpc":"2.0","id":1,"method":"tools/list"}`, hdr...)
 	}
 	o := HTTPOptions{DisableLocalhostProtection: true}
-	require.NotContains(t, list(o), `"get_fits"`, "no callback: nobody is keyed")
+	require.NotContains(t, list(o), `"analyze_battle"`, "no callback: nobody is keyed")
 
 	o.Keyed = func(r *http.Request) bool { return r.Header.Get("X-Test-Keyed") == "yes" }
-	require.NotContains(t, list(o), `"get_fits"`)
+	require.NotContains(t, list(o), `"analyze_battle"`)
 	keyed := list(o, "X-Test-Keyed", "yes")
-	require.Contains(t, keyed, `"get_fits"`)
+	require.Contains(t, keyed, `"analyze_battle"`)
 	require.Contains(t, keyed, `"appraise_items"`)
 	require.NotContains(t, keyed, `"convert_isk_to_real"`)
 }
@@ -258,7 +268,7 @@ func TestHTTPHandler_ToolCalledFiresOncePerCallWithTheCarryingRequest(t *testing
 	}
 	h := httpHandler(&tools.Deps{}, o, exec)
 	call := func(name string, hdr ...string) {
-		postRPC(t, h, `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"`+name+`","arguments":{}}}`, hdr...)
+		postRPC(t, h, `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"`+name+`","arguments":`+validArgs[name]+`}}`, hdr...)
 	}
 	postRPC(t, h, `{"jsonrpc":"2.0","id":1,"method":"tools/list"}`, "X-Test-Caller", "a")
 	call("get_jumps_between", "X-Test-Caller", "a")

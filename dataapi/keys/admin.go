@@ -40,6 +40,8 @@ const maxAdminBody = 1 << 10 // 1 KiB
 //	PATCH  /admin/v1/ops/keys/{id}             change the daily cap
 //	DELETE /admin/v1/ops/keys/{id}             revoke any key
 //	GET    /admin/v1/ops/keys/{id}/usage       request history (?days=1..30, default 30)
+//	GET    /admin/v1/ops/usage                 the day history of every key with usage (?days=1..30,
+//	                                           default 30): 200 {"days":N,"keys":{"<key id>":[day rows]}}
 //	PUT    /admin/v1/ops/owners/{owner}/block  block an owner and revoke their keys
 //	DELETE /admin/v1/ops/owners/{owner}/block  unblock an owner
 //	DELETE /admin/v1/ops/owners/{owner}        delete all of an owner's key records (active and
@@ -62,6 +64,7 @@ func AdminHandler(s *Store, token string, log *slog.Logger) http.Handler {
 	mux.HandleFunc("PATCH /admin/v1/ops/keys/{id}", a.opsSetCap)
 	mux.HandleFunc("DELETE /admin/v1/ops/keys/{id}", a.opsRevoke)
 	mux.HandleFunc("GET /admin/v1/ops/keys/{id}/usage", a.opsUsage)
+	mux.HandleFunc("GET /admin/v1/ops/usage", a.opsUsageAll)
 	mux.HandleFunc("PUT /admin/v1/ops/owners/{owner}/block", a.opsBlock)
 	mux.HandleFunc("DELETE /admin/v1/ops/owners/{owner}/block", a.opsUnblock)
 	mux.HandleFunc("DELETE /admin/v1/ops/owners/{owner}", a.opsPurge)
@@ -310,15 +313,37 @@ func (a *admin) opsRevoke(w http.ResponseWriter, r *http.Request) {
 	a.noContent(w)
 }
 
-func (a *admin) opsUsage(w http.ResponseWriter, r *http.Request) {
+// queryDays reads ?days= (default 30); false when it is not an integer, after answering 400.
+func (a *admin) queryDays(w http.ResponseWriter, r *http.Request) (int, bool) {
 	days := retainDays
 	if q, ok := r.URL.Query()["days"]; ok {
 		n, err := strconv.Atoi(q[0])
 		if err != nil {
 			a.storeErr(w, r, ErrBadDays)
-			return
+			return 0, false
 		}
 		days = n
+	}
+	return days, true
+}
+
+func (a *admin) opsUsageAll(w http.ResponseWriter, r *http.Request) {
+	days, ok := a.queryDays(w, r)
+	if !ok {
+		return
+	}
+	all, err := a.s.UsageAll(r.Context(), days)
+	if err != nil {
+		a.storeErr(w, r, err)
+		return
+	}
+	a.write(w, http.StatusOK, map[string]any{"days": days, "keys": all})
+}
+
+func (a *admin) opsUsage(w http.ResponseWriter, r *http.Request) {
+	days, ok := a.queryDays(w, r)
+	if !ok {
+		return
 	}
 	u, err := a.s.Usage(r.Context(), r.PathValue("id"), days)
 	if err != nil {

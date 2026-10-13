@@ -155,7 +155,7 @@ type oaComponents struct {
 // errorResponseNames maps a status to its shared component response.
 func errorResponseNames() map[int]struct{ name, description string } {
 	return map[int]struct{ name, description string }{
-		http.StatusBadRequest:            {"BadRequest", "The request is malformed: invalid JSON, or a missing or invalid parameter or header (`invalid_request`, `janice_key_required`)."},
+		http.StatusBadRequest:            {"BadRequest", "The request is malformed: invalid JSON, or a missing or invalid parameter or header, or a tool call without a required argument (`invalid_request`, `janice_key_required`, `invalid_arguments`)."},
 		http.StatusUnauthorized:          {"Unauthorized", "The tool needs an API key and the request has none (`api_key_required`), or the key it sent is not valid (`invalid_api_key`)."},
 		http.StatusForbidden:             {"Forbidden", "The tool is disabled on this service (`tool_disabled`), or the key may not run keyed tools (`key_not_permitted`)."},
 		http.StatusNotFound:              {"NotFound", "No such route or tool (`not_found`, `unknown_tool`)."},
@@ -478,7 +478,7 @@ func (b *schemaBuilder) operation(s Surface, rt route, rate Rate) *oaOperation {
 	op := &oaOperation{
 		Tags:        []string{d.tag},
 		Summary:     d.summary,
-		Description: d.description + rateSentence(rate),
+		Description: d.description + searchKeyNote(s, d) + rateSentence(s, rate),
 		OperationID: d.id,
 		Parameters:  []any{schema{"$ref": "#/components/parameters/RequestID"}},
 	}
@@ -512,12 +512,24 @@ func (b *schemaBuilder) operation(s Surface, rt route, rate Rate) *oaOperation {
 	}
 	ok := propList{{name: "200", schema: okResponse(d.ok.description, schema{media: schema{"schema": sch}})}}
 	errs := d.errors
-	if d.id == "mcp" && s.Auth {
+	if (d.id == "mcp" || d.id == searchFitsID) && s.Auth {
 		op.Security = optionalSecurity()
 		errs = append(slices.Clone(errs), http.StatusUnauthorized)
 	}
 	op.Responses = b.responses(ok, errs)
 	return op
+}
+
+// searchFitsID is the operation id of GET /fits/search.
+const searchFitsID = "searchFits"
+
+// searchKeyNote says that the free-text parameter of the fit search needs an API key, on a
+// service that accepts keys.
+func searchKeyNote(s Surface, d *opDoc) string {
+	if d.id != searchFitsID || !s.Auth {
+		return ""
+	}
+	return " Free-text search (`q`) needs an API key (`401 api_key_required` without one; `401 invalid_api_key` for a key that is not valid) because it embeds the query; the filters work without a key."
 }
 
 // toolOperation documents one tool of the raw tool endpoint.
@@ -538,7 +550,7 @@ func (b *schemaBuilder) toolOperation(s Surface, rt route, tl catalog.Tool, rate
 		desc.WriteString(" `result.data` is a `" + componentName(tl.Data) + "` object when the call succeeds.")
 	}
 	desc.WriteString(tierSentence(s, tl))
-	desc.WriteString(rateSentence(rate))
+	desc.WriteString(rateSentence(s, rate))
 	if up := upstreamSentence(s, tl); up != "" {
 		desc.WriteString("\n\n" + up)
 	}
@@ -578,23 +590,31 @@ func (b *schemaBuilder) toolOperation(s Surface, rt route, tl catalog.Tool, rate
 	}
 }
 
-// rateSentence states a budget in prose ("" when the route is unlimited).
-func rateSentence(r Rate) string {
+// rateSentence states a budget in prose ("" when the route is unlimited). Where an API key
+// raises it, both numbers are stated.
+func rateSentence(s Surface, r Rate) string {
 	if r.Max <= 0 || r.Window <= 0 {
 		return ""
+	}
+	if k := s.keyedRate(r); s.Auth && k.Max != r.Max {
+		return fmt.Sprintf("\n\nRate limit: %d requests per %s per client IP without an API key, %d per %s per API key with one.", r.Max, windowWord(r), k.Max, windowWord(k))
 	}
 	return fmt.Sprintf("\n\nRate limit: %d requests per %s per caller (per API key when one is sent, otherwise per client IP).", r.Max, windowWord(r))
 }
 
-// keyConventions is the convention bullets on what an API key does: the raised budgets
-// (gated on the factor) and the daily cap (gated on KeyDailyCap). "" without keys.
+// keyConventions is the convention bullets on what an API key does: the trial limits of a
+// caller without one (the daily cap, gated on AnonDailyCap), the raised budgets and the
+// daily cap of a key (gated on KeyDailyCap). "" without keys.
 func keyConventions(s Surface) string {
 	if !s.Auth {
 		return ""
 	}
 	var b strings.Builder
-	if s.KeyedLimitFactor >= 2 {
-		fmt.Fprintf(&b, "- An API key raises the budgets stated on the operations to %d times as much, counted in the key's own window. The live-data tools keep their lower limit.\n", s.KeyedLimitFactor)
+	if s.AnonDailyCap > 0 {
+		fmt.Fprintf(&b, "- Without an API key the API is for trying it out: %d requests per UTC day per client (counted per client IP; the documentation routes are not counted) and the lower per-minute limits stated on the operations. Over the day's budget a client gets `429` `daily_quota_exceeded` with `Retry-After` set to the seconds until 00:00 UTC. A free API key is for real use.\n", s.AnonDailyCap)
+	}
+	if s.keysRaise() {
+		b.WriteString("- An API key raises the per-minute budgets: every operation states its limit without a key and with one, counted in the key's own window. The live-data tools keep a lower limit than the route.\n")
 	}
 	if s.KeyDailyCap > 0 {
 		fmt.Fprintf(&b, "- A new API key has a daily cap of %d requests per UTC day by default (a cap can be changed per key, 0 meaning none). Over its cap a key gets `429` `daily_quota_exceeded` with `Retry-After` set to the seconds until 00:00 UTC.\n", s.KeyDailyCap)

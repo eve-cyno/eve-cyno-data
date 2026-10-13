@@ -27,7 +27,6 @@ import (
 
 const (
 	zkillBase            = "https://zkillboard.com/api"
-	zkillUA              = "EVE-Cyno/1.0 (+https://eve-cyno.dev)"
 	autoFullThresholdISK = 50_000_000_000.0 // mirrors Python _AUTO_FULL_THRESHOLD_ISK
 	battleKMCacheTTL     = 30 * time.Minute
 	battleKMCacheMax     = 32
@@ -575,7 +574,7 @@ func zkillGet(ctx context.Context, c *Client, url string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("User-Agent", zkillUA)
+	req.Header.Set("User-Agent", c.userAgent())
 	req.Header.Set("Accept-Encoding", "gzip")
 	req.Header.Set("Accept", "application/json")
 

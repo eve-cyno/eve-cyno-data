@@ -28,13 +28,16 @@ type Surface struct {
 	// hosted "how to get a key" copy. Auth alone (a key file) says keys are issued by the
 	// operator.
 	SelfServe bool
-	// KeyedLimitFactor is the multiple of the route limits an API key gets; the documents
-	// state it when Auth is on and it is at least 2.
+	// KeyedLimitFactor is the multiple of the route limits an API key gets on a route with no
+	// explicit Rate.KeyedMax; it applies when Auth is on and it is at least 2.
 	KeyedLimitFactor int
 	// KeyDailyCap is the default daily request cap of a new API key (a key's own cap can
 	// differ); the documents state it (and the daily_quota_exceeded refusal) when Auth is
 	// on and it is above 0; 0 leaves both out.
 	KeyDailyCap int
+	// AnonDailyCap is the number of requests per UTC day a client without an API key gets;
+	// the documents state it when Auth is on and it is above 0.
+	AnonDailyCap int
 	// Docs is true when the description routes (openapi.yaml, openapi.json, /llms.txt,
 	// /llms-full.txt) are served.
 	Docs bool
@@ -57,7 +60,27 @@ const DefaultKeyDailyCap = 10000
 // switched on, at the default prefix and default limits. The committed generated files
 // (api/openapi.yaml, llms.txt, llms-full.txt) describe it.
 func PublicSurface() Surface {
-	return Surface{Prefix: DefaultPrefix, ToolAPI: ToolAPIPublic, MCP: true, Docs: true, Auth: true, SelfServe: true, KeyedLimitFactor: DefaultKeyedLimitFactor, KeyDailyCap: DefaultKeyDailyCap, Limits: DefaultLimits()}
+	return Surface{Prefix: DefaultPrefix, ToolAPI: ToolAPIPublic, MCP: true, Docs: true, Auth: true, SelfServe: true, KeyedLimitFactor: DefaultKeyedLimitFactor, KeyDailyCap: DefaultKeyDailyCap, AnonDailyCap: DefaultAnonDailyCap, Limits: DefaultLimits()}
+}
+
+// keyedRate is the plain budget a caller with an API key gets on route budget r. A service
+// without keys has no such caller: the budget is the plain one.
+func (s Surface) keyedRate(r Rate) Rate {
+	if !s.Auth {
+		return r.forAnon()
+	}
+	return r.forKey(s.KeyedLimitFactor)
+}
+
+// keysRaise reports whether an API key raises the limit of any route on this Surface.
+func (s Surface) keysRaise() bool {
+	l := s.Limits
+	for _, r := range []Rate{l.FitsSearch, l.FitsDetail, l.FitStats, l.FitSuggest, l.ItemsSearch, l.Tool, l.MCP, l.UpstreamTool, l.Docs} {
+		if r.Max > 0 && s.keyedRate(r).Max > r.Max {
+			return true
+		}
+	}
+	return false
 }
 
 func (s Surface) prefix() string {
@@ -80,6 +103,10 @@ type route struct {
 	when   func(Surface) bool
 	rate   func(Surface) Rate
 	handle func(*API, http.ResponseWriter, *http.Request)
+	// trialFree marks the routes the anonymous daily cap does not count: browsing the
+	// documentation (and the portal assets) never spends the trial, and a health probe must
+	// not be locked out.
+	trialFree bool
 	// cache is the Cache-Control policy of a 200 answer ("" leaves the header unset);
 	// every other status is no-store.
 	cache string
@@ -140,7 +167,7 @@ func errorCodes() []string {
 	return []string{
 		"not_found", "method_not_allowed", "invalid_request", "payload_too_large", "rate_limited",
 		"daily_quota_exceeded", "unavailable", "upstream_error", "upstream_busy", "unknown_tool", "tool_disabled", "api_key_required", "invalid_api_key",
-		"key_not_permitted", "janice_key_required", "timeout", "internal_error",
+		"key_not_permitted", "janice_key_required", "invalid_arguments", "timeout", "internal_error",
 	}
 }
 
@@ -154,7 +181,7 @@ func routeTable() []route {
 			rate:   func(s Surface) Rate { return s.Limits.FitsSearch },
 			handle: (*API).fitsSearch,
 			doc: &opDoc{
-				id: "searchFits", tag: "fits", summary: "Search community fits",
+				id: searchFitsID, tag: "fits", summary: "Search community fits",
 				description: "Searches the community-fit corpus (EVE Workbench, Abysstracker and other sources named in each hit). " +
 					"The facet parameters filter the corpus; with `q` a filtered vector search ranks the hits. " +
 					"When the facets match nothing they are relaxed one at a time, last first: `relaxed` is then true and `dropped` names " +
@@ -310,7 +337,7 @@ func routeTable() []route {
 			},
 		},
 		{
-			method: http.MethodGet, path: "/health", when: always, rate: unlimited,
+			method: http.MethodGet, path: "/health", when: always, rate: unlimited, trialFree: true,
 			handle: (*API).health,
 			cache:  cacheNone,
 			doc: &opDoc{
@@ -325,7 +352,7 @@ func routeTable() []route {
 		},
 		{
 			method: http.MethodGet, path: "/openapi.yaml", when: docsOn,
-			rate:   func(s Surface) Rate { return s.Limits.Docs },
+			rate: func(s Surface) Rate { return s.Limits.Docs }, trialFree: true,
 			handle: (*API).serveOpenAPIYAML,
 			cache:  cacheDocs,
 			doc: &opDoc{
@@ -337,7 +364,7 @@ func routeTable() []route {
 		},
 		{
 			method: http.MethodGet, path: "/openapi.json", when: docsOn,
-			rate:   func(s Surface) Rate { return s.Limits.Docs },
+			rate: func(s Surface) Rate { return s.Limits.Docs }, trialFree: true,
 			handle: (*API).serveOpenAPIJSON,
 			cache:  cacheDocs,
 			doc: &opDoc{
@@ -349,101 +376,101 @@ func routeTable() []route {
 		},
 		{
 			method: http.MethodGet, path: "/{$}", root: true, when: docsOn,
-			rate:   func(s Surface) Rate { return s.Limits.Docs },
+			rate: func(s Surface) Rate { return s.Limits.Docs }, trialFree: true,
 			handle: (*API).serveIndex,
 			cache:  cacheDocs,
 		},
 		{
 			method: http.MethodGet, path: "/docs", root: true, when: docsOn,
-			rate:   func(s Surface) Rate { return s.Limits.Docs },
+			rate: func(s Surface) Rate { return s.Limits.Docs }, trialFree: true,
 			handle: (*API).docsRedirect,
 		},
 		{
 			method: http.MethodGet, path: "/docs/{$}", root: true, when: docsOn,
-			rate:   func(s Surface) Rate { return s.Limits.Docs },
+			rate: func(s Surface) Rate { return s.Limits.Docs }, trialFree: true,
 			handle: (*API).docsPage,
 			cache:  cacheDocs,
 		},
 		{
 			method: http.MethodGet, path: "/docs/claude-code", root: true, when: docsOn,
-			rate:   func(s Surface) Rate { return s.Limits.Docs },
+			rate: func(s Surface) Rate { return s.Limits.Docs }, trialFree: true,
 			handle: (*API).docsPage,
 			cache:  cacheDocs,
 		},
 		{
 			method: http.MethodGet, path: "/docs/mcp", root: true, when: docsOn,
-			rate:   func(s Surface) Rate { return s.Limits.Docs },
+			rate: func(s Surface) Rate { return s.Limits.Docs }, trialFree: true,
 			handle: (*API).docsPage,
 			cache:  cacheDocs,
 		},
 		{
 			method: http.MethodGet, path: "/docs/rest", root: true, when: docsOn,
-			rate:   func(s Surface) Rate { return s.Limits.Docs },
+			rate: func(s Surface) Rate { return s.Limits.Docs }, trialFree: true,
 			handle: (*API).docsPage,
 			cache:  cacheDocs,
 		},
 		{
 			method: http.MethodGet, path: "/docs/tools", root: true, when: docsOn,
-			rate:   func(s Surface) Rate { return s.Limits.Docs },
+			rate: func(s Surface) Rate { return s.Limits.Docs }, trialFree: true,
 			handle: (*API).docsPage,
 			cache:  cacheDocs,
 		},
 		{
 			method: http.MethodGet, path: "/docs/access", root: true, when: docsOn,
-			rate:   func(s Surface) Rate { return s.Limits.Docs },
+			rate: func(s Surface) Rate { return s.Limits.Docs }, trialFree: true,
 			handle: (*API).docsPage,
 			cache:  cacheDocs,
 		},
 		{
 			method: http.MethodGet, path: "/docs/attribution", root: true, when: docsOn,
-			rate:   func(s Surface) Rate { return s.Limits.Docs },
+			rate: func(s Surface) Rate { return s.Limits.Docs }, trialFree: true,
 			handle: (*API).docsPage,
 			cache:  cacheDocs,
 		},
 		{
 			method: http.MethodGet, path: "/docs/terms", root: true, when: docsOn,
-			rate:   func(s Surface) Rate { return s.Limits.Docs },
+			rate: func(s Surface) Rate { return s.Limits.Docs }, trialFree: true,
 			handle: (*API).docsPage,
 			cache:  cacheDocs,
 		},
 		{
 			method: http.MethodGet, path: "/docs/tools/{tool}", root: true, when: docsOn,
-			rate:   func(s Surface) Rate { return s.Limits.Docs },
+			rate: func(s Surface) Rate { return s.Limits.Docs }, trialFree: true,
 			handle: (*API).docsTool,
 			cache:  cacheDocs,
 		},
 		{
 			method: http.MethodGet, path: "/docs/search.json", root: true, when: docsOn,
-			rate:   func(s Surface) Rate { return s.Limits.Docs },
+			rate: func(s Surface) Rate { return s.Limits.Docs }, trialFree: true,
 			handle: (*API).docsSearch,
 			cache:  cacheDocs,
 		},
 		{
 			// Versioned static files of the portal: immutable, so no per-caller limit.
-			method: http.MethodGet, path: "/assets/{version}/{file}", root: true, when: docsOn, rate: unlimited,
+			method: http.MethodGet, path: "/assets/{version}/{file}", root: true, when: docsOn, rate: unlimited, trialFree: true,
 			handle: (*API).asset,
 		},
 		{
 			method: http.MethodGet, path: "/terms", root: true, when: docsOn,
-			rate:   func(s Surface) Rate { return s.Limits.Docs },
+			rate: func(s Surface) Rate { return s.Limits.Docs }, trialFree: true,
 			handle: (*API).serveTerms,
 			cache:  cacheDocs,
 		},
 		{
 			method: http.MethodGet, path: "/terms.md", root: true, when: docsOn,
-			rate:   func(s Surface) Rate { return s.Limits.Docs },
+			rate: func(s Surface) Rate { return s.Limits.Docs }, trialFree: true,
 			handle: (*API).serveTermsMarkdown,
 			cache:  cacheDocs,
 		},
 		{
 			method: http.MethodGet, path: "/llms.txt", root: true, when: docsOn,
-			rate:   func(s Surface) Rate { return s.Limits.Docs },
+			rate: func(s Surface) Rate { return s.Limits.Docs }, trialFree: true,
 			handle: (*API).serveLLMs,
 			cache:  cacheDocs,
 		},
 		{
 			method: http.MethodGet, path: "/llms-full.txt", root: true, when: docsOn,
-			rate:   func(s Surface) Rate { return s.Limits.Docs },
+			rate: func(s Surface) Rate { return s.Limits.Docs }, trialFree: true,
 			handle: (*API).serveLLMsFull,
 			cache:  cacheDocs,
 		},

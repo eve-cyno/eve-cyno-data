@@ -19,7 +19,7 @@
 //
 // The tool endpoint and the MCP endpoint apply the same tool tiers (core/catalog): public
 // tools for anyone (the SDE lookups and the ESI pass-throughs, the latter with a lower
-// per-caller limit), keyed tools (get_fits, list_fits, analyze_battle)
+// per-caller limit), keyed tools (analyze_battle)
 // only with a valid API key, appraise_items only with the caller's own Janice key in the
 // X-Janice-Key header (never the project's), and disabled tools (convert_isk_to_real) never.
 // An API key is sent as "Authorization: Bearer <key>" or "X-API-Key: <key>". Each document
@@ -29,9 +29,11 @@
 // file; for a local run: `set -a; . ./.env; set +a`):
 //
 //	DATAAPI_ADDR              listen address (default :8092)
-//	DATAAPI_EXPOSE_TOOL_API   register POST /v1/tool/{name} (default false; when on,
-//	                          30 req/min per caller, tool tiers enforced)
-//	DATAAPI_EXPOSE_MCP        mount POST /v1/mcp (default false; 60 req/min/IP)
+//	DATAAPI_EXPOSE_TOOL_API   register POST /v1/tool/{name} (default false; when on, tool
+//	                          tiers are enforced; 10 req/min per caller without an API key,
+//	                          60 with one)
+//	DATAAPI_EXPOSE_MCP        mount POST /v1/mcp (default false; 20 req/min per caller
+//	                          without an API key, 120 with one)
 //	DATAAPI_API_KEYS_FILE     path of the API key file: one "id:sha256hex" per line (only
 //	                          the SHA-256 of a key is stored; `printf %s "$KEY" | sha256sum`),
 //	                          # comments allowed. Unset means no file keys; self-serve keys from
@@ -43,10 +45,11 @@
 //	                          corpus is not configured. Unset (default): Qdrant is expected; if
 //	                          it is configured but down, fit search answers 502 "upstream_error"
 //	                          per request and /v1/health still reports corpus:true
-//	DATAAPI_UPSTREAM_TOOL_LIMIT  calls per minute per caller of the tools that read live ESI
-//	                          data (get_market_price, get_type_info, get_sovereignty,
-//	                          get_system_activity), REST and MCP together (default 10; 0 = no
-//	                          extra limit)
+//	DATAAPI_UPSTREAM_TOOL_LIMIT  calls per minute per caller without an API key of the tools that
+//	                          read live ESI data (get_market_price, get_type_info,
+//	                          get_sovereignty, get_system_activity), REST and MCP together
+//	                          (default 5; a caller with a key gets twice as many; 0 = no extra
+//	                          limit)
 //	DATAAPI_ESI_GUARD_PERCENT share (0-90, default 25) of every ESI rate-limit group's tokens
 //	                          kept unspent; below it a tool answers 503 upstream_busy instead
 //	                          of calling ESI. Every ESI call is logged as msg "esi_call"
@@ -63,8 +66,15 @@
 //	                          recorded per endpoint. Unset: no self-serve keys (key file only)
 //	DATAAPI_KEY_DAILY_CAP     daily request cap copied into each newly issued key (integer 0-10000000,
 //	                          default 10000; 0 = no cap); the day is the UTC calendar day
-//	DATAAPI_KEYED_LIMIT_FACTOR  multiple of the route limits a keyed caller gets (integer 1-10,
-//	                          default 2); the live-ESI tool budget is never multiplied
+//	DATAAPI_KEYED_LIMIT_FACTOR  multiple of the route limits a keyed caller gets on the routes
+//	                          that have no explicit keyed figure of their own (integer 1-10,
+//	                          default 2); MCP, the tool route, fit search and the live-ESI
+//	                          tools have explicit trial and keyed numbers (see
+//	                          dataapi.DefaultLimits) that the factor does not change
+//	DATAAPI_ANON_DAILY_CAP    requests per UTC day a client without an API key may make (integer
+//	                          0-10000000, default 200; 0 = no cap). In memory, per client IP;
+//	                          the documentation pages and /health are not counted. Applies only
+//	                          where keys exist (a key file or DATAAPI_KEYS_DB)
 //	DATAAPI_ADMIN_TOKEN       bearer token of the admin API that issues, revokes and audits
 //	                          keys. Unset: no admin listener. Never logged
 //	DATAAPI_ADMIN_ADDR        admin listen address (default 127.0.0.1:8093; the container
@@ -149,6 +159,19 @@ func keyedFactor(getenv func(string) string) (int, error) {
 	n, err := strconv.Atoi(v)
 	if err != nil || n < 1 || n > 10 {
 		return 0, fmt.Errorf("DATAAPI_KEYED_LIMIT_FACTOR: want 1-10, got %q", v)
+	}
+	return n, nil
+}
+
+// anonDailyCap resolves DATAAPI_ANON_DAILY_CAP: an integer 0..keys.MaxDailyCap (0 = no cap).
+func anonDailyCap(getenv func(string) string) (int, error) {
+	v := strings.TrimSpace(getenv("DATAAPI_ANON_DAILY_CAP"))
+	if v == "" {
+		return dataapi.DefaultAnonDailyCap, nil
+	}
+	n, err := strconv.Atoi(v)
+	if err != nil || n < 0 || n > keys.MaxDailyCap {
+		return 0, fmt.Errorf("DATAAPI_ANON_DAILY_CAP: want an integer 0-%d, got %q", keys.MaxDailyCap, v)
 	}
 	return n, nil
 }
@@ -254,6 +277,9 @@ type exposure struct {
 	keyedFactor int
 	// dailyCap is the cap new keys get; it only feeds the generated documents.
 	dailyCap int
+	// anonDailyCap is DATAAPI_ANON_DAILY_CAP: the requests per UTC day of a client without a
+	// key (0: no cap). It applies only when some key source is configured.
+	anonDailyCap int
 	// sdeBuild is the SDE build id /v1/health reports ("" when unknown).
 	sdeBuild string
 }
@@ -287,23 +313,29 @@ func loadAuth(getenv func(string) string) (dataapi.Authenticator, error) {
 // internet-facing. The description routes (OpenAPI, llms.txt) are always on; they
 // describe whatever else is.
 func newHandler(d *bootstrap.Deps, ex exposure, log *slog.Logger) (http.Handler, error) {
-	limits := dataapi.DefaultLimits()
-	if ex.upstream != nil {
-		limits.UpstreamTool = *ex.upstream
-	}
-	// One budget for the tools that read live ESI data, shared by REST and MCP so using
-	// both does not double a caller's allowance.
-	upstream := dataapi.NewUpstreamLimiter(limits.UpstreamTool, nil)
 	// Untyped nil for an absent side: a nil pointer inside the interface would not be skipped.
 	var fileKeys, storeKeys dataapi.Authenticator
 	fileKeys = ex.auth
 	if ex.store != nil {
 		storeKeys = ex.store
 	}
+	auth := dataapi.AnyOf(fileKeys, storeKeys)
+	limits := dataapi.DefaultLimits()
+	if ex.upstream != nil {
+		limits.UpstreamTool = *ex.upstream
+	}
+	if auth == nil {
+		// Nobody can get a key here: everyone gets the keyed budgets, and no daily cap.
+		limits = limits.WithoutKeys()
+	}
+	// One budget for the tools that read live ESI data, shared by REST and MCP so using
+	// both does not double a caller's allowance.
+	upstream := dataapi.NewUpstreamLimiter(limits.UpstreamTool, nil)
 	cfg := dataapi.Config{
 		Deps:             dataapi.NewDeps(d.Tools, d.Retriever),
 		Docs:             true,
-		Auth:             dataapi.AnyOf(fileKeys, storeKeys),
+		Auth:             auth,
+		AnonDailyCap:     ex.anonDailyCap,
 		PublicURL:        ex.publicURL,
 		Limits:           &limits,
 		Upstream:         upstream,
@@ -333,8 +365,14 @@ func newHandler(d *bootstrap.Deps, ex exposure, log *slog.Logger) (http.Handler,
 			Upstream:                   upstream.Allow,
 			Logger:                     log,
 		}
+		if auth != nil {
+			opts.AnonDailyCap = ex.anonDailyCap
+		}
 		if ex.store != nil {
 			store := ex.store
+			if ex.publicURL != "" {
+				opts.KeyHint = ex.publicURL + "/docs/access#access-keys"
+			}
 			opts.ToolCalled = func(r *http.Request, tool string) {
 				if c := dataapi.CallerFrom(r.Context()); c.Authenticated() {
 					store.RecordTool(c.ID, tool)
@@ -403,6 +441,10 @@ func run(log *slog.Logger) error {
 	if err != nil {
 		return err
 	}
+	anonCap, err := anonDailyCap(os.Getenv)
+	if err != nil {
+		return err
+	}
 	var store *keys.Store
 	if path := os.Getenv("DATAAPI_KEYS_DB"); path != "" {
 		store, err = keys.Open(path, keys.Options{DailyCap: dayCap, Logger: log})
@@ -420,10 +462,13 @@ func run(log *slog.Logger) error {
 	ex := exposure{
 		toolAPI: exposeToolAPI(os.Getenv), mcp: exposeMCP(os.Getenv), auth: auth, publicURL: pub,
 		upstream: &upstream, logSalt: os.Getenv("DATAAPI_LOG_SALT"),
-		store: store, keyedFactor: factor, dailyCap: dayCap, sdeBuild: sdeBuild(cfg.SDEPath, log),
+		store: store, keyedFactor: factor, dailyCap: dayCap, anonDailyCap: anonCap, sdeBuild: sdeBuild(cfg.SDEPath, log),
 	}
 	log.Info("ESI pass-through tools: shared Expires cache, fail-fast budget guard",
-		"upstream_tool_limit_per_min", upstream.Max, "esi_guard_percent", guard)
+		"upstream_tool_limit_per_min", upstream.Max, "upstream_tool_limit_per_min_keyed", upstream.KeyedMax, "esi_guard_percent", guard)
+	if auth != nil || store != nil {
+		log.Info("callers without an API key get trial limits", "anon_daily_cap", anonCap, "env", "DATAAPI_ANON_DAILY_CAP")
+	}
 	if auth != nil {
 		log.Info("API keys loaded: the keyed tool tier is available", "env", "DATAAPI_API_KEYS_FILE")
 	}

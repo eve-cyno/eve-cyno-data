@@ -2,7 +2,7 @@
   <header class="doc-head">
     <ol class="crumbs"><li><a href="/docs/">Docs</a></li><li>Connect</li><li aria-current="page">MCP (any harness)</li></ol>
     <h1>MCP (any harness)</h1>
-    <p class="doc-lede">Any MCP client that speaks streamable HTTP can use the tools. One URL, no account, no key for the public tools.</p>
+    <p class="doc-lede">Any MCP client that speaks streamable HTTP can use the tools. One URL, no account, and no key to {{if .Auth}}try{{else}}use{{end}} the public tools.</p>
   </header>
   <details class="toc" data-toc open>
     <summary><svg class="ico" aria-hidden="true"><use href="#i-chev"/></svg>On this page</summary>
@@ -19,8 +19,8 @@
     <dl class="facts">
       <dt>Endpoint</dt><dd><code>{{.Origin}}{{.Prefix}}/mcp</code></dd>
       <dt>Transport</dt><dd>Streamable HTTP, stateless, JSON responses. One JSON-RPC 2.0 message per POST; <code>GET</code> and <code>DELETE</code> answer 405.</dd>
-      <dt>Auth</dt><dd>None for public tools. <code>X-Janice-Key</code> for <code>appraise_items</code>. {{if .Auth}}{{if .SelfServe}}A free{{else}}An{{end}} API key for keyed tools, sent as <code>Authorization: Bearer ecd_...</code> or <code>X-API-Key: ecd_...</code>.{{else}}An API key for keyed tools (none issued yet).{{end}}</dd>
-      <dt>Rate limit</dt><dd><b>{{.Lim.MCP}} requests per minute</b> per caller{{if .KeyFactor}}, {{.KeyMCP}} with an API key{{end}}</dd>
+      <dt>Auth</dt><dd>None {{if .Auth}}to try the public tools (trial limits){{else}}for public tools{{end}}. <code>X-Janice-Key</code> for <code>appraise_items</code>. {{if .Auth}}{{if .SelfServe}}A free{{else}}An{{end}} API key for {{if .Auth}}daily use and the keyed {{plural .Stats.Keyed "tool" "tools"}}{{else}}keyed tools{{end}}, sent as <code>Authorization: Bearer ecd_...</code> or <code>X-API-Key: ecd_...</code>. With Claude Code: add <code>--header "X-API-Key: ecd_…"</code> to the <code>claude mcp add</code> command.{{else}}An API key for keyed tools (none issued yet).{{end}}</dd>
+      <dt>Rate limit</dt><dd><b>{{.Lim.MCP}} requests per minute</b>{{if .KeysRaise}}{{if .AnonCap}} and {{.AnonCap}} a day{{end}} per client without a key; {{.KeyMCP}} per minute{{if .KeyCap}} and {{.KeyCap}} a day{{end}} with one{{else}} per caller{{end}}</dd>
     </dl>
 
     <h2 id="mcp-connect">Connect<a class="h-anchor" href="#mcp-connect" aria-label="Link to this section">#</a></h2>
@@ -32,18 +32,22 @@
         </div>
         <button class="code-copy" type="button" data-copy aria-label="Copy"><svg class="ico" aria-hidden="true"><use href="#i-copy"/></svg><span data-copy-label>Copy</span></button>
       </div>
-<pre role="tabpanel" data-panel="cli"><code><span class="tk-p" data-nocopy>$ </span>claude mcp add --transport http eve-cyno {{.Origin}}{{.Prefix}}/mcp</code></pre>
+<pre role="tabpanel" data-panel="cli"><code><span class="tk-p" data-nocopy>$ </span>claude mcp add --transport http --scope user eve-cyno {{.Origin}}{{.Prefix}}/mcp</code></pre>
 <pre role="tabpanel" data-panel="json" hidden><code>{
   <span class="tk-k">"mcpServers"</span>: {
     <span class="tk-k">"eve-cyno"</span>: {
       <span class="tk-k">"type"</span>: <span class="tk-s">"http"</span>,
       <span class="tk-k">"url"</span>: <span class="tk-s">"{{.Origin}}{{.Prefix}}/mcp"</span>,
-      <span class="tk-k">"headers"</span>: { <span class="tk-k">"X-Janice-Key"</span>: <span class="tk-s">"&lt;your Janice key, optional&gt;"</span> }
+      <span class="tk-k">"headers"</span>: {
+        <span class="tk-k">"X-Janice-Key"</span>: <span class="tk-s">"&lt;your Janice key, optional&gt;"</span>{{if .Auth}},
+        <span class="tk-k">"X-API-Key"</span>: <span class="tk-s">"&lt;your EVE-Cyno API key, optional&gt;"</span>{{end}}
+      }
     }
   }
 }</code></pre>
     </div>
     <p>The JSON is the shape the Claude Code plugin ships. Other clients name these fields their own way: look for an HTTP or streamable-HTTP server setting and give it the URL.</p>
+    <p>Check it with <code>claude mcp list</code> (it shows <code>eve-cyno</code> as Connected; in a session, <code>/mcp</code>). <code>--scope user</code> makes the server available in every project; without it, it is saved for the current directory only. Remove it with <code>claude mcp remove eve-cyno --scope user</code>. In Claude Code the tools are named <code>mcp__eve-cyno__&lt;tool&gt;</code>; allow them all with <code>mcp__eve-cyno__*</code>.</p>
     <aside class="callout" data-kind="note"><svg class="ico" aria-hidden="true"><use href="#i-info"/></svg><div><p class="callout-title">More harnesses</p><p>Claude Code has a packaged plugin today. Plugins for more harnesses are planned: tell us which one you use on the <a href="https://discord.gg/XZzkH38dt9">EVE-Cyno Discord</a>.</p></div></aside>
 
     <h2 id="mcp-tools">What the server lists<a class="h-anchor" href="#mcp-tools" aria-label="Link to this section">#</a></h2>
@@ -74,7 +78,7 @@
     </div>
 
     <h2 id="mcp-limits">Limits<a class="h-anchor" href="#mcp-limits" aria-label="Link to this section">#</a></h2>
-    <p>{{.Lim.MCP}} requests per minute per caller{{if .KeyFactor}}, or {{.KeyMCP}} with an API key{{if .KeyCap}} (which adds a daily cap of {{.KeyCap}} requests per key){{end}}{{end}}. A session is a handful of requests (the handshake is three) plus one per tool call. The live ESI tools have their own {{.Lim.UpstreamTool}} calls per minute per caller{{if .Auth}}, keyed or not{{end}}, shared with REST. Request bodies are capped at 64 KiB.</p>
+    <p>{{.Lim.MCP}} requests per minute{{if .AnonCap}} and {{.AnonCap}} a day{{end}} per {{if .AnonCap}}client without a key{{else}}caller{{end}}{{if .KeysRaise}}, or {{.KeyMCP}} per minute{{if .KeyCap}} and {{.KeyCap}} a day{{end}} with an API key{{else if .KeyCap}}; a key adds a daily cap of {{.KeyCap}} requests{{end}}. A session is a handful of requests (the handshake is three) plus one per tool call. The live ESI tools have their own {{.Lim.UpstreamTool}} calls per minute per caller{{if ne .KeyLim.UpstreamTool .Lim.UpstreamTool}} without a key and {{.KeyLim.UpstreamTool}} with one{{end}}, shared with REST. Request bodies are capped at 64 KiB.</p>
 
     <nav class="pager" aria-label="Previous and next page">
       <a href="/docs/claude-code"><span class="pg-k"><svg class="ico" aria-hidden="true"><use href="#i-back"/></svg>Previous</span><span class="pg-t">Claude Code plugin</span></a>

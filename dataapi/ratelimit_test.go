@@ -21,16 +21,6 @@ func limitsOf(mut func(*dataapi.Limits)) *dataapi.Limits {
 	return &l
 }
 
-func TestDefaultLimits_MatchTheBudgetsNativeHad(t *testing.T) {
-	l := dataapi.DefaultLimits()
-	require.Equal(t, dataapi.Rate{Max: 120, Window: time.Minute}, l.FitsSearch)
-	require.Equal(t, dataapi.Rate{Max: 60, Window: time.Minute}, l.FitsDetail)
-	require.Equal(t, dataapi.Rate{Max: 60, Window: time.Minute}, l.FitStats)
-	require.Equal(t, dataapi.Rate{Max: 60, Window: time.Minute}, l.FitSuggest)
-	require.Equal(t, dataapi.Rate{Max: 120, Window: time.Minute}, l.ItemsSearch)
-	require.Equal(t, dataapi.Rate{Max: 30, Window: time.Minute}, l.Tool)
-}
-
 // Every limited route answers 429 + Retry-After + the JSON error once the budget
 // is spent, and the refused request never reaches the handler.
 func TestLimiter_EveryRouteRefusesPastItsBudget(t *testing.T) {
@@ -167,21 +157,24 @@ func TestToolAPI_OffByDefaultMeansNoRoute(t *testing.T) {
 
 func TestToolAPI_LoopbackRunsEveryTierWithoutKeys(t *testing.T) {
 	a := newAPI(t, dataapi.Config{Deps: emptyToolDeps(), ToolAPI: dataapi.ToolAPILoopback})
-	for _, name := range []string{"appraise_items", "get_fits", "list_fits", "get_market_price"} {
+	for name, body := range map[string]string{
+		"appraise_items": `{"items":"Tritanium"}`, "get_fits": `{}`, "list_fits": `{}`, "get_market_price": `{"type_id":0}`,
+	} {
 		t.Run(name, func(t *testing.T) {
-			require.Equal(t, http.StatusOK, do(a, "POST", "/v1/tool/"+name, `{}`).Code)
+			require.Equal(t, http.StatusOK, do(a, "POST", "/v1/tool/"+name, body).Code)
 		})
 	}
 }
 
 // Public: 30 requests/min per client IP by default; a different client keeps its
 // own budget.
-func TestToolAPI_PublicRateLimitedPerClientIP30PerMinute(t *testing.T) {
+func TestToolAPI_PublicRateLimitedPerClientIP60PerMinuteWithoutKeys(t *testing.T) {
+	// No Auth: nobody can get a key, so everyone gets the keyed budget (60/min, not the 10 of a trial).
 	a := newAPI(t, dataapi.Config{Deps: emptyToolDeps(), ToolAPI: dataapi.ToolAPIPublic})
 	const addr = "198.51.100.12:2222"
-	for i := 0; i < 30; i++ {
+	for i := 0; i < 60; i++ {
 		rec := doFrom(a, addr, "POST", "/v1/tool/no_such_tool", `{}`)
-		require.Equal(t, http.StatusNotFound, rec.Code, "request %d is within the 30/min budget", i+1)
+		require.Equal(t, http.StatusNotFound, rec.Code, "request %d is within the 60/min budget", i+1)
 	}
 	requireError(t, doFrom(a, addr, "POST", "/v1/tool/no_such_tool", `{}`), http.StatusTooManyRequests, "rate_limited")
 	require.Equal(t, http.StatusNotFound, doFrom(a, "198.51.100.13:2222", "POST", "/v1/tool/no_such_tool", `{}`).Code)

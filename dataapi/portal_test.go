@@ -204,7 +204,7 @@ func TestPortal_RendersTheCatalogAndLimits(t *testing.T) {
 
 	home := do(api, http.MethodGet, "/", "").Body.String()
 	require.Contains(t, home, `<span data-slot="tools_offered">21</span>`)
-	require.Contains(t, home, `<span data-slot="tools_public">17</span>`)
+	require.Contains(t, home, `<span data-slot="tools_public">19</span>`)
 	require.Contains(t, home, `<span data-slot="tools_upstream">4</span>`)
 	require.Contains(t, home, `<span data-slot="limit_mcp">77</span>`)
 	require.Contains(t, home, "shared cache, 9 calls/min")
@@ -252,19 +252,22 @@ func TestPortal_KeysCopyFollowsConfig(t *testing.T) {
 		return do(newAPI(t, cfg), http.MethodGet, path, "").Body.String()
 	}
 	def := get(publicConfig(), "/docs/access")
-	require.Contains(t, def, "Twice the per-minute route limits of an anonymous caller, and a daily cap of 10,000 requests per key (UTC day, resets at 00:00 UTC).")
+	require.Contains(t, def, `The per-minute route limits in the "With a key" column above, and a daily cap of 10,000 requests per key (UTC day, resets at 00:00 UTC).`)
+	require.Contains(t, def, "daily trial limit of 200 requests per client", "the trial cap is stated")
 	cfg := publicConfig()
 	cfg.KeyedLimitFactor, cfg.KeyDailyCap = 3, 1234567
 	access := get(cfg, "/docs/access")
 	require.Contains(t, access, "/apikey create")
-	require.Contains(t, access, "3 times the per-minute route limits")
+	require.Contains(t, access, "180 per minute", "a route without an explicit keyed figure gets the factor (60 x 3)")
 	require.Contains(t, access, "daily cap of 1,234,567 requests per key")
 	require.Contains(t, access, "429 daily_quota_exceeded")
-	require.Contains(t, get(cfg, "/docs/mcp"), "daily cap of 1,234,567 requests per key")
-	require.Contains(t, get(cfg, "/"), "a cap of 1,234,567 requests a day per key")
+	require.Contains(t, get(cfg, "/docs/mcp"), "and 1,234,567 a day with an API key")
+	require.Contains(t, get(cfg, "/"), "The daily cap is 200 requests per client without a key and 1,234,567 per key")
 	require.Contains(t, get(cfg, "/"), "No cookies, no analytics. An account only if you create an API key.")
 
 	cfg.KeyDailyCap = 0
+	require.Contains(t, get(cfg, "/docs/rest"), "daily_quota_exceeded", "the trial cap of a client without a key is still stated")
+	cfg.AnonDailyCap = 0
 	require.NotContains(t, get(cfg, "/docs/access"), "daily_quota_exceeded")
 	require.NotContains(t, get(cfg, "/docs/rest"), "daily_quota_exceeded")
 
@@ -273,7 +276,7 @@ func TestPortal_KeysCopyFollowsConfig(t *testing.T) {
 	require.NotContains(t, get(cfg, "/docs/access"), "/apikey create")
 	require.Contains(t, get(cfg, "/docs/access"), "per key. No keys are issued yet")
 	require.Contains(t, get(cfg, "/docs/mcp"), "calls per minute per caller, shared with REST")
-	require.Contains(t, get(publicConfig(), "/docs/mcp"), "calls per minute per caller, keyed or not, shared with REST")
+	require.Contains(t, get(publicConfig(), "/docs/mcp"), "calls per minute per caller without a key and 10 with one, shared with REST")
 	require.Contains(t, get(cfg, "/"), "No cookies, no accounts, no analytics.")
 }
 
@@ -378,4 +381,115 @@ func TestPortal_HostedKeyCopyNeedsSelfServe(t *testing.T) {
 	}
 	require.Contains(t, without, "issued by the operator of this service")
 	require.Contains(t, without, "Keyed callers are rate limited per key.")
+}
+
+// The Claude Code and MCP pages carry the shell install path, the user scope, the API key
+// header and the check command; every sentence about an API key follows the configuration.
+func TestPortal_ClaudeCodeAndMCPPagesCoverKeysScopeAndChecks(t *testing.T) {
+	get := func(cfg dataapi.Config, path string) string {
+		rec := do(newAPI(t, cfg), http.MethodGet, path, "")
+		require.Equal(t, http.StatusOK, rec.Code, path)
+		return rec.Body.String()
+	}
+	lim := dataapi.DefaultLimits()
+	lim.MCP = dataapi.Rate{Max: 70, Window: time.Minute}
+	cfg := publicConfig()
+	cfg.Limits = &lim
+	cc, mcp := get(cfg, "/docs/claude-code"), get(cfg, "/docs/mcp")
+
+	require.Contains(t, cc, `<p class="callout-title">From a shell</p>`)
+	require.Contains(t, cc, "<code>claude plugin marketplace add eve-cyno/claude-plugins</code>, then <code>claude plugin install eve-cyno@eve-cyno</code>")
+	require.Contains(t, cc, "Pass keys with <code>--config api_key=…</code> or <code>--config janice_api_key=…</code>")
+	require.Contains(t, cc, "Optional: your keys")
+	require.Contains(t, cc, "an <b>EVE-Cyno API key</b> for daily use and the keyed tool.")
+	require.Contains(t, cc, "claude mcp add --transport http --scope user eve-cyno ")
+	require.Contains(t, cc, `. With an API key, add <code>--header "X-API-Key: ecd_…"</code>.`)
+	require.Contains(t, cc, "Set your key in the plugin (<code>api_key</code>) and it appears.")
+	require.Contains(t, cc, "<code>mcp__plugin_eve-cyno_eve-cyno__*</code>")
+	require.Contains(t, cc, "<code>/eve-cyno:eve-fit</code>")
+	require.Contains(t, cc, "140 MCP requests per minute, 10,000 a day", "the keyed limit is the configured factor times the MCP limit")
+	require.Contains(t, cc, "Limits are per caller (per API key when one is sent, otherwise per client IP)")
+	require.NotContains(t, cc, "No EVE-Cyno account and no API key")
+
+	require.Contains(t, mcp, "claude mcp add --transport http --scope user eve-cyno ")
+	require.Contains(t, mcp, `With Claude Code: add <code>--header "X-API-Key: ecd_…"</code> to the <code>claude mcp add</code> command.`)
+	require.Contains(t, mcp, `<span class="tk-k">"X-API-Key"</span>: <span class="tk-s">"&lt;your EVE-Cyno API key, optional&gt;"</span>`)
+	require.Contains(t, mcp, "Check it with <code>claude mcp list</code>")
+	require.Contains(t, mcp, "<code>claude mcp remove eve-cyno --scope user</code>")
+	require.Contains(t, mcp, "<code>mcp__eve-cyno__*</code>")
+
+	// A service that issues no keys renders none of the key sentences.
+	cfg.Auth = nil
+	cc, mcp = get(cfg, "/docs/claude-code"), get(cfg, "/docs/mcp")
+	for _, key := range []string{"--config api_key", "api_key</code>", `X-API-Key: ecd_…`, "EVE-Cyno API key", "Set your key", "with a key", "per API key", "Optional: your keys", "No EVE-Cyno account and no API key"} {
+		require.NotContains(t, cc, key, "claude-code page")
+		require.NotContains(t, mcp, key, "mcp page")
+	}
+	require.Contains(t, cc, "Optional: your Janice key")
+	require.Contains(t, cc, "Pass the Janice key with <code>--config janice_api_key=…</code>")
+	require.Contains(t, cc, "No account is needed. Requests are limited per client IP")
+	require.Contains(t, cc, "claude mcp add --transport http --scope user eve-cyno ")
+	require.Contains(t, mcp, `<span class="tk-k">"X-Janice-Key"</span>: <span class="tk-s">"&lt;your Janice key, optional&gt;"</span>
+      }`)
+	require.Contains(t, mcp, "Check it with <code>claude mcp list</code>")
+}
+
+// The trial-access copy: a keyed service states the trial number and the key number side by
+// side, lists get_fits and list_fits as public and analyze_battle as keyed, and counts the
+// daily trial in the privacy lines.
+func TestPortal_TrialAccessCopyOnAKeyedService(t *testing.T) {
+	api := portalAPI(t)
+	home := do(api, http.MethodGet, "/", "").Body.String()
+	for _, want := range []string{
+		"Try it without a key or an account (trial limits, 200 requests a day)",
+		"requests/min per caller (120 with a key)",
+		"shared cache, 5 calls/min (10 with a key)",
+		"community fits and 4 live ESI reads",
+		"POST /v1/mcp · 120 with a key",
+		"POST /v1/tool/{name} · 60 with a key",
+		"GET /v1/fits/search · 240 with a key",
+		"GET /v1/items/search · 240 with a key",
+		`<b>200<small>/day</small></b><span>without a key, per client · 10,000 per key</span>`,
+		"The daily cap is 200 requests per client without a key and 10,000 per key (UTC day; docs pages do not count)",
+		"including the daily trial count",
+		"Free-text fit search (<code>q</code> on <code>/v1/fits/search</code>) needs a key too",
+	} {
+		require.Contains(t, home, want)
+	}
+	require.Equal(t, 6, strings.Count(home, `<div class="limit">`), "five per-minute budgets and the daily one")
+
+	tools := do(api, http.MethodGet, "/docs/tools", "").Body.String()
+	require.Contains(t, tools, `data-tool="get_fits" data-tier="public"`)
+	require.Contains(t, tools, `data-tool="list_fits" data-tier="public"`)
+	require.Contains(t, tools, `data-tool="analyze_battle" data-tier="keyed"`)
+	require.Contains(t, tools, "Anyone, anonymous included (trial limits).")
+
+	access := do(api, http.MethodGet, "/docs/access", "").Body.String()
+	require.Contains(t, access, `<th scope="col" class="num">Without a key (trial)</th><th scope="col" class="num">With a key</th>`)
+	for _, pair := range [][2]string{{"20", "120"}, {"10", "60"}, {"30", "240"}, {"5", "10"}} {
+		require.Contains(t, access, `<td class="num">`+pair[0]+` per minute</td><td class="num">`+pair[1]+` per minute</td>`)
+	}
+	require.Contains(t, access, `<td>Per day</td><td class="num">200 requests per client (UTC day; docs pages do not count)</td><td class="num">10,000 per key</td>`)
+	require.Contains(t, access, "The keyed tool <code>analyze_battle</code>, free-text fit search")
+
+	rest := do(api, http.MethodGet, "/docs/rest", "").Body.String()
+	require.Contains(t, rest, `<td class="num">10 / 60</td>`)
+	require.Contains(t, rest, `<td class="num">30 / 240</td>`)
+
+	terms := do(api, http.MethodGet, "/docs/terms", "").Body.String()
+	require.Contains(t, terms, "Your IP is held in memory for the limits only, including the daily trial count;")
+}
+
+// A service without keys shows one set of numbers: no key wording, no trial, no daily item.
+func TestPortal_KeylessServiceHasNoTrialCopy(t *testing.T) {
+	cfg := publicConfig()
+	cfg.Auth = nil
+	api := newAPI(t, cfg)
+	for _, p := range []string{"/", "/docs/start", "/docs/claude-code", "/docs/mcp", "/docs/rest", "/docs/tools", "/docs/tools/get_market_price", "/docs/access", "/docs/terms"} {
+		body := do(api, http.MethodGet, p, "").Body.String()
+		for _, bad := range []string{"with a key", "trial", "a day", "/day", "for daily use", "Try it without"} {
+			require.NotContains(t, body, bad, p)
+		}
+	}
+	require.Equal(t, 5, strings.Count(do(api, http.MethodGet, "/", "").Body.String(), `<div class="limit">`))
 }

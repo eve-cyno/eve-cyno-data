@@ -29,6 +29,8 @@ EVE Online and its game data are the property of CCP Games / Fenris Creations an
 - [get_ship_bonuses](/llms-full.txt#get_ship_bonuses): Get hull bonuses for an EVE Online ship — per-skill-level bonuses + role bonuses + ship class.
 - [find_canonical_module](/llms-full.txt#find_canonical_module): Look up canonical SDE typeNames for a module family (e.g. 'Steel Plates', 'Entropic Radiation Sink', 'Shield Extender', 'Heat Sink', 'Magnetic Field…
 - [get_hull_facts](/llms-full.txt#get_hull_facts): Authoritative SDE snapshot of a hull's fitting envelope — slot/hardpoint counts, drone bay, role/skill bonuses, AND the canonical list of weapons that hull is…
+- [get_fits](/llms-full.txt#get_fits): Retrieve community ship fits VERBATIM from the indexed fit database (EVE Workbench + Abysstracker + gustavmannfred.streamlit.app + caldarijoans.streamlit.app…
+- [list_fits](/llms-full.txt#list_fits): LIST / enumerate community fits from the indexed fit database by exact payload filters (NOT semantic search).
 - [validate_fitting](/llms-full.txt#validate_fitting): Validate an EVE Online ship fitting in EFT format.
 - [compute_fit_stats](/llms-full.txt#compute_fit_stats): Compute the real stats of an EVE Online fit from its EFT text with the dogma engine (all-V skills, no implants): DPS per weapon group with the charge used…
 - [get_production_chain](/llms-full.txt#get_production_chain): Compute the full material breakdown to manufacture an EVE Online item, recursively expanding sub-components down to base minerals and PI commodities.
@@ -38,12 +40,10 @@ EVE Online and its game data are the property of CCP Games / Fenris Creations an
 - [get_reprocessing_yield](/llms-full.txt#get_reprocessing_yield): Compute the materials produced by reprocessing an EVE item (ore, ice, salvage, modules).
 - [get_required_skills](/llms-full.txt#get_required_skills): List the skills required to fly a ship or build an item.
 - [get_sovereignty](/llms-full.txt#get_sovereignty): Get the alliance / corporation holding sovereignty over an EVE solar system.
-- [get_system_activity](/llms-full.txt#get_system_activity): Get recent killmail count and jump count for a solar system from ESI.
+- [get_system_activity](/llms-full.txt#get_system_activity): Get the ship, pod and NPC kills of a solar system in the last hour from ESI (jumps are not included).
 
 ## Tools (keyed: send an API key)
 
-- [get_fits](/llms-full.txt#get_fits): Retrieve community ship fits VERBATIM from the indexed fit database (EVE Workbench + Abysstracker + gustavmannfred.streamlit.app + caldarijoans.streamlit.app…
-- [list_fits](/llms-full.txt#list_fits): LIST / enumerate community fits from the indexed fit database by exact payload filters (NOT semantic search).
 - [analyze_battle](/llms-full.txt#analyze_battle): Analyze a battle report from zKillboard, WarBeacon, or br.evetools.org.
 
 ## Tools (byo-key: send your own Janice key in X-Janice-Key)

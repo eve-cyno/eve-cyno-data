@@ -100,8 +100,11 @@ func tierRows(s Surface) []tierRow {
 }
 
 type limitRow struct {
-	Route  string `json:"route"`
-	Max    int    `json:"max"`
+	Route string `json:"route"`
+	// Max is the budget without an API key (everyone's, on a service without keys).
+	Max int `json:"max"`
+	// KeyMax is the budget with an API key; omitted when a key does not raise it.
+	KeyMax int    `json:"max_with_key,omitempty"`
 	Window string `json:"window"`
 }
 
@@ -125,7 +128,11 @@ func limitRows(s Surface) []limitRow {
 	var out []limitRow
 	for _, c := range cands {
 		if c.on && c.r.Max > 0 && c.r.Window > 0 {
-			out = append(out, limitRow{c.route, c.r.Max, windowWord(c.r)})
+			row := limitRow{Route: c.route, Max: c.r.Max, Window: windowWord(c.r)}
+			if k := s.keyedRate(c.r); k.Max > c.r.Max {
+				row.KeyMax = k.Max
+			}
+			out = append(out, row)
 		}
 	}
 	return out

@@ -73,7 +73,8 @@ func TestNewHandler_ExposedToolAPIIsPublicMode(t *testing.T) {
 
 	// The tiers apply: this binary is internet-facing and has no API keys here.
 	require.Equal(t, http.StatusBadRequest, post(h, "/v1/tool/appraise_items").Code, "byo-key: needs X-Janice-Key")
-	require.Equal(t, http.StatusUnauthorized, post(h, "/v1/tool/get_fits").Code, "keyed: needs an API key")
+	require.Equal(t, http.StatusUnauthorized, post(h, "/v1/tool/analyze_battle").Code, "keyed: needs an API key")
+	require.NotEqual(t, http.StatusUnauthorized, post(h, "/v1/tool/get_fits").Code, "fit lookups are public")
 	require.Equal(t, http.StatusForbidden, post(h, "/v1/tool/convert_isk_to_real").Code, "disabled")
 	require.Equal(t, http.StatusNotFound, post(h, "/v1/tool/no_such_tool").Code)
 }
@@ -121,7 +122,7 @@ func TestNewHandler_MCPIsOffByDefaultAndPublicSafeWhenOn(t *testing.T) {
 	require.NotEmpty(t, rec.Header().Get("X-Request-ID"))
 	require.Contains(t, rec.Body.String(), "get_jumps_between")
 	require.Contains(t, rec.Body.String(), `"appraise_items"`, "the byo-key tool is listed for everyone")
-	for _, denied := range []string{"get_fits", "list_fits", "analyze_battle", "convert_isk_to_real"} {
+	for _, denied := range []string{"analyze_battle", "convert_isk_to_real"} {
 		require.NotContains(t, rec.Body.String(), `"`+denied+`"`)
 	}
 	require.Contains(t, get(on, "/v1/openapi.yaml").Body.String(), "/mcp:")
@@ -161,7 +162,8 @@ func TestNewHandler_APIKeyUnlocksTheKeyedTierOnRESTAndMCP(t *testing.T) {
 		h.ServeHTTP(rec, req)
 		return rec
 	}
-	require.Equal(t, http.StatusOK, withKey("/v1/tool/get_fits").Code)
+	require.NotEqual(t, http.StatusUnauthorized, withKey("/v1/tool/analyze_battle").Code)
+	require.NotEqual(t, http.StatusForbidden, withKey("/v1/tool/analyze_battle").Code)
 
 	list := func(hdr ...string) string {
 		req := httptest.NewRequest(http.MethodPost, "/v1/mcp", strings.NewReader(`{"jsonrpc":"2.0","id":1,"method":"tools/list"}`))
@@ -176,8 +178,9 @@ func TestNewHandler_APIKeyUnlocksTheKeyedTierOnRESTAndMCP(t *testing.T) {
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 		return rec.Body.String()
 	}
-	require.NotContains(t, list(), `"get_fits"`)
-	require.Contains(t, list("X-API-Key", "ci-key"), `"get_fits"`)
+	require.NotContains(t, list(), `"analyze_battle"`)
+	require.Contains(t, list(), `"get_fits"`)
+	require.Contains(t, list("X-API-Key", "ci-key"), `"analyze_battle"`)
 
 	// The documents describe the keys this process accepts.
 	require.Contains(t, get(h, "/v1/openapi.yaml").Body.String(), "securitySchemes")
@@ -260,6 +263,44 @@ func TestDailyCap(t *testing.T) {
 	}
 }
 
+func TestAnonDailyCap(t *testing.T) {
+	c, err := anonDailyCap(env(nil))
+	require.NoError(t, err)
+	require.Equal(t, 200, c, "default: 200 requests a day per client without a key")
+	c, err = anonDailyCap(env(map[string]string{"DATAAPI_ANON_DAILY_CAP": "0"}))
+	require.NoError(t, err)
+	require.Equal(t, 0, c, "0 turns the cap off")
+	c, err = anonDailyCap(env(map[string]string{"DATAAPI_ANON_DAILY_CAP": " 50 "}))
+	require.NoError(t, err)
+	require.Equal(t, 50, c)
+	for _, bad := range []string{"-1", "x", "1.5", "10000001"} {
+		_, err = anonDailyCap(env(map[string]string{"DATAAPI_ANON_DAILY_CAP": bad}))
+		require.ErrorContains(t, err, "DATAAPI_ANON_DAILY_CAP", bad)
+	}
+}
+
+func TestNewHandler_AnonymousClientsHaveADailyBudgetWhereKeysExist(t *testing.T) {
+	store := openStore(t, 0)
+	h, err := newHandler(&bootstrap.Deps{Tools: &tools.Deps{}}, exposure{store: store, anonDailyCap: 2, keyedFactor: 2}, slog.Default())
+	require.NoError(t, err)
+	for range 2 {
+		require.Equal(t, http.StatusNotFound, get(h, "/v1/no/such/route").Code)
+	}
+	over := get(h, "/v1/no/such/route")
+	require.Equal(t, http.StatusTooManyRequests, over.Code)
+	require.Contains(t, over.Body.String(), "daily_quota_exceeded")
+	require.Equal(t, http.StatusOK, get(h, "/v1/openapi.json").Code, "browsing the docs is never counted or refused")
+	require.Contains(t, get(h, "/llms-full.txt").Body.String(), "2 requests per UTC day per client")
+
+	// no keys at all: no cap, and the full numbers for everyone
+	h, err = newHandler(&bootstrap.Deps{Tools: &tools.Deps{}}, exposure{anonDailyCap: 2}, slog.Default())
+	require.NoError(t, err)
+	for range 5 {
+		require.Equal(t, http.StatusNotFound, get(h, "/v1/no/such/route").Code)
+	}
+	require.NotContains(t, get(h, "/llms-full.txt").Body.String(), "per UTC day per client")
+}
+
 func TestSDEBuild(t *testing.T) {
 	dir := t.TempDir()
 	path := dir + "/sde.sqlite"
@@ -328,13 +369,13 @@ func TestNewHandler_StoreAndFileKeysCoexist(t *testing.T) {
 	h, err := newHandler(&bootstrap.Deps{Tools: &tools.Deps{}}, exposure{toolAPI: true, auth: file, store: store}, slog.Default())
 	require.NoError(t, err)
 	for _, k := range []string{"ci-key", secret} {
-		req := httptest.NewRequest(http.MethodPost, "/v1/tool/get_fits", strings.NewReader(`{}`))
+		req := httptest.NewRequest(http.MethodPost, "/v1/tool/analyze_battle", strings.NewReader(`{}`))
 		req.Header.Set("Authorization", "Bearer "+k)
 		rec := httptest.NewRecorder()
 		h.ServeHTTP(rec, req)
-		require.Equal(t, http.StatusOK, rec.Code)
+		require.Equal(t, http.StatusBadRequest, rec.Code, "past the key gate: the missing argument is the refusal")
 	}
-	req := httptest.NewRequest(http.MethodPost, "/v1/tool/get_fits", strings.NewReader(`{}`))
+	req := httptest.NewRequest(http.MethodPost, "/v1/tool/analyze_battle", strings.NewReader(`{}`))
 	req.Header.Set("Authorization", "Bearer ecd_"+strings.Repeat("0", 64))
 	rec := httptest.NewRecorder()
 	h.ServeHTTP(rec, req)

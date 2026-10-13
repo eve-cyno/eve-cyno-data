@@ -7,5 +7,61 @@
     "limit": 3
   },
   "prompt": "Show me community Gila fits for the abyss.",
-  "note": "Request only: no API keys are issued yet, so there is no recorded response. Every fit in a response carries an attribution object (source, source_url, author, license): keep it where you show the fit."
+  "recorded": "2026-10-13",
+  "response": {
+    "tool": "get_fits",
+    "version": "0.10.0",
+    "result": {
+      "text": "FOUND 2 community fit(s) — copy each EFT block VERBATIM in your response:\n\n--- Fit 1/2 | source=example | score=0.42 | tags=['abyss', 'pve', 'mid'] | url=https://eve-cyno.dev/docs/examples/example-1 ---\n# Gila — Example PvE fit\nSource: https://eve-cyno.dev/docs/examples/example-1\nAuthor: Example Pilot\n\n[Gila, Example PvE fit]\nDrone Link Augmentor I\nRapid Light Missile Launcher II\nRapid Light Missile Launcher II\nRapid Light Missile Launcher II\nRapid Light Missile Launcher II\n\n10MN Monopropellant Enduring Afterburner\nMultispectrum Shield Hardener II\nCaldari Navy Large Shield Extender\nCaldari Navy Large Shield Extender\n\nDrone Damage Amplifier II\nDrone Damage Amplifier II\n\nMedium Core Defense Field Extender II\nMedium Core Defense Field Extender II\n\n\n--- Fit 2/2 | source=example | score=0.32 | tags=['abyss', 'pve', 'mid'] | url=https://eve-cyno.dev/docs/examples/example-2 ---\n# Gila — Example budget PvE fit\nSource: https://eve-cyno.dev/docs/examples/example-2\nAuthor: Example Pilot\n\n[Gila, Example budget PvE fit]\nDrone Link Augmentor I\nRapid Light Missile Launcher II\nRapid Light Missile Launcher II\nRapid Light Missile Launcher II\nRapid Light Missile Launcher II\n\n10MN Monopropellant Enduring Afterburner\nMultispectrum Shield Hardener II\nCaldari Navy Large Shield Extender\nCaldari Navy Large Shield Extender\n\nDrone Damage Amplifier II\nDrone Damage Amplifier II\n\nMedium Core Defense Field Extender II\nMedium Core Defense Field Extender II\n",
+      "data": {
+        "found": 2,
+        "relaxed": false,
+        "fits": [
+          {
+            "ship_name": "Gila",
+            "fit_name": "Example PvE fit",
+            "source": "example",
+            "source_url": "https://eve-cyno.dev/docs/examples/example-1",
+            "tags": [
+              "abyss",
+              "pve",
+              "mid"
+            ],
+            "score": 0.42,
+            "eft": "# Gila — Example PvE fit\nSource: https://eve-cyno.dev/docs/examples/example-1\nAuthor: Example Pilot\n\n[Gila, Example PvE fit]\nDrone Link Augmentor I\nRapid Light Missile Launcher II\nRapid Light Missile Launcher II\nRapid Light Missile Launcher II\nRapid Light Missile Launcher II\n\n10MN Monopropellant Enduring Afterburner\nMultispectrum Shield Hardener II\nCaldari Navy Large Shield Extender\nCaldari Navy Large Shield Extender\n\nDrone Damage Amplifier II\nDrone Damage Amplifier II\n\nMedium Core Defense Field Extender II\nMedium Core Defense Field Extender II\n",
+            "attribution": {
+              "source": "example",
+              "source_url": "https://eve-cyno.dev/docs/examples/example-1",
+              "license": "Example data for the documentation"
+            }
+          },
+          {
+            "ship_name": "Gila",
+            "fit_name": "Example budget PvE fit",
+            "source": "example",
+            "source_url": "https://eve-cyno.dev/docs/examples/example-2",
+            "tags": [
+              "abyss",
+              "pve",
+              "mid"
+            ],
+            "score": 0.32,
+            "eft": "# Gila — Example budget PvE fit\nSource: https://eve-cyno.dev/docs/examples/example-2\nAuthor: Example Pilot\n\n[Gila, Example budget PvE fit]\nDrone Link Augmentor I\nRapid Light Missile Launcher II\nRapid Light Missile Launcher II\nRapid Light Missile Launcher II\nRapid Light Missile Launcher II\n\n10MN Monopropellant Enduring Afterburner\nMultispectrum Shield Hardener II\nCaldari Navy Large Shield Extender\nCaldari Navy Large Shield Extender\n\nDrone Damage Amplifier II\nDrone Damage Amplifier II\n\nMedium Core Defense Field Extender II\nMedium Core Defense Field Extender II\n",
+            "attribution": {
+              "source": "example",
+              "source_url": "https://eve-cyno.dev/docs/examples/example-2",
+              "license": "Example data for the documentation"
+            }
+          }
+        ]
+      }
+    },
+    "attribution": [
+      {
+        "name": "Example fit source",
+        "url": "https://eve-cyno.dev/docs/",
+        "license": "Example data for the documentation"
+      }
+    ]
+  }
 }

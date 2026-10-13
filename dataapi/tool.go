@@ -78,6 +78,7 @@ type toolEnvelopeBody struct {
 //   - 200 text/plain        success, ToolFormatText
 //   - 400             body is not valid JSON
 //   - 400             also: appraise_items without X-Janice-Key (janice_key_required)
+//   - 400             a required argument is missing or blank (invalid_arguments)
 //   - 401             keyed tool without a valid API key (api_key_required, invalid_api_key)
 //   - 403             disabled tool (tool_disabled) on a ToolAPIPublic service
 //   - 404             unknown tool name
@@ -101,14 +102,6 @@ func (a *API) tool(w http.ResponseWriter, r *http.Request) {
 		if deps, ok = a.toolGate(w, r, name); !ok {
 			return
 		}
-		// Tools that read live ESI data have a stricter budget than the route's. It is
-		// charged after the gate, so a refused (keyed, disabled) call costs nothing.
-		if ok, retry := a.upstream.Allow(r, name); !ok {
-			w.Header().Set("Retry-After", strconv.Itoa(retrySeconds(retry)))
-			writeError(w, r, http.StatusTooManyRequests, "rate_limited",
-				"too many calls to "+name+", which reads live ESI data and has a lower limit; slow down")
-			return
-		}
 	}
 
 	body, ok := readBody(w, r, toolBodyMax)
@@ -124,6 +117,23 @@ func (a *API) tool(w http.ResponseWriter, r *http.Request) {
 	}
 	if args == nil {
 		args = map[string]any{}
+	}
+	if t, known := catalog.Lookup(name); known {
+		if err := t.CheckArgs(args); err != nil {
+			writeError(w, r, http.StatusBadRequest, "invalid_arguments", err.Error())
+			return
+		}
+	}
+
+	if a.toolMode == ToolAPIPublic {
+		// Tools that read live ESI data have a stricter budget than the route's. It is
+		// charged after the gate and the argument check, so a refused call costs nothing.
+		if ok, retry := a.upstream.Allow(r, name); !ok {
+			w.Header().Set("Retry-After", strconv.Itoa(retrySeconds(retry)))
+			writeError(w, r, http.StatusTooManyRequests, "rate_limited",
+				"too many calls to "+name+", which reads live ESI data and has a lower limit; slow down")
+			return
+		}
 	}
 
 	ctx, cancel := context.WithTimeout(r.Context(), a.toolTimeout)

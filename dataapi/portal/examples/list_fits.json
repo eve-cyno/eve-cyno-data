@@ -6,5 +6,68 @@
     "limit": 5
   },
   "prompt": "List the Workbench fits for the Gila.",
-  "note": "Request only: no API keys are issued yet, so there is no recorded response."
+  "recorded": "2026-10-13",
+  "response": {
+    "tool": "list_fits",
+    "version": "0.10.0",
+    "result": {
+      "text": "3 fit(s) match (showing first 3):\n1. Gila — Example PvE fit | tags: mid,pve | https://eve-cyno.dev/docs/examples/example-1\n2. Gila — Example ratting fit | tags: mid,pve,ratting | https://eve-cyno.dev/docs/examples/example-2\n3. Gila — Example blingy fit | tags: blingy,pve | https://eve-cyno.dev/docs/examples/example-3",
+      "data": {
+        "total": 3,
+        "shown": 3,
+        "fits": [
+          {
+            "ship_name": "Gila",
+            "fit_name": "Example PvE fit",
+            "tags": [
+              "mid",
+              "pve"
+            ],
+            "source_url": "https://eve-cyno.dev/docs/examples/example-1",
+            "attribution": {
+              "source": "example",
+              "source_url": "https://eve-cyno.dev/docs/examples/example-1",
+              "license": "Example data for the documentation"
+            }
+          },
+          {
+            "ship_name": "Gila",
+            "fit_name": "Example ratting fit",
+            "tags": [
+              "mid",
+              "pve",
+              "ratting"
+            ],
+            "source_url": "https://eve-cyno.dev/docs/examples/example-2",
+            "attribution": {
+              "source": "example",
+              "source_url": "https://eve-cyno.dev/docs/examples/example-2",
+              "license": "Example data for the documentation"
+            }
+          },
+          {
+            "ship_name": "Gila",
+            "fit_name": "Example blingy fit",
+            "tags": [
+              "blingy",
+              "pve"
+            ],
+            "source_url": "https://eve-cyno.dev/docs/examples/example-3",
+            "attribution": {
+              "source": "example",
+              "source_url": "https://eve-cyno.dev/docs/examples/example-3",
+              "license": "Example data for the documentation"
+            }
+          }
+        ]
+      }
+    },
+    "attribution": [
+      {
+        "name": "Example fit source",
+        "url": "https://eve-cyno.dev/docs/",
+        "license": "Example data for the documentation"
+      }
+    ]
+  }
 }

@@ -122,10 +122,10 @@ func llmsFullTxt(s Surface) string {
 			fmt.Fprintf(&w, "### %s %s/tool/{name}\n\nRuns one tool (see Tools). The body is the tool's arguments as a JSON object; the response is "+
 				"`{\"tool\", \"version\", \"result\": {\"text\", \"data\"}, \"attribution\": [{\"name\", \"url\", \"license\"}]}`. "+
 				"`result.text` is the answer as the chat assistant reads it, `result.data` the typed result where the tool has one (otherwise null), "+
-				"`attribution` the upstreams behind the answer.%s\n\n", rt.method, p, rateSentence(rt.rate(s)))
+				"`attribution` the upstreams behind the answer.%s\n\n", rt.method, p, rateSentence(s, rt.rate(s)))
 			continue
 		}
-		fmt.Fprintf(&w, "### %s %s\n\n%s%s\n\n", rt.method, p+rt.path, d.description, rateSentence(rt.rate(s)))
+		fmt.Fprintf(&w, "### %s %s\n\n%s%s%s\n\n", rt.method, p+rt.path, d.description, searchKeyNote(s, d), rateSentence(s, rt.rate(s)))
 		if len(d.query) > 0 {
 			w.WriteString("Query parameters:\n\n")
 			for _, q := range d.query {
