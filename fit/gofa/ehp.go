@@ -10,16 +10,18 @@ const (
 	attrHullHP   = 9
 
 	// Shield resonances (post-resist multipliers: resonance = 1 − resist).
-	attrShieldResEM    = 271
-	attrShieldResTherm = 272
-	attrShieldResKin   = 273
-	attrShieldResExp   = 274
+	// The SDE numbers them EM, Explosive, Kinetic, Thermal, not in the usual
+	// EM/Therm/Kin/Exp display order.
+	attrShieldResEM    = 271 // shieldEmDamageResonance
+	attrShieldResTherm = 274 // shieldThermalDamageResonance
+	attrShieldResKin   = 273 // shieldKineticDamageResonance
+	attrShieldResExp   = 272 // shieldExplosiveDamageResonance
 
-	// Armor resonances.
-	attrArmorResEM    = 267
-	attrArmorResTherm = 268
-	attrArmorResKin   = 269
-	attrArmorResExp   = 270
+	// Armor resonances (same SDE order as the shield ones).
+	attrArmorResEM    = 267 // armorEmDamageResonance
+	attrArmorResTherm = 270 // armorThermalDamageResonance
+	attrArmorResKin   = 269 // armorKineticDamageResonance
+	attrArmorResExp   = 268 // armorExplosiveDamageResonance
 
 	// Hull (structure) resonances — from dgmAttributeTypes in the EVE SDE.
 	// These are the *structure* resonance attributes (not armor/shield):
