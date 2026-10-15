@@ -75,6 +75,35 @@ func TestTank_KineticShieldResist(t *testing.T) {
 	require.InDelta(t, 0.5, stats.ShieldResists.Kin, 1e-9)
 }
 
+// TestTank_ResonanceAttributeIDs pins each resist field to its SDE attribute.
+// The IDs are written as literals on purpose: a test built on the constants
+// would pass with the constants swapped. The values are the Condor's base
+// resonances, which differ for every damage type on both layers.
+//
+// SDE: shield 271 EM, 272 Explosive, 273 Kinetic, 274 Thermal;
+// armor 267 EM, 268 Explosive, 269 Kinetic, 270 Thermal.
+func TestTank_ResonanceAttributeIDs(t *testing.T) {
+	ship := &Item{
+		TypeID: 583, // Condor
+		Kind:   KindShip,
+		Attrs: map[int]float64{
+			271: 1.0, 272: 0.5, 273: 0.6, 274: 0.8,
+			267: 0.5, 268: 0.9, 269: 0.75, 270: 0.55,
+		},
+	}
+	stats := tank(ship, nil)
+
+	require.InDelta(t, 0.0, stats.ShieldResists.EM, 1e-9)
+	require.InDelta(t, 0.2, stats.ShieldResists.Therm, 1e-9, "shield thermal is attribute 274")
+	require.InDelta(t, 0.4, stats.ShieldResists.Kin, 1e-9)
+	require.InDelta(t, 0.5, stats.ShieldResists.Exp, 1e-9, "shield explosive is attribute 272")
+
+	require.InDelta(t, 0.5, stats.ArmorResists.EM, 1e-9)
+	require.InDelta(t, 0.45, stats.ArmorResists.Therm, 1e-9, "armor thermal is attribute 270")
+	require.InDelta(t, 0.25, stats.ArmorResists.Kin, 1e-9)
+	require.InDelta(t, 0.1, stats.ArmorResists.Exp, 1e-9, "armor explosive is attribute 268")
+}
+
 // TestTank_ActiveRep verifies that a shield booster module contributes to
 // ActiveRepPerSec: boost/durSec.
 func TestTank_ActiveRep(t *testing.T) {
