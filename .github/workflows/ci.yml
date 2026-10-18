@@ -76,10 +76,11 @@ jobs:
       EVE_REQUIRE_SDE: '1'
       # SQLite-bound packages that run WITHOUT -race (an extended regexp over import paths).
       # modernc.org/sqlite (pure-Go SQLite, the SDE driver) is memory-access all the way down,
-      # so -race adds minutes (tools: 18 s plain / 196 s -race) and no signal for those
-      # sequential rule suites. The concurrent code lives in packages that keep -race, and the
-      # few concurrency tests of the excluded package still run under -race below.
-      NORACE: '/data/tools$'
+      # so -race adds minutes (tools: 18 s plain / 196 s -race; sde: over 600 s -race since the
+      # system and jump indexes) and no signal for those sequential rule suites. The concurrent
+      # code lives in packages that keep -race, and the concurrency tests of the excluded
+      # packages still run under -race below.
+      NORACE: '/data/(tools|sde)$'
     steps:
       - uses: actions/checkout@v7
 
