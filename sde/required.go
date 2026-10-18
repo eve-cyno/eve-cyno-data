@@ -16,12 +16,12 @@ import (
 // its positions (mapSolarSystems x/y/z)), so a schema that lacks one of these degrades silently: no
 // skill/ship modifiers reach the dogma engine, no stacking penalties.
 //
-// Two checks consume it: the SDE builder's publish gate in core/sde/build (a build
+// Two checks consume it: the SDE builder's publish gate in sde/build (a build
 // missing a column never replaces the live file) and the open-time check in openHandle
 // (an already-deployed file missing one is reported at ERROR).
 //
 // Keep it in step with the CREATE TABLE statements in
-// core/sde/build/builder.go and with the queries in effects.go, dogma.go, typebasics.go,
+// sde/build/builder.go and with the queries in effects.go, dogma.go, typebasics.go,
 // industry.go, systems.go and jumps.go.
 var RequiredColumns = map[string][]string{
 	"invTypes":          {"typeID", "groupID", "typeName", "description", "published", "mass", "volume", "capacity", "portionSize", "marketGroupID"},
@@ -90,6 +90,6 @@ func logMissingRequiredColumns(db *sql.DB, path string) {
 	if len(missing) == 0 {
 		return
 	}
-	slog.Error("sde: file lacks columns the readers need; dogma modifiers, stacking, mass/volume/capacity, type descriptions and market groups, and the map and jump readers degrade silently - rebuild it (go -C ingest run ./cmd/ingest sde)",
+	slog.Error("sde: file lacks columns the readers need; dogma modifiers, stacking, mass/volume/capacity, type descriptions and market groups, and the map and jump readers degrade silently - rebuild it (go run ./cmd/sde -force)",
 		"path", path, "missing", missing)
 }

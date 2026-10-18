@@ -26,10 +26,15 @@ RUN CGO_ENABLED=0 go build -trimpath \
       -ldflags "-s -w -X eve-cyno.dev/go/data/version.buildVersion=${VERSION}" \
       -o /out/sde ./cmd/sde
 
+# Key store directory, owned by distroless nonroot (65532): a fresh named volume mounted at
+# /data/keys copies this ownership on first use, so dataapi can create keys.db without root.
+RUN mkdir -p /out/keys
+
 # -- Runtime stage (distroless static: no shell, no libc; CA bundle for the SDE download) --
 FROM gcr.io/distroless/static-debian13:nonroot AS runtime
 COPY --from=build /out/dataapi /dataapi
 COPY --from=build /out/sde /sde
+COPY --from=build --chown=65532:65532 /out/keys /data/keys
 
 # The SDE is supplied at runtime through a volume mounted at /data/sde (read-only is enough to
 # serve). Build it with the second binary:
@@ -45,6 +50,8 @@ LABEL org.opencontainers.image.source="https://github.com/eve-cyno/eve-cyno-data
       org.opencontainers.image.licenses="MIT"
 
 EXPOSE 8092
+# Admin API of the key store (published on host loopback only in compose).
+EXPOSE 8093
 
 # No HEALTHCHECK: distroless has no curl/wget. dataapi serves GET /v1/health; use an
 # orchestrator-level TCP/HTTP check.

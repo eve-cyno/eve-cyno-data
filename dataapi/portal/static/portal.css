@@ -4,7 +4,7 @@
    callouts, tables, tool rows, footer) + the portal landing sections.
    data-docs.html loads this file, then data-docs.css.
    Tokens only (tokens.css). Radius 2px. One accent: ice. 12px type floor.
-   Port: Go html/template in core/dataapi. Repeatable blocks use classes and
+   Port: Go html/template in dataapi. Repeatable blocks use classes and
    data-* hooks only; behaviour lives in data-site.js.
    ========================================================================== */
 :root {

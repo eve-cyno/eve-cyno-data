@@ -15,13 +15,13 @@ type Source struct {
 }
 
 // Result is the full answer of one tool call: the LLM-oriented text the chat loop
-// reads, plus what the public API (core/dataapi, later MCP / OpenAPI) wants around it.
-// It has no JSON form of its own: each transport owns its wire shape (core/dataapi nests
+// reads, plus what the public API (dataapi, later MCP / OpenAPI) wants around it.
+// It has no JSON form of its own: each transport owns its wire shape (dataapi nests
 // Text and Data under "result"); only Source and the typed Data structs carry JSON tags.
 type Result struct {
 	// Tool is the tool name as called.
 	Tool string
-	// Version is the build version of this binary (core/version).
+	// Version is the build version of this binary (version).
 	Version string
 	// Text is exactly what ExecuteTool returns: the string the brain and the guards
 	// parse. It never changes with the typed results.

@@ -6,7 +6,7 @@ import (
 )
 
 // NewDeps assembles Deps from the concrete deterministic layer the binaries
-// build at startup (core/bootstrap): the Gofa stats engine is the tool layer's
+// build at startup (bootstrap): the Gofa stats engine is the tool layer's
 // own (t.StatsEngine, over t.SDE), so /fit/stats and the fit-stat tools share one
 // warm SDE memo, and a nil retriever stays an untyped nil interface (assigning a
 // nil *rag.QdrantRetriever to Deps.Retriever directly would make it non-nil).

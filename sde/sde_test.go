@@ -21,7 +21,7 @@ func dbPath(t *testing.T) string {
 
 func loadGolden(t *testing.T, rel string, v any) {
 	t.Helper()
-	// core/sde/ + ../testdata = core/testdata
+	// sde/ + ../testdata = testdata
 	b, err := os.ReadFile(filepath.Join("..", "testdata", "golden", rel))
 	require.NoError(t, err)
 	require.NoError(t, json.Unmarshal(b, v))

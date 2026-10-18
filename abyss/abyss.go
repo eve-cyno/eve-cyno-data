@@ -5,7 +5,7 @@
 // community kill-order lists.
 //
 // The data lives in abyss_data.json (embedded) and is regenerated from an SDE SQLite file
-// with `go generate ./abyss` in the core module (see generate.go). Every number in the
+// with `go generate ./abyss` (see generate.go). Every number in the
 // file is either a raw SDE attribute or a documented, deterministic derivation of one;
 // KillPriority is a separate heuristic of ours and is NOT stored in the file.
 //

@@ -1,16 +1,16 @@
-// Command abyssgen derives core/abyss/abyss_data.json from the SDE SQLite file: the
+// Command abyssgen derives abyss/abyss_data.json from the SDE SQLite file: the
 // Abyssal Deadspace NPCs, weather environments, filament tiers and hazard clouds. Only SDE
 // tables are read (invTypes, invGroups, dgmTypeAttributes, dgmTypeEffects); nothing is
-// fetched and no wiki text is used. It runs through `go generate ./abyss` in the core
-// module (the directive is in core/abyss/generate.go).
+// fetched and no wiki text is used. It runs through `go generate ./abyss` (the directive is in
+// abyss/generate.go).
 //
-//	ABYSS_SDE_BUILD=3586130_20261007 go run ./internal/abyssgen -out abyss/abyss_data.json -doc ../data/knowledge/eve_abyss_weather_and_npcs.md
+//	ABYSS_SDE_BUILD=3586130_20261007 go run ./internal/abyssgen -out abyss/abyss_data.json -doc /tmp/eve_abyss_weather_and_npcs.md
 //
-// -doc also renders the RAG knowledge document from the same dataset (monorepo only).
+// -doc also renders the RAG knowledge document from the same dataset.
 //
 // The SDE path is -sde, else EVE_CORE_SDE_PATH, else data/sde/sde.sqlite. The build id is
 // -build, else ABYSS_SDE_BUILD, else the first line of "<sde>.build" (written by
-// core/cmd/sde); it is required so the file always says which SDE it came from. Output is
+// cmd/sde); it is required so the file always says which SDE it came from. Output is
 // deterministic: sorted, rounded, no timestamps.
 package main
 

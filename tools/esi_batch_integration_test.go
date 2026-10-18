@@ -13,7 +13,7 @@ import (
 
 // Live check of the two routes the batch tools add. Run with
 //
-//	GOWORK=off go -C core test -tags integration -count=1 -run Integration_SystemJumpsAndNames ./tools/
+//	GOWORK=off go test -tags integration -count=1 -run Integration_SystemJumpsAndNames ./tools/
 func TestIntegration_SystemJumpsAndNames(t *testing.T) {
 	c := NewClient()
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)

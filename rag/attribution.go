@@ -7,10 +7,10 @@ import (
 	"eve-cyno.dev/go/data/corpus"
 )
 
-// Per-hit attribution (roadmap R3.6). Every corpus hit Product A serves carries an
+// Per-hit attribution. Every corpus hit the data API serves carries an
 // Attribution: where the text came from, the link to the original, who made it
 // when that is known, and the terms it is served under. The licence terms live in
-// ONE table (sourceLicenses below); core/tools builds its per-tool Source
+// ONE table (sourceLicenses below); tools builds its per-tool Source
 // attribution from the same table, so the two cannot drift.
 //
 // The upstream terms of use are the authoritative record behind each entry.

@@ -1,4 +1,4 @@
-// core/rag/fits_test.go
+// rag/fits_test.go
 package rag
 
 import (

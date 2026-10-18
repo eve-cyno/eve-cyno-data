@@ -1,0 +1,20 @@
+# Keep the build context minimal: the Dockerfile copies the module sources only.
+.git
+.github
+.gitignore
+.golangci.yml
+.dockerignore
+.idea
+.vscode
+*.swp
+*~
+.DS_Store
+.env
+.env.*
+data/
+*.db
+*.db-*
+*.sqlite
+*.sqlite-*
+bin/
+dist/

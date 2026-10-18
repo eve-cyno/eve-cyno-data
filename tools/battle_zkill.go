@@ -6,7 +6,7 @@ package tools
 //
 // Endpoints used:
 //   GET https://zkillboard.com/api/related/{systemID}/{timestamp}/
-//   GET https://esi.evetech.net/killmails/{id}/{hash}  (detail="full", via core/esi)
+//   GET https://esi.evetech.net/killmails/{id}/{hash}  (detail="full", via esi)
 
 import (
 	"compress/gzip"

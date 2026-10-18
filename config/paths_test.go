@@ -37,7 +37,7 @@ func skipIfInsideCheckout(t *testing.T, dir string) {
 }
 
 func TestDefaultSDEPath_ClimbsFromSubdirToExistingFile(t *testing.T) {
-	// go -C ingest run ./cmd/ingest runs in ingest/, below the checkout's data/.
+	// a command run from ingest/ sits below the checkout's data/.
 	root := tree(t, "go.work", "data/sde/sde.sqlite", "ingest/cmd/ingest/")
 	t.Chdir(filepath.Join(root, "ingest"))
 

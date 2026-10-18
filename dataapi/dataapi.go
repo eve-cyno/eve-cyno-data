@@ -1,4 +1,4 @@
-// Package dataapi is Product A's HTTP face: the deterministic, no-LLM data
+// Package dataapi is the data API's HTTP face: the deterministic, no-LLM data
 // endpoints (community-fit search, fit detail / stats / suggestions, SDE item
 // search and the opt-in raw tool API) behind a stdlib http.ServeMux.
 //
@@ -25,7 +25,7 @@
 //     only be reachable through the Cloudflare tunnel (or loopback).
 //   - Request bodies are capped (256 KiB for the fit routes, 64 KiB for the tool
 //     API); an oversize body is a 413.
-//   - Tool tiers (core/catalog): on an internet-facing service a tool is public
+//   - Tool tiers (catalog): on an internet-facing service a tool is public
 //     (anyone), keyed (a valid API key, from Config.Auth: Authorization: Bearer or
 //     X-API-Key) or disabled; appraise_items also takes the caller's own Janice key in
 //     X-Janice-Key (optional; used for that request only, never stored or logged). The
@@ -33,7 +33,7 @@
 //   - The tool API answers a JSON envelope (Config.ToolFormat), except where a
 //     legacy mount asks for the bare text.
 //   - Optional machine-readable surfaces, all generated from the same route table and
-//     tool registry (core/catalog): Config.Docs serves GET {prefix}/openapi.yaml and
+//     tool registry (catalog): Config.Docs serves GET {prefix}/openapi.yaml and
 //     openapi.json plus /llms.txt and /llms-full.txt at the root of the host;
 //     Config.MCP mounts an MCP streamable-HTTP handler at {prefix}/mcp behind the same
 //     request IDs and limiter. Both are off by default: cmd/dataapi turns them on, the
@@ -46,7 +46,7 @@
 //     no-store. Only a 200 is cacheable; every error is no-store.
 //
 // Dependencies arrive through Config; the package has no globals and imports
-// only Product A packages (enforced by core/internal/tools/importcheck).
+// only the data API packages (enforced by internal/tools/importcheck).
 package dataapi
 
 import (
@@ -98,7 +98,7 @@ type Deps struct {
 	Tools *tools.Deps
 	// Retriever backs /fits/search and the community frequencies of /fit/suggest.
 	Retriever FitSearcher
-	// Stats computes /fit/stats (core/fit/gofa).
+	// Stats computes /fit/stats (fit/gofa).
 	Stats fit.StatsProvider
 }
 

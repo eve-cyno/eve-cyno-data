@@ -42,7 +42,7 @@ type ListFitScrollResult struct {
 	Clamped bool
 }
 
-// FitPageMax is the largest page of community fits any Product A path serves at once
+// FitPageMax is the largest page of community fits any data API path serves at once
 // (/v1/fits/search, list_fits). Fits are served ranked and capped, never exported:
 // there is no offset, page or cursor parameter anywhere, so one query can reach at
 // most one page (TestFitQueries_HaveNoPaging pins that). It equals the page the
@@ -130,7 +130,7 @@ func qualityFloor(hit FitHit) bool {
 
 // ScrollFits runs a pure payload-filter Qdrant scroll for community fits.
 // No embedding lookup — mirrors Python _get_fits scroll path exactly.
-// Returns raw hits + relaxation state; formatting lives in core/tools/fits.go.
+// Returns raw hits + relaxation state; formatting lives in tools/fits.go.
 func (r *QdrantRetriever) ScrollFits(ctx context.Context, q FitQuery) (FitScrollResult, error) {
 	bounded := q.Limit
 	if bounded < 1 {

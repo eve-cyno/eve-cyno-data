@@ -1,5 +1,5 @@
-// Command apigen writes the generated public descriptions of the core module's API from
-// the one tool registry and the dataapi route table (roadmap R3.3):
+// Command apigen writes the generated public descriptions of this module's API from
+// the one tool registry and the dataapi route table:
 //
 //	api/openapi.yaml   OpenAPI 3.1 for the /v1 surface of the public service
 //	llms.txt           the llmstxt.org index
@@ -7,8 +7,8 @@
 //
 // It describes dataapi.PublicSurface: the internet-facing cmd/dataapi with the tool
 // endpoint, MCP and the description routes all on. Run it through `go generate ./...` in
-// the core module (the directive is in core/dataapi/generate.go); TestGeneratedFilesAreCurrent
-// in core/dataapi fails when a committed file is stale.
+// this module (the directive is in dataapi/generate.go); TestGeneratedFilesAreCurrent
+// in dataapi fails when a committed file is stale.
 package main
 
 import (
@@ -21,7 +21,7 @@ import (
 )
 
 func main() {
-	out := flag.String("out", ".", "the core module root to write into")
+	out := flag.String("out", ".", "the repository root to write into")
 	flag.Parse()
 	if err := run(*out); err != nil {
 		fmt.Fprintln(os.Stderr, "apigen:", err)

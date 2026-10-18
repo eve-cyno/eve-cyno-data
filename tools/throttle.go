@@ -15,7 +15,7 @@ type domainConfig struct {
 	minInterval   time.Duration
 }
 
-// ESI is not a domain here: core/esi paces its own traffic (concurrency, spacing, rate-limit
+// ESI is not a domain here: esi paces its own traffic (concurrency, spacing, rate-limit
 // buckets, error limit).
 var domainConfigs = map[string]domainConfig{
 	// zKillboard's stated limit is 1 request/second (was 500 ms = 2 req/s).

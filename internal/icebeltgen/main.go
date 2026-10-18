@@ -1,4 +1,4 @@
-// Command icebeltgen derives core/icebelts/ice_systems.json from the four EVE University
+// Command icebeltgen derives icebelts/ice_systems.json from the four EVE University
 // Wiki pages that list the ice systems of the faction ice belts (Clear Icicle Belt, White
 // Glaze Belt, Blue Ice Belt, Glacial Mass Belt), checking every system name against the SDE.
 //

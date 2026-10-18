@@ -14,7 +14,7 @@ import (
 
 // Real-ESI smoke test (repo rule: integration tests hit the real API). Run with
 //
-//	go -C core test -tags integration -race -count=1 ./esi/ -run Integration
+//	go test -tags integration -race -count=1 ./esi/ -run Integration
 //
 // Public routes only, no credentials. ESI_CONTACT is optional.
 func newLive(t *testing.T) *esi.Client {

@@ -1,4 +1,4 @@
-// core/sde/build/builder_test.go
+// sde/build/builder_test.go
 //
 // Unit tests for BuildSQLite with tiny inline CSV fixtures. Does NOT hit the
 // network or use the real 506 MB SDE dump.
@@ -285,7 +285,7 @@ func TestBuildSQLite_ReaderColumns(t *testing.T) {
 	defer s.Close()
 
 	mods := s.GetEffectModifiers(414)
-	require.Len(t, mods, 1, "modifierInfo must parse with the core/sde JSON reader")
+	require.Len(t, mods, 1, "modifierInfo must parse with the sde JSON reader")
 	require.Equal(t, "shipID", mods[0].Domain)
 	require.Equal(t, "LocationRequiredSkillModifier", mods[0].Func)
 	require.Equal(t, 51, mods[0].ModifiedAttr)

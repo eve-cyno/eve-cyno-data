@@ -12,7 +12,7 @@ import (
 
 // Live check of GET /incursions: 200, decodes, and every infested system is a solar system of the SDE. Run with
 //
-//	GOWORK=off go -C core test -tags integration -count=1 -run Integration_ESIIncursions ./tools/
+//	GOWORK=off go test -tags integration -count=1 -run Integration_ESIIncursions ./tools/
 func TestIntegration_ESIIncursions(t *testing.T) {
 	s := testSDE(t)
 	c := NewClient()

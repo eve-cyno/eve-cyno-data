@@ -4,13 +4,11 @@ Issues and pull requests are welcome.
 
 ## How this repository is maintained
 
-For now this repository is a **mirror** of an upstream monorepo where the code is developed. In practice:
+This repository is the only source of the Go module `eve-cyno.dev/go/data`. Pull requests are reviewed and merged here, and
+releases are tags of this repository (`vX.Y.Z`). The EVE-Cyno services consume the module by version like any other
+dependency.
 
-- Open issues and pull requests here as usual. They are reviewed here.
-- An accepted pull request is applied to the upstream source by the maintainer and comes back in the next sync, so you will see
-  your change land on `main` as part of a `sync:` commit. Your authorship is kept in the commit trailer
-  (`Co-authored-by`) of the sync commit.
-- Because of this, please keep pull requests small and focused, and expect merges to take a little longer than usual.
+- Open issues and pull requests as usual. Keep them small and focused.
 
 ## Before you open a pull request
 

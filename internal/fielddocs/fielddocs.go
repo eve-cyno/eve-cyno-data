@@ -2,7 +2,7 @@
 // generated API description can say what each field of a typed result means. Reflection
 // cannot reach comments; this package reads them from the source and the result is
 // committed as dataapi/fielddocs.json (see dataapi/generate.go). TestFieldDocsAreCurrent
-// in core/dataapi fails when the committed file is stale.
+// in dataapi fails when the committed file is stale.
 package fielddocs
 
 import (
@@ -16,7 +16,7 @@ import (
 	"strings"
 )
 
-// Dirs are the packages (relative to the core module root) whose structs the API encodes.
+// Dirs are the packages (relative to the repository root) whose structs the API encodes.
 func Dirs() []string { return []string{"tools", "fit", "rag", "sde"} }
 
 // Key is the lookup key of a field: the package directory name, the Go type name and the

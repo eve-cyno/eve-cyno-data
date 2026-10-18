@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// expectedToolCount is the number of tool definitions in core/tools/tool_schemas.json
+// expectedToolCount is the number of tool definitions in tools/tool_schemas.json
 // (the source of truth; it was originally dumped from the deleted Python runtime).
 const expectedToolCount = 29
 
@@ -54,7 +54,7 @@ func TestToolSchemasParse(t *testing.T) {
 	schemas := ToolSchemas()
 	require.NotNil(t, schemas, "ToolSchemas() must not return nil")
 	assert.Equal(t, expectedToolCount, len(schemas),
-		"expected %d tool schemas (core/tools/tool_schemas.json), got %d",
+		"expected %d tool schemas (tools/tool_schemas.json), got %d",
 		expectedToolCount, len(schemas))
 }
 

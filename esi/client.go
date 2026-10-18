@@ -1,5 +1,5 @@
-// Package esi is the EVE Online ESI client shared by the data/tools platform (core/tools),
-// the desktop app and the ingest pollers (roadmap R2.10, "ESI client v2").
+// Package esi is the EVE Online ESI client shared by the data/tools platform (tools),
+// the desktop app and the ingest pollers.
 //
 // It implements the contract CCP documents at
 // https://developers.eveonline.com/docs/services/esi/: a descriptive User-Agent, a pinned X-Compatibility-Date on every

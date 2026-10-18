@@ -1,6 +1,6 @@
 // Package catalog is the one tool registry the generated public surfaces read: the
 // OpenAPI document, llms.txt / llms-full.txt, the REST tool endpoint and the MCP server.
-// It joins what core/tools already owns, split across three places, into one
+// It joins what tools already owns, split across three places, into one
 // value per tool:
 //
 //   - tools/tool_schemas.json: the name, the description (written as a prompt for the
@@ -11,7 +11,7 @@
 //     an internet-facing surface), and which typed result a tool carries next to its text.
 //
 // Nothing here executes a tool; execution stays tools.ExecuteToolResult. The package
-// imports only core/tools, so a surface can depend on it without a path to anything else.
+// imports only tools, so a surface can depend on it without a path to anything else.
 package catalog
 
 import (

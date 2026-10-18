@@ -36,7 +36,7 @@ func LoadCassette(path string) (*Cassette, error) {
 }
 
 // Sig builds the cassette lookup key. The key format is frozen: the checked-in
-// cassettes in core/testdata/cassettes were recorded with it (by the since
+// cassettes in testdata/cassettes were recorded with it (by the since
 // deleted Python capture_golden.py recorder), so changing it requires
 // re-keying or re-recording them.
 func Sig(method string, u *url.URL, body []byte) string {

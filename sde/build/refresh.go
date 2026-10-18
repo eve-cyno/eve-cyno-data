@@ -1,4 +1,4 @@
-// core/sde/build/refresh.go
+// sde/build/refresh.go
 //
 // Builder keeps one SDE SQLite file current against the Fuzzwork dump: the
 // Tier-3 "build-date diff". The caller records the build id it last saw and hands
@@ -6,9 +6,9 @@
 // rebuilds (BuildSQLite, behind the publish gate) when the two differ, or when
 // the live file lacks columns the readers need.
 //
-// Where the recorded build id lives is the caller's business: the ingest source
-// (ingest/sources/sde) keeps it in its watermark. This package imports no
-// ingest code (Product A).
+// Where the recorded build id lives is the caller's business: a separate ingest
+// pipeline keeps it in its watermark. This package imports no
+// pipeline code.
 package build
 
 import (
@@ -52,7 +52,7 @@ func NewWithRemote(remote Remote, path string, gate Gate) *Builder {
 // the previous successful Refresh ("" when there is none).
 //
 //   - recorded == latest build -> (latest, false, nil): a true no-op, unless the
-//     existing file lacks columns the readers need (core/sde RequiredColumns):
+//     existing file lacks columns the readers need (sde RequiredColumns):
 //     then it is rebuilt in place like a changed build.
 //   - otherwise the local database is rebuilt (BuildSQLite, behind the publish
 //     gate) and Refresh returns (latest, true, nil); the caller should record
@@ -88,7 +88,7 @@ func (b *Builder) Refresh(ctx context.Context, recorded string) (latest string, 
 	return latest, true, nil
 }
 
-// liveMissingColumns returns the core/sde RequiredColumns the existing file at path
+// liveMissingColumns returns the sde RequiredColumns the existing file at path
 // lacks. An absent or unreadable file reports nothing: it is not "degraded", and a
 // transient read problem must not trigger a download.
 func liveMissingColumns(path string) []string {

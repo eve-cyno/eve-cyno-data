@@ -22,7 +22,7 @@ func TestSourceLicenses_CoverEveryCorpusSource(t *testing.T) {
 	want = append(want, SourceWiki)
 	for _, key := range want {
 		l, ok := SourceLicenseOf(key)
-		require.Truef(t, ok, "corpus source %q has no licence-table entry (core/rag/attribution.go)", key)
+		require.Truef(t, ok, "corpus source %q has no licence-table entry (rag/attribution.go)", key)
 		require.NotEmptyf(t, l.License, "licence of %q is empty", key)
 	}
 	// No orphan rows either: every key of the table is a corpus source.
@@ -166,9 +166,9 @@ func mixedQdrant(t *testing.T, pts []goldenPoint) *httptest.Server {
 }
 
 // Contract: whatever filters a caller passes, the community-fit paths (SearchFits,
-// ScrollFits, ScrollListFits: Product A's only corpus readers) return fit documents
+// ScrollFits, ScrollListFits: the data API's only corpus readers) return fit documents
 // of a corpus.FitSources source and nothing else, each with a full Attribution. So
-// wiki-derived text can never leave Product A without its CC BY-SA attribution,
+// wiki-derived text can never leave the data API without its CC BY-SA attribution,
 // because it cannot leave at all.
 func TestFitPaths_NeverServeNonFitDocuments(t *testing.T) {
 	srv := mixedQdrant(t, mixedCorpus())

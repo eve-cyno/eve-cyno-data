@@ -162,7 +162,7 @@ func llmsFullTxt(s Surface) string {
 	if s.MCP {
 		w.WriteString("## MCP\n\n")
 		fmt.Fprintf(&w, "- Hosted: streamable HTTP, stateless, JSON responses, at `%s/mcp` on this host. One JSON-RPC message per request: batches are not accepted (`400 invalid_request`).\n", p)
-		w.WriteString("- Local: the `cmd/mcp` binary of the core module speaks MCP over stdio (`go run ./cmd/mcp`), for Claude Desktop, Claude Code and other stdio hosts; it reads the SDE from `EVE_CORE_SDE_PATH`.\n\n")
+		w.WriteString("- Local: the `cmd/mcp` binary of this module speaks MCP over stdio (`go run ./cmd/mcp`), for Claude Desktop, Claude Code and other stdio hosts; it reads the SDE from `EVE_CORE_SDE_PATH`.\n\n")
 	}
 
 	w.WriteString("## Attribution and licensing\n\n")

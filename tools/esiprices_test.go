@@ -47,7 +47,7 @@ func (p *pricesServer) setDelay(d time.Duration) {
 }
 
 // newPricesClient is a tools Client over a fake ESI that serves testPricesBody, with a
-// Last-Modified header and no ETag/Expires (so core/esi does not cache it).
+// Last-Modified header and no ETag/Expires (so esi does not cache it).
 func newPricesClient(t *testing.T) (*Client, *fakeESI, *pricesServer) {
 	t.Helper()
 	ps := &pricesServer{status: http.StatusOK, body: testPricesBody}
@@ -197,7 +197,7 @@ func TestESIPriceBook_ACallerThatGivesUpDoesNotFailTheFetch(t *testing.T) {
 }
 
 // The route and its average_price field are in the ESI spec the client is pinned to
-// (core/esi/testdata/openapi.yaml, refreshed by core/esi/contract.sh update): a spec
+// (esi/testdata/openapi.yaml, refreshed by esi/contract.sh update): a spec
 // refresh that drops either fails here.
 func TestPinnedESISpecListsMarketPrices(t *testing.T) {
 	b, err := os.ReadFile(filepath.Join("..", "esi", "testdata", "openapi.yaml"))

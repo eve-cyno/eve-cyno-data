@@ -1,6 +1,6 @@
 // Package gofa is a pure-Go dogma engine that interprets CCP modifierInfo
-// modifiers to compute fit statistics. It depends on core/sde for the
-// interface types only; core/fit must never import it.
+// modifiers to compute fit statistics. It depends on sde for the
+// interface types only; fit must never import it.
 package gofa
 
 // EVE dogma operation codes. These match CCP's dgmExpressions / modifierInfo

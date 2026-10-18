@@ -404,7 +404,7 @@ func TestGoldenSearchFits_abyssExclusionRidesEveryPass(t *testing.T) {
 // goldenHullTraits are the verbatim SDE trait texts (invTraits.bonusText, anchors
 // stripped — what sde.GetShipTraits returns) of the synthetic hulls; the golden
 // retriever derives each hull's weapon affinity from them exactly like
-// core/bootstrap does in production.
+// bootstrap does in production.
 var goldenHullTraits = map[string][]string{
 	"Punisher": {"reduction in Small Energy Turret activation cost", "bonus to all armor resistances"},
 	"Stabber":  {"bonus to Medium Projectile Turret rate of fire", "bonus to Medium Projectile Turret falloff"},

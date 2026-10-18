@@ -1,4 +1,4 @@
-// core/sde/build/refresh_test.go
+// sde/build/refresh_test.go
 //
 // Unit tests for Builder.Refresh with injected fake Fuzzwork remotes.
 // Does NOT hit the network or perform real downloads.

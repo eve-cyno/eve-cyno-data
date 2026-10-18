@@ -152,7 +152,7 @@ func (s *SDE) GetReprocessingYield(typeID, runs int, refiningEfficiencyPct float
 // allowlist, and an empty one would flag everything as Omega-only.
 func (s *SDE) AlphaCloneSkills() (map[int]int, error) {
 	if !s.HasTable("chrCloneGradeSkills") {
-		return nil, fmt.Errorf("sde: table chrCloneGradeSkills is missing - rebuild the SDE (go -C ingest run ./cmd/ingest sde)")
+		return nil, fmt.Errorf("sde: table chrCloneGradeSkills is missing - rebuild the SDE (go run ./cmd/sde -force)")
 	}
 	rows, err := s.db.Query(`SELECT CAST(typeID AS INTEGER), MAX(CAST(level AS INTEGER)) FROM chrCloneGradeSkills GROUP BY 1`)
 	if err != nil {

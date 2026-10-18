@@ -28,7 +28,7 @@ func testSDE(t *testing.T) *sde.SDE {
 	return s
 }
 
-// These tests pin how the tools talk to ESI now that every call goes through core/esi:
+// These tests pin how the tools talk to ESI now that every call goes through esi:
 // the request shape (route, headers, no "/latest", no datasource) and that the tool
 // outputs are the ones the Python-parity goldens expect.
 

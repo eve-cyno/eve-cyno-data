@@ -42,7 +42,7 @@ func TestZkillThrottleHonoursOneRequestPerSecond(t *testing.T) {
 
 func TestDomainFor(t *testing.T) {
 	cases := map[string]string{
-		"https://esi.evetech.net/markets/10000002/orders": "", // paced by core/esi, not by this throttle
+		"https://esi.evetech.net/markets/10000002/orders": "", // paced by esi, not by this throttle
 		"https://zkillboard.com/api/kills/":               "zkill",
 		"https://janice.e-351.com/api/appraisal/":         "janice",
 		"https://api.frankfurter.dev/v2/rate/USD/EUR":     "frankfurter",

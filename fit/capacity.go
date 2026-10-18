@@ -1,13 +1,13 @@
 package fit
 
 // Fitting capacity model, shared by Validate (this package) and the
-// validate_fitting tool (core/tools) so there is exactly one implementation of
+// validate_fitting tool (tools) so there is exactly one implementation of
 // "how much CPU/PG does this fit have and how much does each module draw".
 //
 // The model is the all-V skill profile, cross-checked against Pyfa v2.67.0 output
 // (all-V character) on the recorded QC2 fits (see validate_qc2_test.go). It is
 // NOT a full dogma engine: hull-specific role bonuses, rig drawbacks and
-// implants are not modelled (core/fit/gofa is the dogma engine).
+// implants are not modelled (fit/gofa is the dogma engine).
 
 // Dogma attribute IDs of the modules and rigs that change the ship's CPU / PG
 // output. Names are dgmAttributeTypes.attributeName; the effects that apply them
@@ -62,7 +62,7 @@ const (
 // (Vorton Projector) were missing — Pyfa discounts both (Supratidal Entropic
 // Disintegrator I: CPU 300 -> 225, PG 16500 -> 14850).
 //
-// This is the only copy: the validate_fitting tool (core/tools) and the guards'
+// This is the only copy: the validate_fitting tool (tools) and the guards'
 // deterministic repair (chat/brain/guards moduleLoad) call ModuleLoad.
 var weaponGroups = map[int]bool{
 	53: true, 55: true, 74: true,

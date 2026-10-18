@@ -2,8 +2,8 @@ package fit
 
 import "context"
 
-// StatsProvider is the seam between core/fit and the dogma engine.
-// Implementations live in sub-packages (e.g. core/fit/gofa); core/fit
+// StatsProvider is the seam between fit and the dogma engine.
+// Implementations live in sub-packages (e.g. fit/gofa); fit
 // must never import them.
 type StatsProvider interface {
 	Stats(ctx context.Context, f Fit, opts StatsOpts) (FitStats, error)

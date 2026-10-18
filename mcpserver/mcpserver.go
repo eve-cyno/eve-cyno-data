@@ -1,5 +1,5 @@
 // Package mcpserver exposes the deterministic EVE-Cyno tools as a Model Context Protocol
-// server: the same registry (core/catalog) and the same executor
+// server: the same registry (catalog) and the same executor
 // (tools.ExecuteToolResult) as the REST tool endpoint, so a tool answers identically over
 // MCP, REST and the chat brain.
 //

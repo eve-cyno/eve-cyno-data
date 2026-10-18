@@ -9,8 +9,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// LoadGolden reads core/testdata/golden/<rel> into v.
-// Call from tests living under core/<pkg>/ — the path goes up two levels to core/.
+// LoadGolden reads testdata/golden/<rel> into v.
+// Call from tests living under <pkg>/ — the path goes up two levels to the repository root.
 func LoadGolden(t *testing.T, rel string, v any) {
 	t.Helper()
 	b, err := os.ReadFile(filepath.Join("..", "..", "testdata", "golden", rel))

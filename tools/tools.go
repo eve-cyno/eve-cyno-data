@@ -30,14 +30,14 @@ type Deps struct {
 	// value is the chat brain's text, which the golden tests pin.
 	Public bool
 	// Stats is the one dogma engine behind compute_fit_stats and the validate_fitting
-	// stat card, built once over SDE where the Deps are (core/bootstrap) so every call
+	// stat card, built once over SDE where the Deps are (bootstrap) so every call
 	// reuses its warm SDE memo (a cold engine reads ~2x slower). nil → StatsEngine
 	// builds one lazily, once (tests, struct literals).
 	Stats *gofa.Engine
 
 	// Legality is the one Alpha-clone legality checker (skill allowlist + meta tier)
 	// behind validate_fitting and the fit controller, built once where the Deps are
-	// (core/bootstrap). nil → AlphaLegality builds one lazily, once (tests, struct
+	// (bootstrap). nil → AlphaLegality builds one lazily, once (tests, struct
 	// literals); nil there too when the allowlist cannot be loaded.
 	Legality *fit.Legality
 

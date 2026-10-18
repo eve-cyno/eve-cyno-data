@@ -15,7 +15,7 @@
 // composition table.
 //
 // To regenerate the file after the wiki changes (this fetches over the network, so there is
-// no go:generate directive), run from the core module:
+// no go:generate directive), run from the repository root:
 //
 //	go run ./internal/icebeltgen -out icebelts/ice_systems.json
 //

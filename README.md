@@ -64,16 +64,18 @@ The stdio server (`cmd/mcp`) has the same switch: `-sde-only` or `MCP_SDE_ONLY=t
 **Refreshing the SDE.** Run `go run ./cmd/sde` again after each game patch: it checks Fuzzwork's build id (kept in
 `<out>.build`) and rebuilds only when it changed, publishing the new file atomically; `-force` rebuilds anyway. A running
 server notices the replaced file and reopens it (`EVE_CORE_SDE_RELOAD_INTERVAL`). A failed build leaves the old file in place
-and exits 1. In the monorepo, `go -C ingest run ./cmd/ingest sde` runs the same builder with its own watermark in `ingest.db`.
+and exits 1.
 
 ### Docker
 
-`deploy/Dockerfile.dataapi` builds only this module (`GOWORK=off`) into a small distroless image (about 45 MB, runs as a
-non-root user, `EXPOSE 8092`). The entrypoint is `/dataapi`; the SDE builder is a second binary, `/sde`. Build from the
+The root `Dockerfile` builds this module into a small distroless image (about 45 MB, runs as a
+non-root user, `EXPOSE 8092`, and `EXPOSE 8093` for the key-store admin API, which a compose file should publish on host
+loopback only). The image ships an empty `/data/keys` owned by the non-root user, so a fresh named volume mounted there is
+writable for the key store. The entrypoint is `/dataapi`; the SDE builder is a second binary, `/sde`. Build from the
 repository root:
 
 ```sh
-docker build -f deploy/Dockerfile.dataapi --build-arg VERSION=dev -t eve-cyno-dataapi .
+docker build --build-arg VERSION=dev -t eve-cyno-dataapi .
 
 # 1. Build the SDE into a named volume (needs internet access; --user 0:0 because a fresh volume is root-owned).
 docker run --rm --user 0:0 -v sde_data:/data/sde --entrypoint /sde eve-cyno-dataapi
@@ -234,7 +236,7 @@ The stdio server needs no keys; it reads the SDE from `EVE_CORE_SDE_PATH` and re
 corpus is not configured; it is never inferred from a missing `QDRANT_URL`.
 
 ```sh
-go -C core build -o eve-cyno-mcp ./cmd/mcp
+go build -o eve-cyno-mcp ./cmd/mcp
 ```
 
 - Claude Desktop: add [`examples/claude-desktop.json`](examples/claude-desktop.json) to `claude_desktop_config.json` (use
@@ -349,7 +351,12 @@ Read from the process environment; the commands do not read a `.env` file.
 | `DEEPINFRA_EMBED_BASE_URL`, `EMBEDDING_MODEL`, `DEEPINFRA_API_KEY`, `EMBED_QUERY_INSTRUCTION` | both | an OpenAI-compatible embedding endpoint for query embeddings; without a base URL an Ollama server (`EVE_CORE_OLLAMA_URL`, `EVE_CORE_EMBED_MODEL`) is used |
 | `JANICE_API_KEY` | mcp `-all` | your Janice key: Janice appraisals instead of the ESI estimate over stdio |
 
-The fit corpus itself is built by the `ingest` module of the monorepo; `core` only reads it.
+The fit corpus itself is built by a separate ingest pipeline; this module only reads it.
+
+## Development
+
+This repository is the only source of the module; there is no upstream copy. See [`CONTRIBUTING.md`](CONTRIBUTING.md) for the checks
+to run before a pull request.
 
 ## Attribution and licensing
 

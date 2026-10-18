@@ -6,7 +6,7 @@ import (
 )
 
 // ModuleCandidate is a fittable module for a slot, supplied by a ModuleSearcher
-// (SDE adapter). core/fit stays free of core/sde — the handler adapts.
+// (SDE adapter). fit stays free of sde — the handler adapts.
 type ModuleCandidate struct {
 	TypeID   int
 	Name     string

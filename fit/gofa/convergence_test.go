@@ -6,9 +6,9 @@
 // only; no Pyfa code is used or linked, see testdata/golden/gofa/README.md). For every fit in the
 // shared corpus it parses the EFT, resolves it through the engine, and diffs the
 // resolved per-item attributes against the committed oracle dump
-// (core/testdata/golden/gofa/oracle/<name>.json, produced with a local Pyfa checkout outside this repository).
+// (testdata/golden/gofa/oracle/<name>.json, produced with a local Pyfa checkout outside this repository).
 //
-// Run:  go -C core test ./fit/gofa/ -tags gofa_oracle -run Convergence -v
+// Run:  go test ./fit/gofa/ -tags gofa_oracle -run Convergence -v
 //
 // Skipped automatically when data/sde/sde.sqlite is absent. The oracle uses
 // Pyfa's eve.db and Gofa uses our Fuzzwork dump, so sub-percent base-value drift

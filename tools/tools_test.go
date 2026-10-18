@@ -21,7 +21,7 @@ func realSDEPathOrSkip(t *testing.T) string {
 
 func testDepsCassette(t *testing.T, cassettePath string) *Deps {
 	t.Helper()
-	// resolve relative to core/tools/ → ../testdata/cassettes/
+	// resolve relative to tools/ → ../testdata/cassettes/
 	cassette, err := diff.LoadCassette(filepath.Join("..", "testdata", "cassettes", filepath.Base(cassettePath)))
 	require.NoError(t, err, "load cassette %s", cassettePath)
 	dbPath := realSDEPathOrSkip(t)

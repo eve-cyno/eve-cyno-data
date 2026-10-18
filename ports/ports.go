@@ -1,5 +1,5 @@
 // Package ports holds the embedding contract shared by the corpus (rag) and the
-// ingest pipeline. It is Product A code and a leaf — it imports nothing in-repo.
+// ingest pipeline. It is the data API code and a leaf — it imports nothing in-repo.
 // The streaming chat contract (Chat, ChatMessage, ChatChunk) is Product B and
 // lives in chat/brain/ports.
 package ports

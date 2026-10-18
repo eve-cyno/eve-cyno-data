@@ -237,7 +237,7 @@ func TestFittingModifierAttributesMatchSDE(t *testing.T) {
 // Co-Processor/ACR/POU bonuses (EVE University "Stacking penalty" table:
 // "Powergrid: no, CPU: no"; Pyfa gives the plain product). If CCP ever flips the
 // flag this test fails and a penalty helper (exp(-(i/2.67)^2) over the sorted
-// bonuses, as in core/fit/gofa/stacking.go) must be added to OutputCapacity.
+// bonuses, as in fit/gofa/stacking.go) must be added to OutputCapacity.
 func TestFittingOutputAttributesAreNotStackingPenalised(t *testing.T) {
 	s := qc2OpenSDE(t)
 	require.True(t, s.GetAttributeMeta(attrPGOut).Stackable, "powerOutput must stay stackable=1")

@@ -1,4 +1,4 @@
-// Command dataapi serves Product A's HTTP data API (core/dataapi) on its own:
+// Command dataapi serves the HTTP data API (dataapi) on its own:
 // community-fit search, fit detail / stats / suggestions, SDE item search and the
 // opt-in raw tool API, all deterministic and LLM-free.
 //
@@ -17,7 +17,7 @@
 //	GET  /                   the index page (HTML; JSON with Accept: application/json)
 //	GET  /terms, /terms.md   the service terms
 //
-// The tool endpoint and the MCP endpoint apply the same tool tiers (core/catalog): public
+// The tool endpoint and the MCP endpoint apply the same tool tiers (catalog): public
 // tools for anyone (the SDE lookups and the ESI pass-throughs, the latter with a lower
 // per-caller limit), keyed tools (analyze_battle)
 // only with a valid API key, appraise_items with the caller's optional Janice key in the
@@ -58,7 +58,7 @@
 //	                          of calling ESI. Every ESI call is logged as msg "esi_call"
 //	DATAAPI_LOG_SALT          salt of the opaque "caller" token in the tool/MCP access-log
 //	                          lines (default: random per process)
-//	ESI_CONTACT               contact for the ESI User-Agent (core/esi)
+//	ESI_CONTACT               contact for the ESI User-Agent (esi)
 //	DATAAPI_PUBLIC_URL        the public origin, e.g. https://data.eve-cyno.dev (https, no path or
 //	                          query; invalid is a startup error). Makes the OpenAPI servers entry
 //	                          and the llms.txt links absolute (ChatGPT Actions need that); unset
@@ -84,7 +84,7 @@
 //	                          setup sets :8093 so the internal network reaches it); served only
 //	                          when both the key store and the admin token are set. The token must
 //	                          be at least 32 characters, else startup fails
-//	EVE_CORE_*, QDRANT_*, DEEPINFRA_EMBED_*   the deterministic layer (core/config)
+//	EVE_CORE_*, QDRANT_*, DEEPINFRA_EMBED_*   the deterministic layer (config)
 //
 // The SDE build id that /v1/health reports is read from the file "<EVE_CORE_SDE_PATH>.build"
 // (trimmed; a missing file leaves it empty).

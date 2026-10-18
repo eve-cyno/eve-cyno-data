@@ -15,7 +15,7 @@ import (
 	"eve-cyno.dev/go/data/toolusage"
 )
 
-// toolGate applies the tool tiers (core/catalog) of an internet-facing service to one
+// toolGate applies the tool tiers (catalog) of an internet-facing service to one
 // call. It answers the refusal itself and returns ok=false, or returns the deps to run the
 // tool with: a copy (tools.Deps.ForPublic) that answers with the public texts and carries the
 // caller's own Janice key (the X-Janice-Key header, "" when absent), never the project's, so no

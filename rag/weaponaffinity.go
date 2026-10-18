@@ -44,7 +44,7 @@ type HullAffinity struct {
 
 // WeaponAffinity resolves a hull — by exact ship_name, as stored on the fit
 // points — to its HullAffinity. The zero HullAffinity means the hull is unknown or
-// carries no weapon bonus. It is injected at construction time (core/bootstrap
+// carries no weapon bonus. It is injected at construction time (bootstrap
 // derives it from the SDE's invTraits and racial ship skills) because the
 // retriever itself has no SDE access; a nil WeaponAffinity disables the off-bonus
 // ranking penalty entirely.

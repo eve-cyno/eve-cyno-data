@@ -16,7 +16,7 @@ type ModuleHit struct {
 }
 
 // slotEffectID maps a slot name to the dogma effect that marks that slot.
-// Mirrors GetModuleSlot (core/sde/dogma.go): hiPower 12, medPower 13,
+// Mirrors GetModuleSlot (sde/dogma.go): hiPower 12, medPower 13,
 // loPower 11, rig 2663.
 var slotEffectID = map[string]int{"high": 12, "mid": 13, "low": 11, "rig": 2663}
 

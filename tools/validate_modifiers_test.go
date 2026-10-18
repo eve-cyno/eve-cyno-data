@@ -16,9 +16,9 @@ import (
 
 // QC2 PR-1: the validate_fitting tool applies the same fitting modifiers
 // (Co-Processor, RCU/PDS, MAPC, ACR/POU rigs) and the same skill-discount load
-// model as core/fit.Validate — both call fit.OutputCapacity / fit.ModuleLoad.
+// model as fit.Validate — both call fit.OutputCapacity / fit.ModuleLoad.
 // The EFT fixtures are the exact fits of the recorded eval answers and live with
-// the core/fit tests.
+// the fit tests.
 
 func qc2Fixture(t *testing.T, name string) string {
 	t.Helper()

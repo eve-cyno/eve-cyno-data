@@ -93,7 +93,7 @@ func TestLimiter_KeyedByCFConnectingIP(t *testing.T) {
 	require.Equal(t, http.StatusServiceUnavailable, doFrom(a, tunnel, "GET", itemsURL, "", "CF-Connecting-IP", "203.0.113.51").Code)
 }
 
-// The regression R0.4 fixed: a caller must not escape its bucket by rotating
+// Regression: a caller must not escape its bucket by rotating
 // X-Forwarded-For / X-Real-IP / True-Client-IP.
 func TestLimiter_NotBypassedBySpoofedForwardingHeaders(t *testing.T) {
 	a := newAPI(t, oneRequestBudget())

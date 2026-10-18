@@ -1,17 +1,17 @@
 #!/usr/bin/env bash
-# ESI contract check (roadmap R2.10).
+# ESI contract check.
 #
-#   core/esi/contract.sh check    diff live ESI against the committed snapshots; exit 1 on any change
-#   core/esi/contract.sh update   refresh the snapshots from live ESI (review the git diff, then commit)
+#   esi/contract.sh check    diff live ESI against the committed snapshots; exit 1 on any change
+#   esi/contract.sh update   refresh the snapshots from live ESI (review the git diff, then commit)
 #
-# Snapshots (core/esi/testdata/):
+# Snapshots (esi/testdata/):
 #   compatibility-dates.json  GET /meta/compatibility-dates, pretty-printed (newest date first)
 #   openapi.yaml              GET /meta/openapi.yaml sent with X-Compatibility-Date: <DefaultCompatibilityDate>,
 #                             i.e. the exact contract the client is pinned to
 #
 # A change means CCP released a new compatibility date, raised the minimum date or edited the
-# pinned spec. Read the diff, re-check every ESI caller (core/tools, ingest/intel), then either
-# bump DefaultCompatibilityDate in core/esi/config.go or just accept the new snapshots.
+# pinned spec. Read the diff, re-check every ESI caller (tools, ingest/intel), then either
+# bump DefaultCompatibilityDate in esi/config.go or just accept the new snapshots.
 #
 # The ingest intel collector follows the same pin (there is no collector-specific date any more);
 # `check` additionally verifies that every route its pollers (ingest/intel/pollers.go) request
@@ -137,8 +137,8 @@ if [ "$rc" -ne 0 ]; then
     { echo '```diff'; cat "$report"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
   fi
   echo
-  echo "ESI contract changed. Review it, re-check the ESI callers, then run core/esi/contract.sh update"
-  echo "(and bump DefaultCompatibilityDate in core/esi/config.go if the new date is wanted)."
+  echo "ESI contract changed. Review it, re-check the ESI callers, then run esi/contract.sh update"
+  echo "(and bump DefaultCompatibilityDate in esi/config.go if the new date is wanted)."
   exit 1
 fi
 echo "ESI contract unchanged (pinned $pin, $intel_count ingest/intel routes present; $(jq '.compatibility_dates | length' "$work/compatibility-dates.json") compatibility dates)."

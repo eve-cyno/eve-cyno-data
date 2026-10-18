@@ -40,8 +40,8 @@ func TestLookup(t *testing.T) {
 	require.False(t, ok)
 }
 
-// The tier table is the policy owners approved; a change here is a deliberate policy
-// change. Owner 2026-10-13: fit lookups (get_fits, list_fits) are public with trial limits.
+// The tier table is the policy the project approved; a change here is a deliberate policy
+// change. Project decision 2026-10-13: fit lookups (get_fits, list_fits) are public with trial limits.
 func TestTiers_Policy(t *testing.T) {
 	want := map[catalog.Tier][]string{
 		catalog.TierPublic: {

@@ -23,7 +23,7 @@ import (
 // (cap wording, overrides, fences, size) with pure-function tests.
 
 // oracleFit is one Pyfa reference-oracle fit: the EFT and the reference values
-// core/fit/gofa is convergence-tested against, so the tool is checked against the
+// fit/gofa is convergence-tested against, so the tool is checked against the
 // same numbers.
 type oracleFit struct {
 	EFT   string

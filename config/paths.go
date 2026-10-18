@@ -8,7 +8,7 @@ import (
 // Path defaults derive from the environment and the current working directory only,
 // never from where the source file lives (a binary built from the Go module cache has
 // no source tree to point at). The one concession to the dev workflow is the repo
-// root: `go -C chat run ./cmd/api` runs in chat/, one level below the checkout's
+// root: a command run from a subdirectory sits below the checkout's
 // data/ and .env, so lookups may climb from the working directory to the root of
 // the enclosing checkout (the first directory holding go.work or .git) and never
 // further. Outside a checkout (a container, a consumer's own project) only the
@@ -62,9 +62,9 @@ func findUp(start, rel string) (string, bool) {
 
 // defaultSDEPath is where the SDE SQLite lives when EVE_CORE_SDE_PATH is unset:
 // data/sde/sde.sqlite, found with FindUp. When the file does not exist yet (a fresh
-// checkout, before `go -C ingest run ./cmd/ingest sde` builds it) it is the same path
+// checkout, before `go run ./cmd/sde` builds it) it is the same path
 // under the checkout root, or under the working directory outside a checkout, which
-// is where the ingest will create it.
+// is where the builder will create it.
 func defaultSDEPath() string {
 	rel := filepath.Join("data", "sde", "sde.sqlite")
 	if p, ok := FindUp(rel); ok {

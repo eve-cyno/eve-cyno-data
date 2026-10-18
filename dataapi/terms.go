@@ -11,7 +11,7 @@ import (
 )
 
 // termsDraft shows a visible draft banner on GET /terms (and marks the index link) while a
-// new version of terms.md awaits the owner's approval. The current text was approved on
+// new version of terms.md awaits the maintainers' approval. The current text was approved on
 // 2026-10-15.
 const termsDraft = false
 

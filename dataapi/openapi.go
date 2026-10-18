@@ -25,7 +25,7 @@ const SpecVersion = "0.1.0"
 
 // OpenAPIJSON returns the OpenAPI 3.1 document of the service described by s, as JSON.
 // It is generated from the route table, the Go types the handlers encode and the tool
-// registry (core/catalog); nothing in it is written by hand except the prose.
+// registry (catalog); nothing in it is written by hand except the prose.
 func OpenAPIJSON(s Surface) ([]byte, error) {
 	doc, err := buildOpenAPI(s)
 	if err != nil {

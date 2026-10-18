@@ -86,7 +86,7 @@ func TestIndex_JSON(t *testing.T) {
 	require.Len(t, doc.Tiers, 3)
 	require.NotEmpty(t, doc.RateLimits)
 	require.Contains(t, doc.Disclaimer, "Fenris Creations")
-	// Discord is the project's contact channel; the page carries no mailto (owner decision 2026-10-09).
+	// Discord is the project's contact channel; the page carries no mailto (project decision 2026-10-09).
 	require.Equal(t, "https://discord.gg/XZzkH38dt9", doc.Contact)
 
 	// A browser asks for HTML even if it lists JSON.

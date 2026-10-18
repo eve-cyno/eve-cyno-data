@@ -1,5 +1,5 @@
-// Command gen writes dataapi/fielddocs.json from the struct field comments of the core
-// module (see package fielddocs). Run it through `go generate ./...` in the core module.
+// Command gen writes dataapi/fielddocs.json from the struct field comments of this
+// module (see package fielddocs). Run it through `go generate ./...`.
 package main
 
 import (
@@ -11,7 +11,7 @@ import (
 )
 
 func main() {
-	root := flag.String("root", ".", "the core module root")
+	root := flag.String("root", ".", "the repository root")
 	out := flag.String("out", "dataapi/fielddocs.json", "the file to write")
 	flag.Parse()
 	b, err := fielddocs.Generate(*root)

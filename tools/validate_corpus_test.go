@@ -19,7 +19,7 @@ import (
 	"eve-cyno.dev/go/data/sde"
 )
 
-// The validate_fitting golden corpus (R1.10 / T6).
+// The validate_fitting golden corpus.
 //
 // validate_fitting's TEXT is parsed by the chat guards (deterministic repair,
 // fit-repair, validate, fit-remove) and by the eval assertions, so every byte of
@@ -28,8 +28,8 @@ import (
 // Alpha names, unknown / unfittable / mutated modules, charges, drones, cargo,
 // ESI fallbacks — so the validator internals can change without the output moving.
 //
-//	core/testdata/golden/tools/validate_corpus/<set>.txt         inputs, many cases per set
-//	core/testdata/golden/tools/validate_corpus/golden/<set>.txt  the expected answers of that set
+//	testdata/golden/tools/validate_corpus/<set>.txt         inputs, many cases per set
+//	testdata/golden/tools/validate_corpus/golden/<set>.txt  the expected answers of that set
 //
 // Sets: handcrafted (one case per rule and edge), fixtures (the QC2 eval fits and
 // the tools-test fits, plain and under an Alpha clone), eval (fits extracted from
@@ -256,7 +256,7 @@ func runCorpusCase(t *testing.T, real *sde.SDE, c corpusCase) string {
 	t.Helper()
 	client, s := corpusEnv(t, real, c.env)
 	// The tool runs with the process-wide Alpha Legality whenever there is an SDE to
-	// build it over (production: core/bootstrap); the ESI-only and no-data cases have
+	// build it over (production: bootstrap); the ESI-only and no-data cases have
 	// none and report the Alpha check as skipped.
 	var lg *fit.Legality
 	if s != nil {

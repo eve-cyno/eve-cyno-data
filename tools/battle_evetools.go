@@ -8,8 +8,8 @@ package tools
 // Endpoints used:
 //   GET https://br.evetools.org/newapi/br/composition/{brID}
 //   GET https://br.evetools.org/newapi/killmail/{kmID}   (detail="full" only)
-//   POST https://esi.evetech.net/universe/names  (batch name resolve, via core/esi)
-//   GET  https://esi.evetech.net/alliances/{id}  (alliance tickers, via core/esi)
+//   POST https://esi.evetech.net/universe/names  (batch name resolve, via esi)
+//   GET  https://esi.evetech.net/alliances/{id}  (alliance tickers, via esi)
 
 import (
 	"context"

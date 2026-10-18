@@ -13,7 +13,7 @@ import (
 // Live check of the keyless appraisal's price source (repo rule: integration tests hit the
 // real API). Run with
 //
-//	GOWORK=off go -C core test -tags integration -count=1 -run Integration ./tools/
+//	GOWORK=off go test -tags integration -count=1 -run Integration ./tools/
 func TestIntegration_ESIMarketPrices(t *testing.T) {
 	c := NewClient()
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)

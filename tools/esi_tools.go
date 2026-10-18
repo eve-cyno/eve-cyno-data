@@ -18,7 +18,7 @@ import (
 	"eve-cyno.dev/go/data/sde"
 )
 
-// All ESI calls in this package go through core/esi (User-Agent, pinned
+// All ESI calls in this package go through esi (User-Agent, pinned
 // X-Compatibility-Date, ETag/Expires cache, X-Ratelimit-* buckets, X-Pages pagination).
 // Routes are the OpenAPI paths: no "/latest", no trailing slash, and no datasource query
 // (tranquility is the default tenant); the language parameter is the Accept-Language header.
@@ -44,7 +44,7 @@ func marketFor(typeID int) (region int, market, where string) {
 }
 
 // getMarketPrice mirrors Python _get_market_price — paginated Forge orders.
-// Output format matches Python exactly. The old 5-minute result cache is gone: core/esi
+// Output format matches Python exactly. The old 5-minute result cache is gone: esi
 // keeps every page until its Expires header (about 5 minutes for market orders) and
 // revalidates with If-None-Match afterwards. The MarketPrice is nil unless there are
 // orders to report; the text is the answer in every case.

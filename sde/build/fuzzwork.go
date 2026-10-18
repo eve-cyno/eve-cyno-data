@@ -1,4 +1,4 @@
-// core/sde/build/fuzzwork.go
+// sde/build/fuzzwork.go
 //
 // Fuzzwork HTTP client: discover the build id, list tables, stream CSV downloads.
 //

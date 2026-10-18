@@ -25,14 +25,14 @@ allowlist with `go-licenses check ./...`. Re-run the command and re-check this f
 | Module | Version | Licence (SPDX) | Copyright holder | Notes |
 |---|---|---|---|---|
 | `github.com/dustin/go-humanize` | v1.1.0 | MIT | Dustin Sallings | via `modernc.org/libc` |
-| `github.com/google/jsonschema-go` | v0.4.3 | MIT | JSON Schema Go Project Authors | via the MCP SDK (`core/mcpserver`) |
+| `github.com/google/jsonschema-go` | v0.4.3 | MIT | JSON Schema Go Project Authors | via the MCP SDK (`mcpserver`) |
 | `github.com/google/uuid` | v1.6.0 | BSD-3-Clause | Google Inc. | |
-| `github.com/modelcontextprotocol/go-sdk` | v1.8.0 | Apache-2.0 AND MIT | Model Context Protocol a Series of LF Projects, LLC; The Go MCP SDK Authors | the official MCP Go SDK (`core/mcpserver`, `core/cmd/mcp`). Its `LICENSE` carries both texts: the project is moving from MIT to Apache-2.0, new code is Apache-2.0 and contributions without relicensing consent stay MIT; documentation is CC-BY-4.0 and is not linked. No `NOTICE` file |
+| `github.com/modelcontextprotocol/go-sdk` | v1.8.0 | Apache-2.0 AND MIT | Model Context Protocol a Series of LF Projects, LLC; The Go MCP SDK Authors | the official MCP Go SDK (`mcpserver`, `cmd/mcp`). Its `LICENSE` carries both texts: the project is moving from MIT to Apache-2.0, new code is Apache-2.0 and contributions without relicensing consent stay MIT; documentation is CC-BY-4.0 and is not linked. No `NOTICE` file |
 | `github.com/remyoudompheng/bigfft` | v0.0.0-20230129092748-24d4a6f8daec | BSD-3-Clause | The Go Authors | via `modernc.org/mathutil`, `modernc.org/memory` |
 | `github.com/segmentio/asm` | v1.1.3 | MIT | Segment | via `segmentio/encoding` |
 | `github.com/segmentio/encoding` | v0.5.4 | MIT | Segment.io, Inc. | via the MCP SDK (its JSON codec) |
 | `github.com/yosida95/uritemplate/v3` | v3.0.2 | BSD-3-Clause | Kohei YOSHIDA | via the MCP SDK |
-| `go.yaml.in/yaml/v3` | v3.0.5 | MIT AND Apache-2.0 | Canonical Ltd; Kirill Simonov (libyaml) | writes the generated `api/openapi.yaml` (`core/dataapi`); parts ported from libyaml (MIT), the rest Apache-2.0 with a Canonical `NOTICE` |
+| `go.yaml.in/yaml/v3` | v3.0.5 | MIT AND Apache-2.0 | Canonical Ltd; Kirill Simonov (libyaml) | writes the generated `api/openapi.yaml` (`dataapi`); parts ported from libyaml (MIT), the rest Apache-2.0 with a Canonical `NOTICE` |
 | `golang.org/x/oauth2` | v0.35.0 | BSD-3-Clause | The Go Authors | via the MCP SDK (the OAuth token types its transports mention); ships a `PATENTS` grant |
 | `golang.org/x/sync` | v0.23.0 | BSD-3-Clause | The Go Authors | ships a `PATENTS` grant |
 | `golang.org/x/sys` | v0.48.0 | BSD-3-Clause | The Go Authors | ships a `PATENTS` grant |

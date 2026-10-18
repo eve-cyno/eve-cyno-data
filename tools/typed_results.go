@@ -3,7 +3,7 @@ package tools
 import "eve-cyno.dev/go/data/rag"
 
 // Typed tool results: the structured twin of the LLM-oriented text, for the public API
-// (core/dataapi POST /v1/tool/{name}, later MCP / OpenAPI). Each struct is built from the
+// (dataapi POST /v1/tool/{name}, later MCP / OpenAPI). Each struct is built from the
 // same values the text formatter prints, in the same pass, so a number in Data is the
 // number in Text. JSON keys are snake_case; lists that can be empty are [] and values
 // that can be absent are null, never omitted.

@@ -4,11 +4,11 @@
 //
 // For every fit in the shared corpus it parses the EFT, runs engine.Stats, and
 // compares the returned Navigation / Capacitor / Tank values to the committed
-// oracle JSON (core/testdata/golden/gofa/oracle/<name>.json).
+// oracle JSON (testdata/golden/gofa/oracle/<name>.json).
 //
 // Run:
 //
-//	go -C core test ./fit/gofa/ -tags gofa_oracle -run StatConvergence -v
+//	go test ./fit/gofa/ -tags gofa_oracle -run StatConvergence -v
 //
 // Skipped automatically when data/sde/sde.sqlite is absent (openRealSDE handles
 // this; the helper is defined in sde_skills_test.go which shares the build tag

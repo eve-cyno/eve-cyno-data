@@ -15,7 +15,7 @@ import (
 
 // Live check of /markets/{region_id}/history. Run with
 //
-//	GOWORK=off go -C core test -tags integration -count=1 -run Integration_MarketHistory ./tools/
+//	GOWORK=off go test -tags integration -count=1 -run Integration_MarketHistory ./tools/
 func TestIntegration_MarketHistoryTritanium(t *testing.T) {
 	c := NewClient()
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)

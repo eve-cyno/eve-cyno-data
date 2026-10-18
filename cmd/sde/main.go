@@ -1,14 +1,14 @@
 // Command sde builds (or refreshes) the SDE SQLite file that every other core binary
 // reads, from the Fuzzwork dump of CCP's Static Data Export. It is the standalone
-// counterpart of `ingest sde` (ingest/cmd/ingest) and runs the same builder
-// (core/sde/build), so a checkout of the core module alone can make its own SDE.
+// counterpart of the ingest pipeline's SDE step and runs the same builder
+// (sde/build), so a checkout of this module alone can make its own SDE.
 //
-//	go run ./cmd/sde                   # from the core module; writes EVE_CORE_SDE_PATH
+//	go run ./cmd/sde                   # from the repository root; writes EVE_CORE_SDE_PATH
 //	go run ./cmd/sde -out data/sde/sde.sqlite
 //	go run ./cmd/sde -force            # rebuild even when the build id is unchanged
 //
 // The destination is -out, else EVE_CORE_SDE_PATH, else data/sde/sde.sqlite (see
-// core/config). The build needs internet access to fuzzwork.co.uk (about 440 MB on
+// config). The build needs internet access to fuzzwork.co.uk (about 440 MB on
 // disk, a few minutes at worst) and identifies itself to Fuzzwork with a User-Agent.
 // The new file replaces the old one atomically only after it passes the publish gate;
 // on any failure the existing file is untouched and the exit status is 1. Progress is
@@ -51,7 +51,7 @@ type options struct {
 }
 
 // parseArgs resolves the destination: -out, then EVE_CORE_SDE_PATH, then the
-// core/config default.
+// config default.
 func parseArgs(args []string, getenv func(string) string, stderr io.Writer) (options, error) {
 	fs := flag.NewFlagSet("sde", flag.ContinueOnError)
 	fs.SetOutput(stderr)

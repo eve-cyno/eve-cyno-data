@@ -22,9 +22,9 @@ const (
 	//
 	// 2026-08-18 is the newest date ESI lists. get_sovereignty reads GET /sovereignty/systems,
 	// which exists from 2026-05-19 on (it replaced /sovereignty/map, 404 from that date); every
-	// other route core/tools calls is unchanged since 2020-01-01 (spec and live bodies compared
+	// other route tools calls is unchanged since 2020-01-01 (spec and live bodies compared
 	// byte for byte between 2025-12-16, 2026-05-19 and 2026-08-18 on 2026-10-07). Bump it only
-	// after re-checking each caller against core/esi/contract.sh's diff.
+	// after re-checking each caller against esi/contract.sh's diff.
 	//
 	// The ingest intel collector follows this pin too (its sovereignty poller reads
 	// /sovereignty/systems; contract.sh checks that all five routes it polls exist at it).
@@ -115,7 +115,7 @@ type Config struct {
 //	ESI_COMPATIBILITY_DATE  override of DefaultCompatibilityDate; re-verify every caller first
 //
 // The application version is not read here (this package imports nothing in-repo): the
-// caller sets Config.Version (core/tools and ingest/cmd/ingest from core/version).
+// caller sets Config.Version (tools and ingest/cmd/ingest from version).
 func FromEnv(getenv func(string) string) Config {
 	return Config{
 		Contact:           strings.TrimSpace(getenv("ESI_CONTACT")),

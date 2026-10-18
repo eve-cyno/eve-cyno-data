@@ -2,7 +2,7 @@
 // Code, any stdio MCP host) over stdin/stdout: SDE lookups, fit validation and stats,
 // market prices, sovereignty and system activity, computed from the local SDE and ESI.
 //
-//	go run ./cmd/mcp          # from the core module; or build it: go build -o eve-cyno-mcp ./cmd/mcp
+//	go run ./cmd/mcp          # from the repository root; or build it: go build -o eve-cyno-mcp ./cmd/mcp
 //
 // Stdout is the protocol channel and carries nothing else; logs go to stderr as JSON.
 //
@@ -27,7 +27,7 @@
 //	                    never contacted, and get_fits / list_fits say the corpus is not
 //	                    configured. Explicit only: it is never inferred from a missing QDRANT_URL
 //	EVE_CORE_*, QDRANT_*, DEEPINFRA_EMBED_*, JANICE_API_KEY
-//	                    the rest of the deterministic layer (core/config); needed only by
+//	                    the rest of the deterministic layer (config); needed only by
 //	                    the tools that use them (-all for fit search and Janice appraisals)
 package main
 

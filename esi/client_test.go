@@ -494,7 +494,7 @@ func TestConfigNowOverridesTheClock(t *testing.T) {
 }
 
 func TestNewZeroConfig(t *testing.T) {
-	// core/tools relies on this: an empty Config is valid, so its fallback can ignore the error.
+	// tools relies on this: an empty Config is valid, so its fallback can ignore the error.
 	c, err := New(Config{})
 	require.NoError(t, err)
 	require.Equal(t, DefaultBaseURL, c.baseURL)

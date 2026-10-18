@@ -1,4 +1,4 @@
-// core/sde/build/builder.go
+// sde/build/builder.go
 //
 // BuildSQLite constructs a fresh SDE SQLite database from Fuzzwork CSV dumps.
 // Layout:
@@ -91,12 +91,12 @@ func orNil(s string) any {
 }
 
 // curatedTables is the authoritative list of 25 curated schemas.
-// The columns the readers in core/sde depend on are listed in sde.RequiredColumns.
+// The columns the readers in sde depend on are listed in sde.RequiredColumns.
 var curatedTables = []curatedTable{
 	{
 		name: "invTypes",
 		// mass/volume/capacity are type-record columns that are also dogma
-		// attributes 4/161/38; core/sde GetDogma merges them in (see RequiredColumns).
+		// attributes 4/161/38; sde GetDogma merges them in (see RequiredColumns).
 		create: `CREATE TABLE IF NOT EXISTS invTypes (
 			typeID    INTEGER PRIMARY KEY,
 			groupID   INTEGER,
@@ -147,7 +147,7 @@ var curatedTables = []curatedTable{
 	{
 		name: "dgmEffects",
 		// modifierInfo is the dogma modifier list as a JSON array, stored verbatim
-		// from Fuzzwork (core/sde GetEffectModifiers parses it).
+		// from Fuzzwork (sde GetEffectModifiers parses it).
 		create: `CREATE TABLE IF NOT EXISTS dgmEffects (
 			effectID       INTEGER PRIMARY KEY,
 			effectName     TEXT,
@@ -170,7 +170,7 @@ var curatedTables = []curatedTable{
 	{
 		name: "dgmAttributeTypes",
 		// defaultValue/stackable/highIsGood drive stacking penalties and attribute
-		// defaults in the dogma engine (core/sde GetAttributeMeta).
+		// defaults in the dogma engine (sde GetAttributeMeta).
 		create: `CREATE TABLE IF NOT EXISTS dgmAttributeTypes (
 			attributeID    INTEGER PRIMARY KEY,
 			attributeName  TEXT,
@@ -507,7 +507,7 @@ type Client interface {
 }
 
 // Gate is the publish gate: the last check a freshly built SDE must pass before it
-// replaces the live file. Every required column (core/sde RequiredColumns) must exist, and
+// replaces the live file. Every required column (sde RequiredColumns) must exist, and
 // the columns the dogma readers depend on must actually carry data: a build whose
 // CREATE TABLE is right but whose CSV extraction silently produced NULLs is just as
 // useless as one missing the column. The zero Gate has no row-count floors (required

@@ -8,7 +8,7 @@ import (
 )
 
 // TestFilterKeysAreDeclaredInCorpus: every payload key a rag filter conditions on is
-// a key core/corpus declares, for the widest query each filter builder accepts. The
+// a key corpus declares, for the widest query each filter builder accepts. The
 // write-side counterpart (the writers emit only declared keys, and what they emit
 // matches these filters) is the contract test in ingest/corpuscontract.
 func TestFilterKeysAreDeclaredInCorpus(t *testing.T) {
@@ -22,19 +22,19 @@ func TestFilterKeysAreDeclaredInCorpus(t *testing.T) {
 		conds = append(conds, f.cond)
 	}
 	for _, c := range conds {
-		require.Truef(t, corpus.IsKey(c.Key), "SearchFits filters on %q, which core/corpus does not declare", c.Key)
+		require.Truef(t, corpus.IsKey(c.Key), "SearchFits filters on %q, which corpus does not declare", c.Key)
 	}
 	require.True(t, corpus.IsKey(quarantinedCondition.Key))
 
 	list := buildListFitFilter(ListFitQuery{Source: corpus.SourceWorkbench, ShipName: "Gila", Tag: corpus.TagPvP, FilamentType: corpus.FilamentDark})
 	list = append(list, quarantinedMustNot)
 	for _, c := range list {
-		require.Truef(t, corpus.IsKey(c["key"].(string)), "list_fits filters on %q, which core/corpus does not declare", c["key"])
+		require.Truef(t, corpus.IsKey(c["key"].(string)), "list_fits filters on %q, which corpus does not declare", c["key"])
 	}
 }
 
 // TestFitSourceListsAreCorpusSources: the reader's default source sets only name
-// sources core/corpus declares.
+// sources corpus declares.
 func TestFitSourceListsAreCorpusSources(t *testing.T) {
 	for _, list := range [][]string{fitSearchSources, defaultFitSources, defaultListFitSources} {
 		for _, s := range list {

@@ -6,7 +6,7 @@ A custom GPT Action calls your API from OpenAI's servers, so it needs a **public
 
 1. Start the service with the tool endpoint on, because the OpenAPI document describes only what the process serves:
    ```sh
-   DATAAPI_EXPOSE_TOOL_API=true go -C core run ./cmd/dataapi
+   DATAAPI_EXPOSE_TOOL_API=true go run ./cmd/dataapi
    ```
 2. In ChatGPT: **Explore GPTs -> Create -> Configure -> Actions -> Create new action**.
 3. **Import from URL**: `https://<your-host>/v1/openapi.yaml`. If the import cannot fetch it, open that URL, copy the

@@ -5,7 +5,7 @@ package gofa
 //
 // Run the benchmark:
 //
-//	go -C core test ./fit/gofa/ -run X -bench BenchmarkStats -benchmem
+//	go test ./fit/gofa/ -run X -bench BenchmarkStats -benchmem
 //
 // The equality tests pin the contract of the SDE read cache: caching must never
 // change a number, so Stats on a warm Engine, on a second call and on a fresh
@@ -33,7 +33,7 @@ type perfFit struct {
 	fit  fit.Fit
 }
 
-// perfCorpusEntry mirrors one row of core/testdata/golden/gofa/corpus.json.
+// perfCorpusEntry mirrors one row of testdata/golden/gofa/corpus.json.
 type perfCorpusEntry struct {
 	Name string `json:"name"`
 	EFT  string `json:"eft"`

@@ -11,7 +11,7 @@ import (
 )
 
 // TestGeneratedFilesAreCurrent fails when a committed description of the public API
-// (api/openapi.yaml, llms.txt, llms-full.txt in the core module root) differs from what
+// (api/openapi.yaml, llms.txt, llms-full.txt in the repository root) differs from what
 // the route table and tool registry generate now.
 func TestGeneratedFilesAreCurrent(t *testing.T) {
 	files, err := dataapi.GeneratedFiles()
@@ -20,8 +20,8 @@ func TestGeneratedFilesAreCurrent(t *testing.T) {
 
 	for rel, want := range files {
 		got, err := os.ReadFile(filepath.Join("..", filepath.FromSlash(rel)))
-		require.NoError(t, err, "%s is missing: run `go generate ./...` in the core module", rel)
+		require.NoError(t, err, "%s is missing: run `go generate ./...`", rel)
 		require.Equal(t, string(want), string(got),
-			"%s is stale: run `go generate ./...` in the core module and commit the result", rel)
+			"%s is stale: run `go generate ./...` and commit the result", rel)
 	}
 }

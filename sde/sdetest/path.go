@@ -11,8 +11,7 @@ const PathEnv = "EVE_CORE_SDE_PATH"
 
 // Path returns the real SDE SQLite for a test: $EVE_CORE_SDE_PATH when it is set,
 // else the first data/sde/sde.sqlite found walking up from the test's working
-// directory (the module root in a standalone checkout, the repository root in a
-// monorepo checkout). When there is none it calls Skip, so the test is skipped
+// directory (the module root in a checkout). When there is none it calls Skip, so the test is skipped
 // locally and fails under EVE_REQUIRE_SDE.
 func Path(tb testing.TB) string {
 	tb.Helper()

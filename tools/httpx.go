@@ -14,7 +14,7 @@ import (
 )
 
 // Base URLs — mirrors Python constants verbatim. ESI is not listed: every ESI call goes
-// through core/esi (base https://esi.evetech.net, pinned compatibility date).
+// through esi (base https://esi.evetech.net, pinned compatibility date).
 const (
 	JaniceBase = "https://janice.e-351.com"
 	// FrankfurterBase is the v2 API. The legacy api.frankfurter.app (v1) is
@@ -29,7 +29,7 @@ const (
 
 const (
 	// esiMaxConcurrent and esiMinInterval are the pacing the tools always applied to ESI
-	// (4 requests in flight, starts 250 ms apart); core/esi now enforces them together
+	// (4 requests in flight, starts 250 ms apart); esi now enforces them together
 	// with the X-Ratelimit-* token buckets.
 	esiMaxConcurrent = 4
 	esiMinInterval   = 250 * time.Millisecond
@@ -37,7 +37,7 @@ const (
 
 // Client wraps http.Client with a pluggable transport (real or cassette).
 //
-// ESI traffic goes through ESI (core/esi); HTTP + Throttle serve the other upstreams
+// ESI traffic goes through ESI (esi); HTTP + Throttle serve the other upstreams
 // (Janice, Frankfurter, zKillboard, WarBeacon, br.evetools.org, EvE-Scout).
 type Client struct {
 	HTTP     *http.Client
@@ -100,7 +100,7 @@ func NewClientWithESI(o PublicESIOptions) *Client {
 
 // NewClient creates a Client with the real transport, a shared Throttle and an ESI client
 // configured from the environment (ESI_CONTACT, ESI_COMPATIBILITY_DATE; see esi.FromEnv)
-// and the build version (core/version).
+// and the build version (version).
 func NewClient() *Client {
 	hc := &http.Client{Timeout: 30 * time.Second}
 	return &Client{

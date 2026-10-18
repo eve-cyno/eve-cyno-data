@@ -4,13 +4,13 @@
 // The SDE (a Fuzzwork-built SQLite file, ~440 MB) is never committed, so a fresh
 // checkout does not have it and every test that needs it skips itself. That is the
 // right default for a laptop, but on CI the SDE is built and cached ahead of the test
-// jobs (roadmap R3.2), and a silent skip there would hide a whole slice of the suite
+// jobs, and a silent skip there would hide a whole slice of the suite
 // (about 25 test files). CI therefore sets EVE_REQUIRE_SDE=1: the same call sites then
 // fail the test instead of skipping it, so "green" means the SDE-backed tests ran.
 //
 // Each test keeps finding the SDE the way it always did; only the "not available"
 // branch calls Skip/Skipf here instead of t.Skip/t.Skipf. The package imports nothing
-// from this repository, so core/sde and core/fit tests can use it without an import
+// from this repository, so sde and fit tests can use it without an import
 // cycle.
 package sdetest
 

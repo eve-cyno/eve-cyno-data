@@ -11,7 +11,7 @@ import (
 
 // KeyResolver names the rate-limit bucket a request counts against. It is the
 // seam for per-API-key limits: today every caller is keyed by IP (IPKeys); once
-// keys exist (roadmap R3.5) a resolver returns e.g. "key:<id>" for an
+// keys exist a resolver returns e.g. "key:<id>" for an
 // authenticated caller and falls back to IPKeys for anonymous ones. The key is
 // opaque to the limiter; resolvers should prefix it so key and IP namespaces
 // cannot collide.

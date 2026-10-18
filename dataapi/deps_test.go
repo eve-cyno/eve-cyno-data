@@ -36,7 +36,7 @@ func TestNewDeps_FullLayer(t *testing.T) {
 }
 
 // /fit/stats runs on the engine the tool layer already owns, so both share one
-// warm SDE memo; an engine injected into the tool Deps (core/bootstrap) is the one.
+// warm SDE memo; an engine injected into the tool Deps (bootstrap) is the one.
 func TestNewDeps_SharesTheToolLayersStatsEngine(t *testing.T) {
 	injected := gofa.New(&sde.SDE{})
 	td := &tools.Deps{SDE: &sde.SDE{}, Stats: injected}

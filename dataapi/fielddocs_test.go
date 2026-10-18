@@ -12,13 +12,13 @@ import (
 )
 
 // TestFieldDocsAreCurrent fails when dataapi/fielddocs.json no longer matches the struct
-// field comments it is generated from: run `go generate ./...` in the core module.
+// field comments it is generated from: run `go generate ./...`.
 func TestFieldDocsAreCurrent(t *testing.T) {
 	want, err := fielddocs.Generate("..")
 	require.NoError(t, err)
 	got, err := os.ReadFile("fielddocs.json")
 	require.NoError(t, err)
-	require.Equal(t, string(want), string(got), "fielddocs.json is stale: run `go generate ./...` in the core module and commit the result")
+	require.Equal(t, string(want), string(got), "fielddocs.json is stale: run `go generate ./...` and commit the result")
 }
 
 // The typed results carry the struct docs as property descriptions in the OpenAPI document.

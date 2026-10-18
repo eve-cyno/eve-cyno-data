@@ -521,7 +521,7 @@ Live wormhole connections from Thera and Turnur into known space and wormhole sp
 ## MCP
 
 - Hosted: streamable HTTP, stateless, JSON responses, at `/v1/mcp` on this host. One JSON-RPC message per request: batches are not accepted (`400 invalid_request`).
-- Local: the `cmd/mcp` binary of the core module speaks MCP over stdio (`go run ./cmd/mcp`), for Claude Desktop, Claude Code and other stdio hosts; it reads the SDE from `EVE_CORE_SDE_PATH`.
+- Local: the `cmd/mcp` binary of this module speaks MCP over stdio (`go run ./cmd/mcp`), for Claude Desktop, Claude Code and other stdio hosts; it reads the SDE from `EVE_CORE_SDE_PATH`.
 
 ## Attribution and licensing
 
