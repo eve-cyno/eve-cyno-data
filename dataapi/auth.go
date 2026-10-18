@@ -200,6 +200,11 @@ func CallerFrom(ctx context.Context) Caller {
 	return st.caller
 }
 
+// KeyedTier reports whether r carries a valid API key that unlocks the keyed tier. It is the
+// one predicate behind the usage line's tier on both surfaces (REST and MCP) and behind the
+// MCP tool list (mcpserver.HTTPOptions.Keyed).
+func KeyedTier(r *http.Request) bool { return CallerFrom(r.Context()).Allows(catalog.TierKeyed) }
+
 // authErrorFrom returns the authentication error of the request (nil when there is none).
 func authErrorFrom(ctx context.Context) error {
 	st, _ := ctx.Value(authKey{}).(authState)

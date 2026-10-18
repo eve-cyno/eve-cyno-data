@@ -8,9 +8,11 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"eve-cyno.dev/go/data/catalog"
 	"eve-cyno.dev/go/data/tools"
+	"eve-cyno.dev/go/data/toolusage"
 )
 
 // toolGate applies the tool tiers (core/catalog) of an internet-facing service to one
@@ -26,28 +28,28 @@ import (
 //     and an agent should be told so rather than be sent looking for a typo)
 //   - keyed, anonymous: 401 api_key_required; a key without the keyed allowance: 403
 //     key_not_permitted
-func (a *API) toolGate(w http.ResponseWriter, r *http.Request, name string) (*tools.Deps, bool) {
+func (a *API) toolGate(w http.ResponseWriter, r *http.Request, name string) (*tools.Deps, toolusage.Outcome, bool) {
 	caller := CallerFrom(r.Context())
 	if authErrorFrom(r.Context()) != nil {
 		writeError(w, r, http.StatusUnauthorized, "invalid_api_key", "the API key is not valid")
-		return nil, false
+		return nil, toolusage.Unauthorized, false
 	}
 	janice := catalog.JaniceKeyFrom(r.Header)
 	if len(janice) > maxCredentialLen {
 		writeError(w, r, http.StatusBadRequest, "invalid_request", HeaderJaniceKey+" is too long")
-		return nil, false
+		return nil, toolusage.InvalidArgs, false
 	}
 	if t, ok := catalog.Lookup(name); ok {
 		switch {
 		case t.Tier == catalog.TierDisabled:
 			writeError(w, r, http.StatusForbidden, "tool_disabled", "tool "+name+" is disabled on the public API")
-			return nil, false
+			return nil, toolusage.Unauthorized, false
 		case t.Tier == catalog.TierKeyed && !caller.Allows(catalog.TierKeyed):
 			writeKeyedRefusal(w, r, caller)
-			return nil, false
+			return nil, toolusage.Unauthorized, false
 		}
 	}
-	return a.deps.Tools.ForPublic(janice), true
+	return a.deps.Tools.ForPublic(janice), toolusage.OK, true
 }
 
 // toolEnvelope is the 200 body in ToolFormatEnvelope.
@@ -87,47 +89,71 @@ type toolEnvelopeBody struct {
 //   - 500             tool execution error
 func (a *API) tool(w http.ResponseWriter, r *http.Request) {
 	if a.deps.Tools == nil {
+		markToolLogged(r.Context())
+		toolusage.Log(a.log, toolusage.Call{Tool: r.PathValue("name"), Surface: toolusage.REST, Outcome: toolusage.Failed,
+			Keyed: KeyedTier(r), Client: toolusage.ClientFromUserAgent(r.UserAgent())})
 		writeError(w, r, http.StatusServiceUnavailable, "unavailable", "deterministic layer unavailable (SDE not loaded)")
 		return
 	}
 
 	name := r.PathValue("name")
+	use := toolusage.Call{
+		Tool:    name,
+		Surface: toolusage.REST,
+		Keyed:   KeyedTier(r),
+		Outcome: toolusage.Failed,
+		Client:  toolusage.ClientFromUserAgent(r.UserAgent()),
+	}
+	start := time.Now()
+	markToolLogged(r.Context())
+	defer func() {
+		use.Duration = time.Since(start)
+		toolusage.Log(a.log, use)
+	}()
+
 	deps := a.deps.Tools
 	if a.toolMode == ToolAPIPublic {
 		var ok bool
-		if deps, ok = a.toolGate(w, r, name); !ok {
+		var refusal toolusage.Outcome
+		if deps, refusal, ok = a.toolGate(w, r, name); !ok {
+			use.Outcome = refusal
 			return
 		}
 	}
 
 	body, ok := readBody(w, r, toolBodyMax)
 	if !ok {
+		use.Outcome = toolusage.InvalidArgs
 		return
 	}
 	var args map[string]any
 	if len(body) > 0 {
 		if err := json.Unmarshal(body, &args); err != nil {
 			writeError(w, r, http.StatusBadRequest, "invalid_request", "invalid JSON: "+err.Error())
+			use.Outcome = toolusage.InvalidArgs
 			return
 		}
 	}
 	if args == nil {
 		args = map[string]any{}
 	}
-	if t, known := catalog.Lookup(name); known {
+	t, known := catalog.Lookup(name)
+	if known {
 		if err := t.CheckArgs(args); err != nil {
 			writeError(w, r, http.StatusBadRequest, "invalid_arguments", err.Error())
+			use.Outcome = toolusage.InvalidArgs
 			return
 		}
+		use.Live = t.SpendsUpstream(args)
 	}
 
 	if a.toolMode == ToolAPIPublic {
 		// Tools that read a live upstream (ESI, EvE-Scout) share one budget stricter than the route's. It is
 		// charged after the gate and the argument check, so a refused call costs nothing.
 		// A tool whose live options are off (plan_jump_route without them) answers from the SDE and costs nothing here.
-		t, known := catalog.Lookup(name)
 		if !known || t.SpendsUpstream(args) {
 			if ok, retry := a.upstream.Allow(r, name); !ok {
+				use.Outcome = toolusage.RateLimited
 				w.Header().Set("Retry-After", strconv.Itoa(retrySeconds(retry)))
 				writeError(w, r, http.StatusTooManyRequests, "rate_limited",
 					"too many calls to "+name+", which reads live "+upstreamLabel(name)+" data and has a lower limit; slow down")
@@ -140,6 +166,7 @@ func (a *API) tool(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 	result, err := tools.ExecuteToolResult(ctx, deps, name, args)
 	if err != nil {
+		use.Outcome = toolusage.OutcomeOfError(err)
 		switch {
 		case strings.HasPrefix(err.Error(), "unknown tool"):
 			writeError(w, r, http.StatusNotFound, "unknown_tool", err.Error())
@@ -160,6 +187,7 @@ func (a *API) tool(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	use.Outcome = toolusage.OutcomeOfResult(result)
 	if a.toolFormat == ToolFormatText {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.WriteHeader(http.StatusOK)

@@ -6,9 +6,11 @@ import (
 	"log/slog"
 	"net/http"
 	"runtime/debug"
+	"strings"
 	"time"
 
 	"eve-cyno.dev/go/data/catalog"
+	"eve-cyno.dev/go/data/toolusage"
 )
 
 // HeaderRequestID carries the request ID on both the request and the response.
@@ -20,6 +22,16 @@ type metaKey struct{}
 type meta struct {
 	id  string
 	log *slog.Logger
+	// toolLogged is set once the tool handler wrote the request's usage line, so the
+	// access-log wrapper does not write a second one for a refusal.
+	toolLogged *bool
+}
+
+// markToolLogged records that the usage line of the request was written.
+func markToolLogged(ctx context.Context) {
+	if m, ok := ctx.Value(metaKey{}).(meta); ok && m.toolLogged != nil {
+		*m.toolLogged = true
+	}
 }
 
 // RequestID returns the ID of the request the context belongs to ("" outside a
@@ -68,7 +80,8 @@ func (a *API) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set(HeaderRequestID, id)
 	log := a.log.With("request_id", id)
-	ctx := context.WithValue(r.Context(), metaKey{}, meta{id: id, log: log})
+	toolLogged := false
+	ctx := context.WithValue(r.Context(), metaKey{}, meta{id: id, log: log, toolLogged: &toolLogged})
 	if a.auth != nil {
 		// The credential is read here, once: the limiter keys on the result and the tool and
 		// MCP handlers enforce the tiers with it. Nothing about the key is logged.
@@ -111,6 +124,7 @@ func (a *API) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			attrs = append(attrs, "caller", a.hasher.hash(a.keys.Key(r)))
 		}
 		log.Info("request", attrs...)
+		a.logRefusedToolCall(r, rec.statusCode(), toolLogged, time.Since(start))
 		if c := CallerFrom(r.Context()); c.Authenticated() && a.usage != nil {
 			a.usage.Record(c.ID, usageEndpoint(r), rec.statusCode() == http.StatusTooManyRequests)
 		}
@@ -132,6 +146,29 @@ func (a *API) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	a.mux.ServeHTTP(rec, r)
+}
+
+// logRefusedToolCall writes the usage line of a tool call (POST {prefix}/tool/{name}) that was
+// refused before the tool handler ran: the route limiter, the daily caps and the key quota
+// (429) and a rejected key (401). The tool handler logs its own calls, so this is skipped
+// when it ran. The name comes from the path and is reduced to a catalog name or "unknown".
+// MCP refusals before the SDK stay unlogged: the tool name is in the JSON-RPC body.
+func (a *API) logRefusedToolCall(r *http.Request, status int, handlerLogged bool, took time.Duration) {
+	if handlerLogged || r.Method != http.MethodPost || (status != http.StatusUnauthorized && status != http.StatusTooManyRequests) {
+		return
+	}
+	name, ok := strings.CutPrefix(r.URL.Path, a.prefix+"/tool/")
+	if !ok || name == "" || strings.Contains(name, "/") {
+		return
+	}
+	outcome := toolusage.Unauthorized
+	if status == http.StatusTooManyRequests {
+		outcome = toolusage.RateLimited
+	}
+	toolusage.Log(a.log, toolusage.Call{
+		Tool: name, Surface: toolusage.REST, Keyed: KeyedTier(r), Outcome: outcome,
+		Duration: took, Client: toolusage.ClientFromUserAgent(r.UserAgent()),
+	})
 }
 
 // isTrialFree reports whether r is a request the anonymous daily cap does not count (see

@@ -235,7 +235,7 @@ func TestPortal_RendersTheCatalogAndLimits(t *testing.T) {
 	require.Contains(t, attribution, "https://www.fuzzwork.co.uk/dump/")
 	terms := do(api, http.MethodGet, "/docs/terms", "").Body.String()
 	require.Contains(t, terms, `/terms`)
-	require.Contains(t, terms, "2026-10-15", "the date comes from terms.md")
+	require.Contains(t, terms, "2026-10-18", "the date comes from terms.md")
 }
 
 // The live copy follows the kind of live data a tool reads: every call live ESI, every call
@@ -474,7 +474,7 @@ func TestPortal_LimiterCoversPagesNotAssets(t *testing.T) {
 // The terms say what an API key stores and that an account is needed only for a key.
 func TestTerms_DescribeKeyData(t *testing.T) {
 	md := do(portalAPI(t), http.MethodGet, "/terms.md", "").Body.String()
-	require.Contains(t, md, "Last updated: 2026-10-15")
+	require.Contains(t, md, "Last updated: 2026-10-18")
 	require.Contains(t, md, "The data API sets no cookies and runs no analytics. An account is needed only to create an API key")
 	require.Contains(t, md, "a hash of the key (never the key)")
 	require.NotContains(t, md, "no accounts")

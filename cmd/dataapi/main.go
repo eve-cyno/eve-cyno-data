@@ -117,7 +117,6 @@ import (
 	"time"
 
 	"eve-cyno.dev/go/data/bootstrap"
-	"eve-cyno.dev/go/data/catalog"
 	coreconfig "eve-cyno.dev/go/data/config"
 	"eve-cyno.dev/go/data/dataapi"
 	"eve-cyno.dev/go/data/dataapi/keys"
@@ -364,7 +363,7 @@ func newHandler(d *bootstrap.Deps, ex exposure, log *slog.Logger) (http.Handler,
 		// caller may use the keyed tier.
 		opts := mcpserver.HTTPOptions{
 			DisableLocalhostProtection: true,
-			Keyed:                      func(r *http.Request) bool { return dataapi.CallerFrom(r.Context()).Allows(catalog.TierKeyed) },
+			Keyed:                      dataapi.KeyedTier,
 			Upstream:                   upstream.Allow,
 			Logger:                     log,
 		}

@@ -1,6 +1,6 @@
 # EVE-Cyno Data API: terms of use
 
-Last updated: 2026-10-15
+Last updated: 2026-10-18
 
 ## What this is
 
@@ -39,7 +39,7 @@ For Janice appraisals you can send your own Janice API key in the `X-Janice-Key`
 
 ## Privacy
 
-- The service writes one access-log line per request with: request ID, HTTP method, matched route, status, response size and duration. It does not log your IP address, API key, Janice key, query string or request body. On tool and MCP requests, and on a refused request over a key's daily quota, the line also carries the tool name (REST) and an opaque caller token: a salted hash of your IP address or API key id, which cannot be turned back into either and is used only to spot a client that sends far more than the others. A failed tool call also logs the tool name and the error text.
+- The service writes one access-log line per request with: request ID, HTTP method, matched route, status, response size and duration. It does not log your IP address, API key, Janice key, query string or request body. On tool and MCP requests, and on a refused request over a key's daily quota, the line also carries the tool name (REST) and an opaque caller token: a salted hash of your IP address or API key id, which cannot be turned back into either and is used only to spot a client that sends far more than the others. A failed tool call also logs the tool name and the error text. Each tool call also writes one separate usage line with only: the tool name, REST or MCP, whether a valid API key was sent, the result class (for example ok or rate_limited), whether it read live data, the duration and a client family from a fixed list (for example curl, python-requests or claude-code, or other; the client's own name is never written). That line carries no request ID, IP address, key or caller token and no argument or result; it is used only to count which tools are used.
 - Your IP address is held in memory only, to apply the rate limit. Data kept for an API key is described below. The service sits behind Cloudflare, which sees traffic as any proxy does under its own terms.
 - Logs go to the operator's log store and are kept for a limited time (30 days).
 - Free-text you send to some tools (for example a community-fit search query) is forwarded to the upstream provider that answers it (an embedding provider, ESI, Janice), as each tool's description states.

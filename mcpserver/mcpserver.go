@@ -51,6 +51,7 @@ import (
 
 	"eve-cyno.dev/go/data/catalog"
 	"eve-cyno.dev/go/data/tools"
+	"eve-cyno.dev/go/data/toolusage"
 	"eve-cyno.dev/go/data/version"
 )
 
@@ -137,6 +138,12 @@ type serverConfig struct {
 	called func(tool string)
 	// instructions is the initialize text; empty means the package default.
 	instructions string
+	// keyed marks a server built for a caller whose valid API key unlocks the keyed tier (the usage line's tier).
+	keyed bool
+	// userAgent is the HTTP User-Agent of the request the server was built for, the client
+	// label of a call whose MCP clientInfo is not available (a stateless call carries none
+	// unless the client sends it per request). Empty over stdio.
+	userAgent string
 }
 
 // buildServer registers exposed on a new server over deps.
@@ -161,7 +168,7 @@ func buildServer(deps *tools.Deps, exposed []catalog.Tool, cfg serverConfig, exe
 		},
 		&mcp.ServerOptions{Instructions: text, Logger: quiet(log)},
 	)
-	h := &handler{deps: deps, exec: exec, timeout: timeout, log: log, allow: cfg.allow, called: cfg.called}
+	h := &handler{deps: deps, exec: exec, timeout: timeout, log: log, allow: cfg.allow, called: cfg.called, keyed: cfg.keyed, userAgent: cfg.userAgent}
 	for _, t := range exposed {
 		s.AddTool(mcpTool(t, cfg.janiceFromHeader), h.call(t))
 	}
@@ -204,6 +211,18 @@ type handler struct {
 	log     *slog.Logger
 	allow   func(tool string) (bool, time.Duration)
 	called  func(tool string)
+	// keyed and userAgent feed the usage line (see serverConfig).
+	keyed     bool
+	userAgent string
+}
+
+// client labels the caller of req for the usage line: the MCP clientInfo name when the
+// request carries one, else the HTTP User-Agent's first product token.
+func (h *handler) client(req *mcp.CallToolRequest) string {
+	if info := req.ClientInfo(); info != nil && info.Name != "" {
+		return toolusage.Client(info.Name)
+	}
+	return toolusage.ClientFromUserAgent(h.userAgent)
 }
 
 // call returns the tools/call handler of one tool.
@@ -212,11 +231,15 @@ func (h *handler) call(t catalog.Tool) mcp.ToolHandler {
 	return func(ctx context.Context, req *mcp.CallToolRequest) (res *mcp.CallToolResult, err error) {
 		// A panic in a tool must not take the process down: the SDK runs handlers on its own
 		// goroutines, outside net/http's per-request recover.
+		use := toolusage.Call{Tool: name, Surface: toolusage.MCP, Keyed: h.keyed, Outcome: toolusage.Failed, Client: h.client(req)}
+		start := time.Now()
 		defer func() {
 			if p := recover(); p != nil {
 				h.log.Error("mcp_tool_panic", "tool", name, "panic", p, "stack", string(debug.Stack()))
 				res, err = failure("internal error while running "+name), nil
 			}
+			use.Duration = time.Since(start)
+			toolusage.Log(h.log, use)
 		}()
 
 		if h.called != nil {
@@ -225,18 +248,22 @@ func (h *handler) call(t catalog.Tool) mcp.ToolHandler {
 		args := map[string]any{}
 		if raw := req.Params.Arguments; len(raw) > 0 && string(raw) != "null" {
 			if err := json.Unmarshal(raw, &args); err != nil || args == nil {
+				use.Outcome = toolusage.InvalidArgs
 				return nil, &jsonrpc.Error{Code: jsonrpc.CodeInvalidParams, Message: "arguments must be a JSON object"}
 			}
 		}
 		if err := t.CheckArgs(args); err != nil {
+			use.Outcome = toolusage.InvalidArgs
 			return failure("invalid arguments for " + name + ": " + err.Error() + ". See the tool's inputSchema in tools/list."), nil
 		}
+		use.Live = t.SpendsUpstream(args)
 		if h.deps == nil {
 			return failure("deterministic layer unavailable (SDE not loaded)"), nil
 		}
 
 		if h.allow != nil && t.SpendsUpstream(args) {
 			if ok, retry := h.allow(name); !ok {
+				use.Outcome = toolusage.RateLimited
 				return failure(fmt.Sprintf("rate_limited: %s reads live %s data and has a lower per-caller limit; retry in %d seconds",
 					name, t.UpstreamName, max(1, int((retry+time.Second-1)/time.Second)))), nil
 			}
@@ -246,6 +273,7 @@ func (h *handler) call(t catalog.Tool) mcp.ToolHandler {
 		defer cancel()
 		out, err := h.exec(ctx, h.deps, name, args)
 		if err != nil {
+			use.Outcome = toolusage.OutcomeOfError(err)
 			if errors.Is(err, context.DeadlineExceeded) {
 				return failure(fmt.Sprintf("%s timed out after %s", name, h.timeout)), nil
 			}
@@ -256,6 +284,7 @@ func (h *handler) call(t catalog.Tool) mcp.ToolHandler {
 			h.log.Warn("mcp_tool_failed", "tool", name, "error", err)
 			return failure(err.Error()), nil
 		}
+		use.Outcome = toolusage.OutcomeOfResult(out)
 		return success(out), nil
 	}
 }
@@ -395,7 +424,7 @@ func httpHandler(deps *tools.Deps, o HTTPOptions, exec executor) http.Handler {
 			if len(janice) > maxJaniceKeyLen {
 				janice = "" // not a Janice key; treated as absent
 			}
-			cfg := serverConfig{timeout: o.Timeout, log: o.Logger, janiceFromHeader: true}
+			cfg := serverConfig{timeout: o.Timeout, log: o.Logger, janiceFromHeader: true, keyed: keyed, userAgent: r.UserAgent()}
 			if !keyed && o.KeyHint != "" {
 				cfg.instructions = keylessInstructions(o.AnonDailyCap, o.KeyHint)
 			}
