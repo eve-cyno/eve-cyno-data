@@ -25,12 +25,7 @@ func romanNumeral(level int) string {
 
 // displaySec returns a system's security status as the game shows it: rounded to one decimal,
 // except that a positive value below 0.05 shows as 0.1 (the system is still lowsec).
-func displaySec(sec float64) float64 {
-	if sec > 0 && sec < 0.05 {
-		return 0.1
-	}
-	return math.Round(sec*10) / 10
-}
+func displaySec(sec float64) float64 { return sde.DisplaySecurity(sec) }
 
 // secClass classes a system by its displayed security, as the game does: 0.5 and up is highsec
 // (true security 0.45 and up, the same cut the highsec-only pathfinder in sde uses), above 0.0 is
@@ -64,107 +59,6 @@ func commaSep(n, w int) string {
 		result = "-" + result
 	}
 	return fmt.Sprintf("%*s", w, result)
-}
-
-// getJumpsBetween mirrors Python _get_jumps_between. The *Route is built in the same
-// pass as the text; it is nil for every text-only answer (SDE missing, unknown system,
-// no route).
-func getJumpsBetween(s *sde.SDE, from, to string, preferHighSec bool) (string, *Route) {
-	if !s.Available() {
-		return "SDE not loaded — routing unavailable.", nil
-	}
-	fID := s.ResolveSystemName(from)
-	if fID == nil {
-		return fmt.Sprintf("Unknown system: %s.", from), nil
-	}
-	tID := s.ResolveSystemName(to)
-	if tID == nil {
-		return fmt.Sprintf("Unknown system: %s.", to), nil
-	}
-
-	path, highsecSatisfied := s.GetJumpsPath(*fID, *tID, preferHighSec)
-	if path == nil {
-		return fmt.Sprintf("No route found from %s to %s (disconnected wormhole space?).", from, to), nil
-	}
-
-	// Batch resolve names + security for path
-	names := map[int]string{}
-	secs := map[int]float64{}
-	regions := map[int]string{}
-	if len(path) > 0 {
-		phMap := map[int]string{}
-		secMap := map[int]float64{}
-		metas := make([]map[string]any, 0, len(path))
-		for _, sid := range path {
-			m := s.GetSystemMetadata(sid)
-			if m != nil {
-				metas = append(metas, m)
-			}
-		}
-		for _, m := range metas {
-			if sysID, ok := m["system_id"].(int); ok {
-				if sn, ok := m["system_name"].(string); ok {
-					phMap[sysID] = sn
-				}
-				if sec, ok := m["security"].(float64); ok {
-					secMap[sysID] = sec
-				}
-				if rn, ok := m["region_name"].(string); ok {
-					regions[sysID] = rn
-				}
-			}
-		}
-		names = phMap
-		secs = secMap
-	}
-
-	hops := len(path) - 1
-	var label string
-	if preferHighSec && !highsecSatisfied {
-		label = "highsec preferred but no pure-highsec route exists; showing any-sec — "
-	} else if preferHighSec {
-		label = "highsec-only "
-	}
-	jumpWord := "jumps"
-	if hops == 1 {
-		jumpWord = "jump"
-	}
-	lines := []string{
-		fmt.Sprintf("Route from **%s** to **%s** (%s%d %s):", from, to, label, hops, jumpWord),
-		"",
-	}
-	route := &Route{
-		From: from, To: to, PreferHighSec: preferHighSec, HighsecSatisfied: highsecSatisfied,
-		Jumps: hops, Systems: make([]RouteSystem, 0, len(path)),
-	}
-	for i, sid := range path {
-		name := names[sid]
-		if name == "" {
-			name = fmt.Sprintf("%d", sid)
-		}
-		sec := secs[sid]
-		route.Systems = append(route.Systems, RouteSystem{
-			ID: sid, Name: name, Region: regions[sid], Security: sec,
-			Sec: fmt.Sprintf("%+.1f", displaySec(sec)), Class: secClass(sec),
-		})
-		var marker string
-		switch {
-		case i == 0:
-			marker = "►"
-		case i == len(path)-1:
-			marker = "◄"
-		default:
-			marker = "→"
-		}
-		lines = append(lines, fmt.Sprintf("  %s %-24s (%+.1f, %s)", marker, name, displaySec(sec), secClass(sec)))
-	}
-	if preferHighSec && !highsecSatisfied {
-		lines = append(lines, "")
-		lines = append(lines,
-			"Note: at least one hop crosses lowsec/nullsec/wormhole. "+
-				"Plan accordingly (no autopilot, watch local, scout ahead).")
-	}
-	return strings.Join(lines, "\n"), route
 }
 
 // getSystemsInRegion mirrors Python _get_systems_in_region.
@@ -266,7 +160,15 @@ func getReprocessingYield(s *sde.SDE, itemName string, quantity int, refiningEff
 	if resolvedName != itemName {
 		itemName = resolvedName
 	}
-	yields := s.GetReprocessingYield(tid, quantity, refiningEfficiencyPct)
+	portion := s.PortionSize(tid)
+	if quantity < 1 {
+		quantity = portion // no quantity given: one batch
+	}
+	batches, left := quantity/portion, quantity%portion
+	if portion > 1 && batches == 0 {
+		return fmt.Sprintf("Reprocessing works in batches of %d units of %s: %d %s is less than one batch, so nothing is reprocessed.", portion, itemName, quantity, unitWord(quantity))
+	}
+	yields := s.GetReprocessingYield(tid, batches, refiningEfficiencyPct)
 	if len(yields) == 0 {
 		return fmt.Sprintf("%s cannot be reprocessed (no invTypeMaterials entry).", itemName)
 	}
@@ -294,7 +196,29 @@ func getReprocessingYield(s *sde.SDE, itemName string, quantity int, refiningEff
 		}
 		lines = append(lines, fmt.Sprintf("%-25s %s", name, commaSep(y[1], 12)))
 	}
+	if portion > 1 {
+		word := "batches"
+		if batches == 1 {
+			word = "batch"
+		}
+		note := fmt.Sprintf("Reprocessed as %d %s of %d units.", batches, word, portion)
+		if left > 0 {
+			verb := "are"
+			if left == 1 {
+				verb = "is"
+			}
+			note = fmt.Sprintf("Reprocessed as %d %s of %d units; %d %s left over (less than one batch) %s not reprocessed.", batches, word, portion, left, unitWord(left), verb)
+		}
+		lines = append(lines, "", note)
+	}
 	return strings.Join(lines, "\n")
+}
+
+func unitWord(n int) string {
+	if n == 1 {
+		return "unit"
+	}
+	return "units"
 }
 
 // getRequiredSkills mirrors Python _get_required_skills.
@@ -609,7 +533,10 @@ func clampInt(n, lo, hi int) int {
 // getHullFacts mirrors Python _get_hull_facts.
 // retriever (may be nil) is used to append a top-1 published workbench community
 // fit as a "Reference EFT layout" scaffolding block, matching Python.
-func getHullFacts(ctx context.Context, s *sde.SDE, retriever *rag.QdrantRetriever, shipName string) string {
+//
+// public leaves the chat loop's instructions out of the community-fit block (exampleFitLines)
+// and keeps the fit's source link and author.
+func getHullFacts(ctx context.Context, s *sde.SDE, retriever *rag.QdrantRetriever, shipName string, public bool) string {
 	if !s.Available() {
 		return fmt.Sprintf("SDE unavailable; cannot resolve hull facts for %q.", shipName)
 	}
@@ -664,23 +591,9 @@ func getHullFacts(ctx context.Context, s *sde.SDE, retriever *rag.QdrantRetrieve
 	}
 	lines = append(lines, "")
 
-	bonuses, _ := facts["role_bonuses"].([]map[string]any)
-	if len(bonuses) > 0 {
+	if bl := bonusLines(facts); len(bl) > 0 {
 		lines = append(lines, "**Role & skill bonuses (from invTraits):**")
-		for _, b := range bonuses[:min(20, len(bonuses))] {
-			tag := "ROLE"
-			if sn, ok := b["skill_name"].(string); ok && sn != "" {
-				tag = sn
-			}
-			text, _ := b["text"].(string)
-			bonusPtr, _ := b["bonus"].(*float64)
-			if bonusPtr != nil {
-				// Match Python f"{bonus}%" — whole-number floats get ".0"
-				lines = append(lines, fmt.Sprintf("- [%s] %s%% — %s", tag, pythonFloat(*bonusPtr), text))
-			} else {
-				lines = append(lines, fmt.Sprintf("- [%s] %s", tag, text))
-			}
-		}
+		lines = append(lines, bl...)
 		lines = append(lines, "")
 	}
 
@@ -727,28 +640,95 @@ func getHullFacts(ctx context.Context, s *sde.SDE, retriever *rag.QdrantRetrieve
 	// rigs — that the model can mimic. Pulled via Qdrant metadata filter
 	// (no embedding lookup, just source=workbench & ship_name == X).
 	shipNameStr, _ := facts["ship_name"].(string)
-	if example := fetchCommunityFitExample(ctx, retriever, shipNameStr); example != "" {
-		// Section heading kept neutral on purpose — earlier wording leaked into
-		// model prose as "community database provided…" and tripped the
-		// TRANSPARENCY ban. The model treats this block as ITS OWN reference
-		// material, not as an out-of-band source.
-		lines = append(lines, "**Reference EFT layout for slot/module shape "+
-			"(do NOT cite or quote this section in your prose; "+
-			"use it as internal scaffolding, then write the fit "+
-			"in your own words):**")
-		lines = append(lines, "```")
-		lines = append(lines, example)
-		lines = append(lines, "```")
-		lines = append(lines, "")
+	if eft, attr, ok := communityFitExample(ctx, retriever, shipNameStr); ok {
+		lines = append(lines, exampleFitLines(eft, attr, public)...)
 	}
 
 	lines = append(lines, "Source: data/sde/sde.sqlite (Fuzzwork latest dump)")
 	return strings.Join(lines, "\n")
 }
 
-// fetchCommunityFitExample pulls the top-1 workbench community fit for a hull via
+// bonusLines are the "- [TAG] …" lines of a hull's role and skill bonuses (at most 20), as
+// get_hull_facts prints them under "Role & skill bonuses". It is empty for a hull without bonuses.
+func bonusLines(facts map[string]any) []string {
+	bonuses, _ := facts["role_bonuses"].([]map[string]any)
+	var lines []string
+	for _, b := range bonuses[:min(20, len(bonuses))] {
+		tag := "ROLE"
+		if sn, ok := b["skill_name"].(string); ok && sn != "" {
+			tag = sn
+		}
+		text, _ := b["text"].(string)
+		bonusPtr, _ := b["bonus"].(*float64)
+		if bonusPtr != nil {
+			// Match Python f"{bonus}%" — whole-number floats get ".0"
+			lines = append(lines, fmt.Sprintf("- [%s] %s%% — %s", tag, pythonFloat(*bonusPtr), text))
+		} else {
+			lines = append(lines, fmt.Sprintf("- [%s] %s", tag, text))
+		}
+	}
+	return lines
+}
+
+// getShipBonuses is get_ship_bonuses for a public surface: the hull's class and group and its
+// bonus section only, without slots, weapons, bonused modules or a community fit.
+func getShipBonuses(s *sde.SDE, shipName string) string {
+	if !s.Available() {
+		return fmt.Sprintf("SDE unavailable; cannot resolve hull facts for %q.", shipName)
+	}
+	facts := s.GetHullFacts(shipName)
+	if facts == nil {
+		return fmt.Sprintf("No SDE hull found for %q. Try `search_item_by_name` with the exact spelling, or rephrase the request.", shipName)
+	}
+	hullClass, _ := facts["hull_class"].(string)
+	if hullClass == "" {
+		hullClass = "n/a"
+	}
+	group, _ := facts["group"].(string)
+	if group == "" {
+		group = "n/a"
+	}
+	bl := bonusLines(facts)
+	if len(bl) == 0 {
+		return fmt.Sprintf("No hull bonuses listed for %s in the SDE.", facts["ship_name"])
+	}
+	lines := []string{
+		fmt.Sprintf("## Ship bonuses — %s", facts["ship_name"]),
+		fmt.Sprintf("Class: %s | Group: %s", hullClass, group),
+		"",
+	}
+	lines = append(lines, bl...)
+	lines = append(lines, "", "Source: data/sde/sde.sqlite (Fuzzwork latest dump)")
+	return strings.Join(lines, "\n")
+}
+
+// exampleFitLines is the community-fit block of get_hull_facts. The chat text is the
+// brain's scaffolding instruction; a public reader gets the fit's source link and author
+// (when known) instead, so the credit travels with the EFT block.
+func exampleFitLines(eft string, attr rag.Attribution, public bool) []string {
+	if !public {
+		// Section heading kept neutral on purpose — earlier wording leaked into
+		// model prose as "community database provided…" and tripped the
+		// TRANSPARENCY ban. The model treats this block as ITS OWN reference
+		// material, not as an out-of-band source.
+		return []string{
+			"**Reference EFT layout for slot/module shape " +
+				"(do NOT cite or quote this section in your prose; " +
+				"use it as internal scaffolding, then write the fit " +
+				"in your own words):**",
+			"```", eft, "```", "",
+		}
+	}
+	lines := []string{"**Example community fit (EVE Workbench):**", "Source: " + attr.SourceURL}
+	if attr.Author != "" {
+		lines = append(lines, "Author: "+attr.Author)
+	}
+	return append(lines, "```", eft, "```", "")
+}
+
+// communityFitExample pulls the top-1 workbench community fit for a hull via
 // a Qdrant metadata-filter scroll (source=workbench, ship_name match) and returns
-// the raw EFT block. Mirrors Python _fetch_community_fit_example: take the scroll
+// the raw EFT block and its attribution. Mirrors Python _fetch_community_fit_example: take the scroll
 // page, sort highest-quality-first client-side, pick the top fit's text, then strip
 // the markdown header/stats lines down to the `[ShipName,` EFT line.
 //
@@ -756,9 +736,9 @@ func getHullFacts(ctx context.Context, s *sde.SDE, retriever *rag.QdrantRetrieve
 // exposes only `score`), so the primary `-views` sort key from Python is
 // unavailable; we sort by `-score` descending, which is Python's secondary key.
 // Graceful no-op when retriever is nil, Qdrant is unreachable, or no fit is found.
-func fetchCommunityFitExample(ctx context.Context, retriever *rag.QdrantRetriever, shipName string) string {
+func communityFitExample(ctx context.Context, retriever *rag.QdrantRetriever, shipName string) (eft string, attr rag.Attribution, ok bool) {
 	if retriever == nil || strings.TrimSpace(shipName) == "" {
-		return ""
+		return "", rag.Attribution{}, false
 	}
 	res, err := retriever.ScrollFits(ctx, rag.FitQuery{
 		ShipName: shipName,
@@ -766,15 +746,16 @@ func fetchCommunityFitExample(ctx context.Context, retriever *rag.QdrantRetrieve
 		Limit:    5,
 	})
 	if err != nil || len(res.Hits) == 0 {
-		return ""
+		return "", rag.Attribution{}, false
 	}
 	hits := make([]rag.FitHit, len(res.Hits))
 	copy(hits, res.Hits)
 	sort.SliceStable(hits, func(i, j int) bool { return hits[i].Score > hits[j].Score })
 
+	attr = hits[0].Attribution
 	text := strings.TrimSpace(hits[0].Text)
 	if text == "" {
-		return ""
+		return "", rag.Attribution{}, false
 	}
 	// Strip the markdown header + stats lines workbench prepends — the model
 	// only needs the raw EFT block below them. Cut at the line starting with
@@ -783,10 +764,10 @@ func fetchCommunityFitExample(ctx context.Context, retriever *rag.QdrantRetrieve
 	srcLines := strings.Split(text, "\n")
 	for i, line := range srcLines {
 		if strings.HasPrefix(line, prefix) {
-			return strings.TrimSpace(strings.Join(srcLines[i:], "\n"))
+			return strings.TrimSpace(strings.Join(srcLines[i:], "\n")), attr, true
 		}
 	}
-	return text
+	return text, attr, true
 }
 
 // findCanonicalModule mirrors Python _find_canonical_module.

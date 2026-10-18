@@ -10,14 +10,22 @@ import (
 	"strings"
 
 	"eve-cyno.dev/go/data/esi"
+	"eve-cyno.dev/go/data/sde"
 )
 
-// appraiseItems mirrors Python _appraise_items (Janice). [OPUS-REVIEW] cassette pending.
-func appraiseItems(ctx context.Context, c *Client, items string, janiceAPIKey string) (string, error) {
-	if janiceAPIKey == "" {
-		return "Janice API key not configured.", nil
+// appraiseItems values an item list: through Janice with a Janice key (on a public surface
+// always the caller's own), otherwise as an estimate from ESI's average prices
+// (estimateAppraisal), which never calls Janice.
+func appraiseItems(ctx context.Context, c *Client, s *sde.SDE, items, janiceAPIKey string) (string, error) {
+	if janiceAPIKey != "" {
+		return janiceAppraisal(ctx, c, items, janiceAPIKey)
 	}
+	return estimateAppraisal(ctx, c, s, items)
+}
 
+// janiceAppraisal posts the list to Janice's appraisal API with key and returns the buy,
+// sell and split totals and the appraisal link.
+func janiceAppraisal(ctx context.Context, c *Client, items, janiceAPIKey string) (string, error) {
 	url := JaniceBase + "/api/rest/v1/appraisal"
 	rel, err := c.Throttle.Acquire(ctx, url)
 	if err != nil {
@@ -100,6 +108,9 @@ const PLEXRegion = 19000001
 // convertISKToReal mirrors Python _convert_isk_to_real, reading the PLEX price from the
 // global PLEX market (PLEXRegion).
 func convertISKToReal(ctx context.Context, c *Client, iskAmount float64, currency string) (string, error) {
+	if c == nil {
+		return "No ISK conversion right now: no ESI client is configured.", nil
+	}
 	// Get PLEX price in ISK via ESI
 	resp, err := c.esiClient().Do(ctx, esi.Request{
 		Path:  fmt.Sprintf("/markets/%d/orders", PLEXRegion),

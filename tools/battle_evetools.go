@@ -894,7 +894,7 @@ func etCollectRawKMs(relateds []json.RawMessage) []json.RawMessage {
 // resolveSystemNameFromKillmailsRaw resolves a system name from raw JSON killmails.
 // Tries "system.solarSystemID", "solarSystemID", "systemID" fields.
 func resolveSystemNameFromKillmailsRaw(s *sde.SDE, rawKMs []json.RawMessage) string {
-	if s == nil || !s.Available() {
+	if !s.Available() {
 		return ""
 	}
 	for _, raw := range rawKMs {

@@ -3,6 +3,7 @@ package dataapi_test
 import (
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -128,8 +129,64 @@ func TestGeneratedDocs_StateTheLiveToolsLimitAndBusyAnswer(t *testing.T) {
 	files, err := dataapi.GeneratedFiles()
 	require.NoError(t, err)
 	full := string(files["llms-full.txt"])
-	require.Contains(t, full, "fair-use limit is 5 calls per minute per caller without an API key and 10 with one")
+	require.Contains(t, full, "fair-use limit of 5 calls per minute per caller without an API key and 10 with one")
 	require.Contains(t, full, "upstream_busy")
 	yaml := string(files["api/openapi.yaml"])
 	require.Contains(t, yaml, "upstream_busy")
+}
+
+func TestGeneratedDocs_EveScoutToolNamesItsUpstream(t *testing.T) {
+	files, err := dataapi.GeneratedFiles()
+	require.NoError(t, err)
+	full := string(files["llms-full.txt"])
+	i := strings.Index(full, "\n### get_thera_connections\n")
+	require.GreaterOrEqual(t, i, 0, "the tool has a section")
+	section := full[i+1:]
+	if j := strings.Index(section[4:], "\n### "); j >= 0 {
+		section = section[:4+j]
+	}
+	require.Contains(t, section, "- Live EvE-Scout data: ")
+	require.Contains(t, section, "EvE-Scout (Signal Cartel)")
+	require.Contains(t, section, "fair-use limit of 5 calls per minute per caller without an API key and 10 with one")
+	require.NotContains(t, section, "upstream_busy")
+	require.NotContains(t, section, "ESI's `Expires`")
+}
+
+func TestUpstreamBudget_PlanJumpRouteSpendsOnlyWithLiveOptions(t *testing.T) {
+	a := upstreamAPI(t, 1, &tools.Deps{})
+	call := func(body string) *httptest.ResponseRecorder {
+		return do(a, "POST", "/v1/tool/plan_jump_route", body, fromIP("198.51.100.9")...)
+	}
+	plain := `{"origin":"Amamake","destination":"1DQ1-A","ship":"Rhea"}`
+	live := `{"origin":"Amamake","destination":"1DQ1-A","ship":"Rhea","live_info":true}`
+	require.Equal(t, http.StatusOK, call(plain).Code)
+	require.Equal(t, http.StatusOK, call(plain).Code)
+	require.Equal(t, http.StatusOK, call(live).Code)
+	requireError(t, call(live), http.StatusTooManyRequests, "rate_limited")
+	require.Equal(t, http.StatusOK, call(plain).Code, "a plain call after the budget is spent still runs")
+}
+
+func TestGeneratedDocs_PlanJumpRouteNamesItsLiveOptions(t *testing.T) {
+	files, err := dataapi.GeneratedFiles()
+	require.NoError(t, err)
+	full := string(files["llms-full.txt"])
+	i := strings.Index(full, "\n### plan_jump_route\n")
+	require.GreaterOrEqual(t, i, 0, "the tool has a section")
+	section := full[i+1:]
+	if j := strings.Index(section[4:], "\n### "); j >= 0 {
+		section = section[:4+j]
+	}
+	require.Contains(t, section, "Calls with `avoid_incursions` or `live_info` read live public data")
+}
+
+func TestGeneratedDocs_ListToolsStateTheirDataOnlyForTheListForm(t *testing.T) {
+	files, err := dataapi.GeneratedFiles()
+	require.NoError(t, err)
+	yaml := string(files["api/openapi.yaml"])
+	for _, typ := range []string{"SovereigntyList", "ActivityList"} {
+		require.Contains(t, yaml, "`result.data` is a `"+typ+"` object when called with `systems` (null for the single `system_name` form).")
+		require.NotContains(t, yaml, "`"+typ+"` object when the call succeeds")
+	}
+	require.NotContains(t, string(files["llms-full.txt"]), "Its own fair-use limit")
+	require.Contains(t, string(files["llms-full.txt"]), "share one fair-use limit")
 }

@@ -34,8 +34,8 @@ type exampleFixture struct {
 	Recorded string `json:"recorded"`
 	// Trimmed is true when lists or texts of the recorded response were shortened.
 	Trimmed bool `json:"trimmed"`
-	// Response is the whole recorded envelope; absent for a keyed or byo-key tool, whose
-	// answer cannot be recorded without a credential the project does not hold out.
+	// Response is the whole recorded envelope; absent for a keyed tool, whose answer
+	// cannot be recorded without a credential the project does not hand out.
 	Response json.RawMessage `json:"response"`
 	// Note explains a missing response.
 	Note     string           `json:"note"`
@@ -105,7 +105,7 @@ func newExampleView(t catalog.Tool, fx exampleFixture, origin, prefix string) (e
 		}
 		v.ResponseLabel = "200 · application/json"
 		v.Caption = "Captured from the live service on " + fx.Recorded + "."
-		if t.Upstream {
+		if t.LiveESI() && t.SpendsUpstream(exampleArgs(fx.Request)) {
 			v.Caption = "Example from the live service on " + fx.Recorded + "; live ESI values change."
 		}
 		if fx.Trimmed {
@@ -116,6 +116,13 @@ func newExampleView(t catalog.Tool, fx exampleFixture, origin, prefix string) (e
 	return v, nil
 }
 
+// exampleArgs decodes the arguments object of an example; nil when it is not an object.
+func exampleArgs(raw json.RawMessage) map[string]any {
+	var args map[string]any
+	_ = json.Unmarshal(raw, &args)
+	return args
+}
+
 // header is an extra request header an example needs.
 type header struct{ name, value string }
 
@@ -124,8 +131,6 @@ func headerFor(t catalog.Tier) *header {
 	switch t {
 	case catalog.TierKeyed:
 		return &header{"Authorization", "Bearer <your API key>"}
-	case catalog.TierBYOKey:
-		return &header{catalog.HeaderJaniceKey, "<your Janice key>"}
 	}
 	return nil
 }

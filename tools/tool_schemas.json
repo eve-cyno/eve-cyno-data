@@ -3,7 +3,7 @@
     "type": "function",
     "function": {
       "name": "get_market_price",
-      "description": "Get current market prices for an EVE Online item in The Forge region (Jita hub). Returns best sell price, best buy price, and order counts.",
+      "description": "Get current market prices for an EVE Online item in The Forge region (Jita hub). Returns best sell price, best buy price, and order counts. Set hub (jita, amarr, dodixie, rens, hek) for the orders at that trade hub's main station; without hub the answer covers the whole region of The Forge.",
       "parameters": {
         "type": "object",
         "properties": {
@@ -14,6 +14,11 @@
           "type_name": {
             "type": "string",
             "description": "Human-readable item name, for display only"
+          },
+          "hub": {
+            "type": "string",
+            "enum": ["jita", "amarr", "dodixie", "rens", "hek"],
+            "description": "Trade hub whose main station's orders to read, e.g. 'amarr'. Omit for the whole region of The Forge. Ignored for PLEX."
           }
         },
         "required": [
@@ -147,7 +152,7 @@
     "type": "function",
     "function": {
       "name": "get_fits",
-      "description": "Retrieve community ship fits VERBATIM from the indexed fit database (EVE Workbench + Abysstracker + gustavmannfred.streamlit.app + caldarijoans.streamlit.app, ~8150 fits). Use this FIRST whenever the user asks for popular / community / top / proven / 'most-used' / meta / 'best' / Gustav's / CaldariJoans' fits — never invent a fit when this tool can answer. Returns the raw EFT text (header + modules + drones + ammo) and the source URL for each match. Filter by ship_name (exact), activity (pvp / pve / hauler / exploration / mining / logistics), context (wh, abyss, abyss-electrical / firestorm / exotic / gamma / dark, abyss-t1..t6, ratting, solo), cost_class (cheap < 50M / mid 50-500M / blingy > 500M ISK), alpha_clone (true for Alpha-skill-friendly), combat_role (solo / fleet / elite-flown — zKillboard only). If 0 matches, returns 'NO FITS FOUND' — follow the STEP decision tree: try ONE retry with the most restrictive filter dropped, then proceed to STEP 2 and generate a theorycrafted fit from game knowledge. NEVER tell the user this tool returned empty.",
+      "description": "Retrieve community ship fits VERBATIM from the indexed fit database (EVE Workbench + Abysstracker + gustavmannfred.streamlit.app + caldarijoans.streamlit.app, ~8150 fits). Use this FIRST whenever the user asks for popular / community / top / proven / 'most-used' / meta / 'best' / Gustav's / CaldariJoans' fits — never invent a fit when this tool can answer. Returns the raw EFT text (header + modules + drones + ammo) and the source URL for each match. Filter by ship_name (exact), activity (pvp / pve / hauler / exploration / mining / logistics), context (wh, abyss, abyss-electrical / firestorm / exotic / gamma / dark, abyss-t1..t6, ratting, solo), cost_class (cheap < 50M / mid 50-500M / blingy > 500M ISK), alpha_clone (true for Alpha-skill-friendly), combat_role (solo / fleet — zKillboard only). If 0 matches, returns 'NO FITS FOUND' — follow the STEP decision tree: try ONE retry with the most restrictive filter dropped, then proceed to STEP 2 and generate a theorycrafted fit from game knowledge. NEVER tell the user this tool returned empty.",
       "parameters": {
         "type": "object",
         "properties": {
@@ -325,13 +330,13 @@
     "type": "function",
     "function": {
       "name": "appraise_items",
-      "description": "Appraise a list of EVE Online items using Janice. Returns total buy/sell/split values in ISK and a link to the full appraisal.",
+      "description": "Appraise a list of EVE Online items and return the total ISK value. Without a Janice key the answer is an estimate from EVE's average prices (ESI /markets/prices, refreshed daily), not live Jita buy or sell prices. With a Janice key it is a Janice appraisal: Jita buy, sell and split totals and a link to the full appraisal. The answer names its price source: pass it on, and call an estimate an estimate.",
       "parameters": {
         "type": "object",
         "properties": {
           "items": {
             "type": "string",
-            "description": "Items in multi-buy or EFT format, one per line with quantity, e.g. 'Tritanium x1000'"
+            "description": "Items one per line with a quantity: multi-buy ('Tritanium x1000' or 'Tritanium 1000'), an inventory or contract copy, or an EFT fit"
           }
         },
         "required": [
@@ -383,7 +388,7 @@
     "type": "function",
     "function": {
       "name": "get_jumps_between",
-      "description": "Compute the number of jumps and the route between two EVE solar systems. Default route is shortest (any security). Set prefer_high_sec=true to prefer highsec-only paths (longer but safer).",
+      "description": "Compute the number of jumps and the route between two EVE solar systems. Default route is shortest (any security). Set prefer_high_sec=true to prefer highsec-only paths (longer but safer). Set detail='summary' for one line (jump count, lowest-security hop, highsec/lowsec/nullsec counts and the highsec-only alternative) instead of the hop list. avoid: systems never to route through (up to 20); via: systems to pass through in order (up to 5).",
       "parameters": {
         "type": "object",
         "properties": {
@@ -398,11 +403,168 @@
           "prefer_high_sec": {
             "type": "boolean",
             "description": "If true, route via highsec only (default false)"
+          },
+          "detail": {
+            "type": "string",
+            "enum": [
+              "route",
+              "summary"
+            ],
+            "description": "'route' (default) lists every hop; 'summary' answers in one line"
+          },
+          "avoid": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 20,
+            "description": "Systems never to route through (up to 20), e.g. ['Ahbazon']. The origin and destination are never avoided."
+          },
+          "via": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 5,
+            "description": "Systems to pass through, in order (up to 5), e.g. ['Dodixie']"
           }
         },
         "required": [
           "from_system",
           "to_system"
+        ]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "get_jump_distances",
+      "description": "Jump counts from one origin system to up to 200 other systems in one call (one search over the stargate graph). Use it to rank candidates by distance, e.g. 'which of these systems is nearest to C-N4OD'. One line per system, nearest first; unknown names and systems without a gate route (wormhole space) are listed separately. prefer_high_sec counts highsec-only routes where one exists.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "origin": {
+            "type": "string",
+            "description": "Origin solar system name, e.g. 'C-N4OD'"
+          },
+          "systems": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "maxItems": 200,
+            "description": "Solar system names to measure, e.g. ['Elonaya','Uchomida','Actee']"
+          },
+          "prefer_high_sec": {
+            "type": "boolean",
+            "description": "If true, count highsec-only routes where one exists (default false)"
+          },
+          "avoid": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 20,
+            "description": "Systems never to pass through (up to 20), e.g. ['Ahbazon']; a target you also list here still gets its own count, but no route passes through it."
+          }
+        },
+        "required": [
+          "origin",
+          "systems"
+        ]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "plan_jump_route",
+      "description": "Plan a jump-drive route like a capital pilot's jump planner, for a jump freighter, Rorqual, Black Ops, carrier, dreadnought, Lancer, FAX, supercarrier or titan (give the hull name), or 'Jump Bridge' for a chain of Ansiblex jump bridges (5 ly): the fewest jumps from origin to destination through optional waypoints, then the fewest light-years. Every hop ends where a cynosural field can be lit (lowsec or nullsec; never highsec, wormhole space, Pochven or Zarzakh); capitals cannot start in highsec. One line per hop: region, system, security, NPC stations, light-years, the gate jumps between the same two systems and the isotopes burned; then the totals (light-years, fuel and its m³). Skills default to level 5. Titans, Black Ops and the Rorqual can also bridge, and carriers, supercarriers, Black Ops and the Rorqual can conduit jump, over the same hops; that fuel is not counted. Example: {\"origin\":\"Amamake\",\"destination\":\"1DQ1-A\",\"ship\":\"Rhea\"}. avoid_incursions and live_info read live ESI data and count against the live-data limit; without them the route comes from the SDE alone.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "origin": {
+            "type": "string",
+            "description": "Start solar system name, e.g. 'Amamake'"
+          },
+          "destination": {
+            "type": "string",
+            "description": "Last stop, a solar system name, e.g. '1DQ1-A'"
+          },
+          "ship": {
+            "type": "string",
+            "description": "Hull name, e.g. 'Rhea', 'Rorqual', 'Avatar', 'Panther', or 'Jump Bridge' for Ansiblex jump bridges"
+          },
+          "waypoints": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 5,
+            "description": "Systems the route must stop at, in order (up to 5), e.g. [\"Sahda\"]"
+          },
+          "skills": {
+            "type": "object",
+            "description": "Skill levels 0-5 (default 5 each), e.g. {\"jump_drive_calibration\": 4}. Jump freighters also use jump_freighters.",
+            "properties": {
+              "jump_drive_calibration": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 5,
+                "default": 5,
+                "description": "Jump Drive Calibration level, +20% range per level"
+              },
+              "jump_fuel_conservation": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 5,
+                "default": 5,
+                "description": "Jump Fuel Conservation level, -10% fuel per level"
+              },
+              "jump_freighters": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 5,
+                "default": 5,
+                "description": "Jump Freighters level (jump freighters only), -10% fuel per level"
+              }
+            }
+          },
+          "avoid": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 20,
+            "description": "Systems no hop may end in (up to 20), e.g. ['Tegheon']"
+          },
+          "avoid_regions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 10,
+            "description": "Regions no hop may end in (up to 10), e.g. [\"Khanid\"]"
+          },
+          "prefer_stations": {
+            "type": "boolean",
+            "description": "If true, among the routes with the fewest jumps prefer hops that end in systems with an NPC station (default false)"
+          },
+          "avoid_incursions": {
+            "type": "boolean",
+            "description": "Read the active incursions from ESI (live) and never end a hop in an infested system; incursions jam cynosural fields. Costs one live call."
+          },
+          "live_info": {
+            "type": "boolean",
+            "description": "Add each hop system's sovereignty holder and last-hour jumps and kills from ESI (live). Costs one live call."
+          }
+        },
+        "required": [
+          "origin",
+          "destination",
+          "ship"
         ]
       }
     }
@@ -467,7 +629,8 @@
           },
           "quantity": {
             "type": "integer",
-            "description": "Number of units to reprocess (default 1)"
+            "maximum": 1000000000,
+            "description": "Number of units to reprocess (default: one batch, e.g. 100 for most ores)"
           },
           "refining_efficiency_pct": {
             "type": "number",
@@ -510,19 +673,96 @@
   {
     "type": "function",
     "function": {
+      "name": "get_average_prices",
+      "description": "EVE's average price for up to 200 items in one call, by name (names) or type ID (type_ids), from ESI /markets/prices (refreshed daily, one shared copy). It is an average of recent trades across New Eden, not live Jita buy or sell orders: say so when you quote it. Use get_market_price for the live order book of one item.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "names": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 200,
+            "description": "Exact item names, e.g. ['Tritanium', 'PLEX', 'Gila']; up to 200 together with type_ids"
+          },
+          "type_ids": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            },
+            "maxItems": 200,
+            "description": "Item type IDs, e.g. [34, 44992]; up to 200 together with names"
+          }
+        },
+        "required": []
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "get_market_history",
+      "description": "Daily market history of one item in one region from ESI (/markets/{region_id}/history), summarised: average, low, high and volume per day or per week over the last 1-90 days, and the change from the first to the last bucket. Name the item (item_name) or give type_id; pick a hub (jita, amarr, dodixie, rens, hek) or a region name (default The Forge). Use for 'is X trending up' or 'how much X trades per day'.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "type_id": {
+            "type": "integer",
+            "description": "The EVE type ID of the item (e.g. 34 for Tritanium). Use this or item_name."
+          },
+          "item_name": {
+            "type": "string",
+            "description": "Exact item name, e.g. 'PLEX' or 'Tritanium'. Use this or type_id."
+          },
+          "hub": {
+            "type": "string",
+            "enum": ["jita", "amarr", "dodixie", "rens", "hek"],
+            "description": "Trade hub whose region to read, e.g. 'amarr'. Wins over region. Omit for The Forge."
+          },
+          "region": {
+            "type": "string",
+            "description": "Region name, e.g. 'Domain' or 'Sinq Laison'. Default The Forge. PLEX always uses the global PLEX market."
+          },
+          "days": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 90,
+            "description": "Length of the window in days, 1 to 90 (default 30), ending at the newest day ESI has"
+          },
+          "bucket": {
+            "type": "string",
+            "enum": ["day", "week"],
+            "description": "Size of one row: 'week' (ISO weeks, Monday to Sunday; default) or 'day'"
+          }
+        },
+        "required": []
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
       "name": "get_sovereignty",
-      "description": "Get the alliance / corporation holding sovereignty over an EVE solar system. Live data from ESI. Use for 'who controls X' or 'sov holder of Y' questions.",
+      "description": "Get who holds sovereignty (alliance and corporation, or NPC faction) over EVE solar systems. Live data from ESI. Pass systems (up to 50 names) for one line per system with the holders' names; system_name (one system) is the older form and answers with ids only. Use for 'who controls X' or 'sov holder of Y' questions.",
       "parameters": {
         "type": "object",
         "properties": {
           "system_name": {
             "type": "string",
-            "description": "Solar system name, e.g. 'Saranen'"
+            "description": "Solar system name, e.g. 'Saranen' (single system; the older form, answers ids only)"
+          },
+          "systems": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "maxItems": 50,
+            "description": "Up to 50 solar system names, e.g. ['1DQ1-A', 'Jita']: one line each, with the alliance and corporation names or the NPC faction"
           }
         },
-        "required": [
-          "system_name"
-        ]
+        "required": []
       }
     }
   },
@@ -530,18 +770,239 @@
     "type": "function",
     "function": {
       "name": "get_system_activity",
-      "description": "Get the ship, pod and NPC kills of a solar system in the last hour from ESI (jumps are not included). Use for 'how many kills in X recently', 'is system Y active', 'is it safe to undock'.",
+      "description": "Get the activity of EVE solar systems in the last hour from ESI. Pass systems (up to 50 names) for one line per system with jumps, ship kills, pod kills and NPC kills; system_name (one system) is the older form and answers kills only. Use for 'how busy is X', 'how many kills in Y recently', 'is it safe to undock'.",
       "parameters": {
         "type": "object",
         "properties": {
           "system_name": {
             "type": "string",
-            "description": "Solar system name, e.g. 'Tama'"
+            "description": "Solar system name, e.g. 'Tama' (single system; kills only)"
+          },
+          "systems": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "maxItems": 50,
+            "description": "Up to 50 solar system names, e.g. ['1DQ1-A', 'Jita']: one line each, with jumps, ship kills, pod kills and NPC kills of the last hour"
+          }
+        },
+        "required": []
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "find_systems",
+      "description": "Find solar systems by filters and rank them: security band, region, constellation, faction, wormhole class, NPC station and its services, asteroid belts, planet types, ice belts (EVE University's list of highsec and lowsec ice systems) and distance from an origin (near). One line per system, up to 100 per call (page with offset), with the total. Example, the three nearest highsec Clear Icicle systems to C-N4OD: {\"security\":{\"min\":0.45},\"ice_types\":[\"Clear Icicle\"],\"near\":{\"origin\":\"C-N4OD\"},\"sort\":\"jumps\",\"limit\":3}. Set jump_range {origin, ship, jump_drive_calibration (default 5)} to keep the systems that ship can jump to from the origin (cyno-able: lowsec or nullsec, not wormhole space, Pochven or Zarzakh; 'Jump Bridge' = Ansiblex reach), with the light-years, sorted nearest first; e.g. the nearest lowsec NPC-station systems a Rorqual can reach from EC-P8R: {\"jump_range\":{\"origin\":\"EC-P8R\",\"ship\":\"Rorqual\"},\"security\":{\"min\":0.1,\"max\":0.4},\"has_npc_station\":true,\"limit\":3}.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "near": {
+            "type": "object",
+            "description": "Rank by gate jumps from an origin system and leave out systems with no gate route, e.g. {\"origin\":\"C-N4OD\",\"max_jumps\":10}. Without max_jumps every reachable system is ranked.",
+            "properties": {
+              "origin": {
+                "type": "string",
+                "description": "Solar system name the jumps are counted from, e.g. 'C-N4OD'"
+              },
+              "max_jumps": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 30,
+                "description": "Keep systems at most this many jumps away (1-30)"
+              },
+              "prefer_high_sec": {
+                "type": "boolean",
+                "description": "Count jumps through highsec where a highsec-only route exists, else through any space (the line says '(no highsec-only route)')"
+              }
+            },
+            "required": [
+              "origin"
+            ]
+          },
+          "jump_range": {
+            "type": "object",
+            "description": "Keep the systems a ship can jump to from an origin, with the light-years, nearest first, e.g. {\"origin\":\"EC-P8R\",\"ship\":\"Rorqual\"}.",
+            "properties": {
+              "origin": {
+                "type": "string",
+                "description": "Solar system name the jump starts in, e.g. 'EC-P8R' (lowsec or nullsec)"
+              },
+              "ship": {
+                "type": "string",
+                "description": "Hull name, e.g. 'Rorqual', 'Rhea', 'Avatar', or 'Jump Bridge' for Ansiblex jump bridges"
+              },
+              "jump_drive_calibration": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 5,
+                "description": "Jump Drive Calibration level 0-5 (default 5); it sets the range"
+              }
+            },
+            "required": [
+              "origin",
+              "ship"
+            ]
+          },
+          "security": {
+            "type": "object",
+            "description": "Security band as shown in game, e.g. 0.5 includes systems with true security 0.45-0.5: {\"min\":0.5} is highsec, {\"max\":0.4} is lowsec and below. Wormhole systems carry a security of about -1.0; filter them with wormhole_class (7, 8 and 9 are known-space highsec, lowsec and nullsec).",
+            "properties": {
+              "min": {
+                "type": "number",
+                "description": "Lowest displayed security, e.g. 0.5"
+              },
+              "max": {
+                "type": "number",
+                "description": "Highest displayed security, e.g. 0.9"
+              }
+            }
+          },
+          "region": {
+            "type": "string",
+            "description": "Region name, e.g. 'The Forge'"
+          },
+          "constellation": {
+            "type": "string",
+            "description": "Constellation name, e.g. 'Kimotoro'"
+          },
+          "faction": {
+            "type": "string",
+            "description": "Faction name, e.g. 'Caldari State'"
+          },
+          "wormhole_class": {
+            "type": "integer",
+            "description": "Wormhole class: 1-6 for C1-C6, 7 highsec, 8 lowsec, 9 nullsec, 12 Thera, 13 shattered frigate holes, 14-18 Drifter, 25 Pochven"
+          },
+          "has_npc_station": {
+            "type": "boolean",
+            "description": "true for systems with an NPC station, false for systems without"
+          },
+          "station_services": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 12,
+            "description": "Station services every match must offer, e.g. ['Reprocessing Plant', 'Factory']; an unknown name lists the valid ones"
+          },
+          "min_asteroid_belts": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "At least this many asteroid belts, e.g. 3"
+          },
+          "planet_types": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 12,
+            "description": "Planet types the system must have at least one of each, e.g. ['Lava', 'Gas']; an unknown name lists the valid ones"
+          },
+          "has_ice_belt": {
+            "type": "boolean",
+            "description": "true for systems EVE University lists with ice belts, false for systems it does not list (nullsec ice systems are not covered)"
+          },
+          "ice_types": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 12,
+            "description": "Ice types, e.g. ['Clear Icicle', 'Blue Ice']; a system matches when it has any of them; implies has_ice_belt"
+          },
+          "sort": {
+            "type": "string",
+            "enum": [
+              "jumps",
+              "security",
+              "name",
+              "ly"
+            ],
+            "description": "Order: jumps (needs near; the default with near), security (most secure first), name (the default) or ly (needs jump_range; the default with jump_range)"
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Systems per call (default 20, at most 100)"
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Systems to skip, to read the next page (default 0)"
+          }
+        },
+        "required": []
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "get_system_info",
+      "description": "Facts about up to 50 solar systems in one call: security, region, constellation, faction, wormhole class and effect, neighbouring systems (stargates), counts of asteroid belts, moons, planets by type and NPC stations, and the ice belt when EVE University lists one. One line per system.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "systems": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "maxItems": 50,
+            "description": "Up to 50 solar system names, e.g. ['Jita', 'Erkinen']: one line each"
           }
         },
         "required": [
-          "system_name"
+          "systems"
         ]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "get_thera_connections",
+      "description": "Live wormhole connections from Thera and Turnur into known space and wormhole space, from EvE-Scout (Signal Cartel's public scanning data; credit them as EvE-Scout / Signal Cartel). One line per connection: the exit system with its security and region, wormhole type and largest ship size, hours left and both signature ids. Set near {origin, max_jumps} to keep the exits closest to a system, sorted by jumps. Connections change every few hours.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "hub": {
+            "type": "string",
+            "enum": ["thera", "turnur", "all"],
+            "description": "Which hub's connections: 'thera', 'turnur' or 'all' (default)"
+          },
+          "near": {
+            "type": "object",
+            "description": "Keep the exits with a gate route to an origin system and sort them by jumps, e.g. {\"origin\":\"Jita\",\"max_jumps\":10}. Exits with no gate route from the origin are left out (counted in the answer).",
+            "properties": {
+              "origin": {
+                "type": "string",
+                "description": "Solar system name the jumps are counted from, e.g. 'Jita'"
+              },
+              "max_jumps": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 30,
+                "description": "Keep exits at most this many jumps away (1-30); omit to rank every exit with a gate route"
+              }
+            },
+            "required": [
+              "origin"
+            ]
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 50,
+            "description": "Most connections to list (1-50, default 20); the answer says how many more there are"
+          }
+        }
       }
     }
   },

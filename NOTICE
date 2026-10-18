@@ -55,6 +55,14 @@ and combined with other material; it is not endorsed by EVE University. Derived 
 remains under CC BY-SA 4.0 (share-alike) and is kept apart from the code licence. Tool
 results that use wiki text name the page in their sources.
 
+The ice-belt dataset icebelts/ice_systems.json lists the highsec and lowsec systems
+that the EVE University Wiki pages "Clear Icicle Belt", "White Glaze Belt", "Blue Ice
+Belt" and "Glacial Mass Belt" name (https://wiki.eveuniversity.org/Ice_harvesting),
+(c) EVE University and its wiki contributors, CC BY-SA 4.0. It was extracted and
+checked against the SDE; the file stays under CC BY-SA 4.0 and is not covered by the
+MIT licence. Tool results that use it (find_systems, get_system_info) name the source
+in their attribution.
+
 ------------------------------------------------------------------------------
 Community fit sources
 ------------------------------------------------------------------------------
@@ -64,6 +72,17 @@ EVE Workbench, Abyss Tracker, and similar). The fits are not bundled with this
 repository and not redistributed in bulk: they are served by a running API with the
 source, link-back and licence on every hit. Respect each site's terms if you run your
 own index.
+
+------------------------------------------------------------------------------
+EvE-Scout (Thera and Turnur connections)
+------------------------------------------------------------------------------
+
+get_thera_connections shows live wormhole connections from Thera and Turnur read from
+EvE-Scout's public API, https://api.eve-scout.com/v2/public/signatures, scanning data
+by EvE-Scout / Signal Cartel, https://www.eve-scout.com/ . The API publishes no terms;
+it is used with attribution, a descriptive User-Agent and at most one request per cache
+lifetime. Results name EvE-Scout / Signal Cartel as their source. Character names in the
+API answer are not read, kept or shown. The data is not endorsed by EvE-Scout.
 
 ------------------------------------------------------------------------------
 Pyfa (validation reference only)

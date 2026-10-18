@@ -16,6 +16,8 @@ type BlockedOwner struct {
 	Owner     string    `json:"owner"`
 	OwnerName string    `json:"owner_name"`
 	BlockedAt time.Time `json:"blocked_at"`
+	// Identities are the sign-in identities of an account owner (absent for a legacy owner id).
+	Identities []LinkedIdentity `json:"identities,omitempty"`
 }
 
 // KeyUsage is a key's request history. Over the window the day totals and the endpoint
@@ -86,14 +88,34 @@ func (s *Store) SetCap(ctx context.Context, id string, cap int) (Key, error) {
 	return ks[0].Key, nil
 }
 
-// Block revokes every active key of owner and refuses new ones until Unblock. It returns
+// Block revokes every active key of owner's scope (an account, or the account a linked sign-in id belongs to, with
+// every legacy owner id of its identities) and refuses new ones until Unblock. actor is the
+// acting role, as for RevokeAny; it is stored as RevokedBy of every key revoked. It returns
 // the number of keys revoked. Blocking an owner already blocked revokes any stragglers.
-func (s *Store) Block(ctx context.Context, owner string) (int, error) {
+func (s *Store) Block(ctx context.Context, owner, actor string) (int, error) {
 	if err := validateOwner(owner); err != nil {
+		return 0, err
+	}
+	by, err := operatorActor(actor)
+	if err != nil {
 		return 0, err
 	}
 	s.adminMu.Lock()
 	defer s.adminMu.Unlock()
+	if accountRE.MatchString(owner) {
+		var exists int
+		if err := s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM accounts WHERE id = ?`, owner).Scan(&exists); err != nil {
+			return 0, fmt.Errorf("keys: check account: %w", err)
+		}
+		if exists == 0 {
+			return 0, ErrNoAccount
+		}
+	}
+	scope, err := s.ownerScope(ctx, owner, true)
+	if err != nil {
+		return 0, err
+	}
+	in := placeholders(len(scope))
 	now := s.now().UTC().Format(time.RFC3339Nano)
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -105,49 +127,34 @@ func (s *Store) Block(ctx context.Context, owner string) (int, error) {
 	// busy_timeout does not retry) when the usage flusher commits in between.
 	if _, err := tx.ExecContext(ctx,
 		`INSERT INTO blocked_owners(owner, owner_name, blocked_at)
-		 VALUES(?, COALESCE((SELECT owner_name FROM api_keys WHERE owner = ? AND owner_name <> ''
+		 VALUES(?, COALESCE((SELECT owner_name FROM api_keys WHERE owner IN (`+in+`) AND owner_name <> ''
 		                     ORDER BY rowid DESC LIMIT 1), ''), ?)
 		 ON CONFLICT(owner) DO NOTHING`,
-		owner, owner, now); err != nil {
+		append(append([]any{owner}, anyArgs(scope)...), now)...); err != nil {
 		return 0, fmt.Errorf("keys: block owner: %w", err)
 	}
 	rows, err := tx.QueryContext(ctx,
-		`UPDATE api_keys SET revoked_at = ? WHERE owner = ? AND revoked_at IS NULL RETURNING id, hash`, now, owner)
+		`UPDATE api_keys SET revoked_at = ?, revoked_by = ? WHERE owner IN (`+in+`) AND revoked_at IS NULL RETURNING id, hash`,
+		append([]any{now, by}, anyArgs(scope)...)...)
 	if err != nil {
 		return 0, fmt.Errorf("keys: block owner: %w", err)
 	}
-	type idHash struct{ id, hash string }
-	var gone []idHash
-	for rows.Next() {
-		var g idHash
-		if err := rows.Scan(&g.id, &g.hash); err != nil {
-			_ = rows.Close()
-			return 0, fmt.Errorf("keys: block owner: %w", err)
-		}
-		gone = append(gone, g)
-	}
-	if err := rows.Err(); err != nil {
-		_ = rows.Close()
+	gone, err := scanIDHashes(rows)
+	if err != nil {
 		return 0, fmt.Errorf("keys: block owner: %w", err)
 	}
-	_ = rows.Close()
 	if err := tx.Commit(); err != nil {
 		return 0, fmt.Errorf("keys: block owner: %w", err)
 	}
-	s.mu.Lock()
-	for _, g := range gone {
-		delete(s.byHash, g.hash)
-		delete(s.byID, g.id)
-	}
-	s.mu.Unlock()
-	s.log.Info("api_owner_blocked", "keys_revoked", len(gone), "actor", "operator")
+	s.unindex(gone)
+	s.log.Info("api_owner_blocked", "keys_revoked", len(gone), "actor", by)
 	return len(gone), nil
 }
 
 // PurgeOwner deletes every key row of owner (active and revoked), their usage and endpoint
 // usage rows and the owner's block-list entry, and drops them from the in-memory index and
 // counters at once. It returns the number of keys deleted; ErrNotFound when the owner has
-// no key row and no block-list entry.
+// no key row and no block-list entry. It is an exact-owner operation: it does not extend to an account's scope.
 func (s *Store) PurgeOwner(ctx context.Context, owner string) (int, error) {
 	if err := validateOwner(owner); err != nil {
 		return 0, err
@@ -175,21 +182,10 @@ func (s *Store) PurgeOwner(ctx context.Context, owner string) (int, error) {
 	if err != nil {
 		return 0, fmt.Errorf("keys: purge owner: %w", err)
 	}
-	type idHash struct{ id, hash string }
-	var gone []idHash
-	for rows.Next() {
-		var g idHash
-		if err := rows.Scan(&g.id, &g.hash); err != nil {
-			_ = rows.Close()
-			return 0, fmt.Errorf("keys: purge owner: %w", err)
-		}
-		gone = append(gone, g)
-	}
-	if err := rows.Err(); err != nil {
-		_ = rows.Close()
+	gone, err := scanIDHashes(rows)
+	if err != nil {
 		return 0, fmt.Errorf("keys: purge owner: %w", err)
 	}
-	_ = rows.Close()
 	res, err := tx.ExecContext(ctx, `DELETE FROM blocked_owners WHERE owner = ?`, owner)
 	if err != nil {
 		return 0, fmt.Errorf("keys: purge owner: %w", err)
@@ -202,29 +198,14 @@ func (s *Store) PurgeOwner(ctx context.Context, owner string) (int, error) {
 		return 0, fmt.Errorf("keys: purge owner: %w", err)
 	}
 
-	s.mu.Lock()
-	for _, g := range gone {
-		delete(s.byHash, g.hash)
-		delete(s.byID, g.id)
-	}
-	s.mu.Unlock()
-	s.usageMu.Lock()
-	for _, g := range gone {
-		delete(s.rows, g.id)
-		delete(s.eps, g.id)
-		delete(s.dirty, g.id)
-		delete(s.dirtyEp, g.id)
-		for _, sn := range s.pending {
-			delete(sn.rows, g.id)
-			delete(sn.eps, g.id)
-		}
-	}
-	s.usageMu.Unlock()
+	s.unindex(gone)
+	s.dropCounters(gone)
 	s.log.Info("api_owner_purged", "keys_deleted", len(gone), "actor", "operator")
 	return len(gone), nil
 }
 
-// Unblock lets owner create keys again; ErrNotFound when the owner is not blocked.
+// Unblock lets owner create keys again; ErrNotFound when the owner is not blocked. It is an exact-owner operation:
+// it removes the block entry of that owner id only, not of the rest of an account's scope.
 func (s *Store) Unblock(ctx context.Context, owner string) error {
 	if err := validateOwner(owner); err != nil {
 		return err
@@ -240,6 +221,50 @@ func (s *Store) Unblock(ctx context.Context, owner string) error {
 	}
 	s.log.Info("api_owner_unblocked", "actor", "operator")
 	return nil
+}
+
+// idHash is a key row's id and hash, as an UPDATE or DELETE … RETURNING id, hash yields them.
+type idHash struct{ id, hash string }
+
+// scanIDHashes reads every (id, hash) row and closes rows.
+func scanIDHashes(rows *sql.Rows) ([]idHash, error) {
+	defer rows.Close()
+	var out []idHash
+	for rows.Next() {
+		var g idHash
+		if err := rows.Scan(&g.id, &g.hash); err != nil {
+			return nil, err
+		}
+		out = append(out, g)
+	}
+	return out, rows.Err()
+}
+
+// unindex drops keys from the in-memory index, so they stop authenticating at once.
+func (s *Store) unindex(gone []idHash) {
+	s.mu.Lock()
+	for _, g := range gone {
+		delete(s.byHash, g.hash)
+		delete(s.byID, g.id)
+	}
+	s.mu.Unlock()
+}
+
+// dropCounters drops the in-memory counters of deleted keys, including snapshots still waiting to be written. The
+// caller holds flushMu, so no flush re-inserts rows for them.
+func (s *Store) dropCounters(gone []idHash) {
+	s.usageMu.Lock()
+	for _, g := range gone {
+		delete(s.rows, g.id)
+		delete(s.eps, g.id)
+		delete(s.dirty, g.id)
+		delete(s.dirtyEp, g.id)
+		for _, sn := range s.pending {
+			delete(sn.rows, g.id)
+			delete(sn.eps, g.id)
+		}
+	}
+	s.usageMu.Unlock()
 }
 
 // Blocked lists the blocked owners, most recently blocked first.

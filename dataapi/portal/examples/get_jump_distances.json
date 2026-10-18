@@ -1,0 +1,88 @@
+{
+  "tool": "get_jump_distances",
+  "request": {
+    "origin": "C-N4OD",
+    "systems": [
+      "Elonaya",
+      "Uchomida",
+      "Actee",
+      "Nakugard",
+      "Erkinen",
+      "Thera"
+    ]
+  },
+  "prompt": "How far are these ice systems from C-N4OD?",
+  "recorded": "2026-10-17",
+  "trimmed": false,
+  "response": {
+    "tool": "get_jump_distances",
+    "version": "sha-53503e9",
+    "result": {
+      "text": "Jumps from **C-N4OD** (shortest, any security), 5 systems:\n  Elonaya 26 j (+0.7 highsec)\n  Uchomida 26 j (+0.5 highsec)\n  Actee 27 j (+0.5 highsec)\n  Nakugard 28 j (+0.5 highsec)\n  Erkinen 29 j (+0.6 highsec)\nUnreachable by gates: Thera.",
+      "data": {
+        "origin": "C-N4OD",
+        "origin_id": 30004600,
+        "prefer_high_sec": false,
+        "avoid": [],
+        "distances": [
+          {
+            "system": "Elonaya",
+            "system_id": 30001399,
+            "jumps": 26,
+            "security": 0.665783,
+            "sec": "+0.7",
+            "class": "highsec",
+            "highsec_route": false
+          },
+          {
+            "system": "Uchomida",
+            "system_id": 30045321,
+            "jumps": 26,
+            "security": 0.494727,
+            "sec": "+0.5",
+            "class": "highsec",
+            "highsec_route": false
+          },
+          {
+            "system": "Actee",
+            "system_id": 30004981,
+            "jumps": 27,
+            "security": 0.501465,
+            "sec": "+0.5",
+            "class": "highsec",
+            "highsec_route": false
+          },
+          {
+            "system": "Nakugard",
+            "system_id": 30002068,
+            "jumps": 28,
+            "security": 0.520913,
+            "sec": "+0.5",
+            "class": "highsec",
+            "highsec_route": false
+          },
+          {
+            "system": "Erkinen",
+            "system_id": 30003078,
+            "jumps": 29,
+            "security": 0.592004,
+            "sec": "+0.6",
+            "class": "highsec",
+            "highsec_route": false
+          }
+        ],
+        "unreachable": [
+          "Thera"
+        ],
+        "unresolved": []
+      }
+    },
+    "attribution": [
+      {
+        "name": "EVE Static Data Export (via Fuzzwork)",
+        "url": "https://www.fuzzwork.co.uk/dump/",
+        "license": "CCP game data under the EVE Developer License Agreement; converted by Fuzzwork Enterprises"
+      }
+    ]
+  }
+}

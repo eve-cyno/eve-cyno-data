@@ -4,5 +4,38 @@
     "items": "Tritanium x1000\nPyerite x500"
   },
   "prompt": "Appraise 1000 Tritanium and 500 Pyerite.",
-  "note": "Request only: the call runs with your own Janice key and the project never holds one, so no response is recorded."
+  "recorded": "2026-10-14",
+  "trimmed": false,
+  "response": {
+    "tool": "appraise_items",
+    "version": "sha-d6e076d",
+    "result": {
+      "text": "**Estimated value (ESI average prices): 12,165.00 ISK**\nSource: EVE's average price per item from ESI (GET /markets/prices), as of 2026-10-14 14:23 UTC, refreshed once a day. This is an estimate, not live Jita buy or sell prices; a Janice appraisal gives those.\n  Pyerite x500 @ 16.87 = 8,435.00 ISK\n  Tritanium x1,000 @ 3.73 = 3,730.00 ISK",
+      "data": null
+    },
+    "attribution": [
+      {
+        "name": "ESI (EVE Swagger Interface)",
+        "url": "https://esi.evetech.net/",
+        "license": "EVE Developer License Agreement (CCP Games / Fenris Creations); non-commercial use"
+      },
+      {
+        "name": "EVE Static Data Export (via Fuzzwork)",
+        "url": "https://www.fuzzwork.co.uk/dump/",
+        "license": "CCP game data under the EVE Developer License Agreement; converted by Fuzzwork Enterprises"
+      },
+      {
+        "name": "Janice",
+        "url": "https://janice.e-351.com/",
+        "license": "Private API used with a key granted by its creator"
+      }
+    ]
+  },
+  "callouts": [
+    {
+      "kind": "note",
+      "title": "An estimate",
+      "text": "Without a Janice key the value comes from EVE's average prices (ESI, refreshed daily), not live Jita orders. Send your own Janice key in X-Janice-Key for a Janice appraisal."
+    }
+  ]
 }

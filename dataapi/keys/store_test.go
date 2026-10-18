@@ -45,10 +45,10 @@ func TestRevokeOnlyOwnKey(t *testing.T) {
 	require.ErrorIs(t, s.Revoke(bg, "eve:2", k.ID), keys.ErrNotFound)
 	_, err = s.Authenticate(bearer(secret))
 	require.NoError(t, err)
-	require.NoError(t, s.RevokeAny(bg, k.ID))
+	require.NoError(t, s.RevokeAny(bg, k.ID, ""))
 	_, err = s.Authenticate(bearer(secret))
 	require.ErrorIs(t, err, dataapi.ErrInvalidAPIKey)
-	require.ErrorIs(t, s.RevokeAny(bg, k.ID), keys.ErrNotFound)
+	require.ErrorIs(t, s.RevokeAny(bg, k.ID, ""), keys.ErrNotFound)
 }
 
 func TestNoKeyHeaderIsAnonymous(t *testing.T) {
@@ -186,7 +186,7 @@ func TestLogsCarryNoSecrets(t *testing.T) {
 	require.NoError(t, s.Revoke(bg, "eve:90000001", k.ID))
 	k2, _, err := s.Create(bg, "eve:90000001", "", "b")
 	require.NoError(t, err)
-	require.NoError(t, s.RevokeAny(bg, k2.ID))
+	require.NoError(t, s.RevokeAny(bg, k2.ID, ""))
 
 	out := buf.String()
 	require.Contains(t, out, "api_key_created")

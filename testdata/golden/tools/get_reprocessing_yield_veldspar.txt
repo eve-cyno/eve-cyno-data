@@ -2,4 +2,6 @@ Reprocessing yield: **1000× Veldspar** at 50% efficiency
 
 Material                      Quantity
 ---------------------------------------
-Tritanium                      200,000
+Tritanium                        2,000
+
+Reprocessed as 10 batches of 100 units.

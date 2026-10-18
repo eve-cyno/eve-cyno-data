@@ -350,7 +350,7 @@ func fmtThousands(n int) string {
 // Iterates killmails looking for a solar_system_id and resolves it via SDE.
 // Returns "" if no name can be resolved (SDE unavailable, no system IDs, etc.).
 func resolveSystemNameFromKillmails(s *sde.SDE, killmails []Killmail) string {
-	if s == nil || !s.Available() {
+	if !s.Available() {
 		return ""
 	}
 	for i := range killmails {

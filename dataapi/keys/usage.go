@@ -166,7 +166,7 @@ func (s *Store) prune(day string) error {
 // with their usage, so create-and-revoke loops cannot grow the database for ever. Their
 // ids are not in the in-memory index (revoking removed them).
 func (s *Store) pruneRevoked(end time.Time) error {
-	cutoff := end.AddDate(0, 0, -revokedRetainDays).Format(time.DateOnly)
+	cutoff := revokedCutoff(end)
 	for _, q := range []string{
 		`DELETE FROM key_usage WHERE key_id IN (SELECT id FROM api_keys WHERE revoked_at IS NOT NULL AND revoked_at < ?)`,
 		`DELETE FROM key_endpoint_usage WHERE key_id IN (SELECT id FROM api_keys WHERE revoked_at IS NOT NULL AND revoked_at < ?)`,

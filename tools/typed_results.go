@@ -11,7 +11,7 @@ import "eve-cyno.dev/go/data/rag"
 // ExecuteToolResult returns a pointer to one of these in Result.Data. The tools that do
 // not have one yet leave Data nil.
 
-// TypeInfo is the result of get_type_info (ESI /universe/types/{id}).
+// TypeInfo is the result of get_type_info (the local SDE, ESI /universe/types/{id} as fallback).
 type TypeInfo struct {
 	TypeID int    `json:"type_id"`
 	Name   string `json:"name"`
@@ -22,11 +22,17 @@ type TypeInfo struct {
 	GroupID     int     `json:"group_id"`
 }
 
-// MarketPrice is the result of get_market_price: the best open orders in The Forge.
+// MarketPrice is the result of get_market_price: the best open orders in The Forge, or at
+// one trade hub's main station when a hub was asked for.
 type MarketPrice struct {
-	TypeID   int    `json:"type_id"`
-	RegionID int    `json:"region_id"`
-	Market   string `json:"market"`
+	TypeID   int `json:"type_id"`
+	RegionID int `json:"region_id"`
+	// Market names what the numbers cover: "The Forge / Jita", "Global PLEX market" or a
+	// hub's station name.
+	Market string `json:"market"`
+	// Hub is the hub key the request named ("jita", "amarr", "dodixie", "rens", "hek"); ""
+	// for the region-wide default.
+	Hub string `json:"hub"`
 	// BestSellISK is the lowest sell price, null when there is no sell order.
 	BestSellISK *float64 `json:"best_sell_isk"`
 	SellOrders  int      `json:"sell_orders"`
@@ -38,15 +44,88 @@ type MarketPrice struct {
 // Route is the result of get_jumps_between: the path the text lists, system by system.
 // Data is nil when the text is an error (unknown system, no route, SDE not loaded).
 type Route struct {
+	// From is the origin: the SDE's canonical spelling in summary mode, as typed in route
+	// mode.
 	From string `json:"from"`
-	To   string `json:"to"`
+	// To is the destination: the SDE's canonical spelling in summary mode, as typed in
+	// route mode.
+	To string `json:"to"`
 	// PreferHighSec is the request flag; HighsecSatisfied is false when no pure-highsec
 	// route exists and the path is the any-sec fallback (the text says so).
 	PreferHighSec    bool `json:"prefer_high_sec"`
 	HighsecSatisfied bool `json:"highsec_satisfied"`
-	// Jumps is the hop count the text prints (len(systems)-1).
-	Jumps   int           `json:"jumps"`
+	// Jumps is the full jump count of the route, also when systems is capped (see hops_omitted).
+	Jumps int `json:"jumps"`
+	// Systems lists the stops, origin first: all of them for a route of up to 100 jumps, the
+	// first 101 stops (100 jumps) for a longer one; it is [] when Detail is "summary".
 	Systems []RouteSystem `json:"systems"`
+	// HopsOmitted is how many systems at the end of the route Systems leaves out because a route
+	// lists at most 100 jumps; 0 when all are listed (Jumps counts the whole route).
+	HopsOmitted int `json:"hops_omitted"`
+	// Detail is the requested output: "route" (the hop list) or "summary" (one line).
+	Detail string `json:"detail"`
+	// Via lists the systems the route passes through, in order, as the SDE spells them.
+	Via []string `json:"via"`
+	// Avoid lists the systems the route never enters, as the SDE spells them; the origin,
+	// destination and via stops are never avoided, so they are not listed.
+	Avoid []string `json:"avoid"`
+	// LowestSecurityHop is the least secure system the route enters (the origin does not
+	// count); null for a 0-jump route.
+	LowestSecurityHop *RouteSystem `json:"lowest_security_hop"`
+	// CountsByClass counts the systems the route enters, by security band.
+	CountsByClass ClassCounts `json:"counts_by_class"`
+	// HighsecOnlyJumps is the jump count of a highsec-only route with the same via and
+	// avoid; null when it was not computed (prefer_high_sec is true) or none exists.
+	HighsecOnlyJumps *int `json:"highsec_only_jumps"`
+}
+
+// ClassCounts counts systems by security band.
+type ClassCounts struct {
+	// Highsec counts the highsec systems entered, the origin excluded.
+	Highsec int `json:"highsec"`
+	// Lowsec counts the lowsec systems entered.
+	Lowsec int `json:"lowsec"`
+	// Nullsec counts the nullsec systems entered.
+	Nullsec int `json:"nullsec"`
+}
+
+// JumpDistances is the result of get_jump_distances: gate-jump counts from one origin.
+type JumpDistances struct {
+	// Origin is the origin system as the SDE spells it.
+	Origin string `json:"origin"`
+	// OriginID is the origin's solar system ID.
+	OriginID int `json:"origin_id"`
+	// PreferHighSec is the request flag.
+	PreferHighSec bool `json:"prefer_high_sec"`
+	// Avoid lists the systems no route passes through, origin excluded (a listed target
+	// still gets its own count, but no route passes through it).
+	Avoid []string `json:"avoid"`
+	// Distances is sorted by Jumps, then System: the order of the text lines.
+	Distances []JumpDistance `json:"distances"`
+	// Unreachable lists requested systems with no gate route (wormhole space, for one)
+	// from the origin, including those cut off by Avoid.
+	Unreachable []string `json:"unreachable"`
+	// Unresolved lists requested names that are not solar systems.
+	Unresolved []string `json:"unresolved"`
+}
+
+// JumpDistance is one reachable system of a JumpDistances result.
+type JumpDistance struct {
+	// System is the system name as the SDE spells it.
+	System string `json:"system"`
+	// SystemID is the solar system ID.
+	SystemID int `json:"system_id"`
+	// Jumps is the gate-jump count from the origin (0 for the origin itself).
+	Jumps int `json:"jumps"`
+	// Security is the true security status (the text prints it rounded).
+	Security float64 `json:"security"`
+	// Sec is the security exactly as the text prints it ("+0.9").
+	Sec string `json:"sec"`
+	// Class is the text's band: "highsec", "lowsec" or "nullsec".
+	Class string `json:"class"`
+	// HighsecRoute is true when Jumps counts a highsec-only route (prefer_high_sec and
+	// one exists).
+	HighsecRoute bool `json:"highsec_route"`
 }
 
 // RouteSystem is one stop on a Route, origin first.
@@ -279,4 +358,438 @@ type FitListRow struct {
 	Tags        []string        `json:"tags"`
 	SourceURL   string          `json:"source_url"`
 	Attribution rag.Attribution `json:"attribution"`
+}
+
+// SovereigntyList is the result of get_sovereignty for a list of systems.
+type SovereigntyList struct {
+	// Systems holds one row per resolved system, in request order, duplicates collapsed.
+	Systems []SystemSovereignty `json:"systems"`
+	// Unresolved lists requested names that are not solar systems.
+	Unresolved []string `json:"unresolved"`
+	// NamesUnavailable is true when ESI could not name some alliance or corporation; the
+	// text shows "?" there and the ids stay in the rows.
+	NamesUnavailable bool `json:"names_unavailable"`
+}
+
+// SystemSovereignty is one row of a SovereigntyList.
+type SystemSovereignty struct {
+	// System is the system name as the SDE spells it.
+	System string `json:"system"`
+	// SystemID is the solar system ID.
+	SystemID int `json:"system_id"`
+	// Status is "alliance", "faction", "unclaimed", "wormhole" (no sovereignty in
+	// wormhole space) or "none" (ESI lists no entry for the system).
+	Status string `json:"status"`
+	// AllianceID is the holding alliance, null unless Status is "alliance".
+	AllianceID *int `json:"alliance_id"`
+	// Alliance is the alliance name, null when there is no alliance or ESI gave no name.
+	Alliance *string `json:"alliance"`
+	// CorporationID is the corporation that holds the claim for the alliance, null if none.
+	CorporationID *int `json:"corporation_id"`
+	// Corporation is the corporation name, null when there is none or ESI gave no name.
+	Corporation *string `json:"corporation"`
+	// FactionID is the NPC faction holding the system, null unless Status is "faction".
+	FactionID *int `json:"faction_id"`
+	// Faction is the NPC faction name from the SDE, null when there is none.
+	Faction *string `json:"faction"`
+}
+
+// ActivityList is the result of get_system_activity for a list of systems.
+type ActivityList struct {
+	// Systems holds one row per resolved system, in request order, duplicates collapsed.
+	Systems []SystemActivity `json:"systems"`
+	// Unresolved lists requested names that are not solar systems.
+	Unresolved []string `json:"unresolved"`
+}
+
+// SystemActivity is one row of an ActivityList: the last hour in one system. A system
+// missing from an ESI list counts 0.
+type SystemActivity struct {
+	// System is the system name as the SDE spells it.
+	System string `json:"system"`
+	// SystemID is the solar system ID.
+	SystemID int `json:"system_id"`
+	// Jumps is the number of ship jumps through the system's gates in the last hour.
+	Jumps int `json:"jumps"`
+	// ShipKills is the number of ships killed in the last hour.
+	ShipKills int `json:"ship_kills"`
+	// PodKills is the number of pods killed in the last hour.
+	PodKills int `json:"pod_kills"`
+	// NPCKills is the number of NPCs killed in the last hour.
+	NPCKills int `json:"npc_kills"`
+}
+
+// AveragePrices is the result of get_average_prices: ESI's daily average price per item.
+type AveragePrices struct {
+	// AsOf is the date (YYYY-MM-DD, UTC) of the price list the numbers come from; null
+	// when no price list was read (every item was unknown).
+	AsOf *string `json:"as_of"`
+	// Source names the upstream: "ESI /markets/prices".
+	Source string `json:"source"`
+	// Prices has one row per distinct item, in the order first asked.
+	Prices []AveragePrice `json:"prices"`
+	// Unresolved lists names that are not items, and type IDs that are not in the SDE or
+	// not whole numbers (as "type_id N"); names are listed trimmed.
+	Unresolved []string `json:"unresolved"`
+}
+
+// AveragePrice is one row of an AveragePrices result.
+type AveragePrice struct {
+	// TypeID is the item's type ID.
+	TypeID int `json:"type_id"`
+	// Name is the item name as the SDE spells it.
+	Name string `json:"name"`
+	// AverageISK is EVE's average price in ISK, null when the item has none.
+	AverageISK *float64 `json:"average_isk"`
+}
+
+// MarketHistory is the result of get_market_history: one item's daily market history in
+// one region, summarised per day or per ISO week.
+type MarketHistory struct {
+	// TypeID is the item's type ID.
+	TypeID int `json:"type_id"`
+	// Name is the item name as the SDE spells it.
+	Name string `json:"name"`
+	// RegionID is the region the history is from (the global PLEX market for PLEX).
+	RegionID int `json:"region_id"`
+	// Region is the region's name.
+	Region string `json:"region"`
+	// Hub is the hub key the request named ("jita", "amarr", "dodixie", "rens", "hek"); ""
+	// when a region or the default was used, and for PLEX.
+	Hub string `json:"hub"`
+	// Days is the length of the window in calendar days, ending at the newest day ESI has.
+	Days int `json:"days"`
+	// WindowEnd is the last day of the window, the newest day ESI has (YYYY-MM-DD); not today.
+	WindowEnd string `json:"window_end"`
+	// Bucket is the bucket size: "day" or "week".
+	Bucket string `json:"bucket"`
+	// Buckets are the rows, oldest first. Days on which nothing traded have no row.
+	Buckets []HistoryBucket `json:"buckets"`
+	// Summary covers the whole window.
+	Summary HistorySummary `json:"summary"`
+}
+
+// HistoryBucket is one day, or one ISO week (Monday to Sunday) clipped to the window.
+type HistoryBucket struct {
+	// Start is the first day of the bucket (YYYY-MM-DD).
+	Start string `json:"start"`
+	// End is the last day of the bucket (YYYY-MM-DD); equal to Start for a day.
+	End string `json:"end"`
+	// AverageISK is the daily average price weighted by volume (the plain mean when no
+	// volume traded).
+	AverageISK float64 `json:"average_isk"`
+	// LowestISK is the lowest price of any day in the bucket.
+	LowestISK float64 `json:"lowest_isk"`
+	// HighestISK is the highest price of any day in the bucket.
+	HighestISK float64 `json:"highest_isk"`
+	// Volume is the units traded in the bucket.
+	Volume int64 `json:"volume"`
+	// OrderCount is the number of orders, summed over the days of the bucket.
+	OrderCount int64 `json:"order_count"`
+}
+
+// HistorySummary covers the whole window of a MarketHistory.
+type HistorySummary struct {
+	// AverageISK is the average price over the window, weighted by volume.
+	AverageISK float64 `json:"average_isk"`
+	// LowestISK is the lowest price in the window.
+	LowestISK float64 `json:"lowest_isk"`
+	// HighestISK is the highest price in the window.
+	HighestISK float64 `json:"highest_isk"`
+	// Volume is the units traded in the window.
+	Volume int64 `json:"volume"`
+	// ChangePct is the change of the average price from the first to the last bucket in
+	// percent, null when there is only one bucket or the first bucket's average is 0.
+	ChangePct *float64 `json:"change_pct"`
+}
+
+// SystemList is the result of find_systems: one page of the systems that match the filters.
+type SystemList struct {
+	// Total is the number of systems that match, before paging.
+	Total int `json:"total"`
+	// Offset is the number of matches skipped.
+	Offset int `json:"offset"`
+	// Shown is the number of rows in Systems.
+	Shown int `json:"shown"`
+	// Sort is the order used: "jumps", "security" (most secure first), "name" or "ly".
+	Sort string `json:"sort"`
+	// Origin is the system the jumps or the jump range are counted from (near.origin or jump_range.origin); "" without either.
+	Origin string `json:"origin"`
+	// Systems is the page, in the order of the text lines.
+	Systems []SystemRow `json:"systems"`
+	// JumpRange echoes the jump_range filter; null without it.
+	JumpRange *JumpRangeEcho `json:"jump_range"`
+}
+
+// JumpRangeEcho is the jump_range filter of a find_systems call as the tool resolved it.
+type JumpRangeEcho struct {
+	// Origin is the origin system as the SDE spells it.
+	Origin string `json:"origin"`
+	// Ship is the hull (or "Ansiblex Jump Bridge") as the SDE spells it.
+	Ship string `json:"ship"`
+	// RangeLY is the jump range in light-years that the filter used.
+	RangeLY float64 `json:"range_ly"`
+	// JumpDriveCalibration is the Jump Drive Calibration level behind RangeLY; null for the Ansiblex, which no skill affects.
+	JumpDriveCalibration *int `json:"jump_drive_calibration"`
+}
+
+// SystemRow is one find_systems match.
+type SystemRow struct {
+	// ID is the solar system ID.
+	ID int `json:"id"`
+	// Name is the system name as the SDE spells it.
+	Name string `json:"name"`
+	// Security is the true security status (the text prints it rounded).
+	Security float64 `json:"security"`
+	// Sec is the security exactly as the text prints it ("+0.9").
+	Sec string `json:"sec"`
+	// Class is the text's band: "highsec", "lowsec" or "nullsec".
+	Class string `json:"class"`
+	// Region is the region name.
+	Region string `json:"region"`
+	// Constellation is the constellation name.
+	Constellation string `json:"constellation"`
+	// Jumps is the gate-jump count from the origin; null without near.
+	Jumps *int `json:"jumps"`
+	// HighsecRoute is true when near.prefer_high_sec was set and the jump count follows a
+	// highsec-only route, false when it fell back to any space (and for an origin that is
+	// not itself highsec); null without prefer_high_sec.
+	HighsecRoute *bool `json:"highsec_route"`
+	// NPCStations is the number of NPC stations.
+	NPCStations int `json:"npc_stations"`
+	// Belts is the number of asteroid belts.
+	Belts int `json:"belts"`
+	// IceTypes lists the ice types EVE University's list gives for the system; empty when
+	// the system is not listed.
+	IceTypes []string `json:"ice_types"`
+	// LY is the distance in light-years from jump_range.origin, to 3 decimals; null without jump_range.
+	LY *float64 `json:"ly"`
+}
+
+// SystemInfoList is the result of get_system_info.
+type SystemInfoList struct {
+	// Systems holds one row per resolved system, in request order, duplicates collapsed.
+	Systems []SystemInfo `json:"systems"`
+	// Unresolved lists requested names that are not solar systems.
+	Unresolved []string `json:"unresolved"`
+	// NotEnterable lists requested systems that exist but lie in space players cannot enter (the
+	// Jove regions and the market pseudo-region); they have no profile.
+	NotEnterable []string `json:"not_enterable"`
+}
+
+// SystemInfo is the profile of one solar system.
+type SystemInfo struct {
+	// ID is the solar system ID.
+	ID int `json:"id"`
+	// Name is the system name as the SDE spells it.
+	Name string `json:"name"`
+	// Security is the true security status (the text prints it rounded).
+	Security float64 `json:"security"`
+	// Sec is the security exactly as the text prints it ("+0.9").
+	Sec string `json:"sec"`
+	// Class is the text's band: "highsec", "lowsec" or "nullsec".
+	Class string `json:"class"`
+	// Region is the region name.
+	Region string `json:"region"`
+	// Constellation is the constellation name.
+	Constellation string `json:"constellation"`
+	// Faction is the faction the system, its constellation or its region belongs to; null for none.
+	Faction *string `json:"faction"`
+	// WormholeClass is the wormhole class (1-6 C1-C6, 7 highsec, 8 lowsec, 9 nullsec, 12 Thera,
+	// 13 shattered frigate holes, 14-18 Drifter, 25 Pochven); null for none.
+	WormholeClass *int `json:"wormhole_class"`
+	// WormholeEffect is the system effect of a wormhole system (for example "Pulsar"); null for none.
+	WormholeEffect *string `json:"wormhole_effect"`
+	// Neighbours lists the systems the stargates lead to, sorted by name.
+	Neighbours []string `json:"neighbours"`
+	// Gates is the number of stargates.
+	Gates int `json:"gates"`
+	// Belts is the number of asteroid belts.
+	Belts int `json:"belts"`
+	// Moons is the number of moons.
+	Moons int `json:"moons"`
+	// Planets is the number of planets.
+	Planets int `json:"planets"`
+	// PlanetsByType counts planets per type name ("Gas", "Ice", ...).
+	PlanetsByType map[string]int `json:"planets_by_type"`
+	// NPCStations is the number of NPC stations.
+	NPCStations int `json:"npc_stations"`
+	// StationServices lists the services the system's NPC stations offer, sorted.
+	StationServices []string `json:"station_services"`
+	// IceBelt is the system's entry in EVE University's ice list; null when not listed
+	// (nullsec ice systems are not covered).
+	IceBelt *IceBelt `json:"ice_belt"`
+}
+
+// TheraConnections is the result of get_thera_connections: live wormhole connections from
+// Thera and Turnur (EvE-Scout / Signal Cartel).
+type TheraConnections struct {
+	// AsOf is the time of the EvE-Scout copy the answer is built from (RFC 3339, UTC).
+	AsOf string `json:"as_of"`
+	// Hub is the hub filter the request used: "thera", "turnur" or "all".
+	Hub string `json:"hub"`
+	// Origin is the system the jumps are counted from; empty without near.
+	Origin string `json:"origin"`
+	// Total is the number of connections that match, before the limit.
+	Total int `json:"total"`
+	// Shown is the number of connections in Connections.
+	Shown int `json:"shown"`
+	// LeftOut counts the exits that near left out because they have no gate route from the origin.
+	LeftOut int `json:"left_out"`
+	// Connections are the rows: nearest first with near, else Thera before Turnur, then by system name.
+	Connections []TheraConnection `json:"connections"`
+}
+
+// TheraConnection is one wormhole from Thera or Turnur.
+type TheraConnection struct {
+	// Hub is the hub the wormhole leaves from: "Thera" or "Turnur".
+	Hub string `json:"hub"`
+	// HubSignature is the signature id in the hub system.
+	HubSignature string `json:"hub_signature"`
+	// System is the exit system (as the SDE spells it for known space).
+	System string `json:"system"`
+	// SystemID is the exit system's solar system ID.
+	SystemID int `json:"system_id"`
+	// SystemClass is EvE-Scout's class of the exit: "hs", "ls", "ns" or a wormhole class such as "c2".
+	SystemClass string `json:"system_class"`
+	// Security is the exit's true security status; null in wormhole space.
+	Security *float64 `json:"security"`
+	// Sec is the security exactly as the text prints it ("+0.5"); null in wormhole space.
+	Sec *string `json:"sec"`
+	// Region is the exit's region name.
+	Region string `json:"region"`
+	// Signature is the signature id in the exit system.
+	Signature string `json:"signature"`
+	// WormholeType is the wormhole type code (for example "V898").
+	WormholeType string `json:"wormhole_type"`
+	// MaxShipSize is the largest ship class that fits through ("medium", "large", "xlarge", "capital").
+	MaxShipSize string `json:"max_ship_size"`
+	// ExpiresAt is when the wormhole is expected to collapse (RFC 3339, UTC).
+	ExpiresAt string `json:"expires_at"`
+	// RemainingHours is the whole hours left, rounded down, computed from expires_at when the answer is served.
+	RemainingHours int `json:"remaining_hours"`
+	// Jumps is the gate distance from the near origin; null without near.
+	Jumps *int `json:"jumps"`
+}
+
+// IceBelt is a system's entry in EVE University's list of ice belt systems (CC BY-SA 4.0).
+type IceBelt struct {
+	// Belts are the wiki belt pages that list the system.
+	Belts []string `json:"belts"`
+	// IceTypes are the ice types found in the system.
+	IceTypes []string `json:"ice_types"`
+	// SourceURLs are the wiki pages the entry comes from.
+	SourceURLs []string `json:"source_urls"`
+}
+
+// JumpRoute is the result of plan_jump_route: a jump-drive route (or an Ansiblex chain) planned from the SDE.
+type JumpRoute struct {
+	// Origin is the start system as the SDE spells it.
+	Origin string `json:"origin"`
+	// OriginID is the start system's solar system ID.
+	OriginID int `json:"origin_id"`
+	// Destination is the last stop as the SDE spells it.
+	Destination string `json:"destination"`
+	// DestinationID is the destination's solar system ID.
+	DestinationID int `json:"destination_id"`
+	// Waypoints are the requested waypoints as the SDE spells them, in order.
+	Waypoints []string `json:"waypoints"`
+	// Ship is the hull (or "Ansiblex Jump Bridge") as the SDE spells it.
+	Ship string `json:"ship"`
+	// ShipGroup is the SDE group of the hull, e.g. "Jump Freighter" or "Upwell Jump Bridge".
+	ShipGroup string `json:"ship_group"`
+	// Skills are the skill levels the numbers assume; null for the Ansiblex, which no skill affects.
+	Skills *JumpSkillLevels `json:"skills"`
+	// RangeLY is the range of one jump in light-years.
+	RangeLY float64 `json:"range_ly"`
+	// FuelType is the isotope the hull burns; null for the Ansiblex.
+	FuelType *string `json:"fuel_type"`
+	// FuelPerLY is the fuel burned per light-year at these skills, before Jump Drive Economizers; null for the Ansiblex.
+	FuelPerLY *float64 `json:"fuel_per_ly"`
+	// Jumps is the number of hops (0 when origin and destination are the same system).
+	Jumps int `json:"jumps"`
+	// TotalLY is the summed hop length in light-years, to 3 decimals.
+	TotalLY float64 `json:"total_ly"`
+	// TotalFuel is the summed fuel of the hops, each rounded to a whole unit; null for the Ansiblex.
+	TotalFuel *int `json:"total_fuel"`
+	// FuelVolumeM3 is the volume of TotalFuel in cubic metres, to 1 decimal; null for the Ansiblex.
+	FuelVolumeM3 *float64 `json:"fuel_volume_m3"`
+	// CanBridge is true when the hull can open a jump portal for other ships over the same hops.
+	CanBridge bool `json:"can_bridge"`
+	// CanConduit is true when the hull can conduit jump with passengers over the same hops.
+	CanConduit bool `json:"can_conduit"`
+	// PreferStations is the request flag: among the routes with the fewest jumps, fewest hops ending in a system without an NPC station.
+	PreferStations bool `json:"prefer_stations"`
+	// Avoid lists the systems no hop ends in, as the SDE spells them, in request order.
+	Avoid []string `json:"avoid"`
+	// AvoidRegions lists the regions no hop ends in, as the SDE spells them, in request order.
+	AvoidRegions []string `json:"avoid_regions"`
+	// AvoidIncursions is the request flag: no hop ends in a system with an active incursion (read live from ESI).
+	AvoidIncursions bool `json:"avoid_incursions"`
+	// IncursionSystems lists how many systems ESI reports as infested when avoid_incursions read the incursions; 0 when nothing was read (no flag, or a same-system answer).
+	IncursionSystems int `json:"incursion_systems"`
+	// LiveInfo is the request flag: each hop carries live sovereignty and activity.
+	LiveInfo bool `json:"live_info"`
+	// LiveUnavailable is the answer text of the ESI read that failed when live_info could not be added; null otherwise.
+	LiveUnavailable *string `json:"live_unavailable"`
+	// Hops are hops 1..n in order; the origin is not a hop.
+	Hops []JumpRouteHop `json:"hops"`
+}
+
+// JumpHopLive is the live ESI profile of one hop system (live_info).
+type JumpHopLive struct {
+	// Sovereignty is the holder: the alliance name, "alliance <id>" when ESI gave no name, the faction name, or "none".
+	Sovereignty string `json:"sovereignty"`
+	// AllianceID is the holding alliance's ID; null when no alliance holds the system.
+	AllianceID *int `json:"alliance_id"`
+	// FactionID is the holding faction's ID; null when no faction holds the system.
+	FactionID *int `json:"faction_id"`
+	// Jumps is the number of ship jumps through the system in the last hour.
+	Jumps int `json:"jumps"`
+	// ShipKills is the number of ships destroyed in the system in the last hour.
+	ShipKills int `json:"ship_kills"`
+	// PodKills is the number of pods destroyed in the system in the last hour.
+	PodKills int `json:"pod_kills"`
+	// NPCKills is the number of NPC ships destroyed in the system in the last hour.
+	NPCKills int `json:"npc_kills"`
+}
+
+// JumpSkillLevels are the skill levels (0-5) a JumpRoute assumes.
+type JumpSkillLevels struct {
+	// JumpDriveCalibration is the Jump Drive Calibration level, which lengthens the range.
+	JumpDriveCalibration int `json:"jump_drive_calibration"`
+	// JumpFuelConservation is the Jump Fuel Conservation level, which cuts the fuel use.
+	JumpFuelConservation int `json:"jump_fuel_conservation"`
+	// JumpFreighters is the Jump Freighters level; null unless the hull is a jump freighter.
+	JumpFreighters *int `json:"jump_freighters"`
+}
+
+// JumpRouteHop is one hop of a JumpRoute.
+type JumpRouteHop struct {
+	// N is the hop number, from 1.
+	N int `json:"n"`
+	// System is the system the hop ends in, as the SDE spells it.
+	System string `json:"system"`
+	// SystemID is that system's solar system ID.
+	SystemID int `json:"system_id"`
+	// Region is the system's region.
+	Region string `json:"region"`
+	// Security is the true security status.
+	Security float64 `json:"security"`
+	// Sec is the displayed security as printed in the text, e.g. "+0.4".
+	Sec string `json:"sec"`
+	// Class is "lowsec" or "nullsec" (a hop never ends in highsec).
+	Class string `json:"class"`
+	// NPCStations is the number of NPC stations in the system.
+	NPCStations int `json:"npc_stations"`
+	// LY is the length of the hop in light-years, to 3 decimals.
+	LY float64 `json:"ly"`
+	// GateJumps is the stargate jumps between the same two systems; null when no gate route connects them.
+	GateJumps *int `json:"gate_jumps"`
+	// Fuel is the fuel of the hop, a whole number of units; null for the Ansiblex.
+	Fuel *int `json:"fuel"`
+	// Waypoint is true when the hop ends at a requested waypoint.
+	Waypoint bool `json:"waypoint"`
+	// Live is the hop system's live ESI profile; null unless live_info was set and ESI answered.
+	Live *JumpHopLive `json:"live"`
 }

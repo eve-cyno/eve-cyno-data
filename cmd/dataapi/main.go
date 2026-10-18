@@ -20,7 +20,7 @@
 // The tool endpoint and the MCP endpoint apply the same tool tiers (core/catalog): public
 // tools for anyone (the SDE lookups and the ESI pass-throughs, the latter with a lower
 // per-caller limit), keyed tools (analyze_battle)
-// only with a valid API key, appraise_items only with the caller's own Janice key in the
+// only with a valid API key, appraise_items with the caller's optional Janice key in the
 // X-Janice-Key header (never the project's), and disabled tools (convert_isk_to_real) never.
 // An API key is sent as "Authorization: Bearer <key>" or "X-API-Key: <key>". Each document
 // describes exactly the endpoints this process serves.
@@ -46,8 +46,11 @@
 //	                          it is configured but down, fit search answers 502 "upstream_error"
 //	                          per request and /v1/health still reports corpus:true
 //	DATAAPI_UPSTREAM_TOOL_LIMIT  calls per minute per caller without an API key of the tools that
-//	                          read live ESI data (get_market_price, get_type_info,
-//	                          get_sovereignty, get_system_activity), REST and MCP together
+//	                          read live data (get_market_price, get_type_info,
+//	                          get_sovereignty, get_system_activity, get_market_history from
+//	                          ESI, plan_jump_route from ESI only when avoid_incursions or
+//	                          live_info is set, get_thera_connections from EvE-Scout),
+//	                          REST and MCP together
 //	                          (default 5; a caller with a key gets twice as many; 0 = no extra
 //	                          limit)
 //	DATAAPI_ESI_GUARD_PERCENT share (0-90, default 25) of every ESI rate-limit group's tokens

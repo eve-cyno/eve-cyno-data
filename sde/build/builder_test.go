@@ -121,6 +121,8 @@ func minimalFuzzwork(t *testing.T) *fakeFuzzwork {
 		"chrRaces":                      "raceID,raceName,description,iconID,shortDescription\n2,Minmatar,Warriors,0,Speed and agility\n",
 		"chrCloneGrades":                "cloneGradeID,name\n1,Alpha Caldari\n",
 		"chrCloneGradeSkills":           "cloneGradeID,typeID,level\n1,3300,5\n",
+		"mapDenormalize":                "itemID,typeID,groupID,solarSystemID\n",
+		"mapLocationWormholeClasses":    "locationID,wormholeClassID\n",
 		"industryActivity":              "typeID,activityID,time\n587,1,3600\n",
 		"industryActivityMaterials":     "typeID,activityID,materialTypeID,quantity\n587,1,34,100\n",
 		"industryActivityProducts":      "typeID,activityID,productTypeID,quantity,probability\n587,1,588,1,\n",
@@ -358,7 +360,7 @@ func TestBuildSQLite_NullHandling(t *testing.T) {
 	// Minimal fake: only the tables we need to check NULL handling.
 	fw := &fakeFuzzwork{
 		tables: map[string]string{
-			"invTypes": "typeID,groupID,typeName,published\n100,,MyType,0\n",
+			"invTypes": "typeID,groupID,typeName,description,published,portionSize,marketGroupID\n100,,MyType,,0,,\n",
 			// All other curated tables are empty (header only).
 			"dgmTypeAttributes":             "typeID,attributeID,valueInt,valueFloat\n",
 			"dgmTypeEffects":                "typeID,effectID,isDefault\n",
@@ -371,12 +373,14 @@ func TestBuildSQLite_NullHandling(t *testing.T) {
 			"chrRaces":                      "raceID,raceName,shortDescription\n",
 			"chrCloneGrades":                "cloneGradeID,name\n1,Alpha Caldari\n",
 			"chrCloneGradeSkills":           "cloneGradeID,typeID,level\n1,3300,5\n",
+			"mapDenormalize":                "itemID,typeID,groupID,solarSystemID\n",
+			"mapLocationWormholeClasses":    "locationID,wormholeClassID\n",
 			"industryActivity":              "typeID,activityID,time\n",
 			"industryActivityMaterials":     "typeID,activityID,materialTypeID,quantity\n",
 			"industryActivityProducts":      "typeID,activityID,productTypeID,quantity,probability\n",
 			"industryActivitySkills":        "typeID,activityID,skillID,level\n",
 			"invTypeMaterials":              "typeID,materialTypeID,quantity\n",
-			"mapSolarSystems":               "solarSystemID,regionID,constellationID,solarSystemName,security,securityClass,factionID\n",
+			"mapSolarSystems":               "solarSystemID,regionID,constellationID,solarSystemName,security,securityClass,factionID,x,y,z\n",
 			"mapSolarSystemJumps":           "fromSolarSystemID,toSolarSystemID\n",
 			"mapRegions":                    "regionID,regionName,factionID\n",
 			"mapConstellations":             "constellationID,regionID,constellationName,factionID\n",
@@ -488,7 +492,7 @@ func TestPublishGate_RejectsMissingRequiredColumn(t *testing.T) {
 	require.NoError(t, err)
 	defer db.Close()
 	for _, ddl := range []string{
-		`CREATE TABLE invTypes (typeID INTEGER PRIMARY KEY, groupID INTEGER, typeName TEXT, published INTEGER, mass REAL, volume REAL, capacity REAL)`,
+		`CREATE TABLE invTypes (typeID INTEGER PRIMARY KEY, groupID INTEGER, typeName TEXT, published INTEGER, mass REAL, volume REAL, capacity REAL, portionSize INTEGER, marketGroupID INTEGER)`,
 		`CREATE TABLE dgmEffects (effectID INTEGER PRIMARY KEY, effectName TEXT, effectCategory INTEGER, displayName TEXT, published INTEGER)`,
 		`CREATE TABLE dgmAttributeTypes (attributeID INTEGER PRIMARY KEY, attributeName TEXT, displayName TEXT, unitID INTEGER, published INTEGER)`,
 	} {
@@ -508,4 +512,67 @@ func TestPublishGate_PassesCompleteBuild(t *testing.T) {
 	require.NoError(t, buildSQLite(context.Background(), dst, minimalFuzzwork(t), fixtureGate))
 
 	require.NoError(t, fixtureGate.check(context.Background(), openRO(t, dst)))
+}
+
+// A curated table keeps every CSV column: the typed ones with their declared
+// types, every other one as TEXT after them (including a column added upstream
+// that the schema has never heard of).
+func TestBuildSQLite_CuratedTableKeepsEveryCSVColumn(t *testing.T) {
+	fw := minimalFuzzwork(t)
+	fw.tables["invTypes"] = csvTable(t, append(append([]string{}, invTypesHeader...), "brandNewColumn", "TYPENAME"),
+		map[string]string{"typeID": "587", "groupID": "25", "typeName": "Rifter", "description": "A fast frigate",
+			"mass": "1067000.0", "volume": "27289.0", "capacity": "140.0", "published": "1",
+			"portionSize": "1", "basePrice": "0", "marketGroupID": "61", "iconID": "", "brandNewColumn": "x"})
+	// Renamed typed columns (typeID -> blueprint_typeID) must not collide with extras.
+	fw.tables["industryActivityMaterials"] = "typeID,activityID,materialTypeID,quantity,consumed\n587,1,34,100,1\n"
+
+	dst := filepath.Join(t.TempDir(), "sde.sqlite")
+	require.NoError(t, buildSQLite(context.Background(), dst, fw, fixtureGate))
+	db := openRO(t, dst)
+
+	// Typed columns first with their declared types, then the rest as TEXT in header order.
+	rows, err := db.Query("PRAGMA table_info(invTypes)")
+	require.NoError(t, err)
+	defer rows.Close()
+	var names, types []string
+	for rows.Next() {
+		var cid, notNull, pk int
+		var name, typ string
+		var dflt any
+		require.NoError(t, rows.Scan(&cid, &name, &typ, &notNull, &dflt, &pk))
+		names = append(names, name)
+		types = append(types, typ)
+	}
+	require.NoError(t, rows.Err())
+	require.Equal(t, []string{"typeID", "groupID", "typeName", "published", "mass", "volume", "capacity",
+		"description", "portionSize", "raceID", "basePrice", "marketGroupID", "iconID", "soundID", "graphicID",
+		"factionID", "metaLevel", "techLevel", "shipTreeGroupID", "packagedVolume", "isDynamicType", "isRepackable",
+		"brandNewColumn", "TYPENAME_2"}, names)
+	require.Equal(t, []string{"INTEGER", "INTEGER", "TEXT", "INTEGER", "REAL", "REAL", "REAL"}, types[:7])
+	for _, ty := range types[7:] {
+		require.Equal(t, "TEXT", ty)
+	}
+
+	var desc, portion, market, newCol string
+	var icon *string
+	var mass float64
+	require.NoError(t, db.QueryRow(
+		"SELECT description, portionSize, marketGroupID, brandNewColumn, iconID, mass FROM invTypes WHERE typeID=587").
+		Scan(&desc, &portion, &market, &newCol, &icon, &mass))
+	require.Equal(t, "A fast frigate", desc)
+	require.Equal(t, "1", portion)
+	require.Equal(t, "61", market)
+	require.Equal(t, "x", newCol)
+	require.Nil(t, icon, "empty extra cell is NULL")
+	require.InDelta(t, 1067000.0, mass, 0.001)
+
+	// The table keeps its indexes and a renamed-column table keeps its extra column.
+	var idx int
+	require.NoError(t, db.QueryRow("SELECT COUNT(*) FROM sqlite_master WHERE type='index' AND name='idx_invTypes_name'").Scan(&idx))
+	require.Equal(t, 1, idx)
+	var bp, mat, qty int
+	var consumed string
+	require.NoError(t, db.QueryRow("SELECT blueprint_typeID, material_typeID, quantity, consumed FROM industryActivityMaterials").
+		Scan(&bp, &mat, &qty, &consumed))
+	require.Equal(t, []any{587, 34, 100, "1"}, []any{bp, mat, qty, consumed})
 }

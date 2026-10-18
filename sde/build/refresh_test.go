@@ -38,7 +38,7 @@ func (f *fakeRemote) ListTables(ctx context.Context) ([]string, error) {
 // header-only (no data rows), and a single generic table for phase 2.
 func allCuratedEmpty() map[string]string {
 	return map[string]string{
-		"invTypes":                      "typeID,groupID,typeName,published\n",
+		"invTypes":                      "typeID,groupID,typeName,description,published,portionSize,marketGroupID\n",
 		"dgmTypeAttributes":             "typeID,attributeID,valueInt,valueFloat\n",
 		"dgmTypeEffects":                "typeID,effectID,isDefault\n",
 		"dgmEffects":                    "effectID,effectName,effectCategory,displayName,published\n",
@@ -50,12 +50,14 @@ func allCuratedEmpty() map[string]string {
 		"chrRaces":                      "raceID,raceName,shortDescription\n",
 		"chrCloneGrades":                "cloneGradeID,name\n1,Alpha Caldari\n",
 		"chrCloneGradeSkills":           "cloneGradeID,typeID,level\n1,3300,5\n",
+		"mapDenormalize":                "itemID,typeID,groupID,solarSystemID\n",
+		"mapLocationWormholeClasses":    "locationID,wormholeClassID\n",
 		"industryActivity":              "typeID,activityID,time\n",
 		"industryActivityMaterials":     "typeID,activityID,materialTypeID,quantity\n",
 		"industryActivityProducts":      "typeID,activityID,productTypeID,quantity,probability\n",
 		"industryActivitySkills":        "typeID,activityID,skillID,level\n",
 		"invTypeMaterials":              "typeID,materialTypeID,quantity\n",
-		"mapSolarSystems":               "solarSystemID,regionID,constellationID,solarSystemName,security,securityClass,factionID\n",
+		"mapSolarSystems":               "solarSystemID,regionID,constellationID,solarSystemName,security,securityClass,factionID,x,y,z\n",
 		"mapSolarSystemJumps":           "fromSolarSystemID,toSolarSystemID\n",
 		"mapRegions":                    "regionID,regionName,factionID\n",
 		"mapConstellations":             "constellationID,regionID,constellationName,factionID\n",
@@ -160,7 +162,7 @@ func writeOldSchemaSDE(t *testing.T, path string) {
 	require.NoError(t, err)
 	defer db.Close()
 	for _, ddl := range []string{
-		`CREATE TABLE invTypes (typeID INTEGER PRIMARY KEY, groupID INTEGER, typeName TEXT, published INTEGER)`,
+		`CREATE TABLE invTypes (typeID INTEGER PRIMARY KEY, groupID INTEGER, typeName TEXT, published INTEGER, portionSize INTEGER, marketGroupID INTEGER)`,
 		`CREATE TABLE dgmEffects (effectID INTEGER PRIMARY KEY, effectName TEXT, effectCategory INTEGER, displayName TEXT, published INTEGER)`,
 		`CREATE TABLE dgmAttributeTypes (attributeID INTEGER PRIMARY KEY, attributeName TEXT, displayName TEXT, unitID INTEGER, published INTEGER)`,
 	} {

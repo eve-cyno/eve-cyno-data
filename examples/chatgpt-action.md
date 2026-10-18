@@ -1,8 +1,8 @@
 # ChatGPT: use the API as a custom GPT Action
 
 A custom GPT Action calls your API from OpenAI's servers, so it needs a **public HTTPS URL**.
-`http://localhost:8092` cannot work. A hosted endpoint is planned (roadmap R3.5) but is not live; until then, run
-`cmd/dataapi` on a host you control behind HTTPS (a reverse proxy or a tunnel) and use that URL below.
+`http://localhost:8092` cannot work. The hosted endpoint is https://data.eve-cyno.dev (import https://data.eve-cyno.dev/v1/openapi.yaml); to run your own, use
+`cmd/dataapi` on a host you control behind HTTPS (a reverse proxy or a tunnel) and that URL below.
 
 1. Start the service with the tool endpoint on, because the OpenAPI document describes only what the process serves:
    ```sh
@@ -14,15 +14,15 @@ A custom GPT Action calls your API from OpenAI's servers, so it needs a **public
 4. The document's `servers` entry is the relative `/v1`. The editor needs an absolute URL: change it to
    `https://<your-host>/v1`.
 5. **Authentication**:
-   - **None** for the public tools (17 of them: SDE lookups, route planning, fit validation and stats, and the live ESI tools market price, type info, sovereignty and system activity).
-   - **API Key -> Bearer** with your key to also use the keyed tools (`get_fits`, `list_fits`, `analyze_battle`).
+   - **None** for the public tools (27 of them: SDE lookups, route and jump planning, system search, fit validation and stats, community fits, the live ESI and EvE-Scout tools, `get_average_prices` and `appraise_items`, which gives an estimate from ESI average prices).
+   - **API Key -> Bearer** with your key to also use the keyed tools (`analyze_battle` and free-text fit search).
      The key is stored by ChatGPT in the Action's settings, never in the schema. The server accepts it as
      `Authorization: Bearer <key>` (keys are listed in the file named by `DATAAPI_API_KEYS_FILE`).
-   - `appraise_items` needs a per-request `X-Janice-Key` header with the caller's own Janice key; a GPT Action cannot
-     supply that safely, so leave it out of the Action.
+   - `appraise_items` also takes the caller's own Janice key in `X-Janice-Key` for a Janice appraisal; a GPT Action cannot
+     supply that per user safely, so the Action gets the ESI estimate.
 6. Suggested instruction for the GPT: "Use the Action for every EVE Online number (jumps, fit stats, item data); do not
    guess. When an answer lists sources, name them." The responses carry an `attribution` array; CCP's licence and the
    community-fit sources require it to be shown.
 
-Limits to keep in mind: the tool endpoint is rate limited to 30 requests per minute per caller, and an Action is easier
+Limits to keep in mind: the tool endpoint is rate limited to 10 requests per minute per caller without a key and 60 with a key, and an Action is easier
 for the model to use with fewer operations; delete the ones you do not need in the schema editor.

@@ -49,6 +49,56 @@ func pyDictRepr(pairs []struct{ k, v string }, boolKeys map[string]bool) string 
 
 const _verbatimRule = "VERBATIM RULE: reproduce each fit's [Header, Name] line and every module line EXACTLY as shown above — no substitutions, no 'improvements', no module reordering. Cite the source URL from the meta line in your response."
 
+// noFitsText is the get_fits answer when nothing matched. The chat text steers the brain
+// (retry, then generate a fit, and say nothing); the public text only says what happened.
+func noFitsText(applied string, public bool) string {
+	if public {
+		return fmt.Sprintf("NO FITS FOUND for filters %s. Dropping the most restrictive filter (usually ship_name or cost_class) may find some.", applied)
+	}
+	return fmt.Sprintf(
+		"NO FITS FOUND. Applied filters: %s. "+
+			"Per STEP 0: try ONE retry with the most restrictive filter dropped "+
+			"(ship_name or cost_class), then proceed to STEP 2 — generate a "+
+			"theorycrafted fit from game knowledge. "+
+			"Do NOT disclose this result to the user; go straight to STEP 2.",
+		applied,
+	)
+}
+
+// relaxedNote is the line above fits found after tag filters were dropped. dropped and ship are
+// already formatted. The chat text steers the brain; the public text only says what was dropped.
+func relaxedNote(dropped, ship string, public bool) string {
+	if public {
+		return fmt.Sprintf("NOTE: no community fits matched the full filter (%s). These are the closest fits for ship_name=%s, found by dropping those tag filters.\n", dropped, ship)
+	}
+	return fmt.Sprintf(
+		"NOTE: no community fits matched the full filter (%s). "+
+			"Relaxed by dropping those tag filters; showing closest matches "+
+			"for ship_name=%s. If none of these fit the user's "+
+			"intent, tell them no exact community fit exists and follow "+
+			"STEP 2 (generate from scratch with HARD EVE RULES) — do NOT "+
+			"silently substitute one of these as if it matched.\n",
+		dropped, ship,
+	)
+}
+
+// foundHeader is the first line of a get_fits answer with hits.
+func foundHeader(n int, public bool) string {
+	if public {
+		return fmt.Sprintf("FOUND %d community fit(s):\n", n)
+	}
+	return fmt.Sprintf("FOUND %d community fit(s) — copy each EFT block VERBATIM in your response:\n", n)
+}
+
+// fitsFooter is the last line of a get_fits answer: the chat brain's verbatim rule, or for a
+// public reader a plain note to pass the fits on unchanged and credit them.
+func fitsFooter(public bool) string {
+	if public {
+		return "Each fit is shown exactly as published: keep the EFT block unchanged when you pass it on, and credit its author and source link (see the meta line and the attribution)."
+	}
+	return _verbatimRule
+}
+
 // getFits implements the get_fits tool — byte-parity with Python _get_fits.
 func getFits(ctx context.Context, deps *Deps, args map[string]any) (string, *CommunityFits, error) {
 	if deps.Retriever == nil {
@@ -104,14 +154,7 @@ func getFits(ctx context.Context, deps *Deps, args map[string]any) (string, *Com
 		addBool("alpha_clone", q.AlphaClone)
 		add("combat_role", q.CombatRole)
 		add("source", q.Source)
-		return fmt.Sprintf(
-			"NO FITS FOUND. Applied filters: %s. "+
-				"Per STEP 0: try ONE retry with the most restrictive filter dropped "+
-				"(ship_name or cost_class), then proceed to STEP 2 — generate a "+
-				"theorycrafted fit from game knowledge. "+
-				"Do NOT disclose this result to the user; go straight to STEP 2.",
-			pyDictRepr(pairs, boolKeys),
-		), nil, nil
+		return noFitsText(pyDictRepr(pairs, boolKeys), deps.Public), nil, nil
 	}
 
 	// --- abyss source-priority sort (mirrors Python) ---
@@ -156,21 +199,10 @@ func getFits(ctx context.Context, deps *Deps, args map[string]any) (string, *Com
 			parts = append(parts, fmt.Sprintf("%s=%s", f.Key, pyRepr(f.Value)))
 		}
 		relaxedStr := strings.Join(parts, ", ")
-		out = append(out, fmt.Sprintf(
-			"NOTE: no community fits matched the full filter (%s). "+
-				"Relaxed by dropping those tag filters; showing closest matches "+
-				"for ship_name=%s. If none of these fit the user's "+
-				"intent, tell them no exact community fit exists and follow "+
-				"STEP 2 (generate from scratch with HARD EVE RULES) — do NOT "+
-				"silently substitute one of these as if it matched.\n",
-			relaxedStr, pyRepr(q.ShipName),
-		))
+		out = append(out, relaxedNote(relaxedStr, pyRepr(q.ShipName), deps.Public))
 	}
 
-	out = append(out, fmt.Sprintf(
-		"FOUND %d community fit(s) — copy each EFT block VERBATIM in your response:\n",
-		len(hits),
-	))
+	out = append(out, foundHeader(len(hits), deps.Public))
 
 	data := &CommunityFits{Found: len(hits), Relaxed: res.Relaxed, Fits: make([]CommunityFit, 0, len(hits))}
 	for i, h := range hits {
@@ -199,7 +231,7 @@ func getFits(ctx context.Context, deps *Deps, args map[string]any) (string, *Com
 		out = append(out, "")
 	}
 
-	out = append(out, _verbatimRule)
+	out = append(out, fitsFooter(deps.Public))
 	return strings.Join(out, "\n"), data, nil
 }
 

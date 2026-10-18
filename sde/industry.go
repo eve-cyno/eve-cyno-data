@@ -1,7 +1,10 @@
 package sde
 
 import (
+	"database/sql"
+	"errors"
 	"fmt"
+	"log/slog"
 	"math"
 )
 
@@ -102,8 +105,24 @@ func (s *SDE) GetRequiredSkillsFromDogma(typeID int) [][2]int {
 	return result
 }
 
+// PortionSize returns invTypes.portionSize: the number of units reprocessed at a
+// time. It is 1 when the type is unknown or the value is null or below 1.
+func (s *SDE) PortionSize(typeID int) int {
+	var n sql.NullInt64
+	if err := s.db.QueryRow("SELECT portionSize FROM invTypes WHERE typeID = ?", typeID).Scan(&n); err != nil {
+		if !errors.Is(err, sql.ErrNoRows) {
+			slog.Warn("sde: portion size lookup failed, assuming 1", "type_id", typeID, "error", err)
+		}
+		return 1
+	}
+	if !n.Valid || n.Int64 < 1 {
+		return 1
+	}
+	return int(n.Int64)
+}
+
 // GetReprocessingYield returns [(material_typeID, quantity), ...] yielded by reprocessing.
-// runs: portionSize multiplier. refiningEfficiencyPct: 0–100%.
+// runs: the number of portions reprocessed (units / PortionSize). refiningEfficiencyPct: 0–100%.
 func (s *SDE) GetReprocessingYield(typeID, runs int, refiningEfficiencyPct float64) [][2]int {
 	if !s.HasTable("invTypeMaterials") {
 		return nil

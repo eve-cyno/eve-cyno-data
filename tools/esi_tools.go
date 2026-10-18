@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -26,6 +27,7 @@ import (
 type marketOrder struct {
 	Price      float64 `json:"price"`
 	IsBuyOrder bool    `json:"is_buy_order"`
+	LocationID int64   `json:"location_id"`
 }
 
 // plexTypeID is PLEX; it trades only on the global PLEX market (PLEXRegion).
@@ -46,11 +48,42 @@ func marketFor(typeID int) (region int, market, where string) {
 // keeps every page until its Expires header (about 5 minutes for market orders) and
 // revalidates with If-None-Match afterwards. The MarketPrice is nil unless there are
 // orders to report; the text is the answer in every case.
-func getMarketPrice(ctx context.Context, c *Client, s *sde.SDE, typeID int) (string, *MarketPrice, error) {
-	if msg, unknown := unknownTypeID(s, typeID); unknown {
+//
+// hub "" is the region-wide answer. A hub key keeps only the orders at that hub's main
+// station (any hub, Jita included, narrows the answer to its station); PLEX ignores the hub
+// and says so.
+func getMarketPrice(ctx context.Context, c *Client, s *sde.SDE, typeID int, hub string) (string, *MarketPrice, error) {
+	return getMarketPriceFor(ctx, c, s, typeID, hub, false)
+}
+
+// getMarketPriceFor is getMarketPrice for a reader that is the chat brain (public false) or
+// a public surface (public true), which gets the neutral unknown-id text.
+func getMarketPriceFor(ctx context.Context, c *Client, s *sde.SDE, typeID int, hub string, public bool) (string, *MarketPrice, error) {
+	if msg, unknown := unknownTypeID(s, typeID, public); unknown {
 		return msg, nil, nil
 	}
+	var hb marketHub
+	if strings.TrimSpace(hub) != "" {
+		h, ok := hubByKey(hub)
+		if !ok {
+			return fmt.Sprintf("Unknown hub: %s. Use jita, amarr, dodixie, rens or hek.", strings.TrimSpace(hub)), nil, nil
+		}
+		if typeID == plexTypeID {
+			text, mp, err := getMarketPriceFor(ctx, c, s, typeID, "", public)
+			if err != nil {
+				return "", nil, err
+			}
+			return "PLEX trades only on the global PLEX market, not at hub stations.\n" + text, mp, nil
+		}
+		hb = h
+	}
 	region, market, where := marketFor(typeID)
+	if hb.Key != "" {
+		region, market = hb.RegionID, hb.Station
+	}
+	if c == nil {
+		return "No market price right now: no ESI client is configured.", nil, nil
+	}
 	pages, err := c.esiClient().GetAllPages(ctx, esi.Request{
 		Path:  fmt.Sprintf("/markets/%d/orders", region),
 		Query: url.Values{"type_id": {strconv.Itoa(typeID)}, "order_type": {"all"}},
@@ -75,10 +108,17 @@ func getMarketPrice(ctx context.Context, c *Client, s *sde.SDE, typeID int) (str
 		if err := p.DecodeJSON(&batch); err != nil || len(batch) == 0 {
 			break
 		}
-		orders = append(orders, batch...)
+		for _, o := range batch {
+			if hb.Key == "" || o.LocationID == int64(hb.StationID) {
+				orders = append(orders, o)
+			}
+		}
 	}
 
 	if len(orders) == 0 {
+		if hb.Key != "" {
+			return fmt.Sprintf("No market data found for type_id=%d at %s.", typeID, hb.Station), nil, nil
+		}
 		return fmt.Sprintf("No market data found for type_id=%d in %s.", typeID, where), nil, nil
 	}
 
@@ -92,7 +132,7 @@ func getMarketPrice(ctx context.Context, c *Client, s *sde.SDE, typeID int) (str
 	}
 
 	price := &MarketPrice{
-		TypeID: typeID, RegionID: region, Market: market,
+		TypeID: typeID, RegionID: region, Market: market, Hub: hb.Key,
 		SellOrders: len(sellPrices), BuyOrders: len(buyPrices),
 	}
 	lines := []string{fmt.Sprintf("Market data (%s) — type_id=%d:", price.Market, typeID)}
@@ -117,15 +157,24 @@ func getMarketPrice(ctx context.Context, c *Client, s *sde.SDE, typeID int) (str
 // knows every type ESI serves, and ESI answers an unknown id with a 404, which counts
 // against the application's error limit (100 per minute, then 420 on every route): the
 // ids a public caller makes up must not reach it. With no SDE loaded the check is skipped.
-func unknownTypeID(s *sde.SDE, typeID int) (string, bool) {
-	if s == nil || !s.Available() || s.GetTypeName(typeID) != nil {
+func unknownTypeID(s *sde.SDE, typeID int, public bool) (string, bool) {
+	if !s.Available() || s.GetTypeName(typeID) != nil {
 		return "", false
+	}
+	return unknownTypeText(typeID, public), true
+}
+
+// unknownTypeText is the answer for an unknown type_id. The chat text steers the brain; the
+// public text only says what to do next.
+func unknownTypeText(typeID int, public bool) string {
+	if public {
+		return fmt.Sprintf("Unknown type_id=%d. Look the item up with search_item_by_name first.", typeID)
 	}
 	return fmt.Sprintf(
 		"Unknown type_id=%d. Do NOT invent a type_id. "+
 			"Call search_item_by_name with the actual item or ship name "+
 			"(e.g. 'PLEX', 'Tritanium', 'Vexor Navy Issue') to look up the correct id.",
-		typeID), true
+		typeID)
 }
 
 // UpstreamBusy reports whether err means a tool did not run because the ESI client is
@@ -184,11 +233,28 @@ func esiGetJSON(ctx context.Context, c *Client, path string) ([]byte, error) {
 	return resp.Body, nil
 }
 
-// getTypeInfo mirrors Python _get_type_info exactly. The TypeInfo is nil for every
+// getTypeInfo answers from the local SDE when it has the type with a description and
+// falls back to ESI otherwise (format mirrors Python _get_type_info). The TypeInfo is nil for every
 // text-only answer (ESI failure, unknown id, unparseable body).
 func getTypeInfo(ctx context.Context, c *Client, s *sde.SDE, typeID int) (string, *TypeInfo, error) {
-	if msg, unknown := unknownTypeID(s, typeID); unknown {
+	return getTypeInfoFor(ctx, c, s, typeID, false)
+}
+
+// getTypeInfoFor is getTypeInfo for the chat brain (public false) or a public surface.
+func getTypeInfoFor(ctx context.Context, c *Client, s *sde.SDE, typeID int, public bool) (string, *TypeInfo, error) {
+	if msg, unknown := unknownTypeID(s, typeID, public); unknown {
 		return msg, nil, nil
+	}
+	if s != nil && s.Available() {
+		if b, ok := s.TypeBasics(typeID); ok && strings.TrimSpace(b.Description) != "" {
+			return typeInfoResult(&TypeInfo{
+				TypeID: typeID, Name: b.Name, Description: strings.TrimSpace(b.Description),
+				VolumeM3: b.VolumeM3, MassKg: b.MassKg, GroupID: b.GroupID,
+			})
+		}
+	}
+	if c == nil {
+		return "No type info right now: no ESI client is configured.", nil, nil
 	}
 	resp, err := c.esiClient().Do(ctx, esi.Request{
 		Path:   fmt.Sprintf("/universe/types/%d", typeID),
@@ -202,11 +268,7 @@ func getTypeInfo(ctx context.Context, c *Client, s *sde.SDE, typeID int) (string
 	}
 	body, status := resp.Body, resp.Status
 	if status == 404 {
-		return fmt.Sprintf(
-			"Unknown type_id=%d. Do NOT invent a type_id. "+
-				"Call search_item_by_name with the actual item or ship name "+
-				"(e.g. 'PLEX', 'Tritanium', 'Vexor Navy Issue') to look up the correct id.",
-			typeID), nil, nil
+		return unknownTypeText(typeID, public), nil, nil
 	}
 	if status != 200 {
 		return fmt.Sprintf("ESI error %d for type_id=%d", status, typeID), nil, nil
@@ -227,6 +289,12 @@ func getTypeInfo(ctx context.Context, c *Client, s *sde.SDE, typeID int) (string
 		TypeID: typeID, Name: t.Name, Description: strings.TrimSpace(t.Description),
 		VolumeM3: t.Volume, MassKg: t.Mass, GroupID: t.GroupID,
 	}
+	return typeInfoResult(info)
+}
+
+// typeInfoResult renders info as the tool text (description cut at 400 bytes) and returns
+// it as the typed result.
+func typeInfoResult(info *TypeInfo) (string, *TypeInfo, error) {
 	desc := info.Description
 	if len(desc) > 400 {
 		desc = desc[:397] + "..."
@@ -248,7 +316,7 @@ func getTypeInfo(ctx context.Context, c *Client, s *sde.SDE, typeID int) (string
 // [OPUS-REVIEW] full parity test pending cassette capture
 // The ShipStats is nil for every text-only answer (no SDE, unknown ship, no attributes).
 func getShipStats(ctx context.Context, c *Client, s *sde.SDE, shipName string) (string, *ShipStats, error) {
-	if s == nil || !s.Available() {
+	if !s.Available() {
 		return "SDE not loaded — cannot resolve ship name.", nil, nil
 	}
 	ids := s.ResolveNames([]string{shipName})
@@ -306,9 +374,13 @@ func getShipStats(ctx context.Context, c *Client, s *sde.SDE, shipName string) (
 // the previous single-string signature could not read the array argument at all
 // (→ empty → "No items found" → the model hallucinated names → invalid fits).
 // Exact matches via SDE ResolveNames; per-name fuzzy suggestions for typo recovery.
-func searchItemByName(ctx context.Context, c *Client, s *sde.SDE, names []string) (string, error) {
-	if s == nil || !s.Available() {
+func searchItemByName(ctx context.Context, c *Client, s *sde.SDE, names []string, public bool) (string, error) {
+	if !s.Available() {
 		return "SDE not loaded.", nil
+	}
+	names = slices.Clone(names)
+	for i, n := range names {
+		names[i] = strings.TrimSpace(n)
 	}
 	if len(names) == 0 {
 		return "No names provided to search_item_by_name.", nil
@@ -322,6 +394,10 @@ func searchItemByName(ctx context.Context, c *Client, s *sde.SDE, names []string
 		}
 		sugg := s.FuzzyMatch(name, 3, 0.6)
 		if len(sugg) == 0 {
+			if public {
+				out = append(out, fmt.Sprintf("'%s' is not a known EVE item (ships/modules/charges/drones).", name))
+				continue
+			}
 			out = append(out, fmt.Sprintf(
 				"'%s' is not a known EVE item (ships/modules/charges/drones). Cannot proceed — ask the user to clarify.", name))
 			continue
@@ -335,6 +411,12 @@ func searchItemByName(ctx context.Context, c *Client, s *sde.SDE, names []string
 				o = append(o, fmt.Sprintf("%s (type_id=%d)", m[1].(string), m[0].(int)))
 			}
 			others = strings.Join(o, ", ")
+		}
+		if public {
+			out = append(out, fmt.Sprintf(
+				"'%s' did not match an EVE item exactly. Closest SDE match: %s (type_id=%d). Other candidates: %s.",
+				name, topName, topID, others))
+			continue
 		}
 		out = append(out, fmt.Sprintf(
 			"'%s' did not match an EVE item exactly. Closest SDE match: %s (type_id=%d). "+
@@ -364,7 +446,7 @@ func inWormholeSpace(s *sde.SDE, systemID int) bool {
 // nested (faction | alliance | unclaimed); the text is the one the flat map produced.
 // Wormhole space is not in the list and has no sovereignty, so it is answered from the SDE.
 func getSovereignty(ctx context.Context, c *Client, s *sde.SDE, systemName string) (string, error) {
-	if s == nil || !s.Available() {
+	if !s.Available() {
 		return "SDE not loaded — sovereignty query unavailable.", nil
 	}
 	sysID := s.ResolveSystemName(systemName)
@@ -375,6 +457,9 @@ func getSovereignty(ctx context.Context, c *Client, s *sde.SDE, systemName strin
 		return fmt.Sprintf("%s is in wormhole space, which has no sovereignty.", systemName), nil
 	}
 
+	if c == nil {
+		return "No sovereignty right now: no ESI client is configured.", nil
+	}
 	resp, err := c.esiClient().Do(ctx, esi.Request{Path: "/sovereignty/systems"})
 	if err != nil {
 		return esiFailure(ctx, "get_sovereignty", *sysID, err)
@@ -424,7 +509,7 @@ func getSovereignty(ctx context.Context, c *Client, s *sde.SDE, systemName strin
 
 // getSystemActivity mirrors Python _get_system_activity. [OPUS-REVIEW] cassette pending.
 func getSystemActivity(ctx context.Context, c *Client, s *sde.SDE, systemName string) (string, error) {
-	if s == nil || !s.Available() {
+	if !s.Available() {
 		return "SDE not loaded — activity query unavailable.", nil
 	}
 	sysID := s.ResolveSystemName(systemName)
@@ -432,6 +517,9 @@ func getSystemActivity(ctx context.Context, c *Client, s *sde.SDE, systemName st
 		return fmt.Sprintf("Unknown system: %s.", systemName), nil
 	}
 
+	if c == nil {
+		return "No system activity right now: no ESI client is configured.", nil
+	}
 	resp, err := c.esiClient().Do(ctx, esi.Request{Path: "/universe/system_kills"})
 	if err != nil {
 		return esiFailure(ctx, "get_system_activity", *sysID, err)

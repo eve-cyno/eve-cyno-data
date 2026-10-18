@@ -2,10 +2,15 @@ package tools
 
 import (
 	"context"
+	"io"
+	"net/http"
 	"path/filepath"
+	"slices"
 	"strings"
+	"sync"
 	"testing"
 
+	"eve-cyno.dev/go/data/esi"
 	"eve-cyno.dev/go/data/internal/diff"
 	"github.com/stretchr/testify/require"
 )
@@ -58,4 +63,59 @@ func TestConvertISKToRealReadsGlobalPLEXMarket(t *testing.T) {
 	require.NoError(t, err)
 	require.Contains(t, eur, "  ≈ €7.25 EUR")
 	require.NotContains(t, eur, "$8.14")
+}
+
+// recordedUpstreams answers Janice with a fixed appraisal and ESI's /markets/prices with
+// testPricesBody, and records every request as host+path plus the Janice key it carried.
+func recordedUpstreams(t *testing.T) (*Client, func() []string) {
+	t.Helper()
+	var mu sync.Mutex
+	var seen []string
+	hc := &http.Client{Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
+		mu.Lock()
+		seen = append(seen, r.URL.Host+r.URL.Path+" key="+r.Header.Get("X-ApiKey"))
+		mu.Unlock()
+		body := `{"code":"abc","buyTotal":1000,"sellTotal":2000,"splitTotal":1500}`
+		if r.URL.Path == esiPricesPath {
+			body = testPricesBody
+		}
+		return &http.Response{
+			StatusCode: http.StatusOK, Request: r,
+			Header: http.Header{"Content-Type": {"application/json"}, "Last-Modified": {testPricesModified}},
+			Body:   io.NopCloser(strings.NewReader(body)),
+		}, nil
+	})}
+	e, err := esi.New(esi.Config{BaseURL: "https://esi.test", HTTPClient: hc, Version: "test", Contact: "ops@example.org", MaxConcurrent: 4})
+	require.NoError(t, err)
+	return &Client{HTTP: hc, Throttle: NewThrottle(), ESI: e}, func() []string {
+		mu.Lock()
+		defer mu.Unlock()
+		return slices.Clone(seen)
+	}
+}
+
+// With a Janice key the tool is exactly today's Janice appraisal: one Janice request with
+// that key, the Janice text, and no ESI request.
+func TestAppraiseItems_WithAKeyIsJaniceOnly(t *testing.T) {
+	c, seen := recordedUpstreams(t)
+	out, err := appraiseItems(context.Background(), c, nil, "Tritanium x1", "caller-key")
+	require.NoError(t, err)
+	require.Equal(t, strings.Join([]string{
+		"**Janice Appraisal:**",
+		"  Buy: 1000.00 ISK",
+		"  Sell: 2000.00 ISK",
+		"  Split: 1500.00 ISK",
+		"Full appraisal: https://janice.e-351.com/abc",
+	}, "\n"), out)
+	require.Equal(t, []string{"janice.e-351.com/api/rest/v1/appraisal key=caller-key"}, seen())
+}
+
+// Without a key the tool estimates from ESI and never calls Janice.
+func TestAppraiseItems_WithoutAKeyIsTheESIEstimateOnly(t *testing.T) {
+	s := testSDE(t)
+	c, seen := recordedUpstreams(t)
+	out, err := appraiseItems(context.Background(), c, s, "Tritanium x1", "")
+	require.NoError(t, err)
+	require.True(t, strings.HasPrefix(out, "**Estimated value (ESI average prices): 4.00 ISK**"), out)
+	require.Equal(t, []string{"esi.test/markets/prices key="}, seen())
 }

@@ -43,9 +43,10 @@ func TestIndex_HTML(t *testing.T) {
 			require.NotContains(t, body, link, tl.Name)
 		}
 	}
-	for _, tier := range []string{"public", "keyed", "byo-key"} {
+	for _, tier := range []string{"public", "keyed"} {
 		require.Contains(t, body, `<div class="tier-group" data-tier="`+tier+`">`)
 	}
+	require.NotContains(t, body, `data-tier="byo-key"`)
 }
 
 func TestIndex_ReflectsConfiguredLimits(t *testing.T) {
@@ -82,7 +83,7 @@ func TestIndex_JSON(t *testing.T) {
 	}
 	require.Contains(t, urls, "/v1/openapi.yaml")
 	require.Contains(t, urls, "/v1/mcp")
-	require.Len(t, doc.Tiers, 4)
+	require.Len(t, doc.Tiers, 3)
 	require.NotEmpty(t, doc.RateLimits)
 	require.Contains(t, doc.Disclaimer, "Fenris Creations")
 	// Discord is the project's contact channel; the page carries no mailto (owner decision 2026-10-09).

@@ -235,7 +235,7 @@ func BuildFitDetail(ctx context.Context, deps *Deps, eft string, withCost bool) 
 		return degradedDetail("", eft, "Could not parse EFT block — missing or malformed header."), nil
 	}
 
-	if deps == nil || deps.SDE == nil || !deps.SDE.Available() {
+	if deps == nil || !deps.SDE.Available() {
 		return degradedDetail(shipName, eft, "SDE unavailable — slot and resource data cannot be computed."), nil
 	}
 
@@ -323,14 +323,14 @@ func BuildFitDetail(ctx context.Context, deps *Deps, eft string, withCost bool) 
 		fd.Drones = append(fd.Drones, FitDroneCell{Name: mod.Name, TypeID: id, Qty: qtyByName[mod.Name]})
 	}
 
-	// Optional cost appraisal — best-effort, never fail the whole call.
+	// Optional cost appraisal through Janice only (a fit's cost is not estimated from ESI averages) — best-effort, never fail the whole call.
 	if withCost && deps.JaniceAPIKey != "" {
 		var modNames []string
 		for _, mod := range modules {
 			modNames = append(modNames, mod.Name)
 		}
 		if len(modNames) > 0 {
-			costText, err := appraiseItems(ctx, deps.Client, strings.Join(modNames, "\n"), deps.JaniceAPIKey)
+			costText, err := janiceAppraisal(ctx, deps.Client, strings.Join(modNames, "\n"), deps.JaniceAPIKey)
 			if err == nil {
 				fd.CostText = costText
 			}

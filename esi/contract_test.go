@@ -40,13 +40,15 @@ func TestSnapshotSpecIsThePinnedVersion(t *testing.T) {
 	}
 }
 
-// usedRoutes is every ESI route core/tools calls (get_market_price, get_type_info,
-// get_sovereignty, get_system_activity, convert_isk_to_real, validate_fitting, analyze_battle)
+// usedRoutes is every ESI route core/tools calls (get_market_price, get_market_history, get_average_prices, get_type_info,
+// get_sovereignty, get_system_activity, plan_jump_route, convert_isk_to_real, validate_fitting, analyze_battle)
 // plus the five routes of the ingest intel pollers, which follow the same pin. Keep it in sync
 // with core/tools and ingest/intel (contract.sh reads the intel routes from pollers.go and
 // checks them against the live spec); a snapshot refresh that drops one of them must fail here.
 var usedRoutes = []string{
 	"/markets/{region_id}/orders",
+	"/markets/{region_id}/history",
+	"/markets/prices",
 	"/universe/types/{type_id}",
 	"/universe/groups/{group_id}",
 	"/universe/ids",
@@ -55,6 +57,7 @@ var usedRoutes = []string{
 	"/universe/system_jumps",
 	"/sovereignty/systems", // exists from 2026-05-19 on; replaced /sovereignty/map (tools) and /sovereignty/structures (intel)
 	"/sovereignty/campaigns",
+	"/incursions",
 	"/fw/systems",
 	"/killmails/{killmail_id}/{killmail_hash}",
 	"/alliances/{alliance_id}",

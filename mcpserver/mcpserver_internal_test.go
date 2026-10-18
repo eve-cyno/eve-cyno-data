@@ -14,6 +14,7 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/stretchr/testify/require"
 
+	"eve-cyno.dev/go/data/catalog"
 	"eve-cyno.dev/go/data/tools"
 )
 
@@ -190,6 +191,21 @@ func TestTools_AnnotationsMarkReadOnly(t *testing.T) {
 	require.True(t, *market.Annotations.OpenWorldHint, "a tool that calls ESI is open-world")
 }
 
+func TestMCPTool_EmbeddedDatasetsAreNotOpenWorld(t *testing.T) {
+	cs := connect(t, newServer(&tools.Deps{}, Options{All: true}, (&fakeExec{}).exec))
+	list, err := cs.ListTools(t.Context(), nil)
+	require.NoError(t, err)
+	open := map[string]bool{}
+	for _, tl := range list.Tools {
+		open[tl.Name] = *tl.Annotations.OpenWorldHint
+	}
+	require.False(t, open["find_systems"], "the ice dataset ships with the binary")
+	require.False(t, open["get_system_info"])
+	require.True(t, open["plan_jump_route"], "the live options read ESI")
+	require.True(t, open["get_market_price"])
+	require.True(t, open["get_thera_connections"], "EvE-Scout data is read live")
+}
+
 // postRPC sends one JSON-RPC message to h like an MCP client does.
 func postRPC(t *testing.T, h http.Handler, body string, hdr ...string) string {
 	t.Helper()
@@ -219,9 +235,11 @@ func TestHTTPHandler_PerRequestDepsCarryOnlyTheCallersJaniceKey(t *testing.T) {
 	shared := &tools.Deps{JaniceAPIKey: "project-key"}
 	var mu sync.Mutex
 	var seen []string
+	var public []bool
 	exec := func(_ context.Context, d *tools.Deps, name string, _ map[string]any) (tools.Result, error) {
 		mu.Lock()
 		seen = append(seen, name+"="+d.JaniceAPIKey)
+		public = append(public, d.Public)
 		mu.Unlock()
 		return tools.Result{Tool: name, Text: "ok"}, nil
 	}
@@ -230,14 +248,36 @@ func TestHTTPHandler_PerRequestDepsCarryOnlyTheCallersJaniceKey(t *testing.T) {
 		return postRPC(t, h, `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"`+name+`","arguments":`+validArgs[name]+`}}`, hdr...)
 	}
 
-	require.Contains(t, call("appraise_items"), "X-Janice-Key", "no header: an error result that names it")
+	require.Contains(t, call("appraise_items"), `"text":"ok"`, "no header: the tool runs without a key")
 	require.Contains(t, call("appraise_items", "X-Janice-Key", "  mine  "), `"text":"ok"`)
 	require.Contains(t, call("get_jumps_between"), `"text":"ok"`)
 	require.Contains(t, call("get_jumps_between", "X-Janice-Key", strings.Repeat("k", 300)), `"text":"ok"`, "an overlong key is dropped, not forwarded")
 
-	require.Equal(t, []string{"appraise_items=mine", "get_jumps_between=", "get_jumps_between="}, seen,
+	require.Equal(t, []string{"appraise_items=", "appraise_items=mine", "get_jumps_between=", "get_jumps_between="}, seen,
 		"the executor only ever sees the caller's key, never the project's")
+	require.Equal(t, []bool{true, true, true, true}, public, "every request runs with the public texts")
 	require.Equal(t, "project-key", shared.JaniceAPIKey, "the shared deps are not mutated")
+	require.False(t, shared.Public, "the shared deps are not mutated")
+}
+
+// The stdio server's default (public) mode never spends a key of the process; All keeps it.
+func TestNewServer_PublicModeDropsTheProcessJaniceKey(t *testing.T) {
+	deps := &tools.Deps{JaniceAPIKey: "machine-key"}
+	var seen []string
+	var public []bool
+	exec := func(_ context.Context, d *tools.Deps, name string, _ map[string]any) (tools.Result, error) {
+		seen = append(seen, name+"="+d.JaniceAPIKey)
+		public = append(public, d.Public)
+		return tools.Result{Tool: name, Text: "ok"}, nil
+	}
+	for _, all := range []bool{false, true} {
+		cs := connect(t, newServer(deps, Options{All: all}, exec))
+		_, err := cs.CallTool(t.Context(), &mcp.CallToolParams{Name: "appraise_items", Arguments: map[string]any{"items": "Tritanium"}})
+		require.NoError(t, err)
+	}
+	require.Equal(t, []string{"appraise_items=", "appraise_items=machine-key"}, seen)
+	require.Equal(t, []bool{true, false}, public, "the public mode answers with the public texts, All with the chat's")
+	require.Equal(t, "machine-key", deps.JaniceAPIKey, "the caller's deps are not mutated")
 }
 
 func TestHTTPHandler_KeyedTierFollowsTheKeyedCallback(t *testing.T) {
@@ -277,4 +317,32 @@ func TestHTTPHandler_ToolCalledFiresOncePerCallWithTheCarryingRequest(t *testing
 	mu.Lock()
 	defer mu.Unlock()
 	require.Equal(t, []string{"get_jumps_between@a", "get_type_info@b"}, got, "tools/list does not fire it")
+}
+
+func TestCall_OnlyLiveOptionsSpendTheUpstreamBudget(t *testing.T) {
+	jump, ok := catalog.Lookup("plan_jump_route")
+	require.True(t, ok)
+	asked, ran := 0, 0
+	exec := func(context.Context, *tools.Deps, string, map[string]any) (tools.Result, error) {
+		ran++
+		return tools.Result{}, nil
+	}
+	cfg := serverConfig{allow: func(string) (bool, time.Duration) { asked++; return true, 0 }}
+	cs := connect(t, buildServer(&tools.Deps{}, []catalog.Tool{jump}, cfg, exec))
+	call := func(extra map[string]any) {
+		args := map[string]any{"origin": "Amamake", "destination": "1DQ1-A", "ship": "Rhea"}
+		for k, v := range extra {
+			args[k] = v
+		}
+		require.False(t, callWith(t, cs, "plan_jump_route", args).IsError)
+	}
+
+	call(nil)
+	call(map[string]any{"live_info": false, "avoid_incursions": false})
+	require.Zero(t, asked, "calls without a live option cost no live budget")
+	call(map[string]any{"avoid_incursions": true})
+	require.Equal(t, 1, asked)
+	call(map[string]any{"avoid_incursions": true, "live_info": true})
+	require.Equal(t, 2, asked)
+	require.Equal(t, 4, ran)
 }

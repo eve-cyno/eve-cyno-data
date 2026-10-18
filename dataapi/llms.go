@@ -105,6 +105,7 @@ func llmsFullTxt(s Surface) string {
 		"`" + strings.Join(errorCodes(), "`, `") + "`.\n")
 	w.WriteString("- Every response carries `X-Request-ID`: your value when it is a token of 1-64 characters from `[A-Za-z0-9._-]`, otherwise a generated one.\n")
 	w.WriteString("- Requests are rate limited per caller (sliding window): per API key when one is sent, otherwise per client IP. A refused request is `429` with `Retry-After`.\n")
+	w.WriteString("- One call is one request against every limit, however long its list arguments; each list argument has its own cap (see the tool).\n")
 	w.WriteString(keyConventions(s))
 	w.WriteString("- Request bodies are capped: 256 KiB on the fit routes, 64 KiB on the tool and MCP endpoints (`413`).\n")
 	if tiered(s) && (s.ToolAPI != ToolAPIOff || s.MCP) {
@@ -148,7 +149,7 @@ func llmsFullTxt(s Surface) string {
 	if ts := docTools(s); len(ts) > 0 && (s.ToolAPI != ToolAPIOff || s.MCP) {
 		w.WriteString("## Tools\n\n")
 		if tiered(s) {
-			w.WriteString("Tools are listed public first, then keyed, then byo-key; each says how to authenticate.\n\n")
+			w.WriteString("Tools are listed public first, then keyed; each says how to authenticate.\n\n")
 		}
 		if s.MCP {
 			fmt.Fprintf(&w, "The same tools are MCP tools of the same name at `%s/mcp`; over MCP, `content[0]` is `result.text`, `structuredContent` is `result.data` and `_meta` carries the attribution.\n\n", p)
@@ -191,10 +192,9 @@ func tierGroups(s Surface, ts []catalog.Tool) []tierGroup {
 	headings := map[catalog.Tier]string{
 		catalog.TierPublic: " (public: no key needed)",
 		catalog.TierKeyed:  " (keyed: send an API key)",
-		catalog.TierBYOKey: " (byo-key: send your own Janice key in " + HeaderJaniceKey + ")",
 	}
 	var out []tierGroup
-	for _, tier := range []catalog.Tier{catalog.TierPublic, catalog.TierKeyed, catalog.TierBYOKey} {
+	for _, tier := range []catalog.Tier{catalog.TierPublic, catalog.TierKeyed} {
 		var g []catalog.Tool
 		for _, t := range ts {
 			if t.Tier == tier {
@@ -216,12 +216,13 @@ func accessLine(s Surface, t catalog.Tool) string {
 	switch t.Tier {
 	case catalog.TierKeyed:
 		return "- Access: keyed. Send an API key as `Authorization: Bearer <key>` or `" + HeaderAPIKey + ": <key>`; `401 api_key_required` without one, `401 invalid_api_key` for an invalid one.\n"
-	case catalog.TierBYOKey:
-		return "- Access: byo-key. Send your own Janice API key in the `" + HeaderJaniceKey + "` header (REST and MCP over HTTP); `400 janice_key_required` over REST, and an error result naming the header over MCP, without it. The key is used for that request only and never logged or stored.\n"
 	}
 	line := "- Access: public. No key needed.\n"
 	if up := upstreamSentence(s, t); up != "" {
-		line += "- Live ESI data: " + up + "\n"
+		line += "- Live " + t.UpstreamName + " data: " + up + "\n"
+	}
+	if t.AcceptsJaniceKey {
+		line += "- Optional: your own Janice API key in the `" + HeaderJaniceKey + "` header (REST and MCP over HTTP) makes it a Janice appraisal instead of the ESI estimate; it is used for that request only and never logged or stored.\n"
 	}
 	return line
 }

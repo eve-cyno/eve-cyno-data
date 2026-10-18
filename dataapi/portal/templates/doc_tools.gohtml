@@ -8,7 +8,6 @@
     <summary><svg class="ico" aria-hidden="true"><use href="#i-chev"/></svg>On this page</summary>
     <ul>
       <li><a href="#tools-public">Public</a></li>
-      <li><a href="#tools-byo">Byo-key</a></li>
       <li><a href="#tools-keyed">Keyed</a></li>
     </ul>
     <div class="toc-more"><a href="{{.URL}}/llms-full.txt"><svg class="ico" aria-hidden="true"><use href="#i-ext"/></svg>llms-full.txt</a><a href="#top"><svg class="ico" aria-hidden="true"><use href="#i-up"/></svg>Back to top</a></div>
@@ -17,29 +16,21 @@
     <div class="chips" role="group" aria-label="Filter tools">
       <button class="chip" type="button" aria-pressed="true" data-filter="all">All <span class="n">{{.Stats.Offered}}</span></button>
       <button class="chip" type="button" aria-pressed="false" data-filter="public">Public <span class="n">{{.Stats.Public}}</span></button>
-      <button class="chip" type="button" aria-pressed="false" data-filter="live">Live ESI <span class="n">{{.Stats.Upstream}}</span></button>
-      <button class="chip" type="button" aria-pressed="false" data-filter="byo-key">Byo-key <span class="n">{{.Stats.BYO}}</span></button>
+      <button class="chip" type="button" aria-pressed="false" data-filter="live">Live <span class="n">{{.Stats.Live}}</span></button>
       <button class="chip" type="button" aria-pressed="false" data-filter="keyed">Keyed <span class="n">{{.Stats.Keyed}}</span></button>
     </div>
 
     <section class="tier-group" data-tier="public">
       <div class="tier-head"><span class="badge" data-tier="public">public</span><h2 id="tools-public">No key</h2><span class="n">{{.Stats.Public}} {{plural .Stats.Public "tool"}}</span><p class="tier-rule">Anyone, anonymous included{{if .Auth}} (trial limits){{end}}.</p></div>
       <ul class="tool-list">
-{{range .Tools.Public}}        <li class="tool-row" data-tool="{{.Name}}" data-tier="public"{{if .Upstream}} data-upstream="true"{{end}}><a class="tool-name" href="/docs/tools/{{.Name}}">{{.Name}}</a><p class="tool-desc">{{.Summary}}</p>{{if .Upstream}}<span class="tool-badges"><span class="badge badge-live">live ESI</span></span>{{end}}</li>
-{{end}}      </ul>
-    </section>
-
-    <section class="tier-group" data-tier="byo-key">
-      <div class="tier-head"><span class="badge" data-tier="byo-key">byo-key</span><h2 id="tools-byo">Your own Janice key</h2><span class="n">{{.Stats.BYO}} {{plural .Stats.BYO "tool"}}</span><p class="tier-rule">Send your own Janice API key in <code>X-Janice-Key</code>, used for that request only, never stored or logged.</p></div>
-      <ul class="tool-list">
-{{range .Tools.BYO}}        <li class="tool-row" data-tool="{{.Name}}" data-tier="byo-key"{{if .Upstream}} data-upstream="true"{{end}}><a class="tool-name" href="/docs/tools/{{.Name}}">{{.Name}}</a><p class="tool-desc">{{.Summary}}</p>{{if .Upstream}}<span class="tool-badges"><span class="badge badge-live">live ESI</span></span>{{end}}</li>
+{{range .Tools.Public}}        <li class="tool-row" data-tool="{{.Name}}" data-tier="public"{{if .Live}} data-upstream="true"{{end}}><a class="tool-name" href="/docs/tools/{{.Name}}">{{.Name}}</a><p class="tool-desc">{{.Summary}}</p>{{with .Live}}<span class="tool-badges"><span class="badge badge-live">{{.}}</span></span>{{end}}</li>
 {{end}}      </ul>
     </section>
 
     <section class="tier-group" data-tier="keyed">
       <div class="tier-head"><span class="badge" data-tier="keyed">keyed</span><h2 id="tools-keyed">API key</h2><span class="n">{{.Stats.Keyed}} {{plural .Stats.Keyed "tool"}}</span><p class="tier-rule">A valid API key{{if .Auth}} (also needed for free-text fit search){{end}}: <code>Authorization: Bearer &lt;key&gt;</code> or <code>X-API-Key</code>. <span data-slot="keys_note">{{if .SelfServe}}Free: run <code>/apikey create</code> in our Discord server, or sign in on ai.eve-cyno.dev → Settings → Data API keys.{{else if .Auth}}Keys are issued by the operator of this service.{{else}}No keys are issued on this service yet.{{end}}</span></p></div>
       <ul class="tool-list">
-{{range .Tools.Keyed}}        <li class="tool-row" data-tool="{{.Name}}" data-tier="keyed"{{if .Upstream}} data-upstream="true"{{end}}><a class="tool-name" href="/docs/tools/{{.Name}}">{{.Name}}</a><p class="tool-desc">{{.Summary}}</p>{{if .Upstream}}<span class="tool-badges"><span class="badge badge-live">live ESI</span></span>{{end}}</li>
+{{range .Tools.Keyed}}        <li class="tool-row" data-tool="{{.Name}}" data-tier="keyed"{{if .Live}} data-upstream="true"{{end}}><a class="tool-name" href="/docs/tools/{{.Name}}">{{.Name}}</a><p class="tool-desc">{{.Summary}}</p>{{with .Live}}<span class="tool-badges"><span class="badge badge-live">{{.}}</span></span>{{end}}</li>
 {{end}}      </ul>
     </section>
 

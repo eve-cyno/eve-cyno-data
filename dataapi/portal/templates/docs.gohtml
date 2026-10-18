@@ -33,7 +33,7 @@
 {{range .NavGroups}}          <details class="nav-sub"{{if .Open}} open{{end}}>
             <summary><svg class="ico" aria-hidden="true"><use href="#i-chev"/></svg>{{.Label}}<span class="n">{{len .Tools}}</span></summary>
             <ul>
-{{range .Tools}}              <li><a class="nav-tool" href="/docs/tools/{{.Name}}" data-nav="tools/{{.Name}}"{{if eq $.Nav (printf "tools/%s" .Name)}} aria-current="page"{{end}}>{{.Name}}{{if .Upstream}}<span class="dot" title="live ESI"></span>{{end}}</a></li>
+{{range .Tools}}              <li><a class="nav-tool" href="/docs/tools/{{.Name}}" data-nav="tools/{{.Name}}"{{if eq $.Nav (printf "tools/%s" .Name)}} aria-current="page"{{end}}>{{.Name}}{{with .Live}}<span class="dot" title="{{.}}"></span>{{end}}</a></li>
 {{end}}            </ul>
           </details>
 {{end}}        </li>

@@ -91,10 +91,17 @@ func tierRows(s Surface) []tierRow {
 	if !s.Auth {
 		keyed += " (no keys are issued on this service yet)"
 	}
+	public := "anyone, no key"
+	if jk := janiceKeyTools(); len(jk) > 0 {
+		var ns []string
+		for _, t := range jk {
+			ns = append(ns, t.Name)
+		}
+		public += "; optional for " + strings.Join(ns, ", ") + ": your own Janice API key in " + HeaderJaniceKey + ", used for that request only, never stored or logged"
+	}
 	return []tierRow{
-		{catalog.TierPublic.String(), "anyone, no key", names(catalog.TierPublic)},
+		{catalog.TierPublic.String(), public, names(catalog.TierPublic)},
 		{catalog.TierKeyed.String(), keyed, names(catalog.TierKeyed)},
-		{catalog.TierBYOKey.String(), "your own Janice API key in " + HeaderJaniceKey + ", used for that request only, never stored or logged", names(catalog.TierBYOKey)},
 		{catalog.TierDisabled.String(), "not offered on this service", names(catalog.TierDisabled)},
 	}
 }

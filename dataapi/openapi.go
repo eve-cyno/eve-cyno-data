@@ -155,7 +155,7 @@ type oaComponents struct {
 // errorResponseNames maps a status to its shared component response.
 func errorResponseNames() map[int]struct{ name, description string } {
 	return map[int]struct{ name, description string }{
-		http.StatusBadRequest:            {"BadRequest", "The request is malformed: invalid JSON, or a missing or invalid parameter or header, or a tool call without a required argument (`invalid_request`, `janice_key_required`, `invalid_arguments`)."},
+		http.StatusBadRequest:            {"BadRequest", "The request is malformed: invalid JSON, or a missing or invalid parameter or header, or a tool call without a required argument (`invalid_request`, `invalid_arguments`)."},
 		http.StatusUnauthorized:          {"Unauthorized", "The tool needs an API key and the request has none (`api_key_required`), or the key it sent is not valid (`invalid_api_key`)."},
 		http.StatusForbidden:             {"Forbidden", "The tool is disabled on this service (`tool_disabled`), or the key may not run keyed tools (`key_not_permitted`)."},
 		http.StatusNotFound:              {"NotFound", "No such route or tool (`not_found`, `unknown_tool`)."},
@@ -259,7 +259,7 @@ func buildOpenAPI(s Surface) (*oaDocument, error) {
 }
 
 // exposedTools is the tool set a Surface offers over the raw tool endpoint and MCP, in
-// tier order (public, keyed, byo-key; registry order within a tier). A loopback service
+// tier order (public, keyed; registry order within a tier). A loopback service
 // offers every tool and states no tiers; a public one omits the disabled tools, and the
 // keyed ones when it accepts no API keys.
 func exposedTools(s Surface) []catalog.Tool {
@@ -270,7 +270,12 @@ func exposedTools(s Surface) []catalog.Tool {
 	if s.Auth {
 		tiers = append(tiers, catalog.TierKeyed)
 	}
-	return catalog.ToolsIn(append(tiers, catalog.TierBYOKey)...)
+	return catalog.ToolsIn(tiers...)
+}
+
+// janiceKeyTools returns the offered tools that take the caller's own Janice key.
+func janiceKeyTools() []catalog.Tool {
+	return slices.DeleteFunc(catalog.Tools(), func(t catalog.Tool) bool { return !t.AcceptsJaniceKey || !t.Tier.Offered() })
 }
 
 // tiered reports whether the documents state access tiers (a service that is not the
@@ -311,8 +316,8 @@ func janiceKeyParameter() propList {
 	return ordered(
 		"name", HeaderJaniceKey,
 		"in", "header",
-		"required", true,
-		"description", "Your own Janice API key (https://janice.e-351.com/). It is used for this request only, sent to Janice and nowhere else, and is never logged or stored by this service. This service never appraises with its own key.",
+		"required", false,
+		"description", "Optional: your own Janice API key (https://janice.e-351.com/). With it the tool answers with a Janice appraisal (Jita buy, sell and split totals); without it, with an estimate from ESI average prices. The key is used for this request only, sent to Janice and nowhere else, and is never logged or stored. This service never appraises with its own key.",
 		"schema", schema{"type": "string", "maxLength": maxCredentialLen},
 	)
 }
@@ -325,10 +330,12 @@ func tierSentence(s Surface, t catalog.Tool) string {
 	switch t.Tier {
 	case catalog.TierKeyed:
 		return "\n\nAccess tier: **keyed**. Send an API key (`Authorization: Bearer <key>` or `" + HeaderAPIKey + "`); without one the answer is `401 api_key_required`."
-	case catalog.TierBYOKey:
-		return "\n\nAccess tier: **byo-key**. Runs only with your own Janice API key in the `" + HeaderJaniceKey + "` header (`400 janice_key_required` without it); the key is used for this request only and never logged or stored."
 	}
-	return "\n\nAccess tier: **public**. No key needed."
+	public := "\n\nAccess tier: **public**. No key needed."
+	if t.AcceptsJaniceKey {
+		public += " Optional: your own Janice API key in the `" + HeaderJaniceKey + "` header makes it a Janice appraisal; the key is used for this request only and never logged or stored."
+	}
+	return public
 }
 
 // commonSchemas registers the error and envelope components and returns the ones the
@@ -547,7 +554,11 @@ func (b *schemaBuilder) toolOperation(s Surface, rt route, tl catalog.Tool, rate
 	respName := "ToolResponse"
 	if tl.Data != nil {
 		respName = toolResponseName(tl.Data)
-		desc.WriteString(" `result.data` is a `" + componentName(tl.Data) + "` object when the call succeeds.")
+		when := "when the call succeeds"
+		if slices.Contains(tl.ParamOrder, "systems") && slices.Contains(tl.ParamOrder, "system_name") {
+			when = "when called with `systems` (null for the single `system_name` form)"
+		}
+		desc.WriteString(" `result.data` is a `" + componentName(tl.Data) + "` object " + when + ".")
 	}
 	desc.WriteString(tierSentence(s, tl))
 	desc.WriteString(rateSentence(s, rate))
@@ -565,10 +576,10 @@ func (b *schemaBuilder) toolOperation(s Surface, rt route, tl catalog.Tool, rate
 	params := []any{schema{"$ref": "#/components/parameters/RequestID"}}
 	var security []schema
 	if tiered(s) {
-		switch tl.Tier {
-		case catalog.TierKeyed:
+		if tl.Tier == catalog.TierKeyed {
 			security = keyedSecurity()
-		case catalog.TierBYOKey:
+		}
+		if tl.AcceptsJaniceKey {
 			params = append(params, janiceKeyParameter())
 		}
 	}
@@ -689,14 +700,16 @@ func apiDescription(s Surface) string {
 // llms-full.txt share it).
 func tiersDescription(s Surface) string {
 	var b strings.Builder
-	b.WriteString("- Tool tiers: each tool is *public* (no key), *keyed* (an API key), *byo-key* (your own Janice key) or *disabled*. ")
+	b.WriteString("- Tool tiers: each tool is *public* (no key), *keyed* (an API key) or *disabled*. ")
 	b.WriteString("Public: " + toolNames(catalog.ToolsIn(catalog.TierPublic)) + ". ")
 	if s.Auth {
 		b.WriteString("Keyed (send the key as `Authorization: Bearer <key>` or `" + HeaderAPIKey + "`; `401 api_key_required` without one, `401 invalid_api_key` for a key that is not valid, on every tool): " +
 			toolNames(catalog.ToolsIn(catalog.TierKeyed)) + ". ")
 	}
-	b.WriteString("Byo-key (the `" + HeaderJaniceKey + "` request header, used for that request only and never logged or stored; `400 janice_key_required` without it): " +
-		toolNames(catalog.ToolsIn(catalog.TierBYOKey)) + ". ")
+	if jk := janiceKeyTools(); len(jk) > 0 {
+		b.WriteString("Optional: your own Janice key in the `" + HeaderJaniceKey + "` request header (used for that request only, never logged or stored) turns " +
+			toolNames(jk) + " into a Janice appraisal; without it the answer is an estimate from ESI average prices. ")
+	}
 	b.WriteString("Disabled tools are not offered on this service (`403 tool_disabled` over REST, absent from the MCP tool list).\n")
 	return b.String()
 }

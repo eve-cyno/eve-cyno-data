@@ -55,11 +55,11 @@
 
     <h2 id="start-limits">Limits in one line<a class="h-anchor" href="#start-limits" aria-label="Link to this section">#</a></h2>
     <p>Requests are limited per caller (per API key when one is sent, otherwise per client IP) over a sliding window; a refused request is a <code>429</code> with <code>Retry-After</code>. The numbers per route are on <a href="/docs/access">Access tiers &amp; rate limits</a>.</p>
-    <aside class="callout" data-kind="tip"><svg class="ico" aria-hidden="true"><use href="#i-tip"/></svg><div><p class="callout-title">Tip</p><p><b>{{.Stats.Public}} tools are public.</b> {{.Stats.BYO}} more {{plural .Stats.BYO "runs" "run"}} with your own Janice key; {{.Stats.Keyed}} {{if .Auth}}{{plural .Stats.Keyed "needs" "need"}} {{if .SelfServe}}a free{{else}}an{{end}} API key. Without a key the API is for trying it out; {{if .SelfServe}}a free key{{else}}a key{{end}} is for connecting it to Claude Code, your own model or a bot (<a href="/docs/access#access-keys">how to get one</a>){{else}}need an API key, and no keys are issued yet{{end}}.</p></div></aside>
+    <aside class="callout" data-kind="tip"><svg class="ico" aria-hidden="true"><use href="#i-tip"/></svg><div><p class="callout-title">Tip</p><p><b>{{.Stats.Public}} tools are public;</b> {{.Stats.Keyed}} {{if .Auth}}{{plural .Stats.Keyed "needs" "need"}} {{if .SelfServe}}a free{{else}}an{{end}} API key. Without a key the API is for trying it out; {{if .SelfServe}}a free key{{else}}a key{{end}} is for connecting it to Claude Code, your own model or a bot (<a href="/docs/access#access-keys">how to get one</a>){{else}}need an API key, and no keys are issued yet{{end}}.</p></div></aside>
 
     <h2 id="start-next">Next steps<a class="h-anchor" href="#start-next" aria-label="Link to this section">#</a></h2>
     <div class="linkcards">
-      <a class="linkcard" href="/docs/claude-code"><svg class="ico" aria-hidden="true"><use href="#i-terminal"/></svg><span class="lc-t">Claude Code plugin</span><svg class="go" aria-hidden="true"><use href="#i-arrow"/></svg><span class="lc-s">Install, slash commands, the Janice key.</span></a>
+      <a class="linkcard" href="/docs/claude-code"><svg class="ico" aria-hidden="true"><use href="#i-terminal"/></svg><span class="lc-t">Claude Code plugin</span><svg class="go" aria-hidden="true"><use href="#i-arrow"/></svg><span class="lc-s">Install, slash commands, the optional Janice key.</span></a>
       <a class="linkcard" href="/docs/tools"><svg class="ico" aria-hidden="true"><use href="#i-doc"/></svg><span class="lc-t">Tools reference</span><svg class="go" aria-hidden="true"><use href="#i-arrow"/></svg><span class="lc-s">Every tool, its arguments and result.</span></a>
     </div>
 

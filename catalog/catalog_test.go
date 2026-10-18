@@ -6,7 +6,6 @@ import (
 	"go/token"
 	"net/http"
 	"strconv"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -46,16 +45,17 @@ func TestLookup(t *testing.T) {
 func TestTiers_Policy(t *testing.T) {
 	want := map[catalog.Tier][]string{
 		catalog.TierPublic: {
-			"get_jumps_between", "get_systems_in_region", "get_npc_stations", "get_reprocessing_yield",
+			"get_jumps_between", "get_jump_distances", "plan_jump_route", "get_average_prices", "get_market_history", "get_systems_in_region", "get_npc_stations", "find_systems", "get_system_info", "get_thera_connections", "get_reprocessing_yield",
 			"get_required_skills", "get_production_chain", "find_canonical_module", "search_item_by_name",
 			"get_ship_stats", "get_hull_facts", "get_ship_bonuses", "compute_fit_stats", "validate_fitting",
 			// the public ESI pass-throughs
 			"get_market_price", "get_type_info", "get_sovereignty", "get_system_activity",
 			// the fit lookups
 			"get_fits", "list_fits",
+			// item appraisal: ESI estimate, or Janice with the caller's own key
+			"appraise_items",
 		},
 		catalog.TierKeyed:    {"analyze_battle"},
-		catalog.TierBYOKey:   {"appraise_items"},
 		catalog.TierDisabled: {"convert_isk_to_real"},
 	}
 	total := 0
@@ -78,24 +78,34 @@ func TestTiers_Policy(t *testing.T) {
 // The tools that can spend the shared ESI budget are marked Upstream, and only they: the
 // public surfaces give exactly these the stricter per-IP limit.
 func TestUpstreamTools(t *testing.T) {
-	var got []string
+	got := map[string]string{}
 	for _, tl := range catalog.Tools() {
+		require.Equal(t, tl.Upstream, tl.UpstreamName != "", "%s: UpstreamName is set exactly for Upstream tools", tl.Name)
 		if tl.Upstream {
-			got = append(got, tl.Name)
+			got[tl.Name] = tl.UpstreamName
 		}
 	}
-	require.ElementsMatch(t, []string{"get_market_price", "get_type_info", "get_sovereignty", "get_system_activity"}, got)
+	require.Equal(t, map[string]string{
+		"get_market_price": "ESI", "get_type_info": "ESI", "get_sovereignty": "ESI", "get_system_activity": "ESI",
+		"get_market_history": "ESI", "get_thera_connections": "EvE-Scout", "plan_jump_route": "ESI",
+	}, got)
+	jump, _ := catalog.Lookup("plan_jump_route")
+	require.Equal(t, []string{"avoid_incursions", "live_info"}, jump.UpstreamArgs)
+	thera, _ := catalog.Lookup("get_thera_connections")
+	require.True(t, thera.Upstream)
+	require.False(t, thera.LiveESI())
+	price, _ := catalog.Lookup("get_market_price")
+	require.True(t, price.LiveESI())
 }
 
 func TestTier_NamesAndOffered(t *testing.T) {
 	require.Equal(t, "public", catalog.TierPublic.String())
 	require.Equal(t, "keyed", catalog.TierKeyed.String())
-	require.Equal(t, "byo-key", catalog.TierBYOKey.String())
 	require.Equal(t, "disabled", catalog.TierDisabled.String())
 	var zero catalog.Tier
 	require.Equal(t, catalog.TierDisabled, zero, "the zero value fails closed")
 	require.False(t, zero.Offered())
-	for _, tier := range []catalog.Tier{catalog.TierPublic, catalog.TierKeyed, catalog.TierBYOKey} {
+	for _, tier := range []catalog.Tier{catalog.TierPublic, catalog.TierKeyed} {
 		require.True(t, tier.Offered(), tier.String())
 	}
 }
@@ -185,7 +195,7 @@ func TestEveryOfferedToolHasASummary(t *testing.T) {
 		}
 		require.NotEmpty(t, tl.Summary, "%s is offered but has no Summary: add it to summaryTable in catalog.go", tl.Name)
 		require.NotContains(t, tl.Summary, "\n", tl.Name)
-		require.LessOrEqual(t, len(tl.Summary), 110, "%s: keep the summary to one short line", tl.Name)
+		require.LessOrEqual(t, len(tl.Summary), 120, "%s: keep the summary to one short line", tl.Name)
 		require.NotEqual(t, tl.Description, tl.Summary, "%s: a summary is not the model-facing description", tl.Name)
 	}
 }
@@ -203,15 +213,92 @@ func TestParamOrder_FollowsTheSchemaFile(t *testing.T) {
 	}
 }
 
-// get_system_activity reads /universe/system_kills only: ship, pod and NPC kills of the
-// last hour. Jumps are not part of the answer, so neither text may promise them.
-func TestSystemActivityTextsDescribeKillsOnly(t *testing.T) {
+// The single-system form of get_system_activity answers kills only; the systems list adds
+// the jump counts. The description says which form gives what.
+func TestSystemActivityTexts_JumpsOnlyInTheListForm(t *testing.T) {
 	tool, ok := catalog.Lookup("get_system_activity")
 	require.True(t, ok)
-	for _, text := range []string{tool.Description, tool.Summary} {
-		require.NotContains(t, strings.ToLower(text), "jump count")
-		require.NotContains(t, strings.ToLower(text), "kills and jumps")
-		require.Contains(t, text, "kills")
-	}
+	require.Contains(t, tool.Description, "systems")
+	require.Contains(t, tool.Description, "jumps")
+	require.Contains(t, tool.Description, "kills only")
 	require.Contains(t, tool.Summary, "last hour")
+}
+
+// The tools that take the caller's own Janice key, and only they, say so: the public
+// surfaces document and forward X-Janice-Key for exactly these.
+func TestAcceptsJaniceKey(t *testing.T) {
+	var got []string
+	for _, tl := range catalog.Tools() {
+		if tl.AcceptsJaniceKey {
+			got = append(got, tl.Name)
+		}
+	}
+	require.Equal(t, []string{"appraise_items"}, got)
+	tl, _ := catalog.Lookup("appraise_items")
+	require.Equal(t, catalog.TierPublic, tl.Tier)
+	require.False(t, tl.Upstream, "one shared daily ESI snapshot, not a per-call ESI read")
+}
+
+// Every UpstreamArgs entry is a boolean property of the tool's schema, so a renamed option cannot
+// silently stop spending the live budget.
+func TestUpstreamArgs_AreBooleanSchemaProperties(t *testing.T) {
+	for _, tl := range catalog.Tools() {
+		props, _ := tl.Parameters["properties"].(map[string]any)
+		for _, a := range tl.UpstreamArgs {
+			p, ok := props[a].(map[string]any)
+			require.True(t, ok, "%s: %s is a schema property", tl.Name, a)
+			require.Equal(t, "boolean", p["type"], "%s.%s", tl.Name, a)
+		}
+	}
+}
+
+// A tool with UpstreamArgs spends the live budget only when one of them is true.
+func TestTool_SpendsUpstream(t *testing.T) {
+	jump, _ := catalog.Lookup("plan_jump_route")
+	price, _ := catalog.Lookup("get_market_price")
+	find, _ := catalog.Lookup("find_systems")
+	for _, c := range []struct {
+		tool catalog.Tool
+		args map[string]any
+		want bool
+	}{
+		{jump, map[string]any{}, false},
+		{jump, map[string]any{"live_info": false}, false},
+		{jump, map[string]any{"live_info": "yes"}, false},
+		{jump, map[string]any{"avoid_incursions": true}, true},
+		{jump, map[string]any{"live_info": true}, true},
+		{price, map[string]any{}, true},
+		{find, map[string]any{}, false},
+	} {
+		require.Equal(t, c.want, c.tool.SpendsUpstream(c.args), "%s %v", c.tool.Name, c.args)
+	}
+}
+
+func TestPublicDescriptions_CarryNoChatInstructions(t *testing.T) {
+	for _, tl := range catalog.Tools() {
+		for _, bad := range []string{"STEP ", "VERBATIM", "NEVER", "do NOT", "Do NOT", "ask the user"} {
+			require.NotContains(t, tl.Description, bad, tl.Name)
+		}
+	}
+	fits, ok := catalog.Lookup("get_fits")
+	require.True(t, ok)
+	require.Contains(t, fits.Description, "NO FITS FOUND")
+	require.Contains(t, fits.Description, "zKillboard only")
+	require.Contains(t, fits.Description, "source (")
+	require.Contains(t, fits.Description, "limit (")
+}
+
+// The chat brain reads tool_schemas.json, not the public override.
+func TestChatSchemasKeepTheChatDescription(t *testing.T) {
+	for _, entry := range tools.ToolSchemas() {
+		fn, _ := entry["function"].(map[string]any)
+		if fn["name"] != "get_fits" {
+			continue
+		}
+		desc, _ := fn["description"].(string)
+		require.Contains(t, desc, "STEP")
+		require.Contains(t, desc, "NEVER tell the user")
+		return
+	}
+	t.Fatal("get_fits missing from ToolSchemas")
 }

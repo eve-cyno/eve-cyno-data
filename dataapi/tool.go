@@ -15,16 +15,17 @@ import (
 
 // toolGate applies the tool tiers (core/catalog) of an internet-facing service to one
 // call. It answers the refusal itself and returns ok=false, or returns the deps to run the
-// tool with: a copy that carries the caller's own Janice key (the X-Janice-Key header, ""
-// when absent), never the project's, so no public-surface call can spend the project key.
-// An unknown name passes (the executor answers 404 unknown_tool).
+// tool with: a copy (tools.Deps.ForPublic) that answers with the public texts and carries the
+// caller's own Janice key (the X-Janice-Key header, "" when absent), never the project's, so no
+// public-surface call can spend the project key
+// (appraise_items without a key answers with the ESI estimate). An unknown name passes (the
+// executor answers 404 unknown_tool).
 //
 //   - a key that was presented but is not accepted: 401 invalid_api_key, whatever the tool
 //   - disabled: 403 tool_disabled (403, not 404: the tool exists and is refused on purpose,
 //     and an agent should be told so rather than be sent looking for a typo)
 //   - keyed, anonymous: 401 api_key_required; a key without the keyed allowance: 403
 //     key_not_permitted
-//   - byo-key without a Janice key: 400 janice_key_required
 func (a *API) toolGate(w http.ResponseWriter, r *http.Request, name string) (*tools.Deps, bool) {
 	caller := CallerFrom(r.Context())
 	if authErrorFrom(r.Context()) != nil {
@@ -44,13 +45,9 @@ func (a *API) toolGate(w http.ResponseWriter, r *http.Request, name string) (*to
 		case t.Tier == catalog.TierKeyed && !caller.Allows(catalog.TierKeyed):
 			writeKeyedRefusal(w, r, caller)
 			return nil, false
-		case t.Tier == catalog.TierBYOKey && janice == "":
-			writeError(w, r, http.StatusBadRequest, "janice_key_required",
-				"tool "+name+" runs with your own Janice API key: send it in the "+HeaderJaniceKey+" header")
-			return nil, false
 		}
 	}
-	return a.deps.Tools.WithJaniceKey(janice), true
+	return a.deps.Tools.ForPublic(janice), true
 }
 
 // toolEnvelope is the 200 body in ToolFormatEnvelope.
@@ -77,7 +74,6 @@ type toolEnvelopeBody struct {
 //   - 200 application/json  success, ToolFormatEnvelope
 //   - 200 text/plain        success, ToolFormatText
 //   - 400             body is not valid JSON
-//   - 400             also: appraise_items without X-Janice-Key (janice_key_required)
 //   - 400             a required argument is missing or blank (invalid_arguments)
 //   - 401             keyed tool without a valid API key (api_key_required, invalid_api_key)
 //   - 403             disabled tool (tool_disabled) on a ToolAPIPublic service
@@ -126,13 +122,17 @@ func (a *API) tool(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if a.toolMode == ToolAPIPublic {
-		// Tools that read live ESI data have a stricter budget than the route's. It is
+		// Tools that read a live upstream (ESI, EvE-Scout) share one budget stricter than the route's. It is
 		// charged after the gate and the argument check, so a refused call costs nothing.
-		if ok, retry := a.upstream.Allow(r, name); !ok {
-			w.Header().Set("Retry-After", strconv.Itoa(retrySeconds(retry)))
-			writeError(w, r, http.StatusTooManyRequests, "rate_limited",
-				"too many calls to "+name+", which reads live ESI data and has a lower limit; slow down")
-			return
+		// A tool whose live options are off (plan_jump_route without them) answers from the SDE and costs nothing here.
+		t, known := catalog.Lookup(name)
+		if !known || t.SpendsUpstream(args) {
+			if ok, retry := a.upstream.Allow(r, name); !ok {
+				w.Header().Set("Retry-After", strconv.Itoa(retrySeconds(retry)))
+				writeError(w, r, http.StatusTooManyRequests, "rate_limited",
+					"too many calls to "+name+", which reads live "+upstreamLabel(name)+" data and has a lower limit; slow down")
+				return
+			}
 		}
 	}
 

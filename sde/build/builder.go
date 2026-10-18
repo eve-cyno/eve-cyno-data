@@ -2,7 +2,8 @@
 //
 // BuildSQLite constructs a fresh SDE SQLite database from Fuzzwork CSV dumps.
 // Layout:
-//   - Phase 1 (curated): 25 explicit typed schemas + indexes.
+//   - Phase 1 (curated): 25 explicit typed schemas + indexes; any CSV column the
+//     schema does not type is added as TEXT, so no column is dropped.
 //   - Phase 2 (generic): every other CSV with TEXT columns from the header, no
 //     indexes (except the post-phase-2 generic-table indexes below).
 //
@@ -32,11 +33,11 @@ import (
 // each transaction small while still being much faster than one-per-row.
 const batchSize = 1000
 
-// curatedTable describes one of the 25 explicit typed schemas.
+// curatedTable describes one of the 25 explicit typed schemas. Its columns are
+// the typed core; loadCurated appends every other CSV column as TEXT.
 type curatedTable struct {
 	name    string
 	create  string
-	insert  string
 	columns []string // subset of CSV columns to read (in CSV order)
 	extract func(row map[string]string) ([]any, bool)
 }
@@ -105,7 +106,6 @@ var curatedTables = []curatedTable{
 			volume    REAL,
 			capacity  REAL
 		)`,
-		insert:  "INSERT OR REPLACE INTO invTypes VALUES (?, ?, ?, ?, ?, ?, ?)",
 		columns: []string{"typeID", "groupID", "typeName", "published", "mass", "volume", "capacity"},
 		extract: func(r map[string]string) ([]any, bool) {
 			return []any{mustInt(r["typeID"]), safeInt(r["groupID"]), orNil(r["typeName"]), mustInt(r["published"]),
@@ -121,7 +121,6 @@ var curatedTables = []curatedTable{
 			valueFloat  REAL,
 			PRIMARY KEY (typeID, attributeID)
 		)`,
-		insert:  "INSERT OR REPLACE INTO dgmTypeAttributes VALUES (?, ?, ?, ?)",
 		columns: []string{"typeID", "attributeID", "valueInt", "valueFloat"},
 		extract: func(r map[string]string) ([]any, bool) {
 			return []any{mustInt(r["typeID"]), mustInt(r["attributeID"]), safeFloat(r["valueInt"]), safeFloat(r["valueFloat"])}, true
@@ -135,7 +134,6 @@ var curatedTables = []curatedTable{
 			isDefault INTEGER,
 			PRIMARY KEY (typeID, effectID)
 		)`,
-		insert:  "INSERT OR REPLACE INTO dgmTypeEffects VALUES (?, ?, ?)",
 		columns: []string{"typeID", "effectID", "isDefault"},
 		extract: func(r map[string]string) ([]any, bool) {
 			def := safeInt(r["isDefault"])
@@ -158,7 +156,6 @@ var curatedTables = []curatedTable{
 			published      INTEGER,
 			modifierInfo   TEXT
 		)`,
-		insert:  "INSERT OR REPLACE INTO dgmEffects VALUES (?, ?, ?, ?, ?, ?)",
 		columns: []string{"effectID", "effectName", "effectCategory", "displayName", "published", "modifierInfo"},
 		extract: func(r map[string]string) ([]any, bool) {
 			def := safeInt(r["published"])
@@ -184,7 +181,6 @@ var curatedTables = []curatedTable{
 			stackable      INTEGER,
 			highIsGood     INTEGER
 		)`,
-		insert:  "INSERT OR REPLACE INTO dgmAttributeTypes VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
 		columns: []string{"attributeID", "attributeName", "displayName", "unitID", "published", "defaultValue", "stackable", "highIsGood"},
 		extract: func(r map[string]string) ([]any, bool) {
 			def := safeInt(r["published"])
@@ -204,7 +200,6 @@ var curatedTables = []curatedTable{
 			groupName  TEXT,
 			published  INTEGER
 		)`,
-		insert:  "INSERT OR REPLACE INTO invGroups VALUES (?, ?, ?, ?)",
 		columns: []string{"groupID", "categoryID", "groupName", "published"},
 		extract: func(r map[string]string) ([]any, bool) {
 			def := safeInt(r["published"])
@@ -222,7 +217,6 @@ var curatedTables = []curatedTable{
 			categoryName TEXT,
 			published    INTEGER
 		)`,
-		insert:  "INSERT OR REPLACE INTO invCategories VALUES (?, ?, ?)",
 		columns: []string{"categoryID", "categoryName", "published"},
 		extract: func(r map[string]string) ([]any, bool) {
 			def := safeInt(r["published"])
@@ -241,7 +235,6 @@ var curatedTables = []curatedTable{
 			displayName TEXT,
 			description TEXT
 		)`,
-		insert:  "INSERT OR REPLACE INTO eveUnits VALUES (?, ?, ?, ?)",
 		columns: []string{"unitID", "unitName", "displayName", "description"},
 		extract: func(r map[string]string) ([]any, bool) {
 			return []any{mustInt(r["unitID"]), orNil(r["unitName"]), orNil(r["displayName"]), orNil(r["description"])}, true
@@ -256,7 +249,6 @@ var curatedTables = []curatedTable{
 			corporationID        INTEGER,
 			militiaCorporationID INTEGER
 		)`,
-		insert:  "INSERT OR REPLACE INTO chrFactions VALUES (?, ?, ?, ?, ?)",
 		columns: []string{"factionID", "factionName", "solarSystemID", "corporationID", "militiaCorporationID"},
 		extract: func(r map[string]string) ([]any, bool) {
 			return []any{mustInt(r["factionID"]), orNil(r["factionName"]), safeInt(r["solarSystemID"]), safeInt(r["corporationID"]), safeInt(r["militiaCorporationID"])}, true
@@ -269,7 +261,6 @@ var curatedTables = []curatedTable{
 			raceName TEXT,
 			shortDescription TEXT
 		)`,
-		insert:  "INSERT OR REPLACE INTO chrRaces VALUES (?, ?, ?)",
 		columns: []string{"raceID", "raceName", "shortDescription"},
 		extract: func(r map[string]string) ([]any, bool) {
 			return []any{mustInt(r["raceID"]), orNil(r["raceName"]), orNil(r["shortDescription"])}, true
@@ -283,7 +274,6 @@ var curatedTables = []curatedTable{
 			time             INTEGER,
 			PRIMARY KEY (blueprint_typeID, activityID)
 		)`,
-		insert:  "INSERT OR REPLACE INTO industryActivity VALUES (?, ?, ?)",
 		columns: []string{"typeID", "activityID", "time"},
 		extract: func(r map[string]string) ([]any, bool) {
 			return []any{mustInt(r["typeID"]), mustInt(r["activityID"]), safeInt(r["time"])}, true
@@ -298,7 +288,6 @@ var curatedTables = []curatedTable{
 			quantity         INTEGER,
 			PRIMARY KEY (blueprint_typeID, activityID, material_typeID)
 		)`,
-		insert:  "INSERT OR REPLACE INTO industryActivityMaterials VALUES (?, ?, ?, ?)",
 		columns: []string{"typeID", "activityID", "materialTypeID", "quantity"},
 		extract: func(r map[string]string) ([]any, bool) {
 			qty := safeInt(r["quantity"])
@@ -319,7 +308,6 @@ var curatedTables = []curatedTable{
 			probability      REAL,
 			PRIMARY KEY (blueprint_typeID, activityID, product_typeID)
 		)`,
-		insert:  "INSERT OR REPLACE INTO industryActivityProducts VALUES (?, ?, ?, ?, ?)",
 		columns: []string{"typeID", "activityID", "productTypeID", "quantity", "probability"},
 		extract: func(r map[string]string) ([]any, bool) {
 			qty := safeInt(r["quantity"])
@@ -339,7 +327,6 @@ var curatedTables = []curatedTable{
 			level            INTEGER,
 			PRIMARY KEY (blueprint_typeID, activityID, skill_typeID)
 		)`,
-		insert:  "INSERT OR REPLACE INTO industryActivitySkills VALUES (?, ?, ?, ?)",
 		columns: []string{"typeID", "activityID", "skillID", "level"},
 		extract: func(r map[string]string) ([]any, bool) {
 			return []any{mustInt(r["typeID"]), mustInt(r["activityID"]), mustInt(r["skillID"]), mustInt(r["level"])}, true
@@ -353,7 +340,6 @@ var curatedTables = []curatedTable{
 			quantity       INTEGER,
 			PRIMARY KEY (typeID, materialTypeID)
 		)`,
-		insert:  "INSERT OR REPLACE INTO invTypeMaterials VALUES (?, ?, ?)",
 		columns: []string{"typeID", "materialTypeID", "quantity"},
 		extract: func(r map[string]string) ([]any, bool) {
 			qty := safeInt(r["quantity"])
@@ -375,7 +361,6 @@ var curatedTables = []curatedTable{
 			securityClass    TEXT,
 			factionID        INTEGER
 		)`,
-		insert:  "INSERT OR REPLACE INTO mapSolarSystems VALUES (?, ?, ?, ?, ?, ?, ?)",
 		columns: []string{"solarSystemID", "regionID", "constellationID", "solarSystemName", "security", "securityClass", "factionID"},
 		extract: func(r map[string]string) ([]any, bool) {
 			return []any{mustInt(r["solarSystemID"]), safeInt(r["regionID"]), safeInt(r["constellationID"]), orNil(r["solarSystemName"]), safeFloat(r["security"]), orNil(r["securityClass"]), safeInt(r["factionID"])}, true
@@ -388,7 +373,6 @@ var curatedTables = []curatedTable{
 			toSolarSystemID   INTEGER,
 			PRIMARY KEY (fromSolarSystemID, toSolarSystemID)
 		)`,
-		insert:  "INSERT OR REPLACE INTO mapSolarSystemJumps VALUES (?, ?)",
 		columns: []string{"fromSolarSystemID", "toSolarSystemID"},
 		extract: func(r map[string]string) ([]any, bool) {
 			return []any{mustInt(r["fromSolarSystemID"]), mustInt(r["toSolarSystemID"])}, true
@@ -401,7 +385,6 @@ var curatedTables = []curatedTable{
 			regionName  TEXT,
 			factionID   INTEGER
 		)`,
-		insert:  "INSERT OR REPLACE INTO mapRegions VALUES (?, ?, ?)",
 		columns: []string{"regionID", "regionName", "factionID"},
 		extract: func(r map[string]string) ([]any, bool) {
 			return []any{mustInt(r["regionID"]), orNil(r["regionName"]), safeInt(r["factionID"])}, true
@@ -415,7 +398,6 @@ var curatedTables = []curatedTable{
 			constellationName  TEXT,
 			factionID          INTEGER
 		)`,
-		insert:  "INSERT OR REPLACE INTO mapConstellations VALUES (?, ?, ?, ?)",
 		columns: []string{"constellationID", "regionID", "constellationName", "factionID"},
 		extract: func(r map[string]string) ([]any, bool) {
 			return []any{mustInt(r["constellationID"]), safeInt(r["regionID"]), orNil(r["constellationName"]), safeInt(r["factionID"])}, true
@@ -432,7 +414,6 @@ var curatedTables = []curatedTable{
 			stationName      TEXT,
 			operationID      INTEGER
 		)`,
-		insert:  "INSERT OR REPLACE INTO staStations VALUES (?, ?, ?, ?, ?, ?, ?)",
 		columns: []string{"stationID", "solarSystemID", "regionID", "corporationID", "stationTypeID", "stationName", "operationID"},
 		extract: func(r map[string]string) ([]any, bool) {
 			return []any{mustInt(r["stationID"]), safeInt(r["solarSystemID"]), safeInt(r["regionID"]), safeInt(r["corporationID"]), safeInt(r["stationTypeID"]), orNil(r["stationName"]), safeInt(r["operationID"])}, true
@@ -445,7 +426,6 @@ var curatedTables = []curatedTable{
 			serviceID    INTEGER,
 			PRIMARY KEY (operationID, serviceID)
 		)`,
-		insert:  "INSERT OR REPLACE INTO staOperationServices VALUES (?, ?)",
 		columns: []string{"operationID", "serviceID"},
 		extract: func(r map[string]string) ([]any, bool) {
 			return []any{mustInt(r["operationID"]), mustInt(r["serviceID"])}, true
@@ -458,7 +438,6 @@ var curatedTables = []curatedTable{
 			serviceName  TEXT,
 			description  TEXT
 		)`,
-		insert:  "INSERT OR REPLACE INTO staServices VALUES (?, ?, ?)",
 		columns: []string{"serviceID", "serviceName", "description"},
 		extract: func(r map[string]string) ([]any, bool) {
 			return []any{mustInt(r["serviceID"]), orNil(r["serviceName"]), orNil(r["description"])}, true
@@ -473,7 +452,6 @@ var curatedTables = []curatedTable{
 			probability      REAL,
 			PRIMARY KEY (blueprint_typeID, activityID, product_typeID)
 		)`,
-		insert:  "INSERT OR REPLACE INTO industryActivityProbabilities VALUES (?, ?, ?, ?)",
 		columns: []string{"typeID", "activityID", "productTypeID", "probability"},
 		extract: func(r map[string]string) ([]any, bool) {
 			return []any{mustInt(r["typeID"]), mustInt(r["activityID"]), mustInt(r["productTypeID"]), safeFloat(r["probability"])}, true
@@ -487,7 +465,6 @@ var curatedTables = []curatedTable{
 			marketGroupName TEXT,
 			hasTypes        INTEGER
 		)`,
-		insert:  "INSERT OR REPLACE INTO invMarketGroups VALUES (?, ?, ?, ?)",
 		columns: []string{"marketGroupID", "parentGroupID", "marketGroupName", "hasTypes"},
 		extract: func(r map[string]string) ([]any, bool) {
 			ht := safeInt(r["hasTypes"])
@@ -506,7 +483,6 @@ var curatedTables = []curatedTable{
 			solarSystemID INTEGER,
 			description   TEXT
 		)`,
-		insert:  "INSERT OR REPLACE INTO crpNPCCorporations VALUES (?, ?, ?, ?)",
 		columns: []string{"corporationID", "factionID", "solarSystemID", "description"},
 		extract: func(r map[string]string) ([]any, bool) {
 			return []any{mustInt(r["corporationID"]), safeInt(r["factionID"]), safeInt(r["solarSystemID"]), orNil(r["description"])}, true
@@ -752,12 +728,62 @@ func buildSQLite(ctx context.Context, dstPath string, fw Client, gate Gate) erro
 	return nil
 }
 
-// loadCurated streams one curated CSV into the database.
-func loadCurated(ctx context.Context, db *sql.DB, tbl curatedTable, fw Client) error {
-	if _, err := db.ExecContext(ctx, tbl.create); err != nil {
-		return fmt.Errorf("create table: %w", err)
+// extraColumns returns the CSV header columns a curated table does not type, in
+// header order, as (csv index, SQLite column name) pairs. Names are sanitised like
+// the generic phase and made unique against the table's own columns (SQLite
+// column names are case-insensitive).
+func extraColumns(header, typedCSV, tableCols []string) (idx []int, names []string) {
+	typed := make(map[string]struct{}, len(typedCSV))
+	for _, c := range typedCSV {
+		typed[c] = struct{}{}
 	}
+	used := make(map[string]struct{}, len(tableCols)+len(header))
+	for _, c := range tableCols {
+		used[strings.ToLower(c)] = struct{}{}
+	}
+	for i, h := range header {
+		h = strings.TrimSpace(h)
+		if _, isTyped := typed[h]; isTyped {
+			continue
+		}
+		name := safeCol(h)
+		for n := 2; ; n++ {
+			if _, dup := used[strings.ToLower(name)]; !dup {
+				break
+			}
+			name = fmt.Sprintf("%s_%d", safeCol(h), n)
+		}
+		used[strings.ToLower(name)] = struct{}{}
+		idx = append(idx, i)
+		names = append(names, name)
+	}
+	return idx, names
+}
 
+// tableColumns lists a table's column names in declaration order.
+func tableColumns(ctx context.Context, db *sql.DB, table string) ([]string, error) {
+	rows, err := db.QueryContext(ctx, fmt.Sprintf(`PRAGMA table_info("%s")`, table))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var cols []string
+	for rows.Next() {
+		var cid, notNull, pk int
+		var name, typ string
+		var dflt any
+		if err := rows.Scan(&cid, &name, &typ, &notNull, &dflt, &pk); err != nil {
+			return nil, err
+		}
+		cols = append(cols, name)
+	}
+	return cols, rows.Err()
+}
+
+// loadCurated streams one curated CSV into the database. The typed columns come
+// from the spec; every other CSV header column is added as TEXT after them, so a
+// curated table keeps the whole CSV (and a new upstream column is never dropped).
+func loadCurated(ctx context.Context, db *sql.DB, tbl curatedTable, fw Client) error {
 	rc, err := fw.DownloadTable(ctx, tbl.name)
 	if err != nil {
 		return fmt.Errorf("download: %w", err)
@@ -779,7 +805,28 @@ func loadCurated(ctx context.Context, db *sql.DB, tbl curatedTable, fw Client) e
 		colIdx[strings.TrimSpace(h)] = i
 	}
 
-	stmt, err := db.PrepareContext(ctx, tbl.insert)
+	if _, err := db.ExecContext(ctx, tbl.create); err != nil {
+		return fmt.Errorf("create table: %w", err)
+	}
+	tableCols, err := tableColumns(ctx, db, tbl.name)
+	if err != nil {
+		return fmt.Errorf("table info: %w", err)
+	}
+	extraIdx, extraNames := extraColumns(header, tbl.columns, tableCols)
+	for _, name := range extraNames {
+		if _, err := db.ExecContext(ctx, fmt.Sprintf(`ALTER TABLE "%s" ADD COLUMN "%s" TEXT`, tbl.name, name)); err != nil {
+			return fmt.Errorf("add column %q: %w", name, err)
+		}
+	}
+	allCols := append(append([]string{}, tableCols...), extraNames...)
+	quoted := make([]string, len(allCols))
+	for i, c := range allCols {
+		quoted[i] = `"` + c + `"`
+	}
+	insertSQL := fmt.Sprintf(`INSERT OR REPLACE INTO "%s" (%s) VALUES (%s)`,
+		tbl.name, strings.Join(quoted, ", "), strings.TrimSuffix(strings.Repeat("?,", len(allCols)), ","))
+
+	stmt, err := db.PrepareContext(ctx, insertSQL)
 	if err != nil {
 		return fmt.Errorf("prepare insert: %w", err)
 	}
@@ -813,6 +860,13 @@ func loadCurated(ctx context.Context, db *sql.DB, tbl curatedTable, fw Client) e
 		vals, ok := tbl.extract(rowMap)
 		if !ok {
 			continue
+		}
+		for _, i := range extraIdx {
+			if i < len(row) && row[i] != "" {
+				vals = append(vals, row[i])
+			} else {
+				vals = append(vals, nil)
+			}
 		}
 
 		if _, err := txStmt.ExecContext(ctx, vals...); err != nil {

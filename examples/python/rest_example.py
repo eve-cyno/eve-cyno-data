@@ -4,7 +4,7 @@
 
 EVE_CYNO_URL      server root (default http://localhost:8092)
 EVE_CYNO_API_KEY  optional API key, sent as `Authorization: Bearer ...`
-EVE_CYNO_JANICE_KEY  optional, your own Janice key for appraise_items (`X-Janice-Key`)
+EVE_CYNO_JANICE_KEY  optional, your own Janice key: appraise_items becomes a Janice appraisal (`X-Janice-Key`)
 
 The server needs DATAAPI_EXPOSE_TOOL_API=true for the /v1/tool/{name} calls.
 """
@@ -17,6 +17,7 @@ import httpx
 
 BASE_URL = os.environ.get("EVE_CYNO_URL", "http://localhost:8092").rstrip("/")
 API_KEY = os.environ.get("EVE_CYNO_API_KEY", "")
+JANICE_KEY = os.environ.get("EVE_CYNO_JANICE_KEY", "")
 
 
 class ApiError(Exception):
@@ -62,10 +63,14 @@ def main() -> None:
         except ApiError as e:
             print(f"fit search unavailable ({e}); the SDE-based calls above do not need it")
 
-        # 4. The tier errors, on purpose.
+        # 4. appraise_items: an estimate from ESI average prices; with your own Janice key it is a Janice appraisal.
+        janice = {"X-Janice-Key": JANICE_KEY} if JANICE_KEY else {}
+        est = request(client, "POST", "/v1/tool/appraise_items", json={"items": "Tritanium x1000\nPyerite x500"}, headers=janice)
+        print(est["result"]["text"].splitlines()[0])
+
+        # 5. The tier errors, on purpose.
         for tool, body, extra in [
-            ("get_fits", {"ship": "Megathron"}, {}),                      # keyed tool, no key
-            ("appraise_items", {"items": "Tritanium"}, {}),               # byo-key, no X-Janice-Key
+            ("analyze_battle", {"battle_url": "https://zkillboard.com/related/30000142/202610141200/"}, {}),  # keyed tool, no key
             ("convert_isk_to_real", {}, {}),                              # disabled
             # A key that is not in the server's key file is refused on every tool, public ones
             # included (only when the server has a key file at all).
@@ -76,10 +81,10 @@ def main() -> None:
                 print(f"{tool}: ok")
             except ApiError as e:
                 # 401 api_key_required / invalid_api_key, 403 key_not_permitted / tool_disabled,
-                # 400 janice_key_required, 429 rate_limited (wait Retry-After seconds).
+                # 429 rate_limited (wait Retry-After seconds).
                 print(f"{tool}: {e}")
 
-        # 5. A malformed request is a 400 invalid_request.
+        # 6. A malformed request is a 400 invalid_request.
         try:
             request(client, "GET", "/v1/items/search", params={"q": "x"})
         except ApiError as e:

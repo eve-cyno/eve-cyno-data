@@ -1,0 +1,122 @@
+{
+  "tool": "get_thera_connections",
+  "request": {
+    "hub": "all",
+    "near": {
+      "origin": "Jita"
+    },
+    "limit": 5
+  },
+  "prompt": "Which Thera and Turnur wormholes are closest to Jita?",
+  "recorded": "2026-10-18",
+  "trimmed": false,
+  "response": {
+    "tool": "get_thera_connections",
+    "version": "sha-52c75d0",
+    "result": {
+      "text": "Thera and Turnur connections (EvE-Scout / Signal Cartel, as of 2026-10-17 23:36 UTC), 5 of 21:\n  Thera ↔ Immuri (+0.4 ls, Black Rise) · M164 xlarge · 8 h left · sigs JON-027 / ZTL-381 · 9 j from Jita\n  Turnur ↔ Ohkunen (+0.4 ls, The Forge) · N944 capital · 18 h left · sigs NLG-969 / UZJ-520 · 11 j from Jita\n  Turnur ↔ Noghere (+0.7 hs, Essence) · B449 xlarge · 9 h left · sigs UWP-468 / WXX-208 · 12 j from Jita\n  Thera ↔ Aeschee (+0.2 ls, Essence) · V898 xlarge · 8 h left · sigs DCJ-230 / UAE-756 · 12 j from Jita\n  Thera ↔ Evuldgenzo (+0.7 hs, Metropolis) · T458 medium · 3 h left · sigs PSK-833 / HXR-510 · 12 j from Jita\n  … 16 more; raise limit.\n9 exits have no gate route from Jita and are left out.",
+      "data": {
+        "as_of": "2026-10-17T23:36:09Z",
+        "hub": "all",
+        "origin": "Jita",
+        "total": 21,
+        "shown": 5,
+        "left_out": 9,
+        "connections": [
+          {
+            "hub": "Thera",
+            "hub_signature": "JON-027",
+            "system": "Immuri",
+            "system_id": 30045343,
+            "system_class": "ls",
+            "security": 0.42116,
+            "sec": "+0.4",
+            "region": "Black Rise",
+            "signature": "ZTL-381",
+            "wormhole_type": "M164",
+            "max_ship_size": "xlarge",
+            "expires_at": "2026-10-18T07:45:00Z",
+            "remaining_hours": 8,
+            "jumps": 9
+          },
+          {
+            "hub": "Turnur",
+            "hub_signature": "NLG-969",
+            "system": "Ohkunen",
+            "system_id": 30000204,
+            "system_class": "ls",
+            "security": 0.384887,
+            "sec": "+0.4",
+            "region": "The Forge",
+            "signature": "UZJ-520",
+            "wormhole_type": "N944",
+            "max_ship_size": "capital",
+            "expires_at": "2026-10-18T17:47:28Z",
+            "remaining_hours": 18,
+            "jumps": 11
+          },
+          {
+            "hub": "Turnur",
+            "hub_signature": "UWP-468",
+            "system": "Noghere",
+            "system_id": 30005018,
+            "system_class": "hs",
+            "security": 0.680809,
+            "sec": "+0.7",
+            "region": "Essence",
+            "signature": "WXX-208",
+            "wormhole_type": "B449",
+            "max_ship_size": "xlarge",
+            "expires_at": "2026-10-18T08:36:16Z",
+            "remaining_hours": 9,
+            "jumps": 12
+          },
+          {
+            "hub": "Thera",
+            "hub_signature": "DCJ-230",
+            "system": "Aeschee",
+            "system_id": 30005008,
+            "system_class": "ls",
+            "security": 0.15653,
+            "sec": "+0.2",
+            "region": "Essence",
+            "signature": "UAE-756",
+            "wormhole_type": "V898",
+            "max_ship_size": "xlarge",
+            "expires_at": "2026-10-18T07:45:00Z",
+            "remaining_hours": 8,
+            "jumps": 12
+          },
+          {
+            "hub": "Thera",
+            "hub_signature": "PSK-833",
+            "system": "Evuldgenzo",
+            "system_id": 30003385,
+            "system_class": "hs",
+            "security": 0.714303,
+            "sec": "+0.7",
+            "region": "Metropolis",
+            "signature": "HXR-510",
+            "wormhole_type": "T458",
+            "max_ship_size": "medium",
+            "expires_at": "2026-10-18T03:24:12Z",
+            "remaining_hours": 3,
+            "jumps": 12
+          }
+        ]
+      }
+    },
+    "attribution": [
+      {
+        "name": "EvE-Scout / Signal Cartel",
+        "url": "https://www.eve-scout.com/",
+        "license": "Public API without published terms, used with attribution; live scanning data by Signal Cartel"
+      },
+      {
+        "name": "EVE Static Data Export (via Fuzzwork)",
+        "url": "https://www.fuzzwork.co.uk/dump/",
+        "license": "CCP game data under the EVE Developer License Agreement; converted by Fuzzwork Enterprises"
+      }
+    ]
+  }
+}

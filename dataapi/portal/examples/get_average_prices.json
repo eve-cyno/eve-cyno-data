@@ -1,0 +1,60 @@
+{
+  "tool": "get_average_prices",
+  "request": {
+    "names": [
+      "Tritanium",
+      "PLEX",
+      "Gila",
+      "Large Shield Extender II"
+    ]
+  },
+  "prompt": "What are the average prices of Tritanium, PLEX, a Gila and a Large Shield Extender II?",
+  "recorded": "2026-10-17",
+  "trimmed": false,
+  "response": {
+    "tool": "get_average_prices",
+    "version": "sha-16bfd26",
+    "result": {
+      "text": "Average prices (ESI /markets/prices, as of 2026-10-17; EVE's daily average, not live Jita orders), 4 items:\n  Tritanium (34): 3.73 ISK\n  PLEX (44992): 4,735,089.99 ISK\n  Gila (17715): 209,814,678.72 ISK\n  Large Shield Extender II (3841): 888,868.78 ISK",
+      "data": {
+        "as_of": "2026-10-17",
+        "source": "ESI /markets/prices",
+        "prices": [
+          {
+            "type_id": 34,
+            "name": "Tritanium",
+            "average_isk": 3.73
+          },
+          {
+            "type_id": 44992,
+            "name": "PLEX",
+            "average_isk": 4735089.99
+          },
+          {
+            "type_id": 17715,
+            "name": "Gila",
+            "average_isk": 209814678.72
+          },
+          {
+            "type_id": 3841,
+            "name": "Large Shield Extender II",
+            "average_isk": 888868.78
+          }
+        ],
+        "unresolved": []
+      }
+    },
+    "attribution": [
+      {
+        "name": "ESI (EVE Swagger Interface)",
+        "url": "https://esi.evetech.net/",
+        "license": "EVE Developer License Agreement (CCP Games / Fenris Creations); non-commercial use"
+      },
+      {
+        "name": "EVE Static Data Export (via Fuzzwork)",
+        "url": "https://www.fuzzwork.co.uk/dump/",
+        "license": "CCP game data under the EVE Developer License Agreement; converted by Fuzzwork Enterprises"
+      }
+    ]
+  }
+}

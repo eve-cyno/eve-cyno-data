@@ -101,7 +101,7 @@ func TestTypedResult_GetMarketPrice(t *testing.T) {
 	}, *price)
 	require.Contains(t, res.Text, "Best sell: "+fmtISK(*price.BestSellISK)+" ISK  ("+strconv.Itoa(price.SellOrders)+" orders)")
 	require.Contains(t, res.Text, "Best buy:  "+fmtISK(*price.BestBuyISK)+" ISK  ("+strconv.Itoa(price.BuyOrders)+" orders)")
-	require.JSONEq(t, `{"type_id":34,"region_id":10000002,"market":"The Forge / Jita","best_sell_isk":999.25,"sell_orders":3,"best_buy_isk":950,"buy_orders":2}`, jsonOf(t, price))
+	require.JSONEq(t, `{"type_id":34,"region_id":10000002,"market":"The Forge / Jita","hub":"","best_sell_isk":999.25,"sell_orders":3,"best_buy_isk":950,"buy_orders":2}`, jsonOf(t, price))
 }
 
 func TestTypedResult_GetMarketPrice_OneSidedBookHasNullPrice(t *testing.T) {
@@ -378,7 +378,7 @@ func TestSecClass_FollowsDisplayedSecurity(t *testing.T) {
 		{0.1, "+0.1", "lowsec"},
 		{0.03, "+0.1", "lowsec"},
 		{0.0, "+0.0", "nullsec"},
-		{-0.04, "-0.0", "nullsec"},
+		{-0.04, "+0.0", "nullsec"}, // never negative zero
 		{-0.5, "-0.5", "nullsec"},
 	}
 	for _, c := range cases {

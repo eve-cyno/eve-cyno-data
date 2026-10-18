@@ -2,6 +2,7 @@ package tools
 
 import (
 	"context"
+	"encoding/json"
 	"strings"
 	"testing"
 
@@ -99,15 +100,61 @@ func TestProductionChainPESkillReducesLeafMaterials(t *testing.T) {
 
 // --- FIX 7: get_reprocessing_yield honours quantity (SDE-backed) ---
 
-func TestReprocessingYieldScalesWithQuantity(t *testing.T) {
+func TestReprocessingYield_UsesPortionSize(t *testing.T) {
+	out := getReprocessingYield(openCorpusSDE(t), "Veldspar", 1000, 50.0)
+	require.Regexp(t, `(?m)^Tritanium +2,000$`, out)
+	require.NotContains(t, out, "200,000")
+	require.True(t, strings.HasSuffix(out, "\n\nReprocessed as 10 batches of 100 units."))
+}
+
+func TestReprocessingYield_ScalesWithBatches(t *testing.T) {
 	s := openCorpusSDE(t)
+	require.Regexp(t, `(?m)^Tritanium +200$`, getReprocessingYield(s, "Veldspar", 100, 50.0))
+	require.Regexp(t, `(?m)^Tritanium +400$`, getReprocessingYield(s, "Veldspar", 200, 50.0))
+}
 
-	one := getReprocessingYield(s, "Veldspar", 1, 50.0)
-	hundred := getReprocessingYield(s, "Veldspar", 100, 50.0)
+func TestReprocessingYield_BelowOneBatch(t *testing.T) {
+	require.Equal(t,
+		"Reprocessing works in batches of 100 units of Veldspar: 50 units is less than one batch, so nothing is reprocessed.",
+		getReprocessingYield(openCorpusSDE(t), "Veldspar", 50, 50.0))
+}
 
-	require.Contains(t, one, "**1× Veldspar**")
-	require.Contains(t, hundred, "**100× Veldspar**")
-	require.NotEqual(t, one, hundred, "100× must yield 100× the materials of 1×")
+func TestReprocessingYield_SingularBatchFooterAndUnit(t *testing.T) {
+	s := openCorpusSDE(t)
+	out := getReprocessingYield(s, "Veldspar", 100, 50.0)
+	require.True(t, strings.HasSuffix(out, "Reprocessed as 1 batch of 100 units."))
+	require.Equal(t,
+		"Reprocessing works in batches of 100 units of Veldspar: 1 unit is less than one batch, so nothing is reprocessed.",
+		getReprocessingYield(s, "Veldspar", 1, 50.0))
+}
+
+func TestReprocessingYield_DefaultsToOneBatch(t *testing.T) {
+	deps := &Deps{SDE: openCorpusSDE(t)}
+	out, err := ExecuteTool(context.Background(), deps, "get_reprocessing_yield", map[string]any{"item_name": "Veldspar", "refining_efficiency_pct": 80.0})
+	require.NoError(t, err)
+	require.Contains(t, out, "**100× Veldspar**")
+	require.Regexp(t, `(?m)^Tritanium +320$`, out)
+}
+
+func TestReprocessingYield_RejectsQuantityBelowOne(t *testing.T) {
+	deps := &Deps{SDE: openCorpusSDE(t)}
+	for q, got := range map[int]string{0: "0", -150: "-150"} {
+		out, err := ExecuteTool(context.Background(), deps, "get_reprocessing_yield", map[string]any{"item_name": "Veldspar", "quantity": q})
+		require.NoError(t, err)
+		require.Equal(t, "quantity: at least 1 (got "+got+").", out)
+	}
+}
+
+func TestReprocessingYield_LeftoverIsStated(t *testing.T) {
+	out := getReprocessingYield(openCorpusSDE(t), "Veldspar", 1050, 50.0)
+	require.Regexp(t, `(?m)^Tritanium +2,000$`, out)
+	require.True(t, strings.HasSuffix(out, "Reprocessed as 10 batches of 100 units; 50 units left over (less than one batch) are not reprocessed."))
+}
+
+func TestReprocessingYield_PortionOneKeepsTodaysText(t *testing.T) {
+	out := getReprocessingYield(openCorpusSDE(t), "Rifter", 1, 50.0)
+	require.Regexp(t, `(?m)^Tritanium +6,666$`, out)
+	require.NotContains(t, out, "Reprocessed as")
 }
 
 func TestReprocessingDispatchReadsQuantityKey(t *testing.T) {
@@ -177,27 +224,29 @@ func TestRequiredSkillsFlyIncludesPrerequisiteChain(t *testing.T) {
 	require.Contains(t, rifter, "Minmatar Frigate")
 }
 
-// --- FIX 3: fetchCommunityFitExample pure no-op + header-stripping ---
+// --- FIX 3: communityFitExample pure no-op + header-stripping ---
 
 func TestFetchCommunityFitExampleNilRetriever(t *testing.T) {
 	// nil retriever → graceful empty string (no panic, no network).
-	require.Equal(t, "", fetchCommunityFitExample(context.Background(), nil, "Gila"))
-	// empty ship name → empty even with a non-nil retriever path skipped.
-	require.Equal(t, "", fetchCommunityFitExample(context.Background(), nil, ""))
+	_, _, ok := communityFitExample(context.Background(), nil, "Gila")
+	require.False(t, ok)
+	// empty ship name → not found even with a non-nil retriever path skipped.
+	_, _, ok = communityFitExample(context.Background(), nil, "")
+	require.False(t, ok)
 }
 
 func TestGetHullFactsNilRetrieverHasNoReferenceBlock(t *testing.T) {
 	s := openCorpusSDE(t)
 	// With a nil retriever the Reference EFT layout block must be absent, but
 	// the rest of the hull-facts output must still render.
-	out := getHullFacts(context.Background(), s, nil, "Rifter")
+	out := getHullFacts(context.Background(), s, nil, "Rifter", false)
 	require.Contains(t, out, "## Hull facts — Rifter")
 	require.NotContains(t, out, "Reference EFT layout")
 	require.Contains(t, out, "Source: data/sde/sde.sqlite (Fuzzwork latest dump)")
 }
 
 // stripEFTHeader mirrors the header-stripping transform inside
-// fetchCommunityFitExample so the pure string logic is unit-tested without a
+// communityFitExample so the pure string logic is unit-tested without a
 // live Qdrant scroll. Kept in lock-step with the production code.
 func stripEFTHeader(shipName, text string) string {
 	text = strings.TrimSpace(text)
@@ -232,4 +281,35 @@ func TestStripEFTHeaderFallsBackToFullText(t *testing.T) {
 	raw := "  just some prose with no EFT block  "
 	require.Equal(t, "just some prose with no EFT block", stripEFTHeader("Gila", raw))
 	require.Equal(t, "", stripEFTHeader("Gila", "   "))
+}
+
+func TestReprocessingYield_QuantityAsStringNilAndFraction(t *testing.T) {
+	deps := &Deps{SDE: openCorpusSDE(t)}
+	run := func(q any) string {
+		out, err := ExecuteTool(context.Background(), deps, "get_reprocessing_yield",
+			map[string]any{"item_name": "Veldspar", "quantity": q})
+		require.NoError(t, err)
+		return out
+	}
+	want := run(float64(1000))
+	require.Equal(t, want, run("1000"), "a quoted number counts as a number")
+	require.Equal(t, want, run(json.Number("1000")))
+	require.Contains(t, run(nil), "**100× Veldspar**", "null quantity is one batch")
+	require.Contains(t, run(""), "**100× Veldspar**", "blank quantity is absent")
+	require.Equal(t, "quantity: at least 1 (got 0).", run(0.5))
+}
+
+func TestReprocessingYield_LeftoverFooterSingular(t *testing.T) {
+	out := getReprocessingYield(openCorpusSDE(t), "Veldspar", 101, 50.0)
+	require.Contains(t, out, "; 1 unit left over (less than one batch) is not reprocessed.")
+	require.Contains(t, getReprocessingYield(openCorpusSDE(t), "Veldspar", 102, 50.0), "2 units left over (less than one batch) are not reprocessed.")
+}
+
+func TestIntArg_CoercesNumericStrings(t *testing.T) {
+	require.Equal(t, 7, intArg(map[string]any{"n": " 7 "}, "n", 3))
+	require.Equal(t, 7, intArg(map[string]any{"n": json.Number("7")}, "n", 3))
+	require.Equal(t, 7, intArg(map[string]any{"n": int64(7)}, "n", 3))
+	require.Equal(t, 1000, intArg(map[string]any{"n": "1000.0"}, "n", 3))
+	require.Equal(t, 3, intArg(map[string]any{"n": "  "}, "n", 3))
+	require.Equal(t, 3, intArg(map[string]any{"n": "abc"}, "n", 3))
 }

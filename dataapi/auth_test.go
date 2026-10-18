@@ -119,7 +119,6 @@ func TestStaticKeys_Authenticate(t *testing.T) {
 		require.False(t, c.Authenticated())
 		require.False(t, c.Allows(catalog.TierKeyed))
 		require.True(t, c.Allows(catalog.TierPublic))
-		require.True(t, c.Allows(catalog.TierBYOKey))
 		require.False(t, c.Allows(catalog.TierDisabled))
 	}
 
@@ -179,7 +178,7 @@ func tierAPI(t *testing.T, mode dataapi.ToolAPIMode, auth dataapi.Authenticator)
 }
 
 // gateCodes are the error codes only the tier gate produces.
-var gateCodes = []string{"api_key_required", "invalid_api_key", "key_not_permitted", "janice_key_required", "tool_disabled"}
+var gateCodes = []string{"api_key_required", "invalid_api_key", "key_not_permitted", "tool_disabled"}
 
 func gateCode(t *testing.T, rec *httptest.ResponseRecorder) string {
 	t.Helper()
@@ -217,17 +216,13 @@ func TestToolTiers_RESTEnforcementMatrix(t *testing.T) {
 			anon.name: "api_key_required", bearer.name: "", xkey.name: "", bad.name: "invalid_api_key",
 			janice.name: "api_key_required", keyAndJanice.name: "",
 		},
-		catalog.TierBYOKey: {
-			anon.name: "janice_key_required", bearer.name: "janice_key_required", xkey.name: "janice_key_required",
-			bad.name: "invalid_api_key", janice.name: "", keyAndJanice.name: "",
-		},
 		catalog.TierDisabled: {
 			anon.name: "tool_disabled", bearer.name: "tool_disabled", xkey.name: "tool_disabled",
 			bad.name: "invalid_api_key", janice.name: "tool_disabled", keyAndJanice.name: "tool_disabled",
 		},
 	}
 	status := map[string]int{
-		"api_key_required": 401, "invalid_api_key": 401, "janice_key_required": 400, "tool_disabled": 403,
+		"api_key_required": 401, "invalid_api_key": 401, "tool_disabled": 403,
 	}
 
 	for _, tl := range catalog.Tools() {
@@ -251,7 +246,7 @@ func TestToolTiers_MatrixCoversEveryTier(t *testing.T) {
 	for _, tl := range catalog.Tools() {
 		seen[tl.Tier] = true
 	}
-	for _, tier := range []catalog.Tier{catalog.TierPublic, catalog.TierKeyed, catalog.TierBYOKey, catalog.TierDisabled} {
+	for _, tier := range []catalog.Tier{catalog.TierPublic, catalog.TierKeyed, catalog.TierDisabled} {
 		require.True(t, seen[tier], "no tool in tier %s: the matrix does not exercise it", tier)
 	}
 }
@@ -299,8 +294,18 @@ func TestJaniceKey_IsTheCallersAndNeverTheProjects(t *testing.T) {
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	require.Equal(t, []string{"caller-one", "caller-two"}, rt.janiceKeys())
 
-	// No call on the public surface falls back to the project key.
-	requireError(t, do(api, "POST", "/v1/tool/appraise_items", `{"items":"x"}`), http.StatusBadRequest, "janice_key_required")
+	// No call on the public surface falls back to the project key: without a header the tool
+	// answers with the ESI estimate and sends nothing to Janice.
+	rec = do(api, "POST", "/v1/tool/appraise_items", `{"items":"Tritanium 1"}`)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	require.Contains(t, rec.Body.String(), tools.ESIEstimateSource)
+	require.Equal(t, []string{"caller-one", "caller-two"}, rt.janiceKeys(), "no Janice request without the caller's key")
+
+	// An unset plugin variable arrives as its placeholder and counts as no key.
+	rec = do(api, "POST", "/v1/tool/appraise_items", `{"items":"Tritanium 1"}`, "X-Janice-Key", "${user_config.janice_api_key}")
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	require.Contains(t, rec.Body.String(), tools.ESIEstimateSource)
+	require.Equal(t, []string{"caller-one", "caller-two"}, rt.janiceKeys())
 
 	// A keyed tool that prices a fit would otherwise reach for the project key.
 	for _, k := range rt.janiceKeys() {

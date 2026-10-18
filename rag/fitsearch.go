@@ -58,7 +58,7 @@ type FitSearchHit struct {
 	Alpha     bool     `json:"alpha"`
 	EFT       string   `json:"eft"`
 	Relevance float64  `json:"relevance"` // computed rank used for sort
-	// Attribution is the credit the fit must carry wherever it is shown (R3.6).
+	// Attribution is the credit the fit must carry wherever it is shown.
 	Attribution Attribution `json:"attribution"`
 
 	// offBonus marks a fit whose main weapon system is not one its hull is

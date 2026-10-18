@@ -29,7 +29,7 @@ func TestOpenAPI_SecuritySchemesAndPerToolSecurity(t *testing.T) {
 	require.Equal(t, "header", apiKey["in"])
 	require.Equal(t, "X-API-Key", apiKey["name"])
 
-	for _, tl := range catalog.ToolsIn(catalog.TierPublic, catalog.TierKeyed, catalog.TierBYOKey) {
+	for _, tl := range catalog.ToolsIn(catalog.TierPublic, catalog.TierKeyed) {
 		op := opOf(t, doc, tl.Name)
 		desc := op["description"].(string)
 		switch tl.Tier {
@@ -43,26 +43,25 @@ func TestOpenAPI_SecuritySchemesAndPerToolSecurity(t *testing.T) {
 		case catalog.TierPublic:
 			require.NotContains(t, op, "security", "%s is open to anonymous callers", tl.Name)
 			require.Contains(t, desc, "Access tier: **public**", tl.Name)
-		case catalog.TierBYOKey:
-			require.NotContains(t, op, "security", tl.Name)
-			require.Contains(t, desc, "Access tier: **byo-key**", tl.Name)
 		}
 	}
 
-	// The Janice header is a required parameter of the byo-key tool, and only of it.
+	// X-Janice-Key is an optional parameter of the tools that accept the caller's key, and only of them.
 	hasJanice := func(op map[string]any) bool {
 		for _, p := range op["parameters"].([]any) {
 			if m, ok := p.(map[string]any); ok && m["name"] == "X-Janice-Key" {
 				require.Equal(t, "header", m["in"])
-				require.Equal(t, true, m["required"])
+				require.Equal(t, false, m["required"])
 				return true
 			}
 		}
 		return false
 	}
+	for _, tl := range catalog.ToolsIn(catalog.TierPublic, catalog.TierKeyed) {
+		require.Equal(t, tl.AcceptsJaniceKey, hasJanice(opOf(t, doc, tl.Name)), tl.Name)
+	}
 	require.True(t, hasJanice(opOf(t, doc, "appraise_items")))
-	require.False(t, hasJanice(opOf(t, doc, "get_fits")))
-	require.False(t, hasJanice(opOf(t, doc, "get_jumps_between")))
+	require.Contains(t, opOf(t, doc, "appraise_items")["description"], "Optional: your own Janice API key")
 
 	// The MCP endpoint works anonymously and with a key.
 	mcp := doc["paths"].(map[string]any)["/mcp"].(map[string]any)["post"].(map[string]any)
@@ -101,28 +100,30 @@ func TestLLMs_GroupToolsByTierAndSayHowToAuthenticate(t *testing.T) {
 	s := PublicSurface()
 	short, full := LLMsTxt(s), LLMsFullTxt(s)
 
-	for _, h := range []string{"## Tools (public", "## Tools (keyed", "## Tools (byo-key"} {
+	for _, h := range []string{"## Tools (public", "## Tools (keyed"} {
 		require.Contains(t, short, h)
 	}
 	pub := strings.Index(short, "## Tools (public")
 	keyed := strings.Index(short, "## Tools (keyed")
-	byo := strings.Index(short, "## Tools (byo-key")
-	require.True(t, pub < keyed && keyed < byo, "public, keyed, byo-key in that order")
+	require.True(t, pub < keyed, "public, then keyed")
+	require.NotContains(t, short, "## Tools (byo-key")
 	require.True(t, strings.Index(short, "[get_jumps_between]") < keyed)
 	require.True(t, strings.Index(short, "[get_fits]") < keyed, "the fit lookups are public")
-	require.True(t, strings.Index(short, "[analyze_battle]") > keyed && strings.Index(short, "[analyze_battle]") < byo)
-	require.Contains(t, short[byo:], "[appraise_items]")
+	require.True(t, strings.Index(short, "[analyze_battle]") > keyed)
+	require.True(t, strings.Index(short, "[appraise_items]") < keyed, "appraise_items is public")
 
 	require.Contains(t, full, "Authorization: Bearer <key>")
 	require.Contains(t, full, "X-API-Key")
 	require.Contains(t, full, "X-Janice-Key")
 	require.Contains(t, full, "- Access: public.")
 	require.Contains(t, full, "- Access: keyed.")
-	require.Contains(t, full, "- Access: byo-key.")
+	require.NotContains(t, full, "- Access: byo-key.")
+	require.Contains(t, full, "- Optional: your own Janice API key")
 	require.Contains(t, full, "`tool_disabled`")
-	for _, code := range []string{"api_key_required", "invalid_api_key", "janice_key_required"} {
+	for _, code := range []string{"api_key_required", "invalid_api_key"} {
 		require.Contains(t, full, code)
 	}
+	require.NotContains(t, full, "janice_key_required")
 
 	// Without API keys the keyed tools are not offered.
 	s.Auth = false
@@ -138,9 +139,10 @@ func TestLLMs_GroupToolsByTierAndSayHowToAuthenticate(t *testing.T) {
 
 func TestErrorCodes_AreStableAndDocumented(t *testing.T) {
 	codes := errorCodes()
-	for _, c := range []string{"tool_disabled", "api_key_required", "invalid_api_key", "key_not_permitted", "janice_key_required"} {
+	for _, c := range []string{"tool_disabled", "api_key_required", "invalid_api_key", "key_not_permitted"} {
 		require.Contains(t, codes, c)
 	}
+	require.NotContains(t, codes, "janice_key_required", "appraise_items runs without a Janice key")
 	require.NotContains(t, codes, "tool_not_available", "replaced by tool_disabled and the key codes")
 	for _, status := range []int{http.StatusUnauthorized, http.StatusForbidden, http.StatusBadRequest} {
 		require.Contains(t, errorResponseNames(), status)

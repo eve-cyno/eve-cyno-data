@@ -42,7 +42,7 @@ func TestNonESIClientsSendProjectUserAgent(t *testing.T) {
 	require.Equal(t, want, c.UserAgent)
 	ctx := context.Background()
 
-	_, _ = appraiseItems(ctx, c, "Tritanium 1", "key")
+	_, _ = janiceAppraisal(ctx, c, "Tritanium 1", "key")
 	_ = usdToEURRate(ctx, c)
 	_, _ = zkillGet(ctx, c, zkillBase+"/x")
 	_, _ = etGetJSON(ctx, c, EveToolsBase+"/x")

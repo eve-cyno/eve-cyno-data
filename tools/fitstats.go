@@ -54,7 +54,7 @@ func (d *Deps) AlphaLegality() *fit.Legality {
 	if d.Legality != nil {
 		return d.Legality
 	}
-	if d.SDE == nil || !d.SDE.Available() {
+	if !d.SDE.Available() {
 		return nil
 	}
 	d.legalityOnce.Do(func() {
@@ -136,7 +136,7 @@ func fitStatCard(ctx context.Context, deps *Deps, eft string, charges map[string
 	if strings.TrimSpace(eft) == "" {
 		return "", nil, "compute_fit_stats needs eft_text: the fit in EFT format, starting with [Ship Name, Fit Name]."
 	}
-	if s == nil || !s.Available() {
+	if !s.Available() {
 		return "", nil, "Fit stats are unavailable: the SDE is not loaded."
 	}
 	f, unresolved := fit.ParseEFT(eft, s)

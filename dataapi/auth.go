@@ -19,7 +19,7 @@ import (
 const (
 	// HeaderAPIKey carries an API key (the alternative to "Authorization: Bearer <key>").
 	HeaderAPIKey = "X-API-Key"
-	// HeaderJaniceKey carries the caller's own Janice key to a byo-key tool.
+	// HeaderJaniceKey carries the caller's own Janice key to a tool that accepts one.
 	HeaderJaniceKey = catalog.HeaderJaniceKey
 
 	// maxCredentialLen caps a presented API key or Janice key; a longer one is
@@ -50,12 +50,12 @@ func NewCaller(id string, tiers ...catalog.Tier) Caller {
 // Authenticated reports whether the caller presented a valid key.
 func (c Caller) Authenticated() bool { return c.ID != "" }
 
-// Allows reports whether the caller may run a tool of tier t: public and byo-key tools
-// are open to everyone (byo-key additionally needs the caller's own Janice key), keyed
-// tools to a key whose allowance includes TierKeyed, disabled tools to nobody.
+// Allows reports whether the caller may run a tool of tier t: public tools are
+// open to everyone, keyed tools to a key whose allowance includes TierKeyed, disabled
+// tools to nobody.
 func (c Caller) Allows(t catalog.Tier) bool {
 	switch t {
-	case catalog.TierPublic, catalog.TierBYOKey:
+	case catalog.TierPublic:
 		return true
 	case catalog.TierKeyed:
 		return c.Authenticated() && slices.Contains(c.tiers, catalog.TierKeyed)
@@ -66,7 +66,7 @@ func (c Caller) Allows(t catalog.Tier) bool {
 // Authenticator turns a request into a Caller. It returns the anonymous Caller and a nil
 // error when the request carries no API key, ErrInvalidAPIKey when it carries one that is
 // not accepted. Implementations must be safe for concurrent use and must never log or
-// return the key. R3.5's key store plugs in here, chained with others through AnyOf, which
+// return the key. A key store plugs in here, chained with others through AnyOf, which
 // hands an ErrInvalidAPIKey on to the next authenticator and passes any other error through.
 type Authenticator interface {
 	Authenticate(r *http.Request) (Caller, error)

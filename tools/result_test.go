@@ -69,15 +69,18 @@ func TestAttribution_TableHasNoOrphanTools(t *testing.T) {
 func TestAttribution_NamesTheRightUpstreams(t *testing.T) {
 	cases := map[string][]string{
 		"get_market_price":      {"ESI (EVE Swagger Interface)"},
-		"get_type_info":         {"ESI (EVE Swagger Interface)"},
+		"get_type_info":         {"EVE Static Data Export (via Fuzzwork)", "ESI (EVE Swagger Interface)"},
 		"get_ship_stats":        {"EVE Static Data Export (via Fuzzwork)"},
 		"get_jumps_between":     {"EVE Static Data Export (via Fuzzwork)"},
+		"get_jump_distances":    {"EVE Static Data Export (via Fuzzwork)"},
+		"plan_jump_route":       {"EVE Static Data Export (via Fuzzwork)", "ESI (EVE Swagger Interface)"},
+		"get_average_prices":    {"ESI (EVE Swagger Interface)", "EVE Static Data Export (via Fuzzwork)"},
 		"compute_fit_stats":     {"EVE Static Data Export (via Fuzzwork)"},
 		"validate_fitting":      {"EVE Static Data Export (via Fuzzwork)", "ESI (EVE Swagger Interface)"},
 		"get_fits":              {"EVE Workbench", "Abysstracker", "gustavmannfred (abyss fits)", "caldarijoans (abyss fits)", "zKillboard"},
 		"list_fits":             {"EVE Workbench", "Abysstracker", "gustavmannfred (abyss fits)", "caldarijoans (abyss fits)", "zKillboard"},
 		"analyze_battle":        {"zKillboard", "WarBeacon", "br.evetools.org", "ESI (EVE Swagger Interface)", "EVE Static Data Export (via Fuzzwork)"},
-		"appraise_items":        {"Janice"},
+		"appraise_items":        {"ESI (EVE Swagger Interface)", "EVE Static Data Export (via Fuzzwork)", "Janice"},
 		"convert_isk_to_real":   {"Frankfurter", "ESI (EVE Swagger Interface)"},
 		"get_hull_facts":        {"EVE Static Data Export (via Fuzzwork)", "EVE Workbench"},
 		"get_sovereignty":       {"ESI (EVE Swagger Interface)", "EVE Static Data Export (via Fuzzwork)"},
@@ -85,6 +88,9 @@ func TestAttribution_NamesTheRightUpstreams(t *testing.T) {
 		"get_production_chain":  {"EVE Static Data Export (via Fuzzwork)"},
 		"get_system_activity":   {"ESI (EVE Swagger Interface)", "EVE Static Data Export (via Fuzzwork)"},
 		"find_canonical_module": {"EVE Static Data Export (via Fuzzwork)"},
+		"find_systems":          {"EVE Static Data Export (via Fuzzwork)", "EVE University Wiki (ice belt systems)"},
+		"get_system_info":       {"EVE Static Data Export (via Fuzzwork)", "EVE University Wiki (ice belt systems)"},
+		"get_thera_connections": {"EvE-Scout / Signal Cartel", "EVE Static Data Export (via Fuzzwork)"},
 	}
 	for tool, want := range cases {
 		require.ElementsMatch(t, want, sourceNames(Attribution(tool)), tool)
@@ -140,10 +146,22 @@ func stubbedUpstreams(t *testing.T) *Client {
 		switch {
 		case r.URL.Path == "/sovereignty/systems":
 			body = `{"solar_systems":[{"solar_system_id":30000142,"claim":{"alliance":{"alliance_id":99000001,"corporation_id":98000001}}}]}`
+		case r.URL.Path == "/incursions":
+			body = `[]`
 		case r.URL.Path == "/universe/system_kills":
 			body = `[{"system_id":30000142,"ship_kills":4,"pod_kills":1,"npc_kills":12}]`
+		case r.URL.Path == "/universe/system_jumps":
+			body = `[{"system_id":30000142,"ship_jumps":1834}]`
+		case r.URL.Path == "/universe/names" && r.Method == http.MethodPost:
+			body = `[{"id":99000001,"name":"Synthetic Alliance","category":"alliance"},{"id":98000001,"name":"Synthetic Corp","category":"corporation"}]`
+		case strings.HasSuffix(r.URL.Path, "/history"):
+			body = `[{"date":"2026-10-14","average":4.5,"highest":5,"lowest":4,"volume":1000,"order_count":10},{"date":"2026-10-15","average":5,"highest":5.5,"lowest":4.5,"volume":2000,"order_count":12}]`
+		case r.URL.Path == "/markets/prices":
+			body = testPricesBody
 		case strings.HasPrefix(r.URL.Path, "/markets/"):
 			body = `[{"price":4500000,"is_buy_order":false},{"price":4400000,"is_buy_order":false}]`
+		case r.URL.Host == "api.eve-scout.com" && r.URL.Path == "/v2/public/signatures":
+			body = `[{"out_system_name":"Thera","out_signature":"AAA-111","in_system_id":30000010,"in_system_name":"Chidah","in_system_class":"hs","in_region_name":"Derelik","in_signature":"BBB-222","wh_type":"V898","max_ship_size":"xlarge","expires_at":"2099-01-01T00:00:00.000Z","remaining_hours":12}]`
 		case r.URL.Path == "/v2/rate/USD/EUR":
 			body = `{"rate":0.9}`
 		}
@@ -184,8 +202,17 @@ func TestExecuteToolResult_TextMatchesExecuteTool(t *testing.T) {
 	cases := []tc{
 		{"get_jumps_between", map[string]any{"from_system": "Jita", "to_system": "Amarr"}, sdeDeps},
 		{"get_jumps_between", map[string]any{"from_system": "Jita", "to_system": "Nope99"}, sdeDeps},
+		{"get_jump_distances", map[string]any{"origin": "Jita", "systems": []any{"Amarr", "Nope99"}}, sdeDeps},
+		{"plan_jump_route", map[string]any{"origin": "Amamake", "destination": "1DQ1-A", "ship": "Rhea", "waypoints": []any{"Sahda"}}, sdeDeps},
+		{"plan_jump_route", map[string]any{"origin": "Amamake", "destination": "1DQ1-A", "ship": "Rhea", "avoid_incursions": true, "live_info": true}, stubDeps},
+		{"find_systems", map[string]any{"jump_range": map[string]any{"origin": "EC-P8R", "ship": "Rorqual"}, "limit": 3.0}, sdeDeps},
+		{"get_jumps_between", map[string]any{"from_system": "Jita", "to_system": "Amarr", "detail": "summary", "avoid": []any{"Ahbazon"}}, sdeDeps},
 		{"get_systems_in_region", map[string]any{"region_name": "The Forge"}, sdeDeps},
 		{"get_npc_stations", map[string]any{"system_name": "Jita"}, sdeDeps},
+		{"find_systems", map[string]any{"region": "The Forge", "limit": 3.0}, sdeDeps},
+		{"find_systems", map[string]any{"region": "Nowhere"}, sdeDeps},
+		{"get_system_info", map[string]any{"systems": []any{"Jita", "Erkinen", "Nope99"}}, sdeDeps},
+		{"get_system_info", map[string]any{"systems": []any{}}, sdeDeps},
 		{"get_reprocessing_yield", map[string]any{"item_name": "Veldspar", "quantity": 1000, "refining_efficiency_pct": 50.0}, sdeDeps},
 		{"get_required_skills", map[string]any{"item_name": "Rifter"}, sdeDeps},
 		{"get_production_chain", map[string]any{"item_name": "Rifter", "runs": 1, "me_level": 10}, sdeDeps},
@@ -204,12 +231,18 @@ func TestExecuteToolResult_TextMatchesExecuteTool(t *testing.T) {
 		{"get_market_price", map[string]any{"type_id": 34}, cassette("get_market_price_34.json")},
 		{"get_market_price", map[string]any{}, sdeDeps},
 		{"get_type_info", map[string]any{"type_id": 587}, cassette("get_type_info_587.json")},
-		{"appraise_items", map[string]any{"items": "Tritanium 10"}, sdeDeps},
+		{"appraise_items", map[string]any{"items": "Tritanium 10"}, stubDeps},
 		{"analyze_battle", map[string]any{}, sdeDeps},
 		{"get_fits", map[string]any{"ship_name": "Gila"}, sdeDeps},
 		{"list_fits", map[string]any{}, sdeDeps},
+		{"get_average_prices", map[string]any{"names": []any{"Tritanium"}}, stubDeps},
+		{"get_market_price", map[string]any{"type_id": 34, "hub": "amarr"}, stubDeps},
+		{"get_market_history", map[string]any{"type_id": 34}, stubDeps},
+		{"get_thera_connections", map[string]any{"hub": "thera"}, stubDeps},
 		{"get_sovereignty", map[string]any{"system_name": "Jita"}, stubDeps},
 		{"get_system_activity", map[string]any{"system_name": "Jita"}, stubDeps},
+		{"get_sovereignty", map[string]any{"systems": []any{"Jita", "Nope"}}, stubDeps},
+		{"get_system_activity", map[string]any{"systems": []any{"Jita"}}, stubDeps},
 		{"convert_isk_to_real", map[string]any{"isk_amount": 1e9, "currency": "BOTH"}, stubDeps},
 	}
 
@@ -238,7 +271,7 @@ func TestExecuteToolResult_TextMatchesExecuteTool(t *testing.T) {
 // Only the tools with a typed result carry Data; every other tool leaves it nil until
 // it gets one.
 func TestExecuteToolResult_DataIsNilForTextOnlyTools(t *testing.T) {
-	deps := testDeps(t)
+	deps := &Deps{SDE: testDeps(t).SDE, Client: stubbedUpstreams(t)} // no network: the keyless appraisal reads the canned prices
 	for _, c := range []struct {
 		tool string
 		args map[string]any

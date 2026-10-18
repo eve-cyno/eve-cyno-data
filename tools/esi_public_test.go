@@ -57,7 +57,7 @@ func TestUnknownTypeIDNeverReachesESI(t *testing.T) {
 	require.Nil(t, data)
 	require.Contains(t, info, "Unknown type_id=999999999. Do NOT invent a type_id.")
 
-	price, mp, err := getMarketPrice(context.Background(), c, s, 999999999)
+	price, mp, err := getMarketPrice(context.Background(), c, s, 999999999, "")
 	require.NoError(t, err)
 	require.Nil(t, mp)
 	require.Contains(t, price, "Unknown type_id=999999999. Do NOT invent a type_id.")
@@ -86,7 +86,7 @@ func TestUpstreamBusyMarketPriceAndTypeInfoAreErrors(t *testing.T) {
 
 	s := tinyTypesSDE(t)
 	for name, call := range map[string]func() error{
-		"market": func() error { _, _, err := getMarketPrice(context.Background(), c, s, 34); return err },
+		"market": func() error { _, _, err := getMarketPrice(context.Background(), c, s, 34, ""); return err },
 		"type":   func() error { _, _, err := getTypeInfo(context.Background(), c, s, 587); return err },
 	} {
 		t.Run(name, func(t *testing.T) {
@@ -107,4 +107,60 @@ func TestUpstreamBusyMarketPriceAndTypeInfoAreErrors(t *testing.T) {
 	require.Error(t, err)
 	_, busy = UpstreamBusy(err)
 	require.False(t, busy, "a call cut off by its own context is not upstream-busy")
+}
+
+// typesSDEWithDescription is tinyTypesSDE plus an invTypes.description column; only the
+// Rifter has a description.
+func typesSDEWithDescription(t *testing.T) *sde.SDE {
+	t.Helper()
+	path := filepath.Join(t.TempDir(), "sde.sqlite")
+	db, err := sql.Open("sqlite", path)
+	require.NoError(t, err)
+	for _, stmt := range []string{
+		`CREATE TABLE invTypes (typeID INTEGER, groupID INTEGER, typeName TEXT, description TEXT, published INTEGER, mass REAL, volume REAL, capacity REAL)`,
+		`INSERT INTO invTypes VALUES (587, 25, 'Rifter', '  A fast frigate.  ', 1, 1067000, 27289, 0), (34, 18, 'Tritanium', NULL, 1, 0, 0.01, 0)`,
+	} {
+		_, err := db.Exec(stmt)
+		require.NoError(t, err, stmt)
+	}
+	require.NoError(t, db.Close())
+	s, err := sde.Open(path)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = s.Close() })
+	return s
+}
+
+func TestTypeInfoFromSDEMakesNoESIRequest(t *testing.T) {
+	var calls atomic.Int32
+	c, _ := newFakeESIClient(t, func(w http.ResponseWriter, r *http.Request, rec esiRec) {
+		calls.Add(1)
+		writeJSON(w, 500, `{}`, nil)
+	})
+	s := typesSDEWithDescription(t)
+
+	got, info, err := getTypeInfo(context.Background(), c, s, 587)
+	require.NoError(t, err)
+	require.Equal(t, "Name: Rifter\nVolume: 27289.0 m³\nMass: 1067000.0 kg\nGroup ID: 25\nDescription: A fast frigate.", got)
+	require.Equal(t, &TypeInfo{TypeID: 587, Name: "Rifter", Description: "A fast frigate.", VolumeM3: 27289, MassKg: 1067000, GroupID: 25}, info)
+	require.Zero(t, calls.Load())
+}
+
+func TestTypeInfoFallsBackToESI(t *testing.T) {
+	esiBody := `{"name":"Tritanium","description":"From ESI","volume":0.01,"mass":0,"group_id":18}`
+	for name, s := range map[string]*sde.SDE{
+		"empty description":     typesSDEWithDescription(t), // Tritanium: NULL description
+		"no description column": tinyTypesSDE(t),
+	} {
+		t.Run(name, func(t *testing.T) {
+			var calls atomic.Int32
+			c, _ := newFakeESIClient(t, func(w http.ResponseWriter, r *http.Request, rec esiRec) {
+				calls.Add(1)
+				writeJSON(w, 200, esiBody, nil)
+			})
+			got, _, err := getTypeInfo(context.Background(), c, s, 34)
+			require.NoError(t, err)
+			require.Contains(t, got, "Description: From ESI")
+			require.Equal(t, int32(1), calls.Load())
+		})
+	}
 }

@@ -73,8 +73,8 @@ func names(tiers ...catalog.Tier) []string {
 func TestMCPTiers_ToolsListIsChosenPerCaller(t *testing.T) {
 	api, _ := tieredMCP(t)
 
-	anonymous := names(catalog.TierPublic, catalog.TierBYOKey)
-	keyed := names(catalog.TierPublic, catalog.TierKeyed, catalog.TierBYOKey)
+	anonymous := names(catalog.TierPublic)
+	keyed := names(catalog.TierPublic, catalog.TierKeyed)
 
 	require.Equal(t, anonymous, listedTools(t, api))
 	require.Equal(t, keyed, listedTools(t, api, "Authorization", "Bearer "+keyAlpha))
@@ -86,7 +86,7 @@ func TestMCPTiers_ToolsListIsChosenPerCaller(t *testing.T) {
 	require.NotContains(t, anonymous, "analyze_battle")
 	require.Contains(t, anonymous, "get_fits", "the fit lookups are public")
 	require.Contains(t, anonymous, "list_fits")
-	require.Contains(t, anonymous, "appraise_items", "the byo-key tool is listed for everyone")
+	require.Contains(t, anonymous, "appraise_items", "appraise_items is public")
 }
 
 func TestMCPTiers_InvalidKeyIs401NotAnAnonymousList(t *testing.T) {
@@ -114,16 +114,16 @@ func TestMCPTiers_KeyedToolIsUnknownWithoutAKey(t *testing.T) {
 	require.Contains(t, rec.Body.String(), "unknown tool")
 }
 
-func TestMCPTiers_ByoKeyCallWithoutHeaderIsAnErrorResultNamingIt(t *testing.T) {
+func TestMCPTiers_AppraiseWithoutHeaderIsTheESIEstimate(t *testing.T) {
 	api, rt := tieredMCP(t)
 	res := rpcResult(t, callTool(t, api, "appraise_items", map[string]any{"items": "Tritanium 1"}))
-	require.Equal(t, true, res["isError"])
+	require.NotEqual(t, true, res["isError"], fmt.Sprint(res))
 	text := res["content"].([]any)[0].(map[string]any)["text"].(string)
-	require.Contains(t, text, "X-Janice-Key")
+	require.Contains(t, text, tools.ESIEstimateSource)
 	require.Empty(t, rt.janiceKeys(), "no Janice request is made, least of all with the project key")
 }
 
-func TestMCPTiers_ByoKeyCallUsesTheCallersKeyOnly(t *testing.T) {
+func TestMCPTiers_AppraiseWithHeaderUsesTheCallersKeyOnly(t *testing.T) {
 	api, rt := tieredMCP(t)
 	res := rpcResult(t, callTool(t, api, "appraise_items", map[string]any{"items": "Tritanium 1"}, "X-Janice-Key", "mcp-caller-key"))
 	require.NotEqual(t, true, res["isError"], fmt.Sprint(res))
@@ -135,6 +135,7 @@ func TestMCPTiers_ByoKeyCallUsesTheCallersKeyOnly(t *testing.T) {
 		m := tl.(map[string]any)
 		if m["name"] == "appraise_items" {
 			require.Contains(t, m["description"], "X-Janice-Key")
+			require.Contains(t, m["description"], "Optional")
 		}
 	}
 }
@@ -186,7 +187,7 @@ func TestMCPTiers_ClientSessionSeesKeyedToolsWithAKey(t *testing.T) {
 		got = append(got, tl.Name)
 	}
 	slices.Sort(got)
-	require.Equal(t, names(catalog.TierPublic, catalog.TierKeyed, catalog.TierBYOKey), got)
+	require.Equal(t, names(catalog.TierPublic, catalog.TierKeyed), got)
 }
 
 type headerTransport map[string]string

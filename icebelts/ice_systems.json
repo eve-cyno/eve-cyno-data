@@ -1,0 +1,2619 @@
+{
+  "schema_version": 1,
+  "source": "EVE University Wiki",
+  "license": "CC BY-SA 4.0",
+  "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+  "credit": "EVE University",
+  "notes": [
+    "Highsec and lowsec ice systems listed on the EVE University pages of the four faction ice belts; nullsec ice systems are not listed there and are not covered.",
+    "Systems the pages mark as no longer accessible (moved to Pochven) are left out.",
+    "Secondary ice types follow each page's composition table: Glare Crust at 0.4 and below, Dark Glitter at 0.1.",
+    "This file is derived from the EVE University Wiki and stays under CC BY-SA 4.0; the code around it is MIT."
+  ],
+  "pages": [
+    {
+      "title": "Clear Icicle Belt",
+      "url": "https://wiki.eveuniversity.org/Clear_Icicle_Belt",
+      "revision": 214740
+    },
+    {
+      "title": "White Glaze Belt",
+      "url": "https://wiki.eveuniversity.org/White_Glaze_Belt",
+      "revision": 229719
+    },
+    {
+      "title": "Blue Ice Belt",
+      "url": "https://wiki.eveuniversity.org/Blue_Ice_Belt",
+      "revision": 214734
+    },
+    {
+      "title": "Glacial Mass Belt",
+      "url": "https://wiki.eveuniversity.org/Glacial_Mass_Belt",
+      "revision": 229716
+    }
+  ],
+  "systems": [
+    {
+      "system": "Aakari",
+      "system_id": 30001396,
+      "belts": [
+        "White Glaze Belt"
+      ],
+      "ice_types": [
+        "White Glaze"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/White_Glaze_Belt"
+      ]
+    },
+    {
+      "system": "Abudban",
+      "system_id": 30002507,
+      "belts": [
+        "Glacial Mass Belt"
+      ],
+      "ice_types": [
+        "Glacial Mass"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Glacial_Mass_Belt"
+      ]
+    },
+    {
+      "system": "Access",
+      "system_id": 30005266,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle",
+        "Glare Crust"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Actee",
+      "system_id": 30004981,
+      "belts": [
+        "Blue Ice Belt"
+      ],
+      "ice_types": [
+        "Blue Ice"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Blue_Ice_Belt"
+      ]
+    },
+    {
+      "system": "Aderkan",
+      "system_id": 30003439,
+      "belts": [
+        "Glacial Mass Belt"
+      ],
+      "ice_types": [
+        "Glacial Mass"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Glacial_Mass_Belt"
+      ]
+    },
+    {
+      "system": "Aeschee",
+      "system_id": 30005008,
+      "belts": [
+        "Blue Ice Belt"
+      ],
+      "ice_types": [
+        "Blue Ice",
+        "Glare Crust"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Blue_Ice_Belt"
+      ]
+    },
+    {
+      "system": "Afivad",
+      "system_id": 30003535,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Agal",
+      "system_id": 30005292,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Agoze",
+      "system_id": 30003787,
+      "belts": [
+        "Blue Ice Belt"
+      ],
+      "ice_types": [
+        "Blue Ice",
+        "Glare Crust"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Blue_Ice_Belt"
+      ]
+    },
+    {
+      "system": "Ahtulaima",
+      "system_id": 30000125,
+      "belts": [
+        "White Glaze Belt"
+      ],
+      "ice_types": [
+        "White Glaze"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/White_Glaze_Belt"
+      ]
+    },
+    {
+      "system": "Alachene",
+      "system_id": 30003042,
+      "belts": [
+        "Blue Ice Belt"
+      ],
+      "ice_types": [
+        "Blue Ice",
+        "Glare Crust"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Blue_Ice_Belt"
+      ]
+    },
+    {
+      "system": "Alparena",
+      "system_id": 30003850,
+      "belts": [
+        "Blue Ice Belt"
+      ],
+      "ice_types": [
+        "Blue Ice",
+        "Glare Crust",
+        "Dark Glitter"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Blue_Ice_Belt"
+      ]
+    },
+    {
+      "system": "Alsavoinon",
+      "system_id": 30003841,
+      "belts": [
+        "Blue Ice Belt"
+      ],
+      "ice_types": [
+        "Blue Ice",
+        "Glare Crust"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Blue_Ice_Belt"
+      ]
+    },
+    {
+      "system": "Angur",
+      "system_id": 30005264,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle",
+        "Glare Crust"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Anjedin",
+      "system_id": 30001647,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Antollare",
+      "system_id": 30003051,
+      "belts": [
+        "Blue Ice Belt"
+      ],
+      "ice_types": [
+        "Blue Ice"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Blue_Ice_Belt"
+      ]
+    },
+    {
+      "system": "Ardallabier",
+      "system_id": 30003030,
+      "belts": [
+        "Blue Ice Belt"
+      ],
+      "ice_types": [
+        "Blue Ice"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Blue_Ice_Belt"
+      ]
+    },
+    {
+      "system": "Arera",
+      "system_id": 30002244,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Arshat",
+      "system_id": 30002253,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Arveyil",
+      "system_id": 30003007,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Asgeir",
+      "system_id": 30003384,
+      "belts": [
+        "Glacial Mass Belt"
+      ],
+      "ice_types": [
+        "Glacial Mass"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Glacial_Mass_Belt"
+      ]
+    },
+    {
+      "system": "Assez",
+      "system_id": 30005224,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle",
+        "Glare Crust"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Astabih",
+      "system_id": 30000113,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle",
+        "Glare Crust"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Aubenall",
+      "system_id": 30003827,
+      "belts": [
+        "Blue Ice Belt"
+      ],
+      "ice_types": [
+        "Blue Ice",
+        "Glare Crust"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Blue_Ice_Belt"
+      ]
+    },
+    {
+      "system": "Avada",
+      "system_id": 30004249,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Avaux",
+      "system_id": 30003843,
+      "belts": [
+        "Blue Ice Belt"
+      ],
+      "ice_types": [
+        "Blue Ice",
+        "Glare Crust"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Blue_Ice_Belt"
+      ]
+    },
+    {
+      "system": "Avyuh",
+      "system_id": 30005215,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Aydoteaux",
+      "system_id": 30003055,
+      "belts": [
+        "Blue Ice Belt"
+      ],
+      "ice_types": [
+        "Blue Ice"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Blue_Ice_Belt"
+      ]
+    },
+    {
+      "system": "Azizora",
+      "system_id": 30002265,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Barkrik",
+      "system_id": 30002071,
+      "belts": [
+        "Glacial Mass Belt"
+      ],
+      "ice_types": [
+        "Glacial Mass"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Glacial_Mass_Belt"
+      ]
+    },
+    {
+      "system": "Bashakru",
+      "system_id": 30002199,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Bordan",
+      "system_id": 30004106,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle",
+        "Glare Crust"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Bourar",
+      "system_id": 30002238,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle",
+        "Glare Crust"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Brapelille",
+      "system_id": 30002699,
+      "belts": [
+        "Blue Ice Belt"
+      ],
+      "ice_types": [
+        "Blue Ice"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Blue_Ice_Belt"
+      ]
+    },
+    {
+      "system": "Cabeki",
+      "system_id": 30003934,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle",
+        "Glare Crust",
+        "Dark Glitter"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Cadelanne",
+      "system_id": 30003569,
+      "belts": [
+        "Blue Ice Belt"
+      ],
+      "ice_types": [
+        "Blue Ice",
+        "Glare Crust",
+        "Dark Glitter"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Blue_Ice_Belt"
+      ]
+    },
+    {
+      "system": "Carirgnottin",
+      "system_id": 30003048,
+      "belts": [
+        "Blue Ice Belt"
+      ],
+      "ice_types": [
+        "Blue Ice"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Blue_Ice_Belt"
+      ]
+    },
+    {
+      "system": "Carrou",
+      "system_id": 30002645,
+      "belts": [
+        "Blue Ice Belt"
+      ],
+      "ice_types": [
+        "Blue Ice",
+        "Glare Crust"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Blue_Ice_Belt"
+      ]
+    },
+    {
+      "system": "Chanoun",
+      "system_id": 30004122,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Chelien",
+      "system_id": 30002667,
+      "belts": [
+        "Blue Ice Belt"
+      ],
+      "ice_types": [
+        "Blue Ice"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Blue_Ice_Belt"
+      ]
+    },
+    {
+      "system": "Choga",
+      "system_id": 30005051,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Claini",
+      "system_id": 30003896,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle",
+        "Glare Crust"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Clarelam",
+      "system_id": 30002275,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Costolle",
+      "system_id": 30005298,
+      "belts": [
+        "Blue Ice Belt"
+      ],
+      "ice_types": [
+        "Blue Ice",
+        "Glare Crust"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Blue_Ice_Belt"
+      ]
+    },
+    {
+      "system": "Cumemare",
+      "system_id": 30003802,
+      "belts": [
+        "Blue Ice Belt"
+      ],
+      "ice_types": [
+        "Blue Ice",
+        "Glare Crust",
+        "Dark Glitter"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Blue_Ice_Belt"
+      ]
+    },
+    {
+      "system": "Dantan",
+      "system_id": 30004097,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Dantbeinn",
+      "system_id": 30003451,
+      "belts": [
+        "Glacial Mass Belt"
+      ],
+      "ice_types": [
+        "Glacial Mass"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Glacial_Mass_Belt"
+      ]
+    },
+    {
+      "system": "Deninard",
+      "system_id": 30004987,
+      "belts": [
+        "Blue Ice Belt"
+      ],
+      "ice_types": [
+        "Blue Ice"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Blue_Ice_Belt"
+      ]
+    },
+    {
+      "system": "Dihra",
+      "system_id": 30002967,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Elonaya",
+      "system_id": 30001399,
+      "belts": [
+        "White Glaze Belt"
+      ],
+      "ice_types": [
+        "White Glaze"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/White_Glaze_Belt"
+      ]
+    },
+    {
+      "system": "Emolgranlan",
+      "system_id": 30002548,
+      "belts": [
+        "Glacial Mass Belt"
+      ],
+      "ice_types": [
+        "Glacial Mass"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Glacial_Mass_Belt"
+      ]
+    },
+    {
+      "system": "Enal",
+      "system_id": 30005082,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle",
+        "Glare Crust"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Endrulf",
+      "system_id": 30002558,
+      "belts": [
+        "Glacial Mass Belt"
+      ],
+      "ice_types": [
+        "Glacial Mass"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Glacial_Mass_Belt"
+      ]
+    },
+    {
+      "system": "Erkinen",
+      "system_id": 30003078,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Ervekam",
+      "system_id": 30003867,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Esescama",
+      "system_id": 30002964,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Esteban",
+      "system_id": 30002260,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Eugales",
+      "system_id": 30003825,
+      "belts": [
+        "Blue Ice Belt"
+      ],
+      "ice_types": [
+        "Blue Ice",
+        "Glare Crust"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Blue_Ice_Belt"
+      ]
+    },
+    {
+      "system": "Eygfe",
+      "system_id": 30003392,
+      "belts": [
+        "Glacial Mass Belt"
+      ],
+      "ice_types": [
+        "Glacial Mass"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Glacial_Mass_Belt"
+      ]
+    },
+    {
+      "system": "Fabum",
+      "system_id": 30003505,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Faspera",
+      "system_id": 30000044,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle",
+        "Glare Crust",
+        "Dark Glitter"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Finanar",
+      "system_id": 30003442,
+      "belts": [
+        "Glacial Mass Belt"
+      ],
+      "ice_types": [
+        "Glacial Mass"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Glacial_Mass_Belt"
+      ]
+    },
+    {
+      "system": "Fliet",
+      "system_id": 30004980,
+      "belts": [
+        "Blue Ice Belt"
+      ],
+      "ice_types": [
+        "Blue Ice",
+        "Glare Crust"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Blue_Ice_Belt"
+      ]
+    },
+    {
+      "system": "Futzchag",
+      "system_id": 30000017,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle",
+        "Glare Crust"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Gallusiene",
+      "system_id": 30003844,
+      "belts": [
+        "Blue Ice Belt"
+      ],
+      "ice_types": [
+        "Blue Ice",
+        "Glare Crust"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Blue_Ice_Belt"
+      ]
+    },
+    {
+      "system": "Gamis",
+      "system_id": 30000107,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Gasavak",
+      "system_id": 30004119,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle",
+        "Glare Crust"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Gedugaud",
+      "system_id": 30003433,
+      "belts": [
+        "Glacial Mass Belt"
+      ],
+      "ice_types": [
+        "Glacial Mass"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Glacial_Mass_Belt"
+      ]
+    },
+    {
+      "system": "Gekutami",
+      "system_id": 30000149,
+      "belts": [
+        "White Glaze Belt"
+      ],
+      "ice_types": [
+        "White Glaze"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/White_Glaze_Belt"
+      ]
+    },
+    {
+      "system": "Gelhan",
+      "system_id": 30000087,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Gemodi",
+      "system_id": 30001663,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle",
+        "Glare Crust"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Geztic",
+      "system_id": 30003871,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Gidali",
+      "system_id": 30003877,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Gonditsa",
+      "system_id": 30005268,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle",
+        "Glare Crust"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Goram",
+      "system_id": 30001646,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Gosalav",
+      "system_id": 30003509,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Hadji",
+      "system_id": 30005223,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Halaima",
+      "system_id": 30002781,
+      "belts": [
+        "White Glaze Belt"
+      ],
+      "ice_types": [
+        "White Glaze"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/White_Glaze_Belt"
+      ]
+    },
+    {
+      "system": "Haras",
+      "system_id": 30003087,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle",
+        "Glare Crust"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Hentogaira",
+      "system_id": 30000188,
+      "belts": [
+        "White Glaze Belt"
+      ],
+      "ice_types": [
+        "White Glaze"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/White_Glaze_Belt"
+      ]
+    },
+    {
+      "system": "Hezere",
+      "system_id": 30003937,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle",
+        "Glare Crust"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Hodrold",
+      "system_id": 30003469,
+      "belts": [
+        "Glacial Mass Belt"
+      ],
+      "ice_types": [
+        "Glacial Mass"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Glacial_Mass_Belt"
+      ]
+    },
+    {
+      "system": "Hoseen",
+      "system_id": 30004264,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle",
+        "Glare Crust",
+        "Dark Glitter"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Hulmate",
+      "system_id": 30004988,
+      "belts": [
+        "Blue Ice Belt"
+      ],
+      "ice_types": [
+        "Blue Ice",
+        "Glare Crust"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Blue_Ice_Belt"
+      ]
+    },
+    {
+      "system": "Hurtoken",
+      "system_id": 30000150,
+      "belts": [
+        "White Glaze Belt"
+      ],
+      "ice_types": [
+        "White Glaze"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/White_Glaze_Belt"
+      ]
+    },
+    {
+      "system": "Iderion",
+      "system_id": 30005227,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Ihal",
+      "system_id": 30000048,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Illi",
+      "system_id": 30004294,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle",
+        "Glare Crust"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Indregulle",
+      "system_id": 30004982,
+      "belts": [
+        "Blue Ice Belt"
+      ],
+      "ice_types": [
+        "Blue Ice",
+        "Glare Crust"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Blue_Ice_Belt"
+      ]
+    },
+    {
+      "system": "Isamm",
+      "system_id": 30002276,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Ivih",
+      "system_id": 30001656,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Jakri",
+      "system_id": 30004125,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Jarzalad",
+      "system_id": 30001653,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Jaschercis",
+      "system_id": 30003029,
+      "belts": [
+        "Blue Ice Belt"
+      ],
+      "ice_types": [
+        "Blue Ice"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Blue_Ice_Belt"
+      ]
+    },
+    {
+      "system": "Jerma",
+      "system_id": 30002254,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Jotenen",
+      "system_id": 30001423,
+      "belts": [
+        "White Glaze Belt"
+      ],
+      "ice_types": [
+        "White Glaze"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/White_Glaze_Belt"
+      ]
+    },
+    {
+      "system": "Kamda",
+      "system_id": 30004115,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Kamih",
+      "system_id": 30004239,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle",
+        "Glare Crust"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Kamio",
+      "system_id": 30002782,
+      "belts": [
+        "White Glaze Belt"
+      ],
+      "ice_types": [
+        "White Glaze"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/White_Glaze_Belt"
+      ]
+    },
+    {
+      "system": "Kari",
+      "system_id": 30001742,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Keberz",
+      "system_id": 30003883,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Kenobanala",
+      "system_id": 30000116,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle",
+        "Glare Crust"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Keri",
+      "system_id": 30005260,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle",
+        "Glare Crust"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Kiskoken",
+      "system_id": 30001360,
+      "belts": [
+        "White Glaze Belt"
+      ],
+      "ice_types": [
+        "White Glaze"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/White_Glaze_Belt"
+      ]
+    },
+    {
+      "system": "Knophtikoo",
+      "system_id": 30002248,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Koona",
+      "system_id": 30004128,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Kothe",
+      "system_id": 30004103,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Lamadent",
+      "system_id": 30002722,
+      "belts": [
+        "Blue Ice Belt"
+      ],
+      "ice_types": [
+        "Blue Ice",
+        "Glare Crust"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Blue_Ice_Belt"
+      ]
+    },
+    {
+      "system": "Lilmad",
+      "system_id": 30000020,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle",
+        "Glare Crust"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Luromooh",
+      "system_id": 30002261,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Mahti",
+      "system_id": 30000104,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle",
+        "Glare Crust"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Majamar",
+      "system_id": 30000047,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle",
+        "Glare Crust"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Manatirid",
+      "system_id": 30005230,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Mannar",
+      "system_id": 30003060,
+      "belts": [
+        "Blue Ice Belt"
+      ],
+      "ice_types": [
+        "Blue Ice",
+        "Glare Crust"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Blue_Ice_Belt"
+      ]
+    },
+    {
+      "system": "Martha",
+      "system_id": 30002194,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Maut",
+      "system_id": 30003835,
+      "belts": [
+        "Blue Ice Belt"
+      ],
+      "ice_types": [
+        "Blue Ice",
+        "Glare Crust"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Blue_Ice_Belt"
+      ]
+    },
+    {
+      "system": "Menai",
+      "system_id": 30005238,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle",
+        "Glare Crust"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Menri",
+      "system_id": 30004121,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle",
+        "Glare Crust"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Mercomesier",
+      "system_id": 30003853,
+      "belts": [
+        "Blue Ice Belt"
+      ],
+      "ice_types": [
+        "Blue Ice",
+        "Glare Crust",
+        "Dark Glitter"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Blue_Ice_Belt"
+      ]
+    },
+    {
+      "system": "Miah",
+      "system_id": 30004113,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Misneden",
+      "system_id": 30002665,
+      "belts": [
+        "Blue Ice Belt"
+      ],
+      "ice_types": [
+        "Blue Ice"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Blue_Ice_Belt"
+      ]
+    },
+    {
+      "system": "Mitsolen",
+      "system_id": 30000120,
+      "belts": [
+        "White Glaze Belt"
+      ],
+      "ice_types": [
+        "White Glaze"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/White_Glaze_Belt"
+      ]
+    },
+    {
+      "system": "Modun",
+      "system_id": 30001720,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle",
+        "Glare Crust"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Moh",
+      "system_id": 30000042,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Molea",
+      "system_id": 30003876,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Moniyyuku",
+      "system_id": 30003881,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Moro",
+      "system_id": 30003893,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Moutid",
+      "system_id": 30001715,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Munory",
+      "system_id": 30004129,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Naguton",
+      "system_id": 30003475,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle",
+        "Glare Crust"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Nakah",
+      "system_id": 30000072,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle",
+        "Glare Crust"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Nakugard",
+      "system_id": 30002068,
+      "belts": [
+        "Glacial Mass Belt"
+      ],
+      "ice_types": [
+        "Glacial Mass"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Glacial_Mass_Belt"
+      ]
+    },
+    {
+      "system": "Nalu",
+      "system_id": 30002262,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Nardiarang",
+      "system_id": 30005207,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle",
+        "Glare Crust"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Nebian",
+      "system_id": 30005031,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle",
+        "Glare Crust"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Neburab",
+      "system_id": 30004089,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Nein",
+      "system_id": 30003423,
+      "belts": [
+        "Glacial Mass Belt"
+      ],
+      "ice_types": [
+        "Glacial Mass"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Glacial_Mass_Belt"
+      ]
+    },
+    {
+      "system": "Niballe",
+      "system_id": 30003580,
+      "belts": [
+        "Blue Ice Belt"
+      ],
+      "ice_types": [
+        "Blue Ice"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Blue_Ice_Belt"
+      ]
+    },
+    {
+      "system": "Oberen",
+      "system_id": 30004109,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle",
+        "Glare Crust"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Oishami",
+      "system_id": 30001433,
+      "belts": [
+        "White Glaze Belt"
+      ],
+      "ice_types": [
+        "White Glaze"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/White_Glaze_Belt"
+      ]
+    },
+    {
+      "system": "Oppold",
+      "system_id": 30003430,
+      "belts": [
+        "Glacial Mass Belt"
+      ],
+      "ice_types": [
+        "Glacial Mass"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Glacial_Mass_Belt"
+      ]
+    },
+    {
+      "system": "Ordion",
+      "system_id": 30005060,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Orva",
+      "system_id": 30000063,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Osmon",
+      "system_id": 30000180,
+      "belts": [
+        "White Glaze Belt"
+      ],
+      "ice_types": [
+        "White Glaze"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/White_Glaze_Belt"
+      ]
+    },
+    {
+      "system": "Outuni",
+      "system_id": 30000135,
+      "belts": [
+        "White Glaze Belt"
+      ],
+      "ice_types": [
+        "White Glaze"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/White_Glaze_Belt"
+      ]
+    },
+    {
+      "system": "Palmon",
+      "system_id": 30004992,
+      "belts": [
+        "Blue Ice Belt"
+      ],
+      "ice_types": [
+        "Blue Ice",
+        "Glare Crust"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Blue_Ice_Belt"
+      ]
+    },
+    {
+      "system": "Partod",
+      "system_id": 30005280,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle",
+        "Glare Crust"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Pedel",
+      "system_id": 30003516,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Petidu",
+      "system_id": 30005241,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle",
+        "Glare Crust"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Piekura",
+      "system_id": 30001391,
+      "belts": [
+        "White Glaze Belt"
+      ],
+      "ice_types": [
+        "White Glaze"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/White_Glaze_Belt"
+      ]
+    },
+    {
+      "system": "Rancer",
+      "system_id": 30002718,
+      "belts": [
+        "Blue Ice Belt"
+      ],
+      "ice_types": [
+        "Blue Ice",
+        "Glare Crust"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Blue_Ice_Belt"
+      ]
+    },
+    {
+      "system": "Raren",
+      "system_id": 30002212,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Ratillose",
+      "system_id": 30003602,
+      "belts": [
+        "Blue Ice Belt"
+      ],
+      "ice_types": [
+        "Blue Ice",
+        "Glare Crust"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Blue_Ice_Belt"
+      ]
+    },
+    {
+      "system": "Rayeret",
+      "system_id": 30004116,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Riavayed",
+      "system_id": 30002993,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Ruerrotta",
+      "system_id": 30003845,
+      "belts": [
+        "Blue Ice Belt"
+      ],
+      "ice_types": [
+        "Blue Ice",
+        "Glare Crust"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Blue_Ice_Belt"
+      ]
+    },
+    {
+      "system": "Sadana",
+      "system_id": 30004242,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle",
+        "Glare Crust"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Saloti",
+      "system_id": 30003874,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Schmaeel",
+      "system_id": 30005063,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle",
+        "Glare Crust"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Seil",
+      "system_id": 30001657,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Serad",
+      "system_id": 30000103,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Sigga",
+      "system_id": 30005219,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Silen",
+      "system_id": 30000179,
+      "belts": [
+        "White Glaze Belt"
+      ],
+      "ice_types": [
+        "White Glaze"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/White_Glaze_Belt"
+      ]
+    },
+    {
+      "system": "Sirseshin",
+      "system_id": 30000127,
+      "belts": [
+        "White Glaze Belt"
+      ],
+      "ice_types": [
+        "White Glaze"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/White_Glaze_Belt"
+      ]
+    },
+    {
+      "system": "Sosala",
+      "system_id": 30003070,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle",
+        "Glare Crust"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Sosan",
+      "system_id": 30002980,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle",
+        "Glare Crust"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Stegette",
+      "system_id": 30002696,
+      "belts": [
+        "Blue Ice Belt"
+      ],
+      "ice_types": [
+        "Blue Ice"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Blue_Ice_Belt"
+      ]
+    },
+    {
+      "system": "Talidal",
+      "system_id": 30003889,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Tannakan",
+      "system_id": 30003091,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle",
+        "Glare Crust"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Teonusude",
+      "system_id": 30002385,
+      "belts": [
+        "Glacial Mass Belt"
+      ],
+      "ice_types": [
+        "Glacial Mass"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Glacial_Mass_Belt"
+      ]
+    },
+    {
+      "system": "Thelan",
+      "system_id": 30002720,
+      "belts": [
+        "Blue Ice Belt"
+      ],
+      "ice_types": [
+        "Blue Ice",
+        "Glare Crust"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Blue_Ice_Belt"
+      ]
+    },
+    {
+      "system": "Tisot",
+      "system_id": 30004298,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle",
+        "Glare Crust",
+        "Dark Glitter"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Tolle",
+      "system_id": 30003052,
+      "belts": [
+        "Blue Ice Belt"
+      ],
+      "ice_types": [
+        "Blue Ice"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Blue_Ice_Belt"
+      ]
+    },
+    {
+      "system": "Turba",
+      "system_id": 30004098,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Uchomida",
+      "system_id": 30045321,
+      "belts": [
+        "White Glaze Belt"
+      ],
+      "ice_types": [
+        "White Glaze"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/White_Glaze_Belt"
+      ]
+    },
+    {
+      "system": "Uotila",
+      "system_id": 30002814,
+      "belts": [
+        "White Glaze Belt"
+      ],
+      "ice_types": [
+        "White Glaze"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/White_Glaze_Belt"
+      ]
+    },
+    {
+      "system": "Uphallant",
+      "system_id": 30003799,
+      "belts": [
+        "Blue Ice Belt"
+      ],
+      "ice_types": [
+        "Blue Ice",
+        "Glare Crust"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Blue_Ice_Belt"
+      ]
+    },
+    {
+      "system": "Upt",
+      "system_id": 30003901,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle",
+        "Glare Crust",
+        "Dark Glitter"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Ussad",
+      "system_id": 30002987,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle",
+        "Glare Crust"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Varigne",
+      "system_id": 30002400,
+      "belts": [
+        "Glacial Mass Belt"
+      ],
+      "ice_types": [
+        "Glacial Mass"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Glacial_Mass_Belt"
+      ]
+    },
+    {
+      "system": "Vattuolen",
+      "system_id": 30000173,
+      "belts": [
+        "White Glaze Belt"
+      ],
+      "ice_types": [
+        "White Glaze"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/White_Glaze_Belt"
+      ]
+    },
+    {
+      "system": "Vaurent",
+      "system_id": 30003027,
+      "belts": [
+        "Blue Ice Belt"
+      ],
+      "ice_types": [
+        "Blue Ice"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Blue_Ice_Belt"
+      ]
+    },
+    {
+      "system": "Vevelonel",
+      "system_id": 30003572,
+      "belts": [
+        "Blue Ice Belt"
+      ],
+      "ice_types": [
+        "Blue Ice",
+        "Glare Crust",
+        "Dark Glitter"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Blue_Ice_Belt"
+      ]
+    },
+    {
+      "system": "Vezila",
+      "system_id": 30003899,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle",
+        "Glare Crust"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Warouh",
+      "system_id": 30003553,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Wuos",
+      "system_id": 30000187,
+      "belts": [
+        "White Glaze Belt"
+      ],
+      "ice_types": [
+        "White Glaze"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/White_Glaze_Belt"
+      ]
+    },
+    {
+      "system": "Yahyerer",
+      "system_id": 30004286,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle",
+        "Glare Crust"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Yishinoon",
+      "system_id": 30000036,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle",
+        "Glare Crust"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Yoma",
+      "system_id": 30001427,
+      "belts": [
+        "White Glaze Belt"
+      ],
+      "ice_types": [
+        "White Glaze"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/White_Glaze_Belt"
+      ]
+    },
+    {
+      "system": "Zatamaka",
+      "system_id": 30005079,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle",
+        "Glare Crust"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Zazamye",
+      "system_id": 30004285,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle",
+        "Glare Crust"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    },
+    {
+      "system": "Zorenyen",
+      "system_id": 30005067,
+      "belts": [
+        "Clear Icicle Belt"
+      ],
+      "ice_types": [
+        "Clear Icicle",
+        "Glare Crust",
+        "Dark Glitter"
+      ],
+      "source_urls": [
+        "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+      ]
+    }
+  ]
+}

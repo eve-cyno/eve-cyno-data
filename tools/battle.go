@@ -15,6 +15,9 @@ func analyzeBattle(ctx context.Context, c *Client, s *sde.SDE, url string, detai
 		return "No battle report URL provided.", nil
 	}
 
+	if c == nil && (strings.Contains(url, "zkillboard.com") || strings.Contains(url, "warbeacon.net") || strings.Contains(url, "br.evetools.org")) {
+		return "No battle report right now: no HTTP client is configured.", nil
+	}
 	switch {
 	case strings.Contains(url, "zkillboard.com"):
 		return analyzeZKill(ctx, c, s, url, detail)

@@ -27,7 +27,9 @@ const maxAdminBody = 1 << 10 // 1 KiB
 // constant time (401 otherwise); owner routes need a valid X-User-ID (400 otherwise).
 // Responses are JSON and never cached. Only the create responses carry a key secret.
 //
-// Owner routes (X-User-ID: eve:<id> or discord:<id>):
+// Owner routes (X-User-ID: an account id acct:<16 hex digits>, or a legacy discord:<id> (acts for its linked
+// account) or eve:<id> (acts only on keys held under that exact id; a create still counts the whole account's caps
+// and blocks); creating a key for an unknown account is 404 no_account):
 //
 //	GET    /admin/v1/keys          list the owner's keys
 //	POST   /admin/v1/keys          create a key; optional X-User-Name header, percent-encoded
@@ -35,7 +37,10 @@ const maxAdminBody = 1 << 10 // 1 KiB
 //
 // Operator routes (token only):
 //
-//	GET    /admin/v1/ops/keys                  every key, the blocked owners and the per-owner limit
+//	GET    /admin/v1/ops/keys                  the active keys, the blocked owners and the per-owner limit;
+//	                                           ?status=revoked: the keys revoked in the last 30 days instead,
+//	                                           newest first, each with revoked_at and revoked_by
+//	                                           (?status=active or none: the default; else 400 invalid_status)
 //	POST   /admin/v1/ops/keys                  issue a key for an owner
 //	PATCH  /admin/v1/ops/keys/{id}             change the daily cap
 //	DELETE /admin/v1/ops/keys/{id}             revoke any key
@@ -47,6 +52,38 @@ const maxAdminBody = 1 << 10 // 1 KiB
 //	DELETE /admin/v1/ops/owners/{owner}        delete all of an owner's key records (active and
 //	                                           revoked), their usage and block-list entry;
 //	                                           200 {"owner","keys_deleted"}, 404 not_found if none
+//	DELETE /admin/v1/ops/accounts/{account}     delete an account with its identities and every key record of
+//	                                           its owner set (active and revoked) and their usage; a blocked
+//	                                           account's block stays on its sign-in ids; 200 {"account",
+//	                                           "keys_deleted","identities"}, 404 no_account
+//
+// Account routes (token only). The caller, a trusted service such as the web front end or the bot, has verified
+// the identity it names and is the only source of the identity fields; the API cannot check them. Bodies are JSON
+// with known fields only. An identity is {"provider":"eve"|"discord","subject":"<numeric id>","owner_hash"?}; an
+// EVE identity must carry its owner hash. Account routes never log identity or account ids.
+//
+//	POST /admin/v1/accounts/resolve  {"provider","subject","owner_hash"?,"sign_in"?,"tester"?}: the account of
+//	                                 an identity, created on first use; 200 {"account","identities":[{"provider",
+//	                                 "subject","linked_at"}],"tester"}; 400 invalid_identity; 409 identity_changed
+//	POST /admin/v1/accounts/link     {"identity":{...},"link":{...}}: attach a freshly verified identity to the
+//	                                 caller's account, merging accounts and their keys; 200 {"account","identities",
+//	                                 "merged":[...],"tester"}; 400 invalid_identity; 403 owner_blocked;
+//	                                 409 identity_changed | discord_conflict
+//	POST /admin/v1/accounts/unlink   {"identity":{...},"unlink":{"provider","subject"}}: detach one; 200
+//	                                 {"account","identities","tester"}; 400 invalid_identity; 403 owner_blocked;
+//	                                 404 not_linked; 409 identity_changed | current_identity
+//	POST /admin/v1/accounts/delete   {"identity":{...}}: delete the caller's account, its identities and every
+//	                                 key row of its owner set (active and revoked) with their usage, at once;
+//	                                 200 {"keys_deleted":N,"identities":[...]}; 400 invalid_identity; 403
+//	                                 owner_blocked (nothing deleted); 404 no_account; 409 identity_changed
+//
+// Account answers carry "blocked":true while the account or a legacy id of one of its identities is blocked.
+//
+// The two operator revokes (DELETE .../keys/{id} and PUT .../block) take an optional X-Actor
+// header with the acting role: "admin" (an admin in a front end's panel) or "operator" (the
+// default). Any other value is 400 invalid_actor and changes nothing. The role becomes the
+// revoked keys' revoked_by; an owner revoke is always "owner". X-Actor is asserted by the
+// bearer-token holder: the API checks only that it is one of these values.
 func AdminHandler(s *Store, token string, log *slog.Logger) http.Handler {
 	if token == "" {
 		return nil
@@ -68,6 +105,11 @@ func AdminHandler(s *Store, token string, log *slog.Logger) http.Handler {
 	mux.HandleFunc("PUT /admin/v1/ops/owners/{owner}/block", a.opsBlock)
 	mux.HandleFunc("DELETE /admin/v1/ops/owners/{owner}/block", a.opsUnblock)
 	mux.HandleFunc("DELETE /admin/v1/ops/owners/{owner}", a.opsPurge)
+	mux.HandleFunc("DELETE /admin/v1/ops/accounts/{account}", a.opsDeleteAccount)
+	mux.HandleFunc("POST /admin/v1/accounts/resolve", a.accountsResolve)
+	mux.HandleFunc("POST /admin/v1/accounts/link", a.accountsLink)
+	mux.HandleFunc("POST /admin/v1/accounts/unlink", a.accountsUnlink)
+	mux.HandleFunc("POST /admin/v1/accounts/delete", a.accountsDelete)
 	a.mux = mux
 	return a
 }
@@ -129,6 +171,18 @@ func (a *admin) storeErr(w http.ResponseWriter, r *http.Request, err error) {
 		a.fail(w, http.StatusTooManyRequests, "create_limit", "too many keys created today; try again after 00:00 UTC")
 	case errors.Is(err, ErrNotFound):
 		a.fail(w, http.StatusNotFound, "not_found", "no such key")
+	case errors.Is(err, ErrNoAccount):
+		a.fail(w, http.StatusNotFound, "no_account", "no such account")
+	case errors.Is(err, ErrBadIdentity):
+		a.fail(w, http.StatusBadRequest, "invalid_identity", "provider must be eve or discord, subject a numeric id, owner_hash only for eve, tester only for discord")
+	case errors.Is(err, ErrIdentityChanged):
+		a.fail(w, http.StatusConflict, "identity_changed", "sign in again: this EVE login carries no owner hash or the character changed hands")
+	case errors.Is(err, ErrDiscordConflict):
+		a.fail(w, http.StatusConflict, "discord_conflict", "the account already has another Discord identity")
+	case errors.Is(err, ErrNotLinked):
+		a.fail(w, http.StatusNotFound, "not_linked", "that identity is not linked to this account")
+	case errors.Is(err, ErrCurrentIdentity):
+		a.fail(w, http.StatusConflict, "current_identity", "the identity in use cannot be unlinked")
 	case errors.Is(err, ErrBadOwner):
 		a.fail(w, http.StatusBadRequest, "owner_required", "a valid owner id is required")
 	case errors.Is(err, ErrBadName):
@@ -139,6 +193,8 @@ func (a *admin) storeErr(w http.ResponseWriter, r *http.Request, err error) {
 		a.fail(w, http.StatusBadRequest, "invalid_cap", "daily cap must be between 0 and 10000000")
 	case errors.Is(err, ErrBadDays):
 		a.fail(w, http.StatusBadRequest, "invalid_days", "days must be between 1 and 30")
+	case errors.Is(err, ErrBadActor):
+		a.fail(w, http.StatusBadRequest, "invalid_actor", "X-Actor must be admin or operator")
 	default:
 		// The route is the registered pattern, never the request path: the path carries
 		// owner ids. Store errors wrap SQLite or context errors and hold no bound values.
@@ -242,9 +298,21 @@ func (a *admin) noContent(w http.ResponseWriter) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// actorHeader carries the role behind an operator revoke or block (see AdminHandler).
+const actorHeader = "X-Actor"
+
 func (a *admin) opsList(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	ks, err := a.s.ListAll(ctx)
+	list := a.s.ListAll
+	switch r.URL.Query().Get("status") {
+	case "", "active":
+	case "revoked":
+		list = a.s.ListRevoked
+	default:
+		a.fail(w, http.StatusBadRequest, "invalid_status", "status must be active or revoked")
+		return
+	}
+	ks, err := list(ctx)
 	if err != nil {
 		a.storeErr(w, r, err)
 		return
@@ -256,6 +324,24 @@ func (a *admin) opsList(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		a.storeErr(w, r, err)
 		return
+	}
+	owners := make([]string, 0, len(ks)+len(bl))
+	for _, k := range ks {
+		owners = append(owners, k.Owner)
+	}
+	for _, b := range bl {
+		owners = append(owners, b.Owner)
+	}
+	ids, err := a.s.IdentitiesOf(ctx, owners)
+	if err != nil {
+		a.storeErr(w, r, err)
+		return
+	}
+	for i := range ks {
+		ks[i].Identities = ids[ks[i].Owner]
+	}
+	for i := range bl {
+		bl[i].Identities = ids[bl[i].Owner]
 	}
 	a.write(w, http.StatusOK, map[string]any{"keys": ks, "blocked": bl, "max": a.s.MaxPerOwner()})
 }
@@ -306,7 +392,7 @@ func (a *admin) opsKey(ctx context.Context, w http.ResponseWriter, r *http.Reque
 }
 
 func (a *admin) opsRevoke(w http.ResponseWriter, r *http.Request) {
-	if err := a.s.RevokeAny(r.Context(), r.PathValue("id")); err != nil {
+	if err := a.s.RevokeAny(r.Context(), r.PathValue("id"), r.Header.Get(actorHeader)); err != nil {
 		a.storeErr(w, r, err)
 		return
 	}
@@ -355,7 +441,7 @@ func (a *admin) opsUsage(w http.ResponseWriter, r *http.Request) {
 
 func (a *admin) opsBlock(w http.ResponseWriter, r *http.Request) {
 	owner := r.PathValue("owner")
-	n, err := a.s.Block(r.Context(), owner)
+	n, err := a.s.Block(r.Context(), owner, r.Header.Get(actorHeader))
 	if err != nil {
 		a.storeErr(w, r, err)
 		return

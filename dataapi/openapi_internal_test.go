@@ -157,8 +157,8 @@ func TestRouteTable_EveryRouteIsDocumentedOrRoot(t *testing.T) {
 
 func TestOpenAPI_ToolOperationsFollowTheSurface(t *testing.T) {
 	all := catalog.Tools()
-	offered := catalog.ToolsIn(catalog.TierPublic, catalog.TierKeyed, catalog.TierBYOKey)
-	noKeys := catalog.ToolsIn(catalog.TierPublic, catalog.TierBYOKey)
+	offered := catalog.ToolsIn(catalog.TierPublic, catalog.TierKeyed)
+	noKeys := catalog.ToolsIn(catalog.TierPublic)
 	require.Less(t, len(offered), len(all))
 
 	names := func(ts []catalog.Tool) []string {
@@ -190,7 +190,7 @@ func TestOpenAPI_ToolOperationsCarryTheRegistryDefinition(t *testing.T) {
 	doc := specDoc(t, PublicSurface())
 	paths := doc["paths"].(map[string]any)
 
-	for _, tl := range catalog.ToolsIn(catalog.TierPublic, catalog.TierKeyed, catalog.TierBYOKey) {
+	for _, tl := range catalog.ToolsIn(catalog.TierPublic, catalog.TierKeyed) {
 		op := paths["/tool/"+tl.Name].(map[string]any)["post"].(map[string]any)
 		require.Equal(t, tl.Name, op["operationId"])
 		require.Contains(t, op["description"], tl.Description)
@@ -308,7 +308,7 @@ func TestLLMs_DescribeTheSurface(t *testing.T) {
 	require.Contains(t, short, "(/v1/openapi.yaml)")
 	require.Contains(t, short, "(/v1/mcp)")
 
-	for _, tl := range catalog.ToolsIn(catalog.TierPublic, catalog.TierKeyed, catalog.TierBYOKey) {
+	for _, tl := range catalog.ToolsIn(catalog.TierPublic, catalog.TierKeyed) {
 		require.Contains(t, short, "["+tl.Name+"](/llms-full.txt#"+tl.Name+")", tl.Name)
 		require.Contains(t, full, "### "+tl.Name+"\n", tl.Name)
 		require.Contains(t, full, tl.Description, tl.Name)

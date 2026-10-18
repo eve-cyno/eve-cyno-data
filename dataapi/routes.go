@@ -167,7 +167,7 @@ func errorCodes() []string {
 	return []string{
 		"not_found", "method_not_allowed", "invalid_request", "payload_too_large", "rate_limited",
 		"daily_quota_exceeded", "unavailable", "upstream_error", "upstream_busy", "unknown_tool", "tool_disabled", "api_key_required", "invalid_api_key",
-		"key_not_permitted", "janice_key_required", "invalid_arguments", "timeout", "internal_error",
+		"key_not_permitted", "invalid_arguments", "timeout", "internal_error",
 	}
 }
 

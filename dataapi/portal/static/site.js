@@ -4,6 +4,7 @@
      drawer   [data-drawer] [data-drawer-open] [data-drawer-close] [data-drawer-scrim]
      search   [data-search] [data-search-input] [data-search-results] [data-search-toggle] [data-search-close]
               index: <script type="application/json" data-search-index>[{t,u,k,tier,live,s}]</script>
+                     live is the live badge of a tool ("live ESI", "live EvE-Scout", "live with options"); absent otherwise
      tabs     [data-tabs] (optional data-tab-group) > [role=tab][data-tab] + [data-panel]
      copy     [data-copy-scope] > [data-copy] (+ [data-copy-label]); [data-nocopy] text is skipped
      toc      details[data-toc] > a[href^="#"]   (scroll-spy + open on wide screens)
@@ -63,7 +64,7 @@
     var TIER = { 'public': 'public', 'keyed': 'keyed', 'byo-key': 'byo-key' };
     var score = function (item, q, words) {
       var t = item.t.toLowerCase(), s = (item.s || '').toLowerCase(), u = q.replace(/\s+/g, '_');
-      var hay = t + ' ' + s + ' ' + (item.tier || '') + (item.live ? ' live esi' : '');
+      var hay = t + ' ' + s + ' ' + (item.tier || '') + (item.live ? ' ' + String(item.live).toLowerCase() : '');
       for (var i = 0; i < words.length; i++) if (hay.indexOf(words[i]) < 0 && t.indexOf(words[i].replace(/\s+/g, '_')) < 0) return 0;
       if (t === q || t === u) return 100;
       if (t.indexOf(q) === 0 || t.indexOf(u) === 0) return 80;
@@ -87,7 +88,7 @@
         a.setAttribute('data-kind', h.k); a.setAttribute('aria-selected', String(i === sel));
         var t = doc.createElement('span'); t.className = 'sr-title'; t.textContent = h.t; a.appendChild(t);
         var m = doc.createElement('span'); m.className = 'sr-meta';
-        if (h.live) { var l = doc.createElement('span'); l.className = 'badge badge-live'; l.textContent = 'live ESI'; m.appendChild(l); }
+        if (h.live) { var l = doc.createElement('span'); l.className = 'badge badge-live'; l.textContent = String(h.live); m.appendChild(l); }
         if (h.tier && TIER[h.tier]) { var b = doc.createElement('span'); b.className = 'badge'; b.setAttribute('data-tier', h.tier); b.textContent = h.tier; m.appendChild(b); }
         else { var k = doc.createElement('span'); k.className = 'sr-kind'; k.textContent = h.k === 'tool' ? 'tool' : 'page'; m.appendChild(k); }
         a.appendChild(m);

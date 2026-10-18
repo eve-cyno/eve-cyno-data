@@ -108,7 +108,7 @@ func TestPurgeOwnerDeletesEverythingAtOnce(t *testing.T) {
 	s.Spend(a.ID)
 	s.Record(a.ID, "/v1/x", true)
 	s.Record(a.ID, "/v1/x", true)
-	_, err = s.Block(bg, "discord:7")
+	_, err = s.Block(bg, "discord:7", "")
 	require.NoError(t, err)
 
 	n, err := s.PurgeOwner(bg, "discord:7")
@@ -140,12 +140,13 @@ func TestAdminPurgeOwner(t *testing.T) {
 	var buf bytes.Buffer
 	log := slog.New(slog.NewTextHandler(&buf, nil))
 	e := newAdmin(t, keys.Options{Logger: log}, log)
-	e.do(t, "POST", "/admin/v1/keys", `{}`, user("discord:555"))
-	path := "/admin/v1/ops/owners/" + url.PathEscape("discord:555")
+	const owner = "discord:owner-purge-test-id"
+	e.do(t, "POST", "/admin/v1/keys", `{}`, user(owner))
+	path := "/admin/v1/ops/owners/" + url.PathEscape(owner)
 
 	code, _, body := e.do(t, "DELETE", path, "", nil)
 	require.Equal(t, 200, code, body)
-	require.JSONEq(t, `{"owner":"discord:555","keys_deleted":1}`, body)
+	require.JSONEq(t, `{"owner":"discord:owner-purge-test-id","keys_deleted":1}`, body)
 	code, _, body = e.do(t, "DELETE", path, "", nil)
 	require.Equal(t, 404, code)
 	require.Equal(t, "not_found", errCode(t, body))
@@ -155,7 +156,8 @@ func TestAdminPurgeOwner(t *testing.T) {
 	require.Equal(t, 401, code)
 
 	require.Contains(t, buf.String(), "api_owner_purged")
-	require.NotContains(t, buf.String(), "555")
+	require.NotContains(t, buf.String(), owner, "the purge log must not name the owner")
+	require.NotContains(t, buf.String(), "owner-purge-test-id", "nor the bare id, escaped or not")
 }
 
 // Creations in the first and last fractions of a UTC day must count: created_at is an

@@ -16,7 +16,7 @@ func TestEveryToolHasATier(t *testing.T) {
 		fn, _ := tl["function"].(map[string]any)
 		name, _ := fn["name"].(string)
 		_, ok := table[name]
-		require.True(t, ok, "tool %q has no entry in tierTable: classify it public, keyed, byo-key or disabled", name)
+		require.True(t, ok, "tool %q has no entry in tierTable: classify it public, keyed or disabled", name)
 	}
 	require.Len(t, table, len(tools.ToolSchemas()), "tierTable names a tool that is not in tool_schemas.json")
 }

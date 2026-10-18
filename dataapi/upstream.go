@@ -13,8 +13,8 @@ import (
 	"eve-cyno.dev/go/data/catalog"
 )
 
-// UpstreamLimiter is the per-caller budget of the tools that can spend the project's
-// shared ESI budget (catalog.Tool.Upstream). It is stricter than the route limits and is
+// UpstreamLimiter is the per-caller budget of the tools that read a live upstream (ESI or
+// EvE-Scout; catalog.Tool.Upstream), one budget across all of them. It is stricter than the route limits and is
 // one budget across REST (/tool/{name}) and MCP: a caller cannot double it by using both.
 // The caller is named by a KeyResolver, like every other limit. A caller with an API key
 // gets the rate's KeyedMax (the same as Max when it sets none), one without gets Max. A nil
@@ -44,7 +44,7 @@ func NewUpstreamLimiter(rate Rate, keys KeyResolver) *UpstreamLimiter {
 
 // Allow records one call of tool by the caller of r and reports whether it is within
 // budget; when not, retryAfter is how long until the oldest counted call leaves the window.
-// Tools that cannot spend the ESI budget are never limited here.
+// Tools that read no live upstream are never limited here.
 func (u *UpstreamLimiter) Allow(r *http.Request, tool string) (ok bool, retryAfter time.Duration) {
 	if u == nil {
 		return true, 0
@@ -64,6 +64,9 @@ func retrySeconds(d time.Duration) int {
 	return max(1, int((d+time.Second-1)/time.Second))
 }
 
+// eveScoutSentenceSource is how the generated documents name the Thera upstream.
+const eveScoutSentenceSource = "EvE-Scout (Signal Cartel)"
+
 // upstreamSentence states the stricter limit and the busy answer of an Upstream tool in the
 // generated documents ("" for any other tool or an unlimited surface).
 func upstreamSentence(s Surface, t catalog.Tool) string {
@@ -71,15 +74,28 @@ func upstreamSentence(s Surface, t catalog.Tool) string {
 		return ""
 	}
 	var b strings.Builder
-	b.WriteString("Reads live public data from EVE's ESI through a shared cache that follows ESI's `Expires`.")
+	switch {
+	case t.LiveESI() && len(t.UpstreamArgs) > 0:
+		quoted := make([]string, len(t.UpstreamArgs))
+		for i, a := range t.UpstreamArgs {
+			quoted[i] = "`" + a + "`"
+		}
+		fmt.Fprintf(&b, "Calls with %s read live public data from EVE's ESI through a shared cache that follows ESI's `Expires`; only those calls count against the fair-use limit below.", strings.Join(quoted, " or "))
+	case t.LiveESI():
+		b.WriteString("Reads live public data from EVE's ESI through a shared cache that follows ESI's `Expires`.")
+	default:
+		b.WriteString("Reads live public data from " + eveScoutSentenceSource + " through a shared cache that follows its cache headers (about 5 minutes).")
+	}
 	if r := s.Limits.UpstreamTool; r.Max > 0 && r.Window > 0 {
 		if k := s.keyedRate(r); s.Auth && k.Max != r.Max {
-			fmt.Fprintf(&b, " Its own fair-use limit is %d calls per %s per caller without an API key and %d with one (REST and MCP together), on top of the route limit.", r.Max, windowWord(r), k.Max)
+			fmt.Fprintf(&b, " All live-upstream calls share one fair-use limit of %d calls per %s per caller without an API key and %d with one (REST and MCP together, counted across every live tool), on top of the route limit.", r.Max, windowWord(r), k.Max)
 		} else {
-			fmt.Fprintf(&b, " Its own fair-use limit is %d calls per %s per caller (REST and MCP together), on top of the route limit.", r.Max, windowWord(r))
+			fmt.Fprintf(&b, " All live-upstream calls share one fair-use limit of %d calls per %s per caller (REST and MCP together, counted across every live tool), on top of the route limit.", r.Max, windowWord(r))
 		}
 	}
-	b.WriteString(" When the shared ESI budget is nearly spent the call is refused with `503 upstream_busy` (MCP: an error result starting `upstream_busy`) and `Retry-After`; retry later.")
+	if t.LiveESI() {
+		b.WriteString(" When the shared ESI budget is nearly spent the call is refused with `503 upstream_busy` (MCP: an error result starting `upstream_busy`) and `Retry-After`; retry later.")
+	}
 	return b.String()
 }
 
@@ -103,4 +119,13 @@ func (h callerHasher) hash(key string) string {
 	m := hmac.New(sha256.New, h.salt)
 	m.Write([]byte(key))
 	return hex.EncodeToString(m.Sum(nil)[:8])
+}
+
+// upstreamLabel names the live upstream of a tool for error messages ("ESI" when the tool
+// is not known to have another).
+func upstreamLabel(tool string) string {
+	if t, ok := catalog.Lookup(tool); ok && t.UpstreamName != "" {
+		return t.UpstreamName
+	}
+	return "ESI"
 }

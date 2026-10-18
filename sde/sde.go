@@ -14,6 +14,12 @@ type SDE struct {
 
 	mapMu    sync.Mutex // guards mapCache
 	mapCache *mapCaches // lazily built adjacency+security cache, tied to one db generation
+
+	factsMu sync.Mutex   // guards facts
+	facts   *systemIndex // lazily built per-system profiles, tied to one db generation
+
+	jumpMu sync.Mutex // guards jumps
+	jumps  *jumpIndex // lazily built jump-drive index (positions, network, hulls), tied to one db generation
 }
 
 // Open opens the SDE read-only with hot-reload at DefaultReloadInterval: when the
@@ -49,7 +55,8 @@ func (s *SDE) Generation() uint64 {
 	return s.db.handle().gen
 }
 
-func (s *SDE) Available() bool { return s.db != nil && s.db.Ping() == nil }
+// Available reports whether the database is open and answers; false for a nil SDE.
+func (s *SDE) Available() bool { return s != nil && s.db != nil && s.db.Ping() == nil }
 
 func (s *SDE) HasTable(name string) bool {
 	var n string

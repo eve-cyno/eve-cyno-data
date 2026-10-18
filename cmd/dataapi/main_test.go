@@ -72,7 +72,9 @@ func TestNewHandler_ExposedToolAPIIsPublicMode(t *testing.T) {
 	require.NoError(t, err)
 
 	// The tiers apply: this binary is internet-facing and has no API keys here.
-	require.Equal(t, http.StatusBadRequest, post(h, "/v1/tool/appraise_items").Code, "byo-key: needs X-Janice-Key")
+	rec := post(h, "/v1/tool/appraise_items")
+	require.Equal(t, http.StatusBadRequest, rec.Code, "public: a call without items fails the argument check")
+	require.Contains(t, rec.Body.String(), `"invalid_arguments"`)
 	require.Equal(t, http.StatusUnauthorized, post(h, "/v1/tool/analyze_battle").Code, "keyed: needs an API key")
 	require.NotEqual(t, http.StatusUnauthorized, post(h, "/v1/tool/get_fits").Code, "fit lookups are public")
 	require.Equal(t, http.StatusForbidden, post(h, "/v1/tool/convert_isk_to_real").Code, "disabled")
@@ -121,7 +123,7 @@ func TestNewHandler_MCPIsOffByDefaultAndPublicSafeWhenOn(t *testing.T) {
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	require.NotEmpty(t, rec.Header().Get("X-Request-ID"))
 	require.Contains(t, rec.Body.String(), "get_jumps_between")
-	require.Contains(t, rec.Body.String(), `"appraise_items"`, "the byo-key tool is listed for everyone")
+	require.Contains(t, rec.Body.String(), `"appraise_items"`, "appraise_items is public")
 	for _, denied := range []string{"analyze_battle", "convert_isk_to_real"} {
 		require.NotContains(t, rec.Body.String(), `"`+denied+`"`)
 	}

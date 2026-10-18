@@ -7,13 +7,15 @@
 // Stdout is the protocol channel and carries nothing else; logs go to stderr as JSON.
 //
 // By default only the public tier is registered (the tools the hosted /v1/mcp endpoint
-// serves to anyone: the SDE and fit tools, the community-fit lookups and the four live ESI
-// tools get_market_price, get_type_info, get_sovereignty and get_system_activity). Every
-// other tool (the keyed one, analyze_battle; appraise_items, which spends a Janice key; and
+// serves to anyone: the SDE and fit tools, the community-fit lookups, the four live ESI
+// tools get_market_price, get_type_info, get_sovereignty and get_system_activity, and
+// appraise_items, which then estimates from ESI's average prices: the default never spends
+// a key from the environment). Every other tool (the keyed one, analyze_battle, and
 // convert_isk_to_real, disabled on public surfaces) is registered only with -all or
-// MCP_EXPOSE_ALL=true, for a process that runs on its owner's machine with the owner's
-// keys from the environment (JANICE_API_KEY, QDRANT_*, ...). The X-Janice-Key header
-// belongs to the HTTP endpoint; over stdio the key comes from the environment.
+// MCP_EXPOSE_ALL=true, for a process that runs on its owner's machine with the owner's keys
+// from the environment (JANICE_API_KEY makes appraise_items a Janice appraisal, QDRANT_*,
+// ...). The X-Janice-Key header belongs to the HTTP endpoint; over stdio the key comes from
+// the environment, and only with -all.
 //
 // Configuration comes from the process environment (it does not read a .env file):
 //
@@ -26,7 +28,7 @@
 //	                    configured. Explicit only: it is never inferred from a missing QDRANT_URL
 //	EVE_CORE_*, QDRANT_*, DEEPINFRA_EMBED_*, JANICE_API_KEY
 //	                    the rest of the deterministic layer (core/config); needed only by
-//	                    the tools that use them (-all for fit search and appraisal)
+//	                    the tools that use them (-all for fit search and Janice appraisals)
 package main
 
 import (
@@ -83,7 +85,7 @@ func main() {
 	log := slog.New(slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelInfo}))
 	slog.SetDefault(log)
 
-	all := flag.Bool("all", false, "register every tool, whatever its public tier (keyed, byo-key, disabled); they use this machine's keys; local use only")
+	all := flag.Bool("all", false, "register every tool, whatever its public tier (keyed, disabled), and use this machine's keys (JANICE_API_KEY for appraise_items); local use only")
 	onlySDE := flag.Bool("sde-only", false, "run without the community-fit corpus: Qdrant is never contacted and get_fits / list_fits say the corpus is not configured (same as MCP_SDE_ONLY=true)")
 	flag.Parse()
 
@@ -116,7 +118,7 @@ func run(log *slog.Logger, all, onlySDE bool) error {
 		log.Warn("SDE-only mode: get_fits and list_fits report the corpus as not configured", "env", "MCP_SDE_ONLY")
 	}
 	if all {
-		log.Warn("every tool registered, including keyed, byo-key and disabled ones: they use this machine's keys")
+		log.Warn("every tool registered, including keyed and disabled ones: they use this machine's keys")
 	}
 	return serve(ctx, deps.Tools, opts, &mcp.StdioTransport{})
 }

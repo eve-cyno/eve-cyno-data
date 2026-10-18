@@ -58,7 +58,7 @@
   <div class="wrap">
     <dl>
       <div class="stat"><dt><i aria-hidden="true"></i>Tools offered</dt><dd><span data-slot="tools_offered">{{.Stats.Offered}}</span><small><span data-slot="tools_public">{{.Stats.Public}}</span> public, no key</small></dd></div>
-      <div class="stat"><dt><i aria-hidden="true"></i>Live ESI tools</dt><dd><span data-slot="tools_upstream">{{.Stats.Upstream}}</span><small>shared cache, {{.Lim.UpstreamTool}} calls/min{{if ne .KeyLim.UpstreamTool .Lim.UpstreamTool}} ({{.KeyLim.UpstreamTool}} with a key){{end}}</small></dd></div>
+      <div class="stat"><dt><i aria-hidden="true"></i>Live tools</dt><dd><span data-slot="tools_upstream">{{.Stats.Live}}</span><small>ESI and EvE-Scout, {{.Lim.UpstreamTool}} calls/min shared{{if ne .KeyLim.UpstreamTool .Lim.UpstreamTool}} ({{.KeyLim.UpstreamTool}} with a key){{end}}</small></dd></div>
       <div class="stat"><dt><i aria-hidden="true"></i>MCP budget</dt><dd><span data-slot="limit_mcp">{{.Lim.MCP}}</span><small>requests/min per caller{{if ne .KeyLim.MCP .Lim.MCP}} ({{.KeyLim.MCP}} with a key){{end}}</small></dd></div>
       <div class="stat"><dt><i aria-hidden="true"></i>Status</dt><dd><span data-slot="health">{{.Health}}</span><small>{{.Prefix}}/health</small></dd></div>
     </dl>
@@ -108,13 +108,13 @@
     <div class="s-head">
       <p class="eyebrow">What's inside</p>
       <h2>{{.Stats.Offered}} tools. Five sources. One contract.</h2>
-      <p>The same tools on MCP and REST, in three access tiers. Every answer carries an <code>attribution</code> block: keep it where you show the data.</p>
+      <p>The same tools on MCP and REST, in two access tiers. Every answer carries an <code>attribution</code> block: keep it where you show the data.</p>
     </div>
 
     <ul class="sources">
       <li class="source"><svg class="ico" aria-hidden="true"><use href="#i-db"/></svg><h3>Static data (SDE)</h3><p>Items, ships, skills, stations, regions, routes, reprocessing and production chains from the official export.</p><div class="meta">via <b>Fuzzwork</b> · EVE Developer License</div></li>
       <li class="source" data-acc="blue"><svg class="ico" aria-hidden="true"><use href="#i-gear"/></svg><h3>Gofa fit engine</h3><p>A Go dogma engine. Validate an EFT fit, then get DPS, EHP, speed, align and capacitor. All-V skills, no implants.</p><div class="meta"><b>validate_fitting</b> · <b>compute_fit_stats</b></div></li>
-      <li class="source" data-acc="green"><svg class="ico" aria-hidden="true"><use href="#i-live"/></svg><h3>Live ESI</h3><p>Jita prices, type info, sovereignty and system activity, through a shared cache that follows ESI's <code>Expires</code>.</p><div class="meta"><b data-slot="tools_upstream">{{.Stats.Upstream}}</b> tools · {{.Lim.UpstreamTool}} calls/min per caller{{if ne .KeyLim.UpstreamTool .Lim.UpstreamTool}} ({{.KeyLim.UpstreamTool}} with a key){{end}}</div></li>
+      <li class="source" data-acc="green"><svg class="ico" aria-hidden="true"><use href="#i-live"/></svg><h3>Live ESI and EvE-Scout</h3><p>Market prices and history, type info, sovereignty, system activity and jump-route checks from ESI, through a shared cache that follows ESI's <code>Expires</code>; Thera and Turnur connections from EvE-Scout (Signal Cartel).</p><div class="meta"><b data-slot="tools_upstream">{{.Stats.Live}}</b> tools · {{.Lim.UpstreamTool}} calls/min per caller, shared{{if ne .KeyLim.UpstreamTool .Lim.UpstreamTool}} ({{.KeyLim.UpstreamTool}} with a key){{end}}</div></li>
       <li class="source" data-acc="red"><svg class="ico" aria-hidden="true"><use href="#i-fit"/></svg><h3>Community fits</h3><p>Searchable fits from public fitting sites. Every fit keeps its source link and author credit. Not a dataset to republish.</p><div class="meta">at most <b>{{.Stats.FitMax}}</b> fits per answer</div></li>
       <li class="source" data-acc="muted"><svg class="ico" aria-hidden="true"><use href="#i-book"/></svg><h3>EVE University wiki</h3><p>Condensed reference text for questions the SDE cannot answer. Keep the credit, share alike.</p><div class="meta"><b>CC BY-SA 4.0</b></div></li>
     </ul>
@@ -125,23 +125,14 @@
       <div class="tier-group" data-tier="public">
         <div class="tier-head">
           <span class="badge" data-tier="public">public</span><h3>No key</h3><span class="n">{{.Stats.Public}} {{plural .Stats.Public "tool"}}</span>
-          <p class="tier-rule">Anyone, anonymous included: SDE lookups, the fit engine, community fits and {{.Stats.Upstream}} live ESI reads.</p>
+          <p class="tier-rule">Anyone, anonymous included: SDE lookups, the fit engine, community fits and {{.Stats.Live}} live tools (ESI and EvE-Scout).</p>
         </div>
         <ul class="tool-list">
-{{range .Tools.Public}}          <li class="tool-row" data-tier="public"{{if .Upstream}} data-upstream="true"{{end}}><a class="tool-name" href="/docs/tools/{{.Name}}">{{.Name}}</a>{{if .Upstream}}<span class="tool-badges"><span class="badge badge-live">live ESI</span></span>{{end}}<p class="tool-desc">{{.Summary}}</p></li>
+{{range .Tools.Public}}          <li class="tool-row" data-tier="public"{{if .Live}} data-upstream="true"{{end}}><a class="tool-name" href="/docs/tools/{{.Name}}">{{.Name}}</a>{{with .Live}}<span class="tool-badges"><span class="badge badge-live">{{.}}</span></span>{{end}}<p class="tool-desc">{{.Summary}}</p></li>
 {{end}}        </ul>
       </div>
       <div class="tier-side">
-{{if .Tools.BYO}}        <div class="tier-group" data-tier="byo-key">
-          <div class="tier-head">
-            <span class="badge" data-tier="byo-key">byo-key</span><h3>Your Janice key</h3><span class="n">{{len .Tools.BYO}} {{plural (len .Tools.BYO) "tool"}}</span>
-            <p class="tier-rule">Send your own key in <code>X-Janice-Key</code>. Used for that request only, never stored or logged.</p>
-          </div>
-          <ul class="tool-list">
-{{range .Tools.BYO}}            <li class="tool-row" data-tier="byo-key"><a class="tool-name" href="/docs/tools/{{.Name}}">{{.Name}}</a><p class="tool-desc">{{.Summary}}</p></li>
-{{end}}          </ul>
-        </div>
-{{end}}{{if .Tools.Keyed}}        <div class="tier-group" data-tier="keyed">
+{{if .Tools.Keyed}}        <div class="tier-group" data-tier="keyed">
           <div class="tier-head">
             <span class="badge" data-tier="keyed">keyed</span><h3>API key</h3><span class="n">{{len .Tools.Keyed}} {{plural (len .Tools.Keyed) "tool"}}</span>
             <p class="tier-rule">A valid API key. <span data-slot="keys_note">{{if .SelfServe}}Free: run <code>/apikey create</code> in the <a href="https://discord.gg/XZzkH38dt9">EVE-Cyno Discord</a>, or sign in on ai.eve-cyno.dev → Settings → Data API keys. Without a key {{if eq (len .Tools.Keyed) 1}}this answers{{else}}these answer{{end}} <code>401 api_key_required</code>.{{else if .Auth}}Keys are issued by the operator of this service. Without a key {{if eq (len .Tools.Keyed) 1}}this answers{{else}}these answer{{end}} <code>401 api_key_required</code>.{{else}}No keys are issued yet; {{if eq (len .Tools.Keyed) 1}}this answers{{else}}these answer{{end}} <code>401 api_key_required</code>.{{end}}{{if .Auth}} Free-text fit search (<code>q</code> on <code>/v1/fits/search</code>) needs a key too; the filters do not.{{end}}</span></p>
@@ -188,8 +179,7 @@
       <p>Hobby-run, no SLA. {{if .Auth}}Without a key the API is for trying it out; a free key is for connecting it to Claude Code, your own model or a bot. {{end}}Limits are per caller: per API key when one is sent, otherwise per client IP, over a sliding window.</p>
     </div>
     <div class="access">
-      <div class="access-card"><div class="top"><span class="badge" data-tier="public">public</span><span class="big">{{.Stats.Public}}<small>{{plural .Stats.Public "tool"}}</small></span></div><p>Anyone, no key{{if .Auth}} (trial limits){{end}}.</p></div>
-      <div class="access-card"><div class="top"><span class="badge" data-tier="byo-key">byo-key</span><span class="big">{{len .Tools.BYO}}<small>{{plural (len .Tools.BYO) "tool"}}</small></span></div><p>Your own Janice API key in <code>X-Janice-Key</code>, used for that request only, never stored or logged.</p></div>
+      <div class="access-card"><div class="top"><span class="badge" data-tier="public">public</span><span class="big">{{.Stats.Public}}<small>{{plural .Stats.Public "tool"}}</small></span></div><p>Anyone, no key{{if .Auth}} (trial limits){{end}}.{{range .Tools.Public}}{{if .AcceptsJaniceKey}} <code>{{.Name}}</code> also takes your own Janice key (optional).{{end}}{{end}}</p></div>
       <div class="access-card"><div class="top"><span class="badge" data-tier="keyed">keyed</span><span class="big">{{len .Tools.Keyed}}<small>{{plural (len .Tools.Keyed) "tool"}}</small></span></div><p>{{if .Auth}}Plus free-text fit search. {{end}}A valid API key: <code>Authorization: Bearer &lt;key&gt;</code> or <code>X-API-Key</code>.{{if .SelfServe}} Free: run <code>/apikey create</code> in the <a href="https://discord.gg/XZzkH38dt9">EVE-Cyno Discord</a>, or sign in on ai.eve-cyno.dev → Settings → Data API keys. <a href="/docs/access#access-keys">How keys work</a>{{else if .Auth}} Keys are issued by the operator of this service. <a href="/docs/access#access-keys">How keys work</a>{{else}} No keys are issued on this service yet.{{end}}</p></div>
     </div>
     <div class="limits-row" aria-label="Rate limits per minute">

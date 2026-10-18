@@ -4,12 +4,14 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"embed"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"html/template"
 	"io/fs"
 	"net/http"
+	"net/url"
 	"path"
 	"reflect"
 	"regexp"
@@ -66,7 +68,8 @@ type portalAsset struct {
 // ---------------------------------------------------------------- view model
 
 type portalStats struct {
-	Offered, Public, BYO, Keyed, Disabled, Upstream, FitMax int
+	// Live counts every offered tool that reads a live upstream, ESI or EvE-Scout.
+	Offered, Public, Keyed, Disabled, Live, FitMax int
 }
 
 type portalLimits struct {
@@ -75,10 +78,59 @@ type portalLimits struct {
 
 type toolRowView struct {
 	Name, Summary, Tier string
-	Upstream            bool
+	Live                string // the live badge (liveLabel); "" for a tool without live data
+	AcceptsJaniceKey    bool
 }
 
-type toolGroups struct{ Public, BYO, Keyed []toolRowView }
+// The live kinds of a tool (liveKind): which live data its docs page describes.
+const (
+	liveESI      = "esi"       // every call can read live ESI
+	liveEveScout = "eve-scout" // every call can read live EvE-Scout
+	liveOptional = "optional"  // SDE-only unless a call sets one of Tool.UpstreamArgs, which read live ESI
+)
+
+// liveKind is the live kind of t; "" for a tool without live data, and for an Upstream tool
+// whose upstream the docs do not describe yet (a test keeps that from shipping).
+func liveKind(t catalog.Tool) string {
+	switch {
+	case !t.Upstream:
+		return ""
+	case t.LiveESI() && len(t.UpstreamArgs) > 0:
+		return liveOptional
+	case t.LiveESI():
+		return liveESI
+	case t.UpstreamName == "EvE-Scout" && len(t.UpstreamArgs) == 0:
+		return liveEveScout
+	}
+	return ""
+}
+
+// liveLabel is the badge text of a live kind.
+func liveLabel(kind string) string {
+	switch kind {
+	case liveESI:
+		return "live ESI"
+	case liveEveScout:
+		return "live EvE-Scout"
+	case liveOptional:
+		return "live with options"
+	}
+	return ""
+}
+
+// liveGroup is the tools of one live kind on the access page.
+type liveGroup struct {
+	Names template.HTML // "<code>a</code>, <code>b</code> and <code>c</code>"
+	N     int
+}
+
+// liveOption is a tool that reads live data only with some arguments, on the access page.
+type liveOption struct {
+	Name string
+	Args template.HTML // "<code>avoid_incursions</code> or <code>live_info</code>"
+}
+
+type toolGroups struct{ Public, Keyed []toolRowView }
 
 type navGroup struct {
 	Label string
@@ -125,7 +177,8 @@ type pagerLink struct {
 
 type toolPage struct {
 	Name, Tier, Summary, Description string
-	Upstream                         bool
+	LiveKind, Live                   string        // liveKind and its badge (liveLabel); "" without live data
+	LiveArgs                         template.HTML // the arguments that make a liveOptional call live
 	GroupAnchor, GroupLabel          string
 	DataName                         string
 	AccessHTML, RateHTML             template.HTML
@@ -144,8 +197,10 @@ type pageData struct {
 	IsDocs             bool
 	Nav                string
 	Assets             string
-	URL                string // PublicURL: prefix of links ("" keeps them relative)
-	Origin             string // scheme and host for examples
+	URL                string       // PublicURL: prefix of links ("" keeps them relative)
+	Origin             string       // scheme and host for examples
+	CursorInstall      template.URL // "Add to Cursor" deep link for the MCP endpoint
+	VSCodeInstall      template.URL // "Install in VS Code" deep link for the MCP endpoint
 	Host               string
 	Prefix             string
 	Version            string
@@ -169,8 +224,12 @@ type pageData struct {
 	Credits    []credit
 	Sources    []tools.Source
 
-	KeyedNames, UpstreamNames template.HTML
-	FirstTool                 string
+	KeyedNames template.HTML
+	// LiveESITools and LiveScoutTools list the tools whose every call can read live ESI or
+	// EvE-Scout; LiveOptional the tools that read live ESI only with some arguments.
+	LiveESITools, LiveScoutTools liveGroup
+	LiveOptional                 []liveOption
+	FirstTool                    string
 
 	Example exampleView
 	T       *toolPage
@@ -203,7 +262,7 @@ func offeredTools() []catalog.Tool {
 }
 
 func rowOf(t catalog.Tool) toolRowView {
-	return toolRowView{Name: t.Name, Summary: t.Summary, Tier: t.Tier.String(), Upstream: t.Upstream}
+	return toolRowView{Name: t.Name, Summary: t.Summary, Tier: t.Tier.String(), Live: liveLabel(liveKind(t)), AcceptsJaniceKey: t.AcceptsJaniceKey}
 }
 
 func rowsOf(ts []catalog.Tool) []toolRowView {
@@ -215,9 +274,19 @@ func rowsOf(ts []catalog.Tool) []toolRowView {
 }
 
 func codeNames(ts []catalog.Tool) template.HTML {
+	names := make([]string, len(ts))
+	for i, t := range ts {
+		names[i] = t.Name
+	}
+	return codeList(names, "and")
+}
+
+// codeList renders names as code joined into a list: "<code>a</code>, <code>b</code> and
+// <code>c</code>" with conj "and". The names are identifiers, not user input.
+func codeList(names []string, conj string) template.HTML {
 	var parts []string
-	for _, t := range ts {
-		parts = append(parts, "<code>"+t.Name+"</code>")
+	for _, n := range names {
+		parts = append(parts, "<code>"+n+"</code>")
 	}
 	switch len(parts) {
 	case 0:
@@ -225,7 +294,7 @@ func codeNames(ts []catalog.Tool) template.HTML {
 	case 1:
 		return template.HTML(parts[0])
 	}
-	return template.HTML(strings.Join(parts[:len(parts)-1], ", ") + " and " + parts[len(parts)-1])
+	return template.HTML(strings.Join(parts[:len(parts)-1], ", ") + " " + conj + " " + parts[len(parts)-1])
 }
 
 func perMin(r Rate) int { return r.Max }
@@ -302,16 +371,48 @@ func sourcesOf(ts []catalog.Tool) []tools.Source {
 	return out
 }
 
+// cursorInstallURL is the Cursor deep link that adds the MCP server at mcpURL: the server
+// config {"url": ...} as standard base64 in the config parameter. It is a template.URL
+// because html/template drops hrefs with a scheme it does not know.
+func cursorInstallURL(mcpURL string) template.URL {
+	cfg, _ := json.Marshal(struct {
+		URL string `json:"url"`
+	}{mcpURL})
+	return template.URL("cursor://anysphere.cursor-deeplink/mcp/install?name=eve-cyno&config=" +
+		base64.StdEncoding.EncodeToString(cfg))
+}
+
+// vscodeInstallURL is the VS Code deep link that adds the MCP server at mcpURL: the server
+// definition as JSON, percent-encoded the way JavaScript's encodeURIComponent does.
+func vscodeInstallURL(mcpURL string) template.URL {
+	def, _ := json.Marshal(struct {
+		Name string `json:"name"`
+		Type string `json:"type"`
+		URL  string `json:"url"`
+	}{"eve-cyno", "http", mcpURL})
+	// QueryEscape writes a space as "+" and also escapes !'()*, which encodeURIComponent
+	// keeps; the JSON here has none of those, so after the space fix the two agree.
+	return template.URL("vscode:mcp/install?" + strings.ReplaceAll(url.QueryEscape(string(def)), "+", "%20"))
+}
+
 func newPageData(in portalInput, assetVersion string) pageData {
 	s := in.Surface
 	offered := offeredTools()
-	pub, byo, keyed := catalog.ToolsIn(catalog.TierPublic), catalog.ToolsIn(catalog.TierBYOKey), catalog.ToolsIn(catalog.TierKeyed)
-	up := 0
-	var upstream []catalog.Tool
+	pub, keyed := catalog.ToolsIn(catalog.TierPublic), catalog.ToolsIn(catalog.TierKeyed)
+	live := 0
+	var liveESITools, liveScoutTools []catalog.Tool
+	var optional []liveOption
 	for _, t := range offered {
 		if t.Upstream {
-			up++
-			upstream = append(upstream, t)
+			live++
+		}
+		switch liveKind(t) {
+		case liveESI:
+			liveESITools = append(liveESITools, t)
+		case liveEveScout:
+			liveScoutTools = append(liveScoutTools, t)
+		case liveOptional:
+			optional = append(optional, liveOption{Name: t.Name, Args: codeList(t.UpstreamArgs, "or")})
 		}
 	}
 	origin := s.PublicURL
@@ -327,34 +428,37 @@ func newPageData(in portalInput, assetVersion string) pageData {
 		updated = m[1]
 	}
 	d := pageData{
-		Assets:       "/assets/" + assetVersion,
-		URL:          s.PublicURL,
-		Origin:       origin,
-		Host:         strings.TrimPrefix(strings.TrimPrefix(origin, "https://"), "http://"),
-		Prefix:       s.prefix(),
-		Version:      version.Version(),
-		Health:       health,
-		Auth:         s.Auth,
-		SelfServe:    s.Auth && s.SelfServe,
-		KeysRaise:    s.Auth && s.keysRaise(),
-		KeyCap:       keyCap(s),
-		AnonCap:      anonCap(s),
-		TermsUpdated: updated,
+		Assets:        "/assets/" + assetVersion,
+		URL:           s.PublicURL,
+		Origin:        origin,
+		CursorInstall: cursorInstallURL(origin + s.prefix() + "/mcp"),
+		VSCodeInstall: vscodeInstallURL(origin + s.prefix() + "/mcp"),
+		Host:          strings.TrimPrefix(strings.TrimPrefix(origin, "https://"), "http://"),
+		Prefix:        s.prefix(),
+		Version:       version.Version(),
+		Health:        health,
+		Auth:          s.Auth,
+		SelfServe:     s.Auth && s.SelfServe,
+		KeysRaise:     s.Auth && s.keysRaise(),
+		KeyCap:        keyCap(s),
+		AnonCap:       anonCap(s),
+		TermsUpdated:  updated,
 		Stats: portalStats{
-			Offered: len(offered), Public: len(pub), BYO: len(byo), Keyed: len(keyed),
-			Disabled: len(catalog.ToolsIn(catalog.TierDisabled)), Upstream: up, FitMax: rag.FitPageMax,
+			Offered: len(offered), Public: len(pub), Keyed: len(keyed),
+			Disabled: len(catalog.ToolsIn(catalog.TierDisabled)), Live: live, FitMax: rag.FitPageMax,
 		},
-		Lim:           limitsView(s, false),
-		KeyLim:        limitsView(s, true),
-		Tools:         toolGroups{Public: rowsOf(pub), BYO: rowsOf(byo), Keyed: rowsOf(keyed)},
-		Credits:       credits(),
-		Sources:       sourcesOf(offered),
-		KeyedNames:    codeNames(keyed),
-		UpstreamNames: codeNames(upstream),
+		Lim:            limitsView(s, false),
+		KeyLim:         limitsView(s, true),
+		Tools:          toolGroups{Public: rowsOf(pub), Keyed: rowsOf(keyed)},
+		Credits:        credits(),
+		Sources:        sourcesOf(offered),
+		KeyedNames:     codeNames(keyed),
+		LiveESITools:   liveGroup{Names: codeNames(liveESITools), N: len(liveESITools)},
+		LiveScoutTools: liveGroup{Names: codeNames(liveScoutTools), N: len(liveScoutTools)},
+		LiveOptional:   optional,
 	}
 	d.NavGroups = []navGroup{
 		{Label: "Public", Open: true, Tools: d.Tools.Public},
-		{Label: "Byo-key", Tools: d.Tools.BYO},
 		{Label: "Keyed", Tools: d.Tools.Keyed},
 	}
 	d.NavGroups = slices.DeleteFunc(d.NavGroups, func(g navGroup) bool { return len(g.Tools) == 0 })
@@ -382,20 +486,21 @@ func limitCards(s Surface) []limitCard {
 	}
 	add(s.MCP, l.MCP, "POST "+p+"/mcp")
 	add(s.ToolAPI == ToolAPIPublic, l.Tool, "POST "+p+"/tool/{name}")
-	add(s.ToolAPI != ToolAPIOff || s.MCP, l.UpstreamTool, "live ESI tools, REST + MCP")
+	add(s.ToolAPI != ToolAPIOff || s.MCP, l.UpstreamTool, "live tools, REST + MCP")
 	add(true, l.FitsSearch, "GET "+p+"/fits/search")
 	add(true, l.ItemsSearch, "GET "+p+"/items/search")
 	return out
 }
 
-// limitTable is the rate-limit table of the access page: limitRows plus the live-ESI budget.
+// limitTable is the rate-limit table of the access page: limitRows plus the per-caller live
+// limit that every live tool shares.
 func limitTable(s Surface) []limitRowView {
 	var out []limitRowView
 	for _, r := range limitRows(s) {
 		out = append(out, limitRowView{Route: r.Route, Max: r.Max, KeyMax: r.KeyMax, Window: r.Window, Code: true})
 	}
 	if u := s.Limits.UpstreamTool; u.Max > 0 && u.Window > 0 && (s.ToolAPI != ToolAPIOff || s.MCP) {
-		row := limitRowView{Route: "Live ESI tools, REST and MCP together", Max: u.Max, Window: windowWord(u)}
+		row := limitRowView{Route: "Live tools, REST and MCP together", Max: u.Max, Window: windowWord(u)}
 		if k := s.keyedRate(u); k.Max > u.Max {
 			row.KeyMax = k.Max
 		}
@@ -412,14 +517,13 @@ func newToolPage(d pageData, t catalog.Tool, fx exampleFixture, order []catalog.
 		return nil, err
 	}
 	tp := &toolPage{
-		Name: t.Name, Tier: t.Tier.String(), Summary: t.Summary, Description: t.Description, Upstream: t.Upstream,
+		Name: t.Name, Tier: t.Tier.String(), Summary: t.Summary, Description: t.Description,
+		LiveKind: liveKind(t), Live: liveLabel(liveKind(t)), LiveArgs: codeList(t.UpstreamArgs, "or"),
 		Params: paramsOf(t), Sources: t.Attribution, Example: ex,
 	}
 	switch t.Tier {
 	case catalog.TierPublic:
 		tp.GroupAnchor, tp.GroupLabel = "tools-public", "Public"
-	case catalog.TierBYOKey:
-		tp.GroupAnchor, tp.GroupLabel = "tools-byo", "Byo-key"
 	default:
 		tp.GroupAnchor, tp.GroupLabel = "tools-keyed", "Keyed"
 	}
@@ -459,8 +563,9 @@ func accessAndRate(d pageData, t catalog.Tool) (access, rate template.HTML) {
 	switch t.Tier {
 	case catalog.TierPublic:
 		access = "<b>public.</b> No key needed."
-	case catalog.TierBYOKey:
-		access = "<b>byo-key.</b> Send your own Janice API key in <code>" + catalog.HeaderJaniceKey + "</code>; it is used for that request only, never stored or logged."
+		if t.AcceptsJaniceKey {
+			access += " Optional: your own Janice API key in <code>" + catalog.HeaderJaniceKey + "</code> makes it a Janice appraisal; it is used for that request only, never stored or logged."
+		}
 	default:
 		access = "<b>keyed.</b> Needs an API key: <code>Authorization: Bearer &lt;key&gt;</code> or <code>X-API-Key</code>."
 		if !d.Auth {
@@ -476,7 +581,11 @@ func accessAndRate(d pageData, t catalog.Tool) (access, rate template.HTML) {
 		r += fmt.Sprintf(" (%d with a key)", d.KeyLim.MCP)
 	}
 	if t.Upstream {
-		r += fmt.Sprintf(", plus <b>%d calls/min</b> for live ESI tools (", d.Lim.UpstreamTool)
+		r += fmt.Sprintf(", plus <b>%d calls/min</b> on the per-caller live limit", d.Lim.UpstreamTool)
+		if len(t.UpstreamArgs) > 0 {
+			r += " for calls with " + string(codeList(t.UpstreamArgs, "or"))
+		}
+		r += ", shared by all live tools ("
 		if d.KeyLim.UpstreamTool != d.Lim.UpstreamTool {
 			r += fmt.Sprintf("%d with a key; ", d.KeyLim.UpstreamTool)
 		}
@@ -491,8 +600,6 @@ func errorRows(d pageData, t catalog.Tool) []errorRow {
 		rows = append(rows, errorRow{200, "A call can still end text-only: an unknown id or an input that does not parse leaves <code>result.data</code> <code>null</code>, and <code>result.text</code> says why."})
 	}
 	switch t.Tier {
-	case catalog.TierBYOKey:
-		rows = append(rows, errorRow{400, "<code>janice_key_required</code>: send your own Janice key in <code>" + catalog.HeaderJaniceKey + "</code>."})
 	case catalog.TierKeyed:
 		rows = append(rows, errorRow{401, "<code>api_key_required</code> or <code>invalid_api_key</code>: this tool needs a valid API key."})
 	}
@@ -502,13 +609,13 @@ func errorRows(d pageData, t catalog.Tool) []errorRow {
 		limit = fmt.Sprintf("<code>rate_limited</code>: over %d calls per minute. Wait for <code>Retry-After</code>.", d.Lim.Tool)
 	}
 	if t.Upstream {
-		limit = fmt.Sprintf("<code>rate_limited</code>: over the route limit or the %d calls/min ESI budget. Wait for <code>Retry-After</code>.", d.Lim.UpstreamTool)
+		limit = fmt.Sprintf("<code>rate_limited</code>: over the route limit or the per-caller live limit (%d calls/min, shared by all live tools). Wait for <code>Retry-After</code>.", d.Lim.UpstreamTool)
 		if d.KeyLim.UpstreamTool != d.Lim.UpstreamTool {
-			limit = fmt.Sprintf("<code>rate_limited</code>: over the route limit or the ESI budget (%d calls/min without a key, %d with one). Wait for <code>Retry-After</code>.", d.Lim.UpstreamTool, d.KeyLim.UpstreamTool)
+			limit = fmt.Sprintf("<code>rate_limited</code>: over the route limit or the per-caller live limit (%d calls/min without a key, %d with one, shared by all live tools). Wait for <code>Retry-After</code>.", d.Lim.UpstreamTool, d.KeyLim.UpstreamTool)
 		}
 	}
 	rows = append(rows, errorRow{429, template.HTML(limit)})
-	if t.Upstream {
+	if t.LiveESI() {
 		rows = append(rows, errorRow{503, "<code>upstream_busy</code>: the shared ESI budget is nearly spent. Wait for <code>Retry-After</code>."})
 	}
 	return rows
@@ -611,11 +718,11 @@ func docsPages() []docsPage {
 	const desc = "Docs for the EVE-Cyno Data API: the Claude Code plugin, MCP for any harness, REST and OpenAPI, the tools reference, access tiers and rate limits."
 	return []docsPage{
 		{"start", "doc_start", "Getting started", desc, "Connect, make a first call, read the answer."},
-		{"claude-code", "doc_claude_code", "Claude Code plugin", desc, "Install, slash commands, the Janice key."},
+		{"claude-code", "doc_claude_code", "Claude Code plugin", desc, "Install, slash commands, the optional Janice key."},
 		{"mcp", "doc_mcp", "MCP (any harness)", desc, "Streamable HTTP endpoint for any MCP client."},
 		{"rest", "doc_rest", "REST & OpenAPI", desc, "POST /v1/tool/{name}, endpoints, headers, errors."},
 		{"tools", "doc_tools", "Tools reference", desc, "Every tool on this service, by access tier."},
-		{"access", "doc_access", "Access tiers & rate limits", desc, "Public, keyed, byo-key; trial and key limits; 429 and Retry-After."},
+		{"access", "doc_access", "Access tiers & rate limits", desc, "Public and keyed; trial and key limits; 429 and Retry-After."},
 		{"attribution", "doc_attribution", "Attribution & licences", desc, "The Fenris Creations notice, CC BY-SA, community fit credits."},
 		{"terms", "doc_terms", "Terms of use", desc, "Summary of the terms; full text at /terms."},
 	}
@@ -633,7 +740,7 @@ type searchEntry struct {
 	U    string `json:"u"`
 	K    string `json:"k"`
 	Tier string `json:"tier,omitempty"`
-	Live bool   `json:"live,omitempty"`
+	Live string `json:"live,omitempty"` // the live badge (liveLabel); omitted for a tool without live data
 	S    string `json:"s,omitempty"`
 }
 
@@ -642,13 +749,13 @@ func searchIndex(order []catalog.Tool, keys bool) ([]byte, error) {
 	for _, p := range docsPages() {
 		summary := p.summary
 		if p.slug == "access" && !keys {
-			summary = "Public, keyed, byo-key; limits per minute; 429 and Retry-After."
+			summary = "Public and keyed; limits per minute; 429 and Retry-After."
 		}
 		idx = append(idx, searchEntry{T: p.title, U: pagePath(p.slug), K: "page", S: summary})
 	}
 	idx = append(idx, searchEntry{T: "Hall of Fame", U: "/#credits", K: "page", S: "The sources and projects behind the data."})
 	for _, t := range order {
-		idx = append(idx, searchEntry{T: t.Name, U: "/docs/tools/" + t.Name, K: "tool", Tier: t.Tier.String(), Live: t.Upstream, S: t.Summary})
+		idx = append(idx, searchEntry{T: t.Name, U: "/docs/tools/" + t.Name, K: "tool", Tier: t.Tier.String(), Live: liveLabel(liveKind(t)), S: t.Summary})
 	}
 	b, err := json.Marshal(idx) // escapes <, > and & as \u00XX: safe inside a script element
 	if err != nil {
@@ -688,7 +795,7 @@ func buildPortal(in portalInput) (*portalSite, error) {
 	}
 
 	d := newPageData(in, ver)
-	order := slices.Concat(catalog.ToolsIn(catalog.TierPublic), catalog.ToolsIn(catalog.TierBYOKey), catalog.ToolsIn(catalog.TierKeyed))
+	order := slices.Concat(catalog.ToolsIn(catalog.TierPublic), catalog.ToolsIn(catalog.TierKeyed))
 	if site.search, err = searchIndex(order, d.Auth); err != nil {
 		return nil, err
 	}
@@ -707,7 +814,7 @@ func buildPortal(in portalInput) (*portalSite, error) {
 	d.Example.TierSentence = "public: no key, no account."
 	landing := d
 	landing.Title = "EVE-CYNO DATA · EVE Online data for Claude Code, MCP and REST"
-	landing.Description = "Deterministic EVE Online data and calculations for Claude Code and any MCP client or HTTP stack: SDE lookups, the Gofa fit engine, live ESI reads and community fits. No LLM in the loop. Free, non-commercial."
+	landing.Description = "Deterministic EVE Online data and calculations for Claude Code and any MCP client or HTTP stack: SDE lookups, the Gofa fit engine, live ESI and EvE-Scout reads and community fits. No LLM in the loop. Free, non-commercial."
 	if site.pages["/"], err = render("", "portal", landing); err != nil {
 		return nil, err
 	}

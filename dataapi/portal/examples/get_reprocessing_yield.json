@@ -5,13 +5,13 @@
     "quantity": 1000
   },
   "prompt": "What does 1000 Veldspar reprocess into?",
-  "recorded": "2026-10-09",
+  "recorded": "2026-10-17",
   "trimmed": false,
   "response": {
     "tool": "get_reprocessing_yield",
-    "version": "sha-aa76146",
+    "version": "sha-3f8b11e",
     "result": {
-      "text": "Reprocessing yield: **1000× Veldspar** at 50% efficiency\n\nMaterial                      Quantity\n---------------------------------------\nTritanium                      200,000",
+      "text": "Reprocessing yield: **1000× Veldspar** at 50% efficiency\n\nMaterial                      Quantity\n---------------------------------------\nTritanium                        2,000\n\nReprocessed as 10 batches of 100 units.",
       "data": null
     },
     "attribution": [

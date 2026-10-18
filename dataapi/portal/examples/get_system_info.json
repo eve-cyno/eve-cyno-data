@@ -1,0 +1,230 @@
+{
+  "tool": "get_system_info",
+  "request": {
+    "systems": [
+      "Jita",
+      "Erkinen",
+      "Thera",
+      "J100009"
+    ]
+  },
+  "prompt": "What do Jita, Erkinen, Thera and J100009 look like?",
+  "recorded": "2026-10-17",
+  "trimmed": false,
+  "response": {
+    "tool": "get_system_info",
+    "version": "sha-b2a1483",
+    "result": {
+      "text": "System info, 4 systems:\n  Jita +0.9 highsec · The Forge / Kimotoro · CONCORD Assembly · gates 7: Ikuchi, Maurasi, Muvolailen, New Caldari, Niyabainen, Perimeter, Sobaseki · 0 belts, 33 moons, 8 planets (Barren 3, Gas 2, Ice 1, Lava 1, Temperate 1) · 18 NPC stations · ice: none listed\n  Erkinen +0.6 highsec · The Bleak Lands / Vaarma · Amarr Empire · gates 2: Komaa, Uusanen · 12 belts, 40 moons, 14 planets (Barren 4, Gas 2, Lava 1, Oceanic 2, Temperate 5) · 2 NPC stations · ice: Clear Icicle\n  Thera -1.0 nullsec · G-R00031 / G-C00324 · no faction · Thera · gates 0: none · 0 belts, 0 moons, 14 planets (Gas 1, Ice 1, Lava 2, Plasma 1, Shattered 9) · 4 NPC stations · ice: none listed\n  J100009 -1.0 nullsec · C-R00011 / C-C00101 · no faction · wormhole C3, effect Pulsar · gates 0: none · 0 belts, 44 moons, 7 planets (Barren 1, Gas 3, Lava 1, Plasma 1, Storm 1) · 0 NPC stations · ice: none listed",
+      "data": {
+        "systems": [
+          {
+            "id": 30000142,
+            "name": "Jita",
+            "security": 0.945913,
+            "sec": "+0.9",
+            "class": "highsec",
+            "region": "The Forge",
+            "constellation": "Kimotoro",
+            "faction": "CONCORD Assembly",
+            "wormhole_class": 7,
+            "wormhole_effect": null,
+            "neighbours": [
+              "Ikuchi",
+              "Maurasi",
+              "Muvolailen",
+              "New Caldari",
+              "Niyabainen",
+              "Perimeter",
+              "Sobaseki"
+            ],
+            "gates": 7,
+            "belts": 0,
+            "moons": 33,
+            "planets": 8,
+            "planets_by_type": {
+              "Barren": 3,
+              "Gas": 2,
+              "Ice": 1,
+              "Lava": 1,
+              "Temperate": 1
+            },
+            "npc_stations": 18,
+            "station_services": [
+              "Bounty Missions",
+              "Cloning",
+              "Courier Missions",
+              "Docking",
+              "Factory",
+              "Fitting",
+              "Insurance",
+              "Interbus",
+              "Loyalty Point Store",
+              "Market",
+              "Navy Offices",
+              "News",
+              "Office Rental",
+              "Paintshop",
+              "Refinery",
+              "Repair Facilities",
+              "Reprocessing Plant",
+              "Security Office",
+              "Stock Exchange",
+              "Storage"
+            ],
+            "ice_belt": null
+          },
+          {
+            "id": 30003078,
+            "name": "Erkinen",
+            "security": 0.592004,
+            "sec": "+0.6",
+            "class": "highsec",
+            "region": "The Bleak Lands",
+            "constellation": "Vaarma",
+            "faction": "Amarr Empire",
+            "wormhole_class": 7,
+            "wormhole_effect": null,
+            "neighbours": [
+              "Komaa",
+              "Uusanen"
+            ],
+            "gates": 2,
+            "belts": 12,
+            "moons": 40,
+            "planets": 14,
+            "planets_by_type": {
+              "Barren": 4,
+              "Gas": 2,
+              "Lava": 1,
+              "Oceanic": 2,
+              "Temperate": 5
+            },
+            "npc_stations": 2,
+            "station_services": [
+              "Bounty Missions",
+              "Cloning",
+              "Courier Missions",
+              "DNA Therapy",
+              "Docking",
+              "Factory",
+              "Fitting",
+              "Insurance",
+              "Loyalty Point Store",
+              "Market",
+              "Navy Offices",
+              "News",
+              "Office Rental",
+              "Repair Facilities",
+              "Reprocessing Plant",
+              "Surgery"
+            ],
+            "ice_belt": {
+              "belts": [
+                "Clear Icicle Belt"
+              ],
+              "ice_types": [
+                "Clear Icicle"
+              ],
+              "source_urls": [
+                "https://wiki.eveuniversity.org/Clear_Icicle_Belt"
+              ]
+            }
+          },
+          {
+            "id": 31000005,
+            "name": "Thera",
+            "security": -0.99,
+            "sec": "-1.0",
+            "class": "nullsec",
+            "region": "G-R00031",
+            "constellation": "G-C00324",
+            "faction": null,
+            "wormhole_class": 12,
+            "wormhole_effect": null,
+            "neighbours": [],
+            "gates": 0,
+            "belts": 0,
+            "moons": 0,
+            "planets": 14,
+            "planets_by_type": {
+              "Gas": 1,
+              "Ice": 1,
+              "Lava": 2,
+              "Plasma": 1,
+              "Shattered": 9
+            },
+            "npc_stations": 4,
+            "station_services": [
+              "Black Market",
+              "Bounty Missions",
+              "Cloning",
+              "Courier Missions",
+              "DNA Therapy",
+              "Docking",
+              "Factory",
+              "Fitting",
+              "Gambling",
+              "Insurance",
+              "Interbus",
+              "Laboratory",
+              "Loyalty Point Store",
+              "Market",
+              "Navy Offices",
+              "News",
+              "Office Rental",
+              "Paintshop",
+              "Refinery",
+              "Repair Facilities",
+              "Reprocessing Plant",
+              "Stock Exchange",
+              "Storage",
+              "Surgery"
+            ],
+            "ice_belt": null
+          },
+          {
+            "id": 31001040,
+            "name": "J100009",
+            "security": -0.99,
+            "sec": "-1.0",
+            "class": "nullsec",
+            "region": "C-R00011",
+            "constellation": "C-C00101",
+            "faction": null,
+            "wormhole_class": 3,
+            "wormhole_effect": "Pulsar",
+            "neighbours": [],
+            "gates": 0,
+            "belts": 0,
+            "moons": 44,
+            "planets": 7,
+            "planets_by_type": {
+              "Barren": 1,
+              "Gas": 3,
+              "Lava": 1,
+              "Plasma": 1,
+              "Storm": 1
+            },
+            "npc_stations": 0,
+            "station_services": [],
+            "ice_belt": null
+          }
+        ],
+        "unresolved": []
+      }
+    },
+    "attribution": [
+      {
+        "name": "EVE Static Data Export (via Fuzzwork)",
+        "url": "https://www.fuzzwork.co.uk/dump/",
+        "license": "CCP game data under the EVE Developer License Agreement; converted by Fuzzwork Enterprises"
+      },
+      {
+        "name": "EVE University Wiki (ice belt systems)",
+        "url": "https://wiki.eveuniversity.org/Ice_harvesting",
+        "license": "CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/); credit EVE University; the dataset stays CC BY-SA"
+      }
+    ]
+  }
+}

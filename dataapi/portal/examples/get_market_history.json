@@ -1,0 +1,94 @@
+{
+  "tool": "get_market_history",
+  "request": {
+    "item_name": "PLEX",
+    "days": 30,
+    "bucket": "week"
+  },
+  "prompt": "Is PLEX trending up or down? Show me the last 30 days by week.",
+  "recorded": "2026-10-18",
+  "trimmed": false,
+  "response": {
+    "tool": "get_market_history",
+    "version": "sha-ebf017c",
+    "result": {
+      "text": "Market history of PLEX (type_id=44992) in Global PLEX market, last 30 days to 2026-10-16 by week (live ESI daily history):\n  2026-09-17 – 2026-09-20  avg 4,895,321.38  low 4,737,000.00  high 5,000,000.00  volume 4,228,021\n  2026-09-21 – 2026-09-27  avg 4,655,623.10  low 4,640,000.00  high 4,850,000.00  volume 6,719,316\n  2026-09-28 – 2026-10-04  avg 4,657,041.27  low 4,646,000.00  high 4,735,000.00  volume 8,082,133\n  2026-10-05 – 2026-10-11  avg 4,723,274.49  low 4,690,000.00  high 4,923,000.00  volume 6,080,120\n  2026-10-12 – 2026-10-16  avg 4,728,976.88  low 4,710,000.00  high 4,955,000.00  volume 3,950,021\nSummary: average 4,715,017.86 ISK, low 4,640,000.00, high 5,000,000.00, volume 29,059,611; change -3.4% (first to last week).",
+      "data": {
+        "type_id": 44992,
+        "name": "PLEX",
+        "region_id": 19000001,
+        "region": "Global PLEX market",
+        "hub": "",
+        "days": 30,
+        "window_end": "2026-10-16",
+        "bucket": "week",
+        "buckets": [
+          {
+            "start": "2026-09-17",
+            "end": "2026-09-20",
+            "average_isk": 4895321.383692276,
+            "lowest_isk": 4737000,
+            "highest_isk": 5000000,
+            "volume": 4228021,
+            "order_count": 13885
+          },
+          {
+            "start": "2026-09-21",
+            "end": "2026-09-27",
+            "average_isk": 4655623.09735098,
+            "lowest_isk": 4640000,
+            "highest_isk": 4850000,
+            "volume": 6719316,
+            "order_count": 19689
+          },
+          {
+            "start": "2026-09-28",
+            "end": "2026-10-04",
+            "average_isk": 4657041.270417104,
+            "lowest_isk": 4646000,
+            "highest_isk": 4735000,
+            "volume": 8082133,
+            "order_count": 21521
+          },
+          {
+            "start": "2026-10-05",
+            "end": "2026-10-11",
+            "average_isk": 4723274.492115287,
+            "lowest_isk": 4690000,
+            "highest_isk": 4923000,
+            "volume": 6080120,
+            "order_count": 18401
+          },
+          {
+            "start": "2026-10-12",
+            "end": "2026-10-16",
+            "average_isk": 4728976.881135569,
+            "lowest_isk": 4710000,
+            "highest_isk": 4955000,
+            "volume": 3950021,
+            "order_count": 15383
+          }
+        ],
+        "summary": {
+          "average_isk": 4715017.864760819,
+          "lowest_isk": 4640000,
+          "highest_isk": 5000000,
+          "volume": 29059611,
+          "change_pct": -3.3980302725546925
+        }
+      }
+    },
+    "attribution": [
+      {
+        "name": "ESI (EVE Swagger Interface)",
+        "url": "https://esi.evetech.net/",
+        "license": "EVE Developer License Agreement (CCP Games / Fenris Creations); non-commercial use"
+      },
+      {
+        "name": "EVE Static Data Export (via Fuzzwork)",
+        "url": "https://www.fuzzwork.co.uk/dump/",
+        "license": "CCP game data under the EVE Developer License Agreement; converted by Fuzzwork Enterprises"
+      }
+    ]
+  }
+}

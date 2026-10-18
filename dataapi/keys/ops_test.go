@@ -69,7 +69,7 @@ func TestSetCapRaisesAndLowers(t *testing.T) {
 	}
 	_, err = s.SetCap(bg, "key_000000000000", 5)
 	require.ErrorIs(t, err, keys.ErrNotFound)
-	require.NoError(t, s.RevokeAny(bg, k.ID))
+	require.NoError(t, s.RevokeAny(bg, k.ID, ""))
 	_, err = s.SetCap(bg, k.ID, 5)
 	require.ErrorIs(t, err, keys.ErrNotFound)
 }
@@ -100,7 +100,7 @@ func TestBlockRevokesAndRefusesUntilUnblock(t *testing.T) {
 	other, otherSecret, err := s.Create(bg, "discord:8", "Bob", "c")
 	require.NoError(t, err)
 
-	n, err := s.Block(bg, "discord:7")
+	n, err := s.Block(bg, "discord:7", "")
 	require.NoError(t, err)
 	require.Equal(t, 2, n)
 	_, err = s.Authenticate(bearer(secret)) // at once, no restart
@@ -117,7 +117,7 @@ func TestBlockRevokesAndRefusesUntilUnblock(t *testing.T) {
 	require.Equal(t, "Ada", b[0].OwnerName)
 	require.False(t, b[0].BlockedAt.IsZero())
 
-	n, err = s.Block(bg, "discord:7") // idempotent
+	n, err = s.Block(bg, "discord:7", "") // idempotent
 	require.NoError(t, err)
 	require.Zero(t, n)
 	require.NoError(t, s.Unblock(bg, "discord:7"))
@@ -130,7 +130,7 @@ func TestBlockRevokesAndRefusesUntilUnblock(t *testing.T) {
 	l, err := s.List(bg, "discord:8")
 	require.NoError(t, err)
 	require.Equal(t, other.ID, l[0].ID)
-	_, err = s.Block(bg, "bad")
+	_, err = s.Block(bg, "bad", "")
 	require.ErrorIs(t, err, keys.ErrBadOwner)
 }
 
@@ -140,7 +140,7 @@ func TestBlockSurvivesReopen(t *testing.T) {
 	require.NoError(t, err)
 	_, secret, err := s.Create(bg, "eve:1", "", "a")
 	require.NoError(t, err)
-	_, err = s.Block(bg, "eve:1")
+	_, err = s.Block(bg, "eve:1", "")
 	require.NoError(t, err)
 	require.NoError(t, s.Close())
 	s, err = keys.Open(path, keys.Options{})

@@ -1,17 +1,59 @@
 {
   "tool": "get_sovereignty",
   "request": {
-    "system_name": "1DQ1-A"
+    "systems": [
+      "1DQ1-A",
+      "Jita",
+      "Thera"
+    ]
   },
-  "prompt": "Who holds sovereignty in 1DQ1-A?",
-  "recorded": "2026-10-09",
+  "prompt": "Who holds sovereignty in 1DQ1-A, Jita and Thera?",
+  "recorded": "2026-10-17",
   "trimmed": false,
   "response": {
     "tool": "get_sovereignty",
-    "version": "sha-aa76146",
+    "version": "sha-0d59efe",
     "result": {
-      "text": "Sovereignty in **1DQ1-A**:\n  Alliance: id=1900696668\n  Corporation: id=1639878825",
-      "data": null
+      "text": "Sovereignty, 3 systems (live ESI):\n  1DQ1-A: alliance The Initiative. (1900696668), corporation Initiative Holding (1639878825)\n  Jita: faction CONCORD Assembly (500006)\n  Thera: wormhole space, no sovereignty",
+      "data": {
+        "systems": [
+          {
+            "system": "1DQ1-A",
+            "system_id": 30004759,
+            "status": "alliance",
+            "alliance_id": 1900696668,
+            "alliance": "The Initiative.",
+            "corporation_id": 1639878825,
+            "corporation": "Initiative Holding",
+            "faction_id": null,
+            "faction": null
+          },
+          {
+            "system": "Jita",
+            "system_id": 30000142,
+            "status": "faction",
+            "alliance_id": null,
+            "alliance": null,
+            "corporation_id": null,
+            "corporation": null,
+            "faction_id": 500006,
+            "faction": "CONCORD Assembly"
+          },
+          {
+            "system": "Thera",
+            "system_id": 31000005,
+            "status": "wormhole",
+            "alliance_id": null,
+            "alliance": null,
+            "corporation_id": null,
+            "corporation": null,
+            "faction_id": null,
+            "faction": null
+          }
+        ],
+        "unresolved": [],
+        "names_unavailable": false
+      }
     },
     "attribution": [
       {

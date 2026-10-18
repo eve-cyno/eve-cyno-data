@@ -1,5 +1,5 @@
 // Package mcpserver exposes the deterministic EVE-Cyno tools as a Model Context Protocol
-// server (roadmap R3.3): the same registry (core/catalog) and the same executor
+// server: the same registry (core/catalog) and the same executor
 // (tools.ExecuteToolResult) as the REST tool endpoint, so a tool answers identically over
 // MCP, REST and the chat brain.
 //
@@ -11,13 +11,13 @@
 //
 //   - tools/list: one MCP tool per registry tool, with the tool_schemas.json description
 //     and argument schema as is. The set follows the tool tiers (catalog.Tier). Over
-//     HTTP it is chosen per request: the public tools always, the keyed tools only when
-//     the caller presented a valid API key (HTTPOptions.Keyed), the byo-key tool always
-//     (its description names the X-Janice-Key header; a call without the header is an
-//     isError result saying so) and the disabled tools never; a tool that is not listed
-//     is the protocol's own "unknown tool" error. Over stdio the default is the public
-//     tools and Options.All registers every tool, for a local process that spends its
-//     owner's keys.
+//     HTTP it is chosen per request: the public tools always (appraise_items among them;
+//     its description says the X-Janice-Key header is optional), the keyed tools only when
+//     the caller presented a valid API key (HTTPOptions.Keyed) and the disabled tools
+//     never; a tool that is not listed is the protocol's own "unknown tool" error. Over
+//     stdio the default is the public tools, run without any key of the process
+//     (appraise_items then estimates), and Options.All registers every tool, for a local
+//     process that spends its owner's keys.
 //   - tools/call: content[0] is the LLM-oriented text exactly as tools.ExecuteTool
 //     returns it; content[1], when the tool has upstreams, is a short "Sources:" line
 //     (attribution is a condition of several of the licences, and most clients do not
@@ -73,16 +73,18 @@ const (
 
 // instructions is what the initialize result tells the client about the server.
 const instructions = "Deterministic EVE Online data and calculation tools: SDE lookups (items, ships, skills, " +
-	"stations, routes), fit validation and stats, market prices, sovereignty and system activity. " +
-	"Answers are computed from CCP's Static Data Export and ESI, not generated. " +
+	"stations, routes, jump distances, system search and facts), fit validation and stats, market prices and history, " +
+	"sovereignty and system activity, and live Thera connections. " +
+	"Answers are computed from CCP's Static Data Export and ESI, with EVE University's ice-belt list and EvE-Scout's Thera data, not generated. " +
 	"EVE Online and its data are the property of CCP Games / Fenris Creations; this service is " +
 	"non-commercial and unaffiliated (EVE Developer License Agreement). Each answer names its sources."
 
 // Options configures a server.
 type Options struct {
-	// All registers every tool, whatever its tier (keyed, byo-key and disabled ones
-	// included; they use the process's own keys). Only for a process that serves its own
-	// user (cmd/mcp -all); never for an internet-facing one.
+	// All registers every tool, whatever its tier (keyed and disabled ones included), and
+	// keeps the process's own keys (JANICE_API_KEY makes appraise_items a Janice
+	// appraisal). Only for a process that serves its own user (cmd/mcp -all); never for an
+	// internet-facing one. Without All the public tools run without any Janice key.
 	All bool
 	// Timeout bounds one tool execution; zero means DefaultTimeout.
 	Timeout time.Duration
@@ -110,6 +112,11 @@ func New(deps *tools.Deps, opts Options) *mcp.Server {
 }
 
 func newServer(deps *tools.Deps, opts Options, exec executor) *mcp.Server {
+	if !opts.All {
+		// The public tier never spends a key of the process: appraise_items runs without one
+		// (the ESI estimate). All keeps the process's keys, for its own user.
+		deps = deps.ForPublic("")
+	}
 	return buildServer(deps, Exposed(opts), serverConfig{timeout: opts.Timeout, log: opts.Logger}, exec)
 }
 
@@ -117,11 +124,14 @@ func newServer(deps *tools.Deps, opts Options, exec executor) *mcp.Server {
 type serverConfig struct {
 	timeout time.Duration
 	log     *slog.Logger
-	// janiceFromHeader marks a per-request HTTP server: byo-key tools run with the
-	// caller's own key (already in the deps) and are refused without one.
+	// janiceFromHeader marks a per-request HTTP server: the deps carry the caller's own
+	// Janice key (or none), and a tool that accepts one says in its description that the
+	// header is optional.
 	janiceFromHeader bool
-	// allow, when set, is asked before each call of an Upstream tool (catalog.Tool.Upstream)
-	// whether the caller is within its budget for it; a refusal carries the wait.
+	// allow, when set, is asked before each call that reads a live upstream (an Upstream tool
+	// whose catalog.Tool.SpendsUpstream is true for the call's arguments; for plan_jump_route
+	// that means a live option is set) whether the caller is within its budget for it; a
+	// refusal carries the wait.
 	allow func(tool string) (ok bool, retryAfter time.Duration)
 	// called, when set, is told of every tools/call.
 	called func(tool string)
@@ -151,26 +161,27 @@ func buildServer(deps *tools.Deps, exposed []catalog.Tool, cfg serverConfig, exe
 		},
 		&mcp.ServerOptions{Instructions: text, Logger: quiet(log)},
 	)
-	h := &handler{deps: deps, exec: exec, timeout: timeout, log: log, janiceFromHeader: cfg.janiceFromHeader, allow: cfg.allow, called: cfg.called}
+	h := &handler{deps: deps, exec: exec, timeout: timeout, log: log, allow: cfg.allow, called: cfg.called}
 	for _, t := range exposed {
 		s.AddTool(mcpTool(t, cfg.janiceFromHeader), h.call(t))
 	}
 	return s
 }
 
-// janiceNote is appended to the description of a byo-key tool on a per-request HTTP server.
-const janiceNote = " Requires your own Janice API key in the " + catalog.HeaderJaniceKey + " request header; this service never uses its own."
+// janiceNote is appended to the description of a tool that accepts the caller's Janice key,
+// on a per-request HTTP server.
+const janiceNote = " Optional: send your own Janice API key in the " + catalog.HeaderJaniceKey + " request header for a Janice appraisal instead of the estimate; this service never uses its own key."
 
-// mcpTool maps a registry tool to its MCP definition. janiceHeader adds the byo-key note.
+// mcpTool maps a registry tool to its MCP definition. janiceHeader adds the optional-key note.
 func mcpTool(t catalog.Tool, janiceHeader bool) *mcp.Tool {
 	no, openWorld := false, false
 	for _, src := range t.Attribution {
-		if src.Name != "" && !strings.Contains(src.Name, "Static Data Export") {
-			openWorld = true // reaches beyond the local SDE: ESI, zKillboard, ...
+		if src.Name != "" && !tools.IsEmbeddedSource(src) {
+			openWorld = true // reaches beyond the shipped data: ESI, zKillboard, ...
 		}
 	}
 	desc := t.Description
-	if janiceHeader && t.Tier == catalog.TierBYOKey {
+	if janiceHeader && t.AcceptsJaniceKey {
 		desc += janiceNote
 	}
 	return &mcp.Tool{
@@ -191,10 +202,8 @@ type handler struct {
 	exec    executor
 	timeout time.Duration
 	log     *slog.Logger
-	// janiceFromHeader: deps carries the caller's Janice key ("" when it sent none).
-	janiceFromHeader bool
-	allow            func(tool string) (bool, time.Duration)
-	called           func(tool string)
+	allow   func(tool string) (bool, time.Duration)
+	called  func(tool string)
 }
 
 // call returns the tools/call handler of one tool.
@@ -225,14 +234,11 @@ func (h *handler) call(t catalog.Tool) mcp.ToolHandler {
 		if h.deps == nil {
 			return failure("deterministic layer unavailable (SDE not loaded)"), nil
 		}
-		if h.janiceFromHeader && t.Tier == catalog.TierBYOKey && h.deps.JaniceAPIKey == "" {
-			return failure(name + " runs with your own Janice API key: send it in the " + catalog.HeaderJaniceKey + " request header"), nil
-		}
 
-		if h.allow != nil && t.Upstream {
+		if h.allow != nil && t.SpendsUpstream(args) {
 			if ok, retry := h.allow(name); !ok {
-				return failure(fmt.Sprintf("rate_limited: %s reads live ESI data and has a lower per-caller limit; retry in %d seconds",
-					name, max(1, int((retry+time.Second-1)/time.Second)))), nil
+				return failure(fmt.Sprintf("rate_limited: %s reads live %s data and has a lower per-caller limit; retry in %d seconds",
+					name, t.UpstreamName, max(1, int((retry+time.Second-1)/time.Second)))), nil
 			}
 		}
 
@@ -333,12 +339,13 @@ type HTTPOptions struct {
 	// ever reached directly on loopback should leave it on.
 	DisableLocalhostProtection bool
 	// Keyed reports whether the request's caller may use the keyed tier (it presented a
-	// valid API key). Nil means nobody may: only the public and byo-key tiers are served.
+	// valid API key). Nil means nobody may: only the public tier is served.
 	// Authentication itself is the embedding service's job (dataapi authenticates before
 	// this handler runs and refuses an invalid key with 401).
 	Keyed func(*http.Request) bool
-	// Upstream, when set, is asked before every call of a tool that reads live ESI data
-	// (catalog.Tool.Upstream) whether the request's caller is within its budget for it
+	// Upstream, when set, is asked before every call that reads a live upstream (a call for
+	// which catalog.Tool.SpendsUpstream is true; for plan_jump_route that means a live option
+	// is set) whether the request's caller is within its budget for it
 	// (dataapi.UpstreamLimiter.Allow; the same limiter as the REST endpoint, so one budget
 	// covers both). A refusal is an isError result starting "rate_limited". Nil: no limit.
 	Upstream func(r *http.Request, tool string) (ok bool, retryAfter time.Duration)
@@ -367,9 +374,9 @@ type HTTPOptions struct {
 // handler serves one URL; mount it where the clients are pointed (dataapi: {prefix}/mcp).
 // GET (the server-initiated stream) and DELETE (end session) are 405 in this mode.
 //
-// The tool set is chosen per request (see the package doc): public and byo-key tools
-// always, keyed tools when o.Keyed says so, disabled tools never. Each request gets its own
-// server over its own copy of deps (tools.Deps.WithJaniceKey) that carries the caller's
+// The tool set is chosen per request (see the package doc): public tools always,
+// keyed tools when o.Keyed says so, disabled tools never. Each request gets its own
+// server over its own copy of deps (tools.Deps.ForPublic) that carries the caller's
 // X-Janice-Key, or no Janice key at all, never deps' own: the shared deps are not mutated,
 // so concurrent callers cannot see each other's keys, and the key is not logged or kept.
 func HTTPHandler(deps *tools.Deps, o HTTPOptions) http.Handler {
@@ -379,10 +386,10 @@ func HTTPHandler(deps *tools.Deps, o HTTPOptions) http.Handler {
 func httpHandler(deps *tools.Deps, o HTTPOptions, exec executor) http.Handler {
 	return mcp.NewStreamableHTTPHandler(
 		func(r *http.Request) *mcp.Server {
-			tiers := []catalog.Tier{catalog.TierPublic, catalog.TierBYOKey}
+			tiers := []catalog.Tier{catalog.TierPublic}
 			keyed := o.Keyed != nil && o.Keyed(r)
 			if keyed {
-				tiers = []catalog.Tier{catalog.TierPublic, catalog.TierKeyed, catalog.TierBYOKey}
+				tiers = []catalog.Tier{catalog.TierPublic, catalog.TierKeyed}
 			}
 			janice := catalog.JaniceKeyFrom(r.Header)
 			if len(janice) > maxJaniceKeyLen {
@@ -398,7 +405,7 @@ func httpHandler(deps *tools.Deps, o HTTPOptions, exec executor) http.Handler {
 			if o.ToolCalled != nil {
 				cfg.called = func(tool string) { o.ToolCalled(r, tool) }
 			}
-			return buildServer(deps.WithJaniceKey(janice), catalog.ToolsIn(tiers...), cfg, exec)
+			return buildServer(deps.ForPublic(janice), catalog.ToolsIn(tiers...), cfg, exec)
 		},
 		&mcp.StreamableHTTPOptions{
 			Stateless:                  true,

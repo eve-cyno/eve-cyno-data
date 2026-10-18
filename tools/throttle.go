@@ -25,6 +25,8 @@ var domainConfigs = map[string]domainConfig{
 	"warbeacon":   {2, 100 * time.Millisecond},
 	// br.evetools.org is a community site with no published limit: one request at a time.
 	"evetools": {1, 100 * time.Millisecond},
+	// EvE-Scout publishes no limit; the Thera cache already keeps it to one request per TTL.
+	"evescout": {1, 0},
 }
 
 // Throttle is a per-domain rate limiter (semaphore + min-spacing).
@@ -88,6 +90,8 @@ func DomainFor(url string) string {
 		return "warbeacon"
 	case strings.Contains(url, "br.evetools.org"):
 		return "evetools"
+	case strings.Contains(url, "api.eve-scout.com"):
+		return "evescout"
 	default:
 		return ""
 	}

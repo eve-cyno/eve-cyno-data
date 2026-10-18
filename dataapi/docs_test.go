@@ -144,7 +144,7 @@ func TestMCP_ClientSessionThroughTheDataAPI(t *testing.T) {
 
 	list, err := cs.ListTools(t.Context(), nil)
 	require.NoError(t, err)
-	require.Len(t, list.Tools, len(catalog.ToolsIn(catalog.TierPublic, catalog.TierBYOKey)), "an anonymous caller sees the public tools and the byo-key tool")
+	require.Len(t, list.Tools, len(catalog.ToolsIn(catalog.TierPublic)), "an anonymous caller sees the public tools")
 
 	res, err := cs.CallTool(t.Context(), &mcp.CallToolParams{
 		Name:      "get_jumps_between",
@@ -257,4 +257,10 @@ func TestDocs_DailyCapSentenceFollowsKeyDailyCap(t *testing.T) {
 	cfg.Limits = &flat
 	require.NotContains(t, body(cfg), "raises the per-minute budgets")
 	require.Contains(t, body(cfg), "daily cap of 1234 requests", "gated on the cap, not on the factor")
+}
+
+func TestLLMsFull_SaysOneCallIsOneRequest(t *testing.T) {
+	api := newAPI(t, publicConfig())
+	require.Contains(t, do(api, http.MethodGet, "/llms-full.txt", "").Body.String(),
+		"- One call is one request against every limit, however long its list arguments; each list argument has its own cap (see the tool).")
 }

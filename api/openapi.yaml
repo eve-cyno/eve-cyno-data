@@ -14,7 +14,7 @@ info:
     - An API key raises the per-minute budgets: every operation states its limit without a key and with one, counted in the key's own window. The live-data tools keep a lower limit than the route.
     - A new API key has a daily cap of 10000 requests per UTC day by default (a cap can be changed per key, 0 meaning none). Over its cap a key gets `429` `daily_quota_exceeded` with `Retry-After` set to the seconds until 00:00 UTC.
     - Request bodies are capped (256 KiB on the fit routes, 64 KiB on tools and MCP); an oversize body is `413`.
-    - Tool tiers: each tool is *public* (no key), *keyed* (an API key), *byo-key* (your own Janice key) or *disabled*. Public: `get_market_price`, `get_type_info`, `search_item_by_name`, `get_ship_stats`, `get_ship_bonuses`, `find_canonical_module`, `get_hull_facts`, `get_fits`, `list_fits`, `validate_fitting`, `compute_fit_stats`, `get_production_chain`, `get_jumps_between`, `get_systems_in_region`, `get_npc_stations`, `get_reprocessing_yield`, `get_required_skills`, `get_sovereignty`, `get_system_activity`. Keyed (send the key as `Authorization: Bearer <key>` or `X-API-Key`; `401 api_key_required` without one, `401 invalid_api_key` for a key that is not valid, on every tool): `analyze_battle`. Byo-key (the `X-Janice-Key` request header, used for that request only and never logged or stored; `400 janice_key_required` without it): `appraise_items`. Disabled tools are not offered on this service (`403 tool_disabled` over REST, absent from the MCP tool list).
+    - Tool tiers: each tool is *public* (no key), *keyed* (an API key) or *disabled*. Public: `get_market_price`, `get_type_info`, `search_item_by_name`, `get_ship_stats`, `get_ship_bonuses`, `find_canonical_module`, `get_hull_facts`, `get_fits`, `list_fits`, `validate_fitting`, `compute_fit_stats`, `appraise_items`, `get_production_chain`, `get_jumps_between`, `get_jump_distances`, `plan_jump_route`, `get_systems_in_region`, `get_npc_stations`, `get_reprocessing_yield`, `get_required_skills`, `get_average_prices`, `get_market_history`, `get_sovereignty`, `get_system_activity`, `find_systems`, `get_system_info`, `get_thera_connections`. Keyed (send the key as `Authorization: Bearer <key>` or `X-API-Key`; `401 api_key_required` without one, `401 invalid_api_key` for a key that is not valid, on every tool): `analyze_battle`. Optional: your own Janice key in the `X-Janice-Key` request header (used for that request only, never logged or stored) turns `appraise_items` into a Janice appraisal; without it the answer is an estimate from ESI average prices. Disabled tools are not offered on this service (`403 tool_disabled` over REST, absent from the MCP tool list).
 
     ## Attribution and licences
 
@@ -317,7 +317,7 @@ paths:
         - tools
       summary: Get current market prices for an EVE Online item in The Forge region (Jita hub).
       description: |-
-        Get current market prices for an EVE Online item in The Forge region (Jita hub). Returns best sell price, best buy price, and order counts.
+        Get current market prices for an EVE Online item in The Forge region (Jita hub). Returns best sell price, best buy price, and order counts. Set hub (jita, amarr, dodixie, rens, hek) for the orders at that trade hub's main station; without hub the answer covers the whole region of The Forge.
 
         Sources: ESI (EVE Swagger Interface). `result.data` is a `MarketPrice` object when the call succeeds.
 
@@ -325,7 +325,7 @@ paths:
 
         Rate limit: 10 requests per minute per client IP without an API key, 60 per minute per API key with one.
 
-        Reads live public data from EVE's ESI through a shared cache that follows ESI's `Expires`. Its own fair-use limit is 5 calls per minute per caller without an API key and 10 with one (REST and MCP together), on top of the route limit. When the shared ESI budget is nearly spent the call is refused with `503 upstream_busy` (MCP: an error result starting `upstream_busy`) and `Retry-After`; retry later.
+        Reads live public data from EVE's ESI through a shared cache that follows ESI's `Expires`. All live-upstream calls share one fair-use limit of 5 calls per minute per caller without an API key and 10 with one (REST and MCP together, counted across every live tool), on top of the route limit. When the shared ESI budget is nearly spent the call is refused with `503 upstream_busy` (MCP: an error result starting `upstream_busy`) and `Retry-After`; retry later.
       operationId: get_market_price
       parameters:
         - $ref: '#/components/parameters/RequestID'
@@ -336,6 +336,15 @@ paths:
             schema:
               type: object
               properties:
+                hub:
+                  type: string
+                  description: Trade hub whose main station's orders to read, e.g. 'amarr'. Omit for the whole region of The Forge. Ignored for PLEX.
+                  enum:
+                    - jita
+                    - amarr
+                    - dodixie
+                    - rens
+                    - hek
                 type_id:
                   type: integer
                   description: The EVE type ID of the item (e.g. 34 for Tritanium, 44992 for PLEX)
@@ -376,13 +385,13 @@ paths:
       description: |-
         Get information about an EVE Online item: name, description, volume, mass, group.
 
-        Sources: ESI (EVE Swagger Interface). `result.data` is a `TypeInfo` object when the call succeeds.
+        Sources: EVE Static Data Export (via Fuzzwork); ESI (EVE Swagger Interface). `result.data` is a `TypeInfo` object when the call succeeds.
 
         Access tier: **public**. No key needed.
 
         Rate limit: 10 requests per minute per client IP without an API key, 60 per minute per API key with one.
 
-        Reads live public data from EVE's ESI through a shared cache that follows ESI's `Expires`. Its own fair-use limit is 5 calls per minute per caller without an API key and 10 with one (REST and MCP together), on top of the route limit. When the shared ESI budget is nearly spent the call is refused with `503 upstream_busy` (MCP: an error result starting `upstream_busy`) and `Retry-After`; retry later.
+        Reads live public data from EVE's ESI through a shared cache that follows ESI's `Expires`. All live-upstream calls share one fair-use limit of 5 calls per minute per caller without an API key and 10 with one (REST and MCP together, counted across every live tool), on top of the route limit. When the shared ESI budget is nearly spent the call is refused with `503 upstream_busy` (MCP: an error result starting `upstream_busy`) and `Retry-After`; retry later.
       operationId: get_type_info
       parameters:
         - $ref: '#/components/parameters/RequestID'
@@ -691,9 +700,9 @@ paths:
     post:
       tags:
         - tools
-      summary: Retrieve community ship fits VERBATIM from the indexed fit database (EVE Workbench + Abysstracker +…
+      summary: Retrieve community ship fits from the indexed fit database, with author and source link for each.
       description: |-
-        Retrieve community ship fits VERBATIM from the indexed fit database (EVE Workbench + Abysstracker + gustavmannfred.streamlit.app + caldarijoans.streamlit.app, ~8150 fits). Use this FIRST whenever the user asks for popular / community / top / proven / 'most-used' / meta / 'best' / Gustav's / CaldariJoans' fits — never invent a fit when this tool can answer. Returns the raw EFT text (header + modules + drones + ammo) and the source URL for each match. Filter by ship_name (exact), activity (pvp / pve / hauler / exploration / mining / logistics), context (wh, abyss, abyss-electrical / firestorm / exotic / gamma / dark, abyss-t1..t6, ratting, solo), cost_class (cheap < 50M / mid 50-500M / blingy > 500M ISK), alpha_clone (true for Alpha-skill-friendly), combat_role (solo / fleet / elite-flown — zKillboard only). If 0 matches, returns 'NO FITS FOUND' — follow the STEP decision tree: try ONE retry with the most restrictive filter dropped, then proceed to STEP 2 and generate a theorycrafted fit from game knowledge. NEVER tell the user this tool returned empty.
+        Retrieve community ship fits from the indexed fit database, with author and source link for each. Returns the raw EFT text (header + modules + drones + ammo) and the source URL for each match. Filter by ship_name (exact), activity (pvp / pve / hauler / exploration / mining / logistics), context (wh, abyss, abyss-electrical / firestorm / exotic / gamma / dark, abyss-t1..t6, ratting, solo), cost_class (cheap < 50M / mid 50-500M / blingy > 500M ISK), alpha_clone (true for Alpha-skill-friendly), combat_role (solo / fleet — zKillboard only), source (workbench / abysstracker / gustavmannfred / caldarijoans: restrict to one source), limit (default 5, at most 10). If nothing matches, the answer says 'NO FITS FOUND'; dropping the most restrictive filter may find some.
 
         Sources: EVE Workbench; Abysstracker; gustavmannfred (abyss fits); caldarijoans (abyss fits); zKillboard. `result.data` is a `CommunityFits` object when the call succeeds.
 
@@ -1019,13 +1028,13 @@ paths:
     post:
       tags:
         - tools
-      summary: Appraise a list of EVE Online items using Janice.
+      summary: Appraise a list of EVE Online items and return the total ISK value.
       description: |-
-        Appraise a list of EVE Online items using Janice. Returns total buy/sell/split values in ISK and a link to the full appraisal.
+        Appraise a list of EVE Online items and return the total ISK value. Without a Janice key the answer is an estimate from EVE's average prices (ESI /markets/prices, refreshed daily), not live Jita buy or sell prices. With a Janice key it is a Janice appraisal: Jita buy, sell and split totals and a link to the full appraisal. The answer names its price source: pass it on, and call an estimate an estimate.
 
-        Sources: Janice.
+        Sources: ESI (EVE Swagger Interface); EVE Static Data Export (via Fuzzwork); Janice.
 
-        Access tier: **byo-key**. Runs only with your own Janice API key in the `X-Janice-Key` header (`400 janice_key_required` without it); the key is used for this request only and never logged or stored.
+        Access tier: **public**. No key needed. Optional: your own Janice API key in the `X-Janice-Key` header makes it a Janice appraisal; the key is used for this request only and never logged or stored.
 
         Rate limit: 10 requests per minute per client IP without an API key, 60 per minute per API key with one.
       operationId: appraise_items
@@ -1033,8 +1042,8 @@ paths:
         - $ref: '#/components/parameters/RequestID'
         - name: X-Janice-Key
           in: header
-          required: true
-          description: Your own Janice API key (https://janice.e-351.com/). It is used for this request only, sent to Janice and nowhere else, and is never logged or stored by this service. This service never appraises with its own key.
+          required: false
+          description: 'Optional: your own Janice API key (https://janice.e-351.com/). With it the tool answers with a Janice appraisal (Jita buy, sell and split totals); without it, with an estimate from ESI average prices. The key is used for this request only, sent to Janice and nowhere else, and is never logged or stored. This service never appraises with its own key.'
           schema:
             type: string
             maxLength: 256
@@ -1047,7 +1056,7 @@ paths:
               properties:
                 items:
                   type: string
-                  description: Items in multi-buy or EFT format, one per line with quantity, e.g. 'Tritanium x1000'
+                  description: 'Items one per line with a quantity: multi-buy (''Tritanium x1000'' or ''Tritanium 1000''), an inventory or contract copy, or an EFT fit'
               required:
                 - items
       responses:
@@ -1147,7 +1156,7 @@ paths:
         - tools
       summary: Compute the number of jumps and the route between two EVE solar systems.
       description: |-
-        Compute the number of jumps and the route between two EVE solar systems. Default route is shortest (any security). Set prefer_high_sec=true to prefer highsec-only paths (longer but safer).
+        Compute the number of jumps and the route between two EVE solar systems. Default route is shortest (any security). Set prefer_high_sec=true to prefer highsec-only paths (longer but safer). Set detail='summary' for one line (jump count, lowest-security hop, highsec/lowsec/nullsec counts and the highsec-only alternative) instead of the hop list. avoid: systems never to route through (up to 20); via: systems to pass through in order (up to 5).
 
         Sources: EVE Static Data Export (via Fuzzwork). `result.data` is a `Route` object when the call succeeds.
 
@@ -1164,6 +1173,18 @@ paths:
             schema:
               type: object
               properties:
+                avoid:
+                  type: array
+                  description: Systems never to route through (up to 20), e.g. ['Ahbazon']. The origin and destination are never avoided.
+                  items:
+                    type: string
+                  maxItems: 20
+                detail:
+                  type: string
+                  description: '''route'' (default) lists every hop; ''summary'' answers in one line'
+                  enum:
+                    - route
+                    - summary
                 from_system:
                   type: string
                   description: Origin solar system name, e.g. 'Jita'
@@ -1173,6 +1194,12 @@ paths:
                 to_system:
                   type: string
                   description: Destination solar system name, e.g. 'Amarr'
+                via:
+                  type: array
+                  description: Systems to pass through, in order (up to 5), e.g. ['Dodixie']
+                  items:
+                    type: string
+                  maxItems: 5
               required:
                 - from_system
                 - to_system
@@ -1183,6 +1210,186 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/RouteToolResponse'
+          headers:
+            X-Request-ID:
+              $ref: '#/components/headers/RequestID'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "413":
+          $ref: '#/components/responses/PayloadTooLarge'
+        "429":
+          $ref: '#/components/responses/RateLimited'
+        "500":
+          $ref: '#/components/responses/InternalError'
+        "503":
+          $ref: '#/components/responses/Unavailable'
+        "504":
+          $ref: '#/components/responses/Timeout'
+  /tool/get_jump_distances:
+    post:
+      tags:
+        - tools
+      summary: Jump counts from one origin system to up to 200 other systems in one call (one search over the stargate graph).
+      description: |-
+        Jump counts from one origin system to up to 200 other systems in one call (one search over the stargate graph). Use it to rank candidates by distance, e.g. 'which of these systems is nearest to C-N4OD'. One line per system, nearest first; unknown names and systems without a gate route (wormhole space) are listed separately. prefer_high_sec counts highsec-only routes where one exists.
+
+        Sources: EVE Static Data Export (via Fuzzwork). `result.data` is a `JumpDistances` object when the call succeeds.
+
+        Access tier: **public**. No key needed.
+
+        Rate limit: 10 requests per minute per client IP without an API key, 60 per minute per API key with one.
+      operationId: get_jump_distances
+      parameters:
+        - $ref: '#/components/parameters/RequestID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                avoid:
+                  type: array
+                  description: Systems never to pass through (up to 20), e.g. ['Ahbazon']; a target you also list here still gets its own count, but no route passes through it.
+                  items:
+                    type: string
+                  maxItems: 20
+                origin:
+                  type: string
+                  description: Origin solar system name, e.g. 'C-N4OD'
+                prefer_high_sec:
+                  type: boolean
+                  description: If true, count highsec-only routes where one exists (default false)
+                systems:
+                  type: array
+                  description: Solar system names to measure, e.g. ['Elonaya','Uchomida','Actee']
+                  items:
+                    type: string
+                  maxItems: 200
+                  minItems: 1
+              required:
+                - origin
+                - systems
+      responses:
+        "200":
+          description: The tool's answer.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JumpDistancesToolResponse'
+          headers:
+            X-Request-ID:
+              $ref: '#/components/headers/RequestID'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "413":
+          $ref: '#/components/responses/PayloadTooLarge'
+        "429":
+          $ref: '#/components/responses/RateLimited'
+        "500":
+          $ref: '#/components/responses/InternalError'
+        "503":
+          $ref: '#/components/responses/Unavailable'
+        "504":
+          $ref: '#/components/responses/Timeout'
+  /tool/plan_jump_route:
+    post:
+      tags:
+        - tools
+      summary: Plan a jump-drive route like a capital pilot's jump planner, for a jump freighter, Rorqual, Black Ops, carrier…
+      description: |-
+        Plan a jump-drive route like a capital pilot's jump planner, for a jump freighter, Rorqual, Black Ops, carrier, dreadnought, Lancer, FAX, supercarrier or titan (give the hull name), or 'Jump Bridge' for a chain of Ansiblex jump bridges (5 ly): the fewest jumps from origin to destination through optional waypoints, then the fewest light-years. Every hop ends where a cynosural field can be lit (lowsec or nullsec; never highsec, wormhole space, Pochven or Zarzakh); capitals cannot start in highsec. One line per hop: region, system, security, NPC stations, light-years, the gate jumps between the same two systems and the isotopes burned; then the totals (light-years, fuel and its m³). Skills default to level 5. Titans, Black Ops and the Rorqual can also bridge, and carriers, supercarriers, Black Ops and the Rorqual can conduit jump, over the same hops; that fuel is not counted. Example: {"origin":"Amamake","destination":"1DQ1-A","ship":"Rhea"}. avoid_incursions and live_info read live ESI data and count against the live-data limit; without them the route comes from the SDE alone.
+
+        Sources: EVE Static Data Export (via Fuzzwork); ESI (EVE Swagger Interface). `result.data` is a `JumpRoute` object when the call succeeds.
+
+        Access tier: **public**. No key needed.
+
+        Rate limit: 10 requests per minute per client IP without an API key, 60 per minute per API key with one.
+
+        Calls with `avoid_incursions` or `live_info` read live public data from EVE's ESI through a shared cache that follows ESI's `Expires`; only those calls count against the fair-use limit below. All live-upstream calls share one fair-use limit of 5 calls per minute per caller without an API key and 10 with one (REST and MCP together, counted across every live tool), on top of the route limit. When the shared ESI budget is nearly spent the call is refused with `503 upstream_busy` (MCP: an error result starting `upstream_busy`) and `Retry-After`; retry later.
+      operationId: plan_jump_route
+      parameters:
+        - $ref: '#/components/parameters/RequestID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                avoid:
+                  type: array
+                  description: Systems no hop may end in (up to 20), e.g. ['Tegheon']
+                  items:
+                    type: string
+                  maxItems: 20
+                avoid_incursions:
+                  type: boolean
+                  description: Read the active incursions from ESI (live) and never end a hop in an infested system; incursions jam cynosural fields. Costs one live call.
+                avoid_regions:
+                  type: array
+                  description: Regions no hop may end in (up to 10), e.g. ["Khanid"]
+                  items:
+                    type: string
+                  maxItems: 10
+                destination:
+                  type: string
+                  description: Last stop, a solar system name, e.g. '1DQ1-A'
+                live_info:
+                  type: boolean
+                  description: Add each hop system's sovereignty holder and last-hour jumps and kills from ESI (live). Costs one live call.
+                origin:
+                  type: string
+                  description: Start solar system name, e.g. 'Amamake'
+                prefer_stations:
+                  type: boolean
+                  description: If true, among the routes with the fewest jumps prefer hops that end in systems with an NPC station (default false)
+                ship:
+                  type: string
+                  description: Hull name, e.g. 'Rhea', 'Rorqual', 'Avatar', 'Panther', or 'Jump Bridge' for Ansiblex jump bridges
+                skills:
+                  type: object
+                  description: 'Skill levels 0-5 (default 5 each), e.g. {"jump_drive_calibration": 4}. Jump freighters also use jump_freighters.'
+                  properties:
+                    jump_drive_calibration:
+                      type: integer
+                      description: Jump Drive Calibration level, +20% range per level
+                      default: 5
+                      minimum: 0
+                      maximum: 5
+                    jump_freighters:
+                      type: integer
+                      description: Jump Freighters level (jump freighters only), -10% fuel per level
+                      default: 5
+                      minimum: 0
+                      maximum: 5
+                    jump_fuel_conservation:
+                      type: integer
+                      description: Jump Fuel Conservation level, -10% fuel per level
+                      default: 5
+                      minimum: 0
+                      maximum: 5
+                waypoints:
+                  type: array
+                  description: Systems the route must stop at, in order (up to 5), e.g. ["Sahda"]
+                  items:
+                    type: string
+                  maxItems: 5
+              required:
+                - origin
+                - destination
+                - ship
+      responses:
+        "200":
+          description: The tool's answer.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JumpRouteToolResponse'
           headers:
             X-Request-ID:
               $ref: '#/components/headers/RequestID'
@@ -1338,7 +1545,8 @@ paths:
                   description: Item name, e.g. 'Veldspar', 'Mexallon'
                 quantity:
                   type: integer
-                  description: Number of units to reprocess (default 1)
+                  description: 'Number of units to reprocess (default: one batch, e.g. 100 for most ores)'
+                  maximum: 1000000000
                 refining_efficiency_pct:
                   type: number
                   description: Combined skill+facility yield 0-100 (default 50)
@@ -1426,26 +1634,165 @@ paths:
           $ref: '#/components/responses/Unavailable'
         "504":
           $ref: '#/components/responses/Timeout'
-  /tool/get_sovereignty:
+  /tool/get_average_prices:
     post:
       tags:
         - tools
-      summary: Get the alliance / corporation holding sovereignty over an EVE solar system.
+      summary: EVE's average price for up to 200 items in one call, by name (names) or type ID (type_ids), from ESI /markets/prices…
       description: |-
-        Get the alliance / corporation holding sovereignty over an EVE solar system. Live data from ESI. Use for 'who controls X' or 'sov holder of Y' questions.
+        EVE's average price for up to 200 items in one call, by name (names) or type ID (type_ids), from ESI /markets/prices (refreshed daily, one shared copy). It is an average of recent trades across New Eden, not live Jita buy or sell orders: say so when you quote it. Use get_market_price for the live order book of one item.
 
-        Sources: EVE Static Data Export (via Fuzzwork); ESI (EVE Swagger Interface).
+        Sources: ESI (EVE Swagger Interface); EVE Static Data Export (via Fuzzwork). `result.data` is a `AveragePrices` object when the call succeeds.
+
+        Access tier: **public**. No key needed.
+
+        Rate limit: 10 requests per minute per client IP without an API key, 60 per minute per API key with one.
+      operationId: get_average_prices
+      parameters:
+        - $ref: '#/components/parameters/RequestID'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                names:
+                  type: array
+                  description: Exact item names, e.g. ['Tritanium', 'PLEX', 'Gila']; up to 200 together with type_ids
+                  items:
+                    type: string
+                  maxItems: 200
+                type_ids:
+                  type: array
+                  description: Item type IDs, e.g. [34, 44992]; up to 200 together with names
+                  items:
+                    type: integer
+                  maxItems: 200
+              required: []
+      responses:
+        "200":
+          description: The tool's answer.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AveragePricesToolResponse'
+          headers:
+            X-Request-ID:
+              $ref: '#/components/headers/RequestID'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "413":
+          $ref: '#/components/responses/PayloadTooLarge'
+        "429":
+          $ref: '#/components/responses/RateLimited'
+        "500":
+          $ref: '#/components/responses/InternalError'
+        "503":
+          $ref: '#/components/responses/Unavailable'
+        "504":
+          $ref: '#/components/responses/Timeout'
+  /tool/get_market_history:
+    post:
+      tags:
+        - tools
+      summary: 'Daily market history of one item in one region from ESI (/markets/{region_id}/history), summarised: average, low, high…'
+      description: |-
+        Daily market history of one item in one region from ESI (/markets/{region_id}/history), summarised: average, low, high and volume per day or per week over the last 1-90 days, and the change from the first to the last bucket. Name the item (item_name) or give type_id; pick a hub (jita, amarr, dodixie, rens, hek) or a region name (default The Forge). Use for 'is X trending up' or 'how much X trades per day'.
+
+        Sources: ESI (EVE Swagger Interface); EVE Static Data Export (via Fuzzwork). `result.data` is a `MarketHistory` object when the call succeeds.
 
         Access tier: **public**. No key needed.
 
         Rate limit: 10 requests per minute per client IP without an API key, 60 per minute per API key with one.
 
-        Reads live public data from EVE's ESI through a shared cache that follows ESI's `Expires`. Its own fair-use limit is 5 calls per minute per caller without an API key and 10 with one (REST and MCP together), on top of the route limit. When the shared ESI budget is nearly spent the call is refused with `503 upstream_busy` (MCP: an error result starting `upstream_busy`) and `Retry-After`; retry later.
+        Reads live public data from EVE's ESI through a shared cache that follows ESI's `Expires`. All live-upstream calls share one fair-use limit of 5 calls per minute per caller without an API key and 10 with one (REST and MCP together, counted across every live tool), on top of the route limit. When the shared ESI budget is nearly spent the call is refused with `503 upstream_busy` (MCP: an error result starting `upstream_busy`) and `Retry-After`; retry later.
+      operationId: get_market_history
+      parameters:
+        - $ref: '#/components/parameters/RequestID'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                bucket:
+                  type: string
+                  description: 'Size of one row: ''week'' (ISO weeks, Monday to Sunday; default) or ''day'''
+                  enum:
+                    - day
+                    - week
+                days:
+                  type: integer
+                  description: Length of the window in days, 1 to 90 (default 30), ending at the newest day ESI has
+                  minimum: 1
+                  maximum: 90
+                hub:
+                  type: string
+                  description: Trade hub whose region to read, e.g. 'amarr'. Wins over region. Omit for The Forge.
+                  enum:
+                    - jita
+                    - amarr
+                    - dodixie
+                    - rens
+                    - hek
+                item_name:
+                  type: string
+                  description: Exact item name, e.g. 'PLEX' or 'Tritanium'. Use this or type_id.
+                region:
+                  type: string
+                  description: Region name, e.g. 'Domain' or 'Sinq Laison'. Default The Forge. PLEX always uses the global PLEX market.
+                type_id:
+                  type: integer
+                  description: The EVE type ID of the item (e.g. 34 for Tritanium). Use this or item_name.
+              required: []
+      responses:
+        "200":
+          description: The tool's answer.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MarketHistoryToolResponse'
+          headers:
+            X-Request-ID:
+              $ref: '#/components/headers/RequestID'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "413":
+          $ref: '#/components/responses/PayloadTooLarge'
+        "429":
+          $ref: '#/components/responses/RateLimited'
+        "500":
+          $ref: '#/components/responses/InternalError'
+        "503":
+          $ref: '#/components/responses/Unavailable'
+        "504":
+          $ref: '#/components/responses/Timeout'
+  /tool/get_sovereignty:
+    post:
+      tags:
+        - tools
+      summary: Get who holds sovereignty (alliance and corporation, or NPC faction) over EVE solar systems.
+      description: |-
+        Get who holds sovereignty (alliance and corporation, or NPC faction) over EVE solar systems. Live data from ESI. Pass systems (up to 50 names) for one line per system with the holders' names; system_name (one system) is the older form and answers with ids only. Use for 'who controls X' or 'sov holder of Y' questions.
+
+        Sources: EVE Static Data Export (via Fuzzwork); ESI (EVE Swagger Interface). `result.data` is a `SovereigntyList` object when called with `systems` (null for the single `system_name` form).
+
+        Access tier: **public**. No key needed.
+
+        Rate limit: 10 requests per minute per client IP without an API key, 60 per minute per API key with one.
+
+        Reads live public data from EVE's ESI through a shared cache that follows ESI's `Expires`. All live-upstream calls share one fair-use limit of 5 calls per minute per caller without an API key and 10 with one (REST and MCP together, counted across every live tool), on top of the route limit. When the shared ESI budget is nearly spent the call is refused with `503 upstream_busy` (MCP: an error result starting `upstream_busy`) and `Retry-After`; retry later.
       operationId: get_sovereignty
       parameters:
         - $ref: '#/components/parameters/RequestID'
       requestBody:
-        required: true
+        required: false
         content:
           application/json:
             schema:
@@ -1453,16 +1800,22 @@ paths:
               properties:
                 system_name:
                   type: string
-                  description: Solar system name, e.g. 'Saranen'
-              required:
-                - system_name
+                  description: Solar system name, e.g. 'Saranen' (single system; the older form, answers ids only)
+                systems:
+                  type: array
+                  description: 'Up to 50 solar system names, e.g. [''1DQ1-A'', ''Jita'']: one line each, with the alliance and corporation names or the NPC faction'
+                  items:
+                    type: string
+                  maxItems: 50
+                  minItems: 1
+              required: []
       responses:
         "200":
           description: The tool's answer.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ToolResponse'
+                $ref: '#/components/schemas/SovereigntyListToolResponse'
           headers:
             X-Request-ID:
               $ref: '#/components/headers/RequestID'
@@ -1484,18 +1837,226 @@ paths:
     post:
       tags:
         - tools
-      summary: Get the ship, pod and NPC kills of a solar system in the last hour from ESI (jumps are not included).
+      summary: Get the activity of EVE solar systems in the last hour from ESI.
       description: |-
-        Get the ship, pod and NPC kills of a solar system in the last hour from ESI (jumps are not included). Use for 'how many kills in X recently', 'is system Y active', 'is it safe to undock'.
+        Get the activity of EVE solar systems in the last hour from ESI. Pass systems (up to 50 names) for one line per system with jumps, ship kills, pod kills and NPC kills; system_name (one system) is the older form and answers kills only. Use for 'how busy is X', 'how many kills in Y recently', 'is it safe to undock'.
 
-        Sources: EVE Static Data Export (via Fuzzwork); ESI (EVE Swagger Interface).
+        Sources: EVE Static Data Export (via Fuzzwork); ESI (EVE Swagger Interface). `result.data` is a `ActivityList` object when called with `systems` (null for the single `system_name` form).
 
         Access tier: **public**. No key needed.
 
         Rate limit: 10 requests per minute per client IP without an API key, 60 per minute per API key with one.
 
-        Reads live public data from EVE's ESI through a shared cache that follows ESI's `Expires`. Its own fair-use limit is 5 calls per minute per caller without an API key and 10 with one (REST and MCP together), on top of the route limit. When the shared ESI budget is nearly spent the call is refused with `503 upstream_busy` (MCP: an error result starting `upstream_busy`) and `Retry-After`; retry later.
+        Reads live public data from EVE's ESI through a shared cache that follows ESI's `Expires`. All live-upstream calls share one fair-use limit of 5 calls per minute per caller without an API key and 10 with one (REST and MCP together, counted across every live tool), on top of the route limit. When the shared ESI budget is nearly spent the call is refused with `503 upstream_busy` (MCP: an error result starting `upstream_busy`) and `Retry-After`; retry later.
       operationId: get_system_activity
+      parameters:
+        - $ref: '#/components/parameters/RequestID'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                system_name:
+                  type: string
+                  description: Solar system name, e.g. 'Tama' (single system; kills only)
+                systems:
+                  type: array
+                  description: 'Up to 50 solar system names, e.g. [''1DQ1-A'', ''Jita'']: one line each, with jumps, ship kills, pod kills and NPC kills of the last hour'
+                  items:
+                    type: string
+                  maxItems: 50
+                  minItems: 1
+              required: []
+      responses:
+        "200":
+          description: The tool's answer.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActivityListToolResponse'
+          headers:
+            X-Request-ID:
+              $ref: '#/components/headers/RequestID'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "413":
+          $ref: '#/components/responses/PayloadTooLarge'
+        "429":
+          $ref: '#/components/responses/RateLimited'
+        "500":
+          $ref: '#/components/responses/InternalError'
+        "503":
+          $ref: '#/components/responses/Unavailable'
+        "504":
+          $ref: '#/components/responses/Timeout'
+  /tool/find_systems:
+    post:
+      tags:
+        - tools
+      summary: 'Find solar systems by filters and rank them: security band, region, constellation, faction, wormhole class, NPC station…'
+      description: |-
+        Find solar systems by filters and rank them: security band, region, constellation, faction, wormhole class, NPC station and its services, asteroid belts, planet types, ice belts (EVE University's list of highsec and lowsec ice systems) and distance from an origin (near). One line per system, up to 100 per call (page with offset), with the total. Example, the three nearest highsec Clear Icicle systems to C-N4OD: {"security":{"min":0.45},"ice_types":["Clear Icicle"],"near":{"origin":"C-N4OD"},"sort":"jumps","limit":3}. Set jump_range {origin, ship, jump_drive_calibration (default 5)} to keep the systems that ship can jump to from the origin (cyno-able: lowsec or nullsec, not wormhole space, Pochven or Zarzakh; 'Jump Bridge' = Ansiblex reach), with the light-years, sorted nearest first; e.g. the nearest lowsec NPC-station systems a Rorqual can reach from EC-P8R: {"jump_range":{"origin":"EC-P8R","ship":"Rorqual"},"security":{"min":0.1,"max":0.4},"has_npc_station":true,"limit":3}.
+
+        Sources: EVE Static Data Export (via Fuzzwork); EVE University Wiki (ice belt systems). `result.data` is a `SystemList` object when the call succeeds.
+
+        Access tier: **public**. No key needed.
+
+        Rate limit: 10 requests per minute per client IP without an API key, 60 per minute per API key with one.
+      operationId: find_systems
+      parameters:
+        - $ref: '#/components/parameters/RequestID'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                constellation:
+                  type: string
+                  description: Constellation name, e.g. 'Kimotoro'
+                faction:
+                  type: string
+                  description: Faction name, e.g. 'Caldari State'
+                has_ice_belt:
+                  type: boolean
+                  description: true for systems EVE University lists with ice belts, false for systems it does not list (nullsec ice systems are not covered)
+                has_npc_station:
+                  type: boolean
+                  description: true for systems with an NPC station, false for systems without
+                ice_types:
+                  type: array
+                  description: Ice types, e.g. ['Clear Icicle', 'Blue Ice']; a system matches when it has any of them; implies has_ice_belt
+                  items:
+                    type: string
+                  maxItems: 12
+                jump_range:
+                  type: object
+                  description: Keep the systems a ship can jump to from an origin, with the light-years, nearest first, e.g. {"origin":"EC-P8R","ship":"Rorqual"}.
+                  properties:
+                    jump_drive_calibration:
+                      type: integer
+                      description: Jump Drive Calibration level 0-5 (default 5); it sets the range
+                      minimum: 0
+                      maximum: 5
+                    origin:
+                      type: string
+                      description: Solar system name the jump starts in, e.g. 'EC-P8R' (lowsec or nullsec)
+                    ship:
+                      type: string
+                      description: Hull name, e.g. 'Rorqual', 'Rhea', 'Avatar', or 'Jump Bridge' for Ansiblex jump bridges
+                  required:
+                    - origin
+                    - ship
+                limit:
+                  type: integer
+                  description: Systems per call (default 20, at most 100)
+                  minimum: 1
+                  maximum: 100
+                min_asteroid_belts:
+                  type: integer
+                  description: At least this many asteroid belts, e.g. 3
+                  minimum: 0
+                near:
+                  type: object
+                  description: Rank by gate jumps from an origin system and leave out systems with no gate route, e.g. {"origin":"C-N4OD","max_jumps":10}. Without max_jumps every reachable system is ranked.
+                  properties:
+                    max_jumps:
+                      type: integer
+                      description: Keep systems at most this many jumps away (1-30)
+                      minimum: 1
+                      maximum: 30
+                    origin:
+                      type: string
+                      description: Solar system name the jumps are counted from, e.g. 'C-N4OD'
+                    prefer_high_sec:
+                      type: boolean
+                      description: Count jumps through highsec where a highsec-only route exists, else through any space (the line says '(no highsec-only route)')
+                  required:
+                    - origin
+                offset:
+                  type: integer
+                  description: Systems to skip, to read the next page (default 0)
+                  minimum: 0
+                planet_types:
+                  type: array
+                  description: Planet types the system must have at least one of each, e.g. ['Lava', 'Gas']; an unknown name lists the valid ones
+                  items:
+                    type: string
+                  maxItems: 12
+                region:
+                  type: string
+                  description: Region name, e.g. 'The Forge'
+                security:
+                  type: object
+                  description: 'Security band as shown in game, e.g. 0.5 includes systems with true security 0.45-0.5: {"min":0.5} is highsec, {"max":0.4} is lowsec and below. Wormhole systems carry a security of about -1.0; filter them with wormhole_class (7, 8 and 9 are known-space highsec, lowsec and nullsec).'
+                  properties:
+                    max:
+                      type: number
+                      description: Highest displayed security, e.g. 0.9
+                    min:
+                      type: number
+                      description: Lowest displayed security, e.g. 0.5
+                sort:
+                  type: string
+                  description: 'Order: jumps (needs near; the default with near), security (most secure first), name (the default) or ly (needs jump_range; the default with jump_range)'
+                  enum:
+                    - jumps
+                    - security
+                    - name
+                    - ly
+                station_services:
+                  type: array
+                  description: Station services every match must offer, e.g. ['Reprocessing Plant', 'Factory']; an unknown name lists the valid ones
+                  items:
+                    type: string
+                  maxItems: 12
+                wormhole_class:
+                  type: integer
+                  description: 'Wormhole class: 1-6 for C1-C6, 7 highsec, 8 lowsec, 9 nullsec, 12 Thera, 13 shattered frigate holes, 14-18 Drifter, 25 Pochven'
+              required: []
+      responses:
+        "200":
+          description: The tool's answer.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SystemListToolResponse'
+          headers:
+            X-Request-ID:
+              $ref: '#/components/headers/RequestID'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "413":
+          $ref: '#/components/responses/PayloadTooLarge'
+        "429":
+          $ref: '#/components/responses/RateLimited'
+        "500":
+          $ref: '#/components/responses/InternalError'
+        "503":
+          $ref: '#/components/responses/Unavailable'
+        "504":
+          $ref: '#/components/responses/Timeout'
+  /tool/get_system_info:
+    post:
+      tags:
+        - tools
+      summary: 'Facts about up to 50 solar systems in one call: security, region, constellation, faction, wormhole class and effect…'
+      description: |-
+        Facts about up to 50 solar systems in one call: security, region, constellation, faction, wormhole class and effect, neighbouring systems (stargates), counts of asteroid belts, moons, planets by type and NPC stations, and the ice belt when EVE University lists one. One line per system.
+
+        Sources: EVE Static Data Export (via Fuzzwork); EVE University Wiki (ice belt systems). `result.data` is a `SystemInfoList` object when the call succeeds.
+
+        Access tier: **public**. No key needed.
+
+        Rate limit: 10 requests per minute per client IP without an API key, 60 per minute per API key with one.
+      operationId: get_system_info
       parameters:
         - $ref: '#/components/parameters/RequestID'
       requestBody:
@@ -1505,18 +2066,97 @@ paths:
             schema:
               type: object
               properties:
-                system_name:
-                  type: string
-                  description: Solar system name, e.g. 'Tama'
+                systems:
+                  type: array
+                  description: 'Up to 50 solar system names, e.g. [''Jita'', ''Erkinen'']: one line each'
+                  items:
+                    type: string
+                  maxItems: 50
+                  minItems: 1
               required:
-                - system_name
+                - systems
       responses:
         "200":
           description: The tool's answer.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ToolResponse'
+                $ref: '#/components/schemas/SystemInfoListToolResponse'
+          headers:
+            X-Request-ID:
+              $ref: '#/components/headers/RequestID'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "413":
+          $ref: '#/components/responses/PayloadTooLarge'
+        "429":
+          $ref: '#/components/responses/RateLimited'
+        "500":
+          $ref: '#/components/responses/InternalError'
+        "503":
+          $ref: '#/components/responses/Unavailable'
+        "504":
+          $ref: '#/components/responses/Timeout'
+  /tool/get_thera_connections:
+    post:
+      tags:
+        - tools
+      summary: Live wormhole connections from Thera and Turnur into known space and wormhole space, from EvE-Scout (Signal Cartel's…
+      description: |-
+        Live wormhole connections from Thera and Turnur into known space and wormhole space, from EvE-Scout (Signal Cartel's public scanning data; credit them as EvE-Scout / Signal Cartel). One line per connection: the exit system with its security and region, wormhole type and largest ship size, hours left and both signature ids. Set near {origin, max_jumps} to keep the exits closest to a system, sorted by jumps. Connections change every few hours.
+
+        Sources: EvE-Scout / Signal Cartel; EVE Static Data Export (via Fuzzwork). `result.data` is a `TheraConnections` object when the call succeeds.
+
+        Access tier: **public**. No key needed.
+
+        Rate limit: 10 requests per minute per client IP without an API key, 60 per minute per API key with one.
+
+        Reads live public data from EvE-Scout (Signal Cartel) through a shared cache that follows its cache headers (about 5 minutes). All live-upstream calls share one fair-use limit of 5 calls per minute per caller without an API key and 10 with one (REST and MCP together, counted across every live tool), on top of the route limit.
+      operationId: get_thera_connections
+      parameters:
+        - $ref: '#/components/parameters/RequestID'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                hub:
+                  type: string
+                  description: 'Which hub''s connections: ''thera'', ''turnur'' or ''all'' (default)'
+                  enum:
+                    - thera
+                    - turnur
+                    - all
+                limit:
+                  type: integer
+                  description: Most connections to list (1-50, default 20); the answer says how many more there are
+                  minimum: 1
+                  maximum: 50
+                near:
+                  type: object
+                  description: Keep the exits with a gate route to an origin system and sort them by jumps, e.g. {"origin":"Jita","max_jumps":10}. Exits with no gate route from the origin are left out (counted in the answer).
+                  properties:
+                    max_jumps:
+                      type: integer
+                      description: Keep exits at most this many jumps away (1-30); omit to rank every exit with a gate route
+                      minimum: 1
+                      maximum: 30
+                    origin:
+                      type: string
+                      description: Solar system name the jumps are counted from, e.g. 'Jita'
+                  required:
+                    - origin
+      responses:
+        "200":
+          description: The tool's answer.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TheraConnectionsToolResponse'
           headers:
             X-Request-ID:
               $ref: '#/components/headers/RequestID'
@@ -1673,6 +2313,55 @@ paths:
           $ref: '#/components/responses/RateLimited'
 components:
   schemas:
+    ActivityList:
+      type: object
+      properties:
+        systems:
+          type: array
+          description: Systems holds one row per resolved system, in request order, duplicates collapsed.
+          items:
+            $ref: '#/components/schemas/SystemActivity'
+        unresolved:
+          type: array
+          description: Unresolved lists requested names that are not solar systems.
+          items:
+            type: string
+      required:
+        - systems
+        - unresolved
+    ActivityListToolResponse:
+      type: object
+      properties:
+        tool:
+          type: string
+          description: The tool that ran.
+        version:
+          type: string
+          description: The build version of the service.
+        result:
+          type: object
+          properties:
+            text:
+              type: string
+              description: The answer as the chat assistant reads it.
+            data:
+              description: The typed answer, or null when the tool has none or the call ended in a text-only answer (an unknown id, a parse failure); `text` then says why.
+              oneOf:
+                - $ref: '#/components/schemas/ActivityList'
+                - type: "null"
+          required:
+            - text
+            - data
+        attribution:
+          type: array
+          description: The upstreams behind the answer; attribution is a condition of several of their licences.
+          items:
+            $ref: '#/components/schemas/Source'
+      required:
+        - tool
+        - version
+        - result
+        - attribution
     Attribution:
       type: object
       properties:
@@ -1698,6 +2387,83 @@ components:
         - source
         - source_url
         - license
+    AveragePrice:
+      type: object
+      properties:
+        type_id:
+          type: integer
+          description: TypeID is the item's type ID.
+        name:
+          type: string
+          description: Name is the item name as the SDE spells it.
+        average_isk:
+          type:
+            - number
+            - "null"
+          description: AverageISK is EVE's average price in ISK, null when the item has none.
+      required:
+        - type_id
+        - name
+        - average_isk
+    AveragePrices:
+      type: object
+      properties:
+        as_of:
+          type:
+            - string
+            - "null"
+          description: AsOf is the date (YYYY-MM-DD, UTC) of the price list the numbers come from; null when no price list was read (every item was unknown).
+        source:
+          type: string
+          description: 'Source names the upstream: "ESI /markets/prices".'
+        prices:
+          type: array
+          description: Prices has one row per distinct item, in the order first asked.
+          items:
+            $ref: '#/components/schemas/AveragePrice'
+        unresolved:
+          type: array
+          description: Unresolved lists names that are not items, and type IDs that are not in the SDE or not whole numbers (as "type_id N"); names are listed trimmed.
+          items:
+            type: string
+      required:
+        - as_of
+        - source
+        - prices
+        - unresolved
+    AveragePricesToolResponse:
+      type: object
+      properties:
+        tool:
+          type: string
+          description: The tool that ran.
+        version:
+          type: string
+          description: The build version of the service.
+        result:
+          type: object
+          properties:
+            text:
+              type: string
+              description: The answer as the chat assistant reads it.
+            data:
+              description: The typed answer, or null when the tool has none or the call ended in a text-only answer (an unknown id, a parse failure); `text` then says why.
+              oneOf:
+                - $ref: '#/components/schemas/AveragePrices'
+                - type: "null"
+          required:
+            - text
+            - data
+        attribution:
+          type: array
+          description: The upstreams behind the answer; attribution is a condition of several of their licences.
+          items:
+            $ref: '#/components/schemas/Source'
+      required:
+        - tool
+        - version
+        - result
+        - attribution
     CapCard:
       type: object
       properties:
@@ -1735,6 +2501,22 @@ components:
         - Stable
         - StablePct
         - SecondsToEmpty
+    ClassCounts:
+      type: object
+      properties:
+        highsec:
+          type: integer
+          description: Highsec counts the highsec systems entered, the origin excluded.
+        lowsec:
+          type: integer
+          description: Lowsec counts the lowsec systems entered.
+        nullsec:
+          type: integer
+          description: Nullsec counts the nullsec systems entered.
+      required:
+        - highsec
+        - lowsec
+        - nullsec
     CommunityFit:
       type: object
       properties:
@@ -1921,7 +2703,6 @@ components:
             - api_key_required
             - invalid_api_key
             - key_not_permitted
-            - janice_key_required
             - invalid_arguments
             - timeout
             - internal_error
@@ -2161,7 +2942,7 @@ components:
           description: computed rank used for sort
         attribution:
           $ref: '#/components/schemas/Attribution'
-          description: Attribution is the credit the fit must carry wherever it is shown (R3.6).
+          description: Attribution is the credit the fit must carry wherever it is shown.
       required:
         - ship_name
         - fit_name
@@ -2513,6 +3294,565 @@ components:
         - corpus
         - corpus_configured
         - stats
+    HistoryBucket:
+      type: object
+      properties:
+        start:
+          type: string
+          description: Start is the first day of the bucket (YYYY-MM-DD).
+        end:
+          type: string
+          description: End is the last day of the bucket (YYYY-MM-DD); equal to Start for a day.
+        average_isk:
+          type: number
+          description: AverageISK is the daily average price weighted by volume (the plain mean when no volume traded).
+        lowest_isk:
+          type: number
+          description: LowestISK is the lowest price of any day in the bucket.
+        highest_isk:
+          type: number
+          description: HighestISK is the highest price of any day in the bucket.
+        volume:
+          type: integer
+          description: Volume is the units traded in the bucket.
+        order_count:
+          type: integer
+          description: OrderCount is the number of orders, summed over the days of the bucket.
+      required:
+        - start
+        - end
+        - average_isk
+        - lowest_isk
+        - highest_isk
+        - volume
+        - order_count
+    HistorySummary:
+      type: object
+      properties:
+        average_isk:
+          type: number
+          description: AverageISK is the average price over the window, weighted by volume.
+        lowest_isk:
+          type: number
+          description: LowestISK is the lowest price in the window.
+        highest_isk:
+          type: number
+          description: HighestISK is the highest price in the window.
+        volume:
+          type: integer
+          description: Volume is the units traded in the window.
+        change_pct:
+          type:
+            - number
+            - "null"
+          description: ChangePct is the change of the average price from the first to the last bucket in percent, null when there is only one bucket or the first bucket's average is 0.
+      required:
+        - average_isk
+        - lowest_isk
+        - highest_isk
+        - volume
+        - change_pct
+    IceBelt:
+      type: object
+      properties:
+        belts:
+          type: array
+          description: Belts are the wiki belt pages that list the system.
+          items:
+            type: string
+        ice_types:
+          type: array
+          description: IceTypes are the ice types found in the system.
+          items:
+            type: string
+        source_urls:
+          type: array
+          description: SourceURLs are the wiki pages the entry comes from.
+          items:
+            type: string
+      required:
+        - belts
+        - ice_types
+        - source_urls
+    JumpDistance:
+      type: object
+      properties:
+        system:
+          type: string
+          description: System is the system name as the SDE spells it.
+        system_id:
+          type: integer
+          description: SystemID is the solar system ID.
+        jumps:
+          type: integer
+          description: Jumps is the gate-jump count from the origin (0 for the origin itself).
+        security:
+          type: number
+          description: Security is the true security status (the text prints it rounded).
+        sec:
+          type: string
+          description: Sec is the security exactly as the text prints it ("+0.9").
+        class:
+          type: string
+          description: 'Class is the text''s band: "highsec", "lowsec" or "nullsec".'
+        highsec_route:
+          type: boolean
+          description: HighsecRoute is true when Jumps counts a highsec-only route (prefer_high_sec and one exists).
+      required:
+        - system
+        - system_id
+        - jumps
+        - security
+        - sec
+        - class
+        - highsec_route
+    JumpDistances:
+      type: object
+      properties:
+        origin:
+          type: string
+          description: Origin is the origin system as the SDE spells it.
+        origin_id:
+          type: integer
+          description: OriginID is the origin's solar system ID.
+        prefer_high_sec:
+          type: boolean
+          description: PreferHighSec is the request flag.
+        avoid:
+          type: array
+          description: Avoid lists the systems no route passes through, origin excluded (a listed target still gets its own count, but no route passes through it).
+          items:
+            type: string
+        distances:
+          type: array
+          description: 'Distances is sorted by Jumps, then System: the order of the text lines.'
+          items:
+            $ref: '#/components/schemas/JumpDistance'
+        unreachable:
+          type: array
+          description: Unreachable lists requested systems with no gate route (wormhole space, for one) from the origin, including those cut off by Avoid.
+          items:
+            type: string
+        unresolved:
+          type: array
+          description: Unresolved lists requested names that are not solar systems.
+          items:
+            type: string
+      required:
+        - origin
+        - origin_id
+        - prefer_high_sec
+        - avoid
+        - distances
+        - unreachable
+        - unresolved
+    JumpDistancesToolResponse:
+      type: object
+      properties:
+        tool:
+          type: string
+          description: The tool that ran.
+        version:
+          type: string
+          description: The build version of the service.
+        result:
+          type: object
+          properties:
+            text:
+              type: string
+              description: The answer as the chat assistant reads it.
+            data:
+              description: The typed answer, or null when the tool has none or the call ended in a text-only answer (an unknown id, a parse failure); `text` then says why.
+              oneOf:
+                - $ref: '#/components/schemas/JumpDistances'
+                - type: "null"
+          required:
+            - text
+            - data
+        attribution:
+          type: array
+          description: The upstreams behind the answer; attribution is a condition of several of their licences.
+          items:
+            $ref: '#/components/schemas/Source'
+      required:
+        - tool
+        - version
+        - result
+        - attribution
+    JumpHopLive:
+      type: object
+      properties:
+        sovereignty:
+          type: string
+          description: 'Sovereignty is the holder: the alliance name, "alliance <id>" when ESI gave no name, the faction name, or "none".'
+        alliance_id:
+          type:
+            - integer
+            - "null"
+          description: AllianceID is the holding alliance's ID; null when no alliance holds the system.
+        faction_id:
+          type:
+            - integer
+            - "null"
+          description: FactionID is the holding faction's ID; null when no faction holds the system.
+        jumps:
+          type: integer
+          description: Jumps is the number of ship jumps through the system in the last hour.
+        ship_kills:
+          type: integer
+          description: ShipKills is the number of ships destroyed in the system in the last hour.
+        pod_kills:
+          type: integer
+          description: PodKills is the number of pods destroyed in the system in the last hour.
+        npc_kills:
+          type: integer
+          description: NPCKills is the number of NPC ships destroyed in the system in the last hour.
+      required:
+        - sovereignty
+        - alliance_id
+        - faction_id
+        - jumps
+        - ship_kills
+        - pod_kills
+        - npc_kills
+    JumpRangeEcho:
+      type: object
+      properties:
+        origin:
+          type: string
+          description: Origin is the origin system as the SDE spells it.
+        ship:
+          type: string
+          description: Ship is the hull (or "Ansiblex Jump Bridge") as the SDE spells it.
+        range_ly:
+          type: number
+          description: RangeLY is the jump range in light-years that the filter used.
+        jump_drive_calibration:
+          type:
+            - integer
+            - "null"
+          description: JumpDriveCalibration is the Jump Drive Calibration level behind RangeLY; null for the Ansiblex, which no skill affects.
+      required:
+        - origin
+        - ship
+        - range_ly
+        - jump_drive_calibration
+    JumpRoute:
+      type: object
+      properties:
+        origin:
+          type: string
+          description: Origin is the start system as the SDE spells it.
+        origin_id:
+          type: integer
+          description: OriginID is the start system's solar system ID.
+        destination:
+          type: string
+          description: Destination is the last stop as the SDE spells it.
+        destination_id:
+          type: integer
+          description: DestinationID is the destination's solar system ID.
+        waypoints:
+          type: array
+          description: Waypoints are the requested waypoints as the SDE spells them, in order.
+          items:
+            type: string
+        ship:
+          type: string
+          description: Ship is the hull (or "Ansiblex Jump Bridge") as the SDE spells it.
+        ship_group:
+          type: string
+          description: ShipGroup is the SDE group of the hull, e.g. "Jump Freighter" or "Upwell Jump Bridge".
+        skills:
+          description: Skills are the skill levels the numbers assume; null for the Ansiblex, which no skill affects.
+          oneOf:
+            - $ref: '#/components/schemas/JumpSkillLevels'
+            - type: "null"
+        range_ly:
+          type: number
+          description: RangeLY is the range of one jump in light-years.
+        fuel_type:
+          type:
+            - string
+            - "null"
+          description: FuelType is the isotope the hull burns; null for the Ansiblex.
+        fuel_per_ly:
+          type:
+            - number
+            - "null"
+          description: FuelPerLY is the fuel burned per light-year at these skills, before Jump Drive Economizers; null for the Ansiblex.
+        jumps:
+          type: integer
+          description: Jumps is the number of hops (0 when origin and destination are the same system).
+        total_ly:
+          type: number
+          description: TotalLY is the summed hop length in light-years, to 3 decimals.
+        total_fuel:
+          type:
+            - integer
+            - "null"
+          description: TotalFuel is the summed fuel of the hops, each rounded to a whole unit; null for the Ansiblex.
+        fuel_volume_m3:
+          type:
+            - number
+            - "null"
+          description: FuelVolumeM3 is the volume of TotalFuel in cubic metres, to 1 decimal; null for the Ansiblex.
+        can_bridge:
+          type: boolean
+          description: CanBridge is true when the hull can open a jump portal for other ships over the same hops.
+        can_conduit:
+          type: boolean
+          description: CanConduit is true when the hull can conduit jump with passengers over the same hops.
+        prefer_stations:
+          type: boolean
+          description: 'PreferStations is the request flag: among the routes with the fewest jumps, fewest hops ending in a system without an NPC station.'
+        avoid:
+          type: array
+          description: Avoid lists the systems no hop ends in, as the SDE spells them, in request order.
+          items:
+            type: string
+        avoid_regions:
+          type: array
+          description: AvoidRegions lists the regions no hop ends in, as the SDE spells them, in request order.
+          items:
+            type: string
+        avoid_incursions:
+          type: boolean
+          description: 'AvoidIncursions is the request flag: no hop ends in a system with an active incursion (read live from ESI).'
+        incursion_systems:
+          type: integer
+          description: IncursionSystems lists how many systems ESI reports as infested when avoid_incursions read the incursions; 0 when nothing was read (no flag, or a same-system answer).
+        live_info:
+          type: boolean
+          description: 'LiveInfo is the request flag: each hop carries live sovereignty and activity.'
+        live_unavailable:
+          type:
+            - string
+            - "null"
+          description: LiveUnavailable is the answer text of the ESI read that failed when live_info could not be added; null otherwise.
+        hops:
+          type: array
+          description: Hops are hops 1..n in order; the origin is not a hop.
+          items:
+            $ref: '#/components/schemas/JumpRouteHop'
+      required:
+        - origin
+        - origin_id
+        - destination
+        - destination_id
+        - waypoints
+        - ship
+        - ship_group
+        - skills
+        - range_ly
+        - fuel_type
+        - fuel_per_ly
+        - jumps
+        - total_ly
+        - total_fuel
+        - fuel_volume_m3
+        - can_bridge
+        - can_conduit
+        - prefer_stations
+        - avoid
+        - avoid_regions
+        - avoid_incursions
+        - incursion_systems
+        - live_info
+        - live_unavailable
+        - hops
+    JumpRouteHop:
+      type: object
+      properties:
+        n:
+          type: integer
+          description: N is the hop number, from 1.
+        system:
+          type: string
+          description: System is the system the hop ends in, as the SDE spells it.
+        system_id:
+          type: integer
+          description: SystemID is that system's solar system ID.
+        region:
+          type: string
+          description: Region is the system's region.
+        security:
+          type: number
+          description: Security is the true security status.
+        sec:
+          type: string
+          description: Sec is the displayed security as printed in the text, e.g. "+0.4".
+        class:
+          type: string
+          description: Class is "lowsec" or "nullsec" (a hop never ends in highsec).
+        npc_stations:
+          type: integer
+          description: NPCStations is the number of NPC stations in the system.
+        ly:
+          type: number
+          description: LY is the length of the hop in light-years, to 3 decimals.
+        gate_jumps:
+          type:
+            - integer
+            - "null"
+          description: GateJumps is the stargate jumps between the same two systems; null when no gate route connects them.
+        fuel:
+          type:
+            - integer
+            - "null"
+          description: Fuel is the fuel of the hop, a whole number of units; null for the Ansiblex.
+        waypoint:
+          type: boolean
+          description: Waypoint is true when the hop ends at a requested waypoint.
+        live:
+          description: Live is the hop system's live ESI profile; null unless live_info was set and ESI answered.
+          oneOf:
+            - $ref: '#/components/schemas/JumpHopLive'
+            - type: "null"
+      required:
+        - n
+        - system
+        - system_id
+        - region
+        - security
+        - sec
+        - class
+        - npc_stations
+        - ly
+        - gate_jumps
+        - fuel
+        - waypoint
+        - live
+    JumpRouteToolResponse:
+      type: object
+      properties:
+        tool:
+          type: string
+          description: The tool that ran.
+        version:
+          type: string
+          description: The build version of the service.
+        result:
+          type: object
+          properties:
+            text:
+              type: string
+              description: The answer as the chat assistant reads it.
+            data:
+              description: The typed answer, or null when the tool has none or the call ended in a text-only answer (an unknown id, a parse failure); `text` then says why.
+              oneOf:
+                - $ref: '#/components/schemas/JumpRoute'
+                - type: "null"
+          required:
+            - text
+            - data
+        attribution:
+          type: array
+          description: The upstreams behind the answer; attribution is a condition of several of their licences.
+          items:
+            $ref: '#/components/schemas/Source'
+      required:
+        - tool
+        - version
+        - result
+        - attribution
+    JumpSkillLevels:
+      type: object
+      properties:
+        jump_drive_calibration:
+          type: integer
+          description: JumpDriveCalibration is the Jump Drive Calibration level, which lengthens the range.
+        jump_fuel_conservation:
+          type: integer
+          description: JumpFuelConservation is the Jump Fuel Conservation level, which cuts the fuel use.
+        jump_freighters:
+          type:
+            - integer
+            - "null"
+          description: JumpFreighters is the Jump Freighters level; null unless the hull is a jump freighter.
+      required:
+        - jump_drive_calibration
+        - jump_fuel_conservation
+        - jump_freighters
+    MarketHistory:
+      type: object
+      properties:
+        type_id:
+          type: integer
+          description: TypeID is the item's type ID.
+        name:
+          type: string
+          description: Name is the item name as the SDE spells it.
+        region_id:
+          type: integer
+          description: RegionID is the region the history is from (the global PLEX market for PLEX).
+        region:
+          type: string
+          description: Region is the region's name.
+        hub:
+          type: string
+          description: Hub is the hub key the request named ("jita", "amarr", "dodixie", "rens", "hek"); "" when a region or the default was used, and for PLEX.
+        days:
+          type: integer
+          description: Days is the length of the window in calendar days, ending at the newest day ESI has.
+        window_end:
+          type: string
+          description: WindowEnd is the last day of the window, the newest day ESI has (YYYY-MM-DD); not today.
+        bucket:
+          type: string
+          description: 'Bucket is the bucket size: "day" or "week".'
+        buckets:
+          type: array
+          description: Buckets are the rows, oldest first. Days on which nothing traded have no row.
+          items:
+            $ref: '#/components/schemas/HistoryBucket'
+        summary:
+          $ref: '#/components/schemas/HistorySummary'
+          description: Summary covers the whole window.
+      required:
+        - type_id
+        - name
+        - region_id
+        - region
+        - hub
+        - days
+        - window_end
+        - bucket
+        - buckets
+        - summary
+    MarketHistoryToolResponse:
+      type: object
+      properties:
+        tool:
+          type: string
+          description: The tool that ran.
+        version:
+          type: string
+          description: The build version of the service.
+        result:
+          type: object
+          properties:
+            text:
+              type: string
+              description: The answer as the chat assistant reads it.
+            data:
+              description: The typed answer, or null when the tool has none or the call ended in a text-only answer (an unknown id, a parse failure); `text` then says why.
+              oneOf:
+                - $ref: '#/components/schemas/MarketHistory'
+                - type: "null"
+          required:
+            - text
+            - data
+        attribution:
+          type: array
+          description: The upstreams behind the answer; attribution is a condition of several of their licences.
+          items:
+            $ref: '#/components/schemas/Source'
+      required:
+        - tool
+        - version
+        - result
+        - attribution
     MarketPrice:
       type: object
       properties:
@@ -2522,6 +3862,10 @@ components:
           type: integer
         market:
           type: string
+          description: 'Market names what the numbers cover: "The Forge / Jita", "Global PLEX market" or a hub''s station name.'
+        hub:
+          type: string
+          description: Hub is the hub key the request named ("jita", "amarr", "dodixie", "rens", "hek"); "" for the region-wide default.
         best_sell_isk:
           type:
             - number
@@ -2540,6 +3884,7 @@ components:
         - type_id
         - region_id
         - market
+        - hub
         - best_sell_isk
         - sell_orders
         - best_buy_isk
@@ -2693,8 +4038,10 @@ components:
       properties:
         from:
           type: string
+          description: 'From is the origin: the SDE''s canonical spelling in summary mode, as typed in route mode.'
         to:
           type: string
+          description: 'To is the destination: the SDE''s canonical spelling in summary mode, as typed in route mode.'
         prefer_high_sec:
           type: boolean
           description: PreferHighSec is the request flag; HighsecSatisfied is false when no pure-highsec route exists and the path is the any-sec fallback (the text says so).
@@ -2702,11 +4049,41 @@ components:
           type: boolean
         jumps:
           type: integer
-          description: Jumps is the hop count the text prints (len(systems)-1).
+          description: Jumps is the full jump count of the route, also when systems is capped (see hops_omitted).
         systems:
           type: array
+          description: 'Systems lists the stops, origin first: all of them for a route of up to 100 jumps, the first 101 stops (100 jumps) for a longer one; it is [] when Detail is "summary".'
           items:
             $ref: '#/components/schemas/RouteSystem'
+        hops_omitted:
+          type: integer
+          description: HopsOmitted is how many systems at the end of the route Systems leaves out because a route lists at most 100 jumps; 0 when all are listed (Jumps counts the whole route).
+        detail:
+          type: string
+          description: 'Detail is the requested output: "route" (the hop list) or "summary" (one line).'
+        via:
+          type: array
+          description: Via lists the systems the route passes through, in order, as the SDE spells them.
+          items:
+            type: string
+        avoid:
+          type: array
+          description: Avoid lists the systems the route never enters, as the SDE spells them; the origin, destination and via stops are never avoided, so they are not listed.
+          items:
+            type: string
+        lowest_security_hop:
+          description: LowestSecurityHop is the least secure system the route enters (the origin does not count); null for a 0-jump route.
+          oneOf:
+            - $ref: '#/components/schemas/RouteSystem'
+            - type: "null"
+        counts_by_class:
+          $ref: '#/components/schemas/ClassCounts'
+          description: CountsByClass counts the systems the route enters, by security band.
+        highsec_only_jumps:
+          type:
+            - integer
+            - "null"
+          description: HighsecOnlyJumps is the jump count of a highsec-only route with the same via and avoid; null when it was not computed (prefer_high_sec is true) or none exists.
       required:
         - from
         - to
@@ -2714,6 +4091,13 @@ components:
         - highsec_satisfied
         - jumps
         - systems
+        - hops_omitted
+        - detail
+        - via
+        - avoid
+        - lowest_security_hop
+        - counts_by_class
+        - highsec_only_jumps
     RouteSystem:
       type: object
       properties:
@@ -2860,6 +4244,59 @@ components:
         - name
         - url
         - license
+    SovereigntyList:
+      type: object
+      properties:
+        systems:
+          type: array
+          description: Systems holds one row per resolved system, in request order, duplicates collapsed.
+          items:
+            $ref: '#/components/schemas/SystemSovereignty'
+        unresolved:
+          type: array
+          description: Unresolved lists requested names that are not solar systems.
+          items:
+            type: string
+        names_unavailable:
+          type: boolean
+          description: NamesUnavailable is true when ESI could not name some alliance or corporation; the text shows "?" there and the ids stay in the rows.
+      required:
+        - systems
+        - unresolved
+        - names_unavailable
+    SovereigntyListToolResponse:
+      type: object
+      properties:
+        tool:
+          type: string
+          description: The tool that ran.
+        version:
+          type: string
+          description: The build version of the service.
+        result:
+          type: object
+          properties:
+            text:
+              type: string
+              description: The answer as the chat assistant reads it.
+            data:
+              description: The typed answer, or null when the tool has none or the call ended in a text-only answer (an unknown id, a parse failure); `text` then says why.
+              oneOf:
+                - $ref: '#/components/schemas/SovereigntyList'
+                - type: "null"
+          required:
+            - text
+            - data
+        attribution:
+          type: array
+          description: The upstreams behind the answer; attribution is a condition of several of their licences.
+          items:
+            $ref: '#/components/schemas/Source'
+      required:
+        - tool
+        - version
+        - result
+        - attribution
     Suggestion:
       type: object
       properties:
@@ -2888,6 +4325,368 @@ components:
         - pg
         - fits
         - reason
+    SystemActivity:
+      type: object
+      properties:
+        system:
+          type: string
+          description: System is the system name as the SDE spells it.
+        system_id:
+          type: integer
+          description: SystemID is the solar system ID.
+        jumps:
+          type: integer
+          description: Jumps is the number of ship jumps through the system's gates in the last hour.
+        ship_kills:
+          type: integer
+          description: ShipKills is the number of ships killed in the last hour.
+        pod_kills:
+          type: integer
+          description: PodKills is the number of pods killed in the last hour.
+        npc_kills:
+          type: integer
+          description: NPCKills is the number of NPCs killed in the last hour.
+      required:
+        - system
+        - system_id
+        - jumps
+        - ship_kills
+        - pod_kills
+        - npc_kills
+    SystemInfo:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: ID is the solar system ID.
+        name:
+          type: string
+          description: Name is the system name as the SDE spells it.
+        security:
+          type: number
+          description: Security is the true security status (the text prints it rounded).
+        sec:
+          type: string
+          description: Sec is the security exactly as the text prints it ("+0.9").
+        class:
+          type: string
+          description: 'Class is the text''s band: "highsec", "lowsec" or "nullsec".'
+        region:
+          type: string
+          description: Region is the region name.
+        constellation:
+          type: string
+          description: Constellation is the constellation name.
+        faction:
+          type:
+            - string
+            - "null"
+          description: Faction is the faction the system, its constellation or its region belongs to; null for none.
+        wormhole_class:
+          type:
+            - integer
+            - "null"
+          description: WormholeClass is the wormhole class (1-6 C1-C6, 7 highsec, 8 lowsec, 9 nullsec, 12 Thera, 13 shattered frigate holes, 14-18 Drifter, 25 Pochven); null for none.
+        wormhole_effect:
+          type:
+            - string
+            - "null"
+          description: WormholeEffect is the system effect of a wormhole system (for example "Pulsar"); null for none.
+        neighbours:
+          type: array
+          description: Neighbours lists the systems the stargates lead to, sorted by name.
+          items:
+            type: string
+        gates:
+          type: integer
+          description: Gates is the number of stargates.
+        belts:
+          type: integer
+          description: Belts is the number of asteroid belts.
+        moons:
+          type: integer
+          description: Moons is the number of moons.
+        planets:
+          type: integer
+          description: Planets is the number of planets.
+        planets_by_type:
+          type: object
+          description: PlanetsByType counts planets per type name ("Gas", "Ice", ...).
+          additionalProperties:
+            type: integer
+        npc_stations:
+          type: integer
+          description: NPCStations is the number of NPC stations.
+        station_services:
+          type: array
+          description: StationServices lists the services the system's NPC stations offer, sorted.
+          items:
+            type: string
+        ice_belt:
+          description: IceBelt is the system's entry in EVE University's ice list; null when not listed (nullsec ice systems are not covered).
+          oneOf:
+            - $ref: '#/components/schemas/IceBelt'
+            - type: "null"
+      required:
+        - id
+        - name
+        - security
+        - sec
+        - class
+        - region
+        - constellation
+        - faction
+        - wormhole_class
+        - wormhole_effect
+        - neighbours
+        - gates
+        - belts
+        - moons
+        - planets
+        - planets_by_type
+        - npc_stations
+        - station_services
+        - ice_belt
+    SystemInfoList:
+      type: object
+      properties:
+        systems:
+          type: array
+          description: Systems holds one row per resolved system, in request order, duplicates collapsed.
+          items:
+            $ref: '#/components/schemas/SystemInfo'
+        unresolved:
+          type: array
+          description: Unresolved lists requested names that are not solar systems.
+          items:
+            type: string
+        not_enterable:
+          type: array
+          description: NotEnterable lists requested systems that exist but lie in space players cannot enter (the Jove regions and the market pseudo-region); they have no profile.
+          items:
+            type: string
+      required:
+        - systems
+        - unresolved
+        - not_enterable
+    SystemInfoListToolResponse:
+      type: object
+      properties:
+        tool:
+          type: string
+          description: The tool that ran.
+        version:
+          type: string
+          description: The build version of the service.
+        result:
+          type: object
+          properties:
+            text:
+              type: string
+              description: The answer as the chat assistant reads it.
+            data:
+              description: The typed answer, or null when the tool has none or the call ended in a text-only answer (an unknown id, a parse failure); `text` then says why.
+              oneOf:
+                - $ref: '#/components/schemas/SystemInfoList'
+                - type: "null"
+          required:
+            - text
+            - data
+        attribution:
+          type: array
+          description: The upstreams behind the answer; attribution is a condition of several of their licences.
+          items:
+            $ref: '#/components/schemas/Source'
+      required:
+        - tool
+        - version
+        - result
+        - attribution
+    SystemList:
+      type: object
+      properties:
+        total:
+          type: integer
+          description: Total is the number of systems that match, before paging.
+        offset:
+          type: integer
+          description: Offset is the number of matches skipped.
+        shown:
+          type: integer
+          description: Shown is the number of rows in Systems.
+        sort:
+          type: string
+          description: 'Sort is the order used: "jumps", "security" (most secure first), "name" or "ly".'
+        origin:
+          type: string
+          description: Origin is the system the jumps or the jump range are counted from (near.origin or jump_range.origin); "" without either.
+        systems:
+          type: array
+          description: Systems is the page, in the order of the text lines.
+          items:
+            $ref: '#/components/schemas/SystemRow'
+        jump_range:
+          description: JumpRange echoes the jump_range filter; null without it.
+          oneOf:
+            - $ref: '#/components/schemas/JumpRangeEcho'
+            - type: "null"
+      required:
+        - total
+        - offset
+        - shown
+        - sort
+        - origin
+        - systems
+        - jump_range
+    SystemListToolResponse:
+      type: object
+      properties:
+        tool:
+          type: string
+          description: The tool that ran.
+        version:
+          type: string
+          description: The build version of the service.
+        result:
+          type: object
+          properties:
+            text:
+              type: string
+              description: The answer as the chat assistant reads it.
+            data:
+              description: The typed answer, or null when the tool has none or the call ended in a text-only answer (an unknown id, a parse failure); `text` then says why.
+              oneOf:
+                - $ref: '#/components/schemas/SystemList'
+                - type: "null"
+          required:
+            - text
+            - data
+        attribution:
+          type: array
+          description: The upstreams behind the answer; attribution is a condition of several of their licences.
+          items:
+            $ref: '#/components/schemas/Source'
+      required:
+        - tool
+        - version
+        - result
+        - attribution
+    SystemRow:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: ID is the solar system ID.
+        name:
+          type: string
+          description: Name is the system name as the SDE spells it.
+        security:
+          type: number
+          description: Security is the true security status (the text prints it rounded).
+        sec:
+          type: string
+          description: Sec is the security exactly as the text prints it ("+0.9").
+        class:
+          type: string
+          description: 'Class is the text''s band: "highsec", "lowsec" or "nullsec".'
+        region:
+          type: string
+          description: Region is the region name.
+        constellation:
+          type: string
+          description: Constellation is the constellation name.
+        jumps:
+          type:
+            - integer
+            - "null"
+          description: Jumps is the gate-jump count from the origin; null without near.
+        highsec_route:
+          type:
+            - boolean
+            - "null"
+          description: HighsecRoute is true when near.prefer_high_sec was set and the jump count follows a highsec-only route, false when it fell back to any space (and for an origin that is not itself highsec); null without prefer_high_sec.
+        npc_stations:
+          type: integer
+          description: NPCStations is the number of NPC stations.
+        belts:
+          type: integer
+          description: Belts is the number of asteroid belts.
+        ice_types:
+          type: array
+          description: IceTypes lists the ice types EVE University's list gives for the system; empty when the system is not listed.
+          items:
+            type: string
+        ly:
+          type:
+            - number
+            - "null"
+          description: LY is the distance in light-years from jump_range.origin, to 3 decimals; null without jump_range.
+      required:
+        - id
+        - name
+        - security
+        - sec
+        - class
+        - region
+        - constellation
+        - jumps
+        - highsec_route
+        - npc_stations
+        - belts
+        - ice_types
+        - ly
+    SystemSovereignty:
+      type: object
+      properties:
+        system:
+          type: string
+          description: System is the system name as the SDE spells it.
+        system_id:
+          type: integer
+          description: SystemID is the solar system ID.
+        status:
+          type: string
+          description: Status is "alliance", "faction", "unclaimed", "wormhole" (no sovereignty in wormhole space) or "none" (ESI lists no entry for the system).
+        alliance_id:
+          type:
+            - integer
+            - "null"
+          description: AllianceID is the holding alliance, null unless Status is "alliance".
+        alliance:
+          type:
+            - string
+            - "null"
+          description: Alliance is the alliance name, null when there is no alliance or ESI gave no name.
+        corporation_id:
+          type:
+            - integer
+            - "null"
+          description: CorporationID is the corporation that holds the claim for the alliance, null if none.
+        corporation:
+          type:
+            - string
+            - "null"
+          description: Corporation is the corporation name, null when there is none or ESI gave no name.
+        faction_id:
+          type:
+            - integer
+            - "null"
+          description: FactionID is the NPC faction holding the system, null unless Status is "faction".
+        faction:
+          type:
+            - string
+            - "null"
+          description: Faction is the NPC faction name from the SDE, null when there is none.
+      required:
+        - system
+        - system_id
+        - status
+        - alliance_id
+        - alliance
+        - corporation_id
+        - corporation
+        - faction_id
+        - faction
     TankCard:
       type: object
       properties:
@@ -2960,6 +4759,139 @@ components:
         - ScanResolution
         - MaxLockedTargets
         - SensorStrength
+    TheraConnection:
+      type: object
+      properties:
+        hub:
+          type: string
+          description: 'Hub is the hub the wormhole leaves from: "Thera" or "Turnur".'
+        hub_signature:
+          type: string
+          description: HubSignature is the signature id in the hub system.
+        system:
+          type: string
+          description: System is the exit system (as the SDE spells it for known space).
+        system_id:
+          type: integer
+          description: SystemID is the exit system's solar system ID.
+        system_class:
+          type: string
+          description: 'SystemClass is EvE-Scout''s class of the exit: "hs", "ls", "ns" or a wormhole class such as "c2".'
+        security:
+          type:
+            - number
+            - "null"
+          description: Security is the exit's true security status; null in wormhole space.
+        sec:
+          type:
+            - string
+            - "null"
+          description: Sec is the security exactly as the text prints it ("+0.5"); null in wormhole space.
+        region:
+          type: string
+          description: Region is the exit's region name.
+        signature:
+          type: string
+          description: Signature is the signature id in the exit system.
+        wormhole_type:
+          type: string
+          description: WormholeType is the wormhole type code (for example "V898").
+        max_ship_size:
+          type: string
+          description: MaxShipSize is the largest ship class that fits through ("medium", "large", "xlarge", "capital").
+        expires_at:
+          type: string
+          description: ExpiresAt is when the wormhole is expected to collapse (RFC 3339, UTC).
+        remaining_hours:
+          type: integer
+          description: RemainingHours is the whole hours left, rounded down, computed from expires_at when the answer is served.
+        jumps:
+          type:
+            - integer
+            - "null"
+          description: Jumps is the gate distance from the near origin; null without near.
+      required:
+        - hub
+        - hub_signature
+        - system
+        - system_id
+        - system_class
+        - security
+        - sec
+        - region
+        - signature
+        - wormhole_type
+        - max_ship_size
+        - expires_at
+        - remaining_hours
+        - jumps
+    TheraConnections:
+      type: object
+      properties:
+        as_of:
+          type: string
+          description: AsOf is the time of the EvE-Scout copy the answer is built from (RFC 3339, UTC).
+        hub:
+          type: string
+          description: 'Hub is the hub filter the request used: "thera", "turnur" or "all".'
+        origin:
+          type: string
+          description: Origin is the system the jumps are counted from; empty without near.
+        total:
+          type: integer
+          description: Total is the number of connections that match, before the limit.
+        shown:
+          type: integer
+          description: Shown is the number of connections in Connections.
+        left_out:
+          type: integer
+          description: LeftOut counts the exits that near left out because they have no gate route from the origin.
+        connections:
+          type: array
+          description: 'Connections are the rows: nearest first with near, else Thera before Turnur, then by system name.'
+          items:
+            $ref: '#/components/schemas/TheraConnection'
+      required:
+        - as_of
+        - hub
+        - origin
+        - total
+        - shown
+        - left_out
+        - connections
+    TheraConnectionsToolResponse:
+      type: object
+      properties:
+        tool:
+          type: string
+          description: The tool that ran.
+        version:
+          type: string
+          description: The build version of the service.
+        result:
+          type: object
+          properties:
+            text:
+              type: string
+              description: The answer as the chat assistant reads it.
+            data:
+              description: The typed answer, or null when the tool has none or the call ended in a text-only answer (an unknown id, a parse failure); `text` then says why.
+              oneOf:
+                - $ref: '#/components/schemas/TheraConnections'
+                - type: "null"
+          required:
+            - text
+            - data
+        attribution:
+          type: array
+          description: The upstreams behind the answer; attribution is a condition of several of their licences.
+          items:
+            $ref: '#/components/schemas/Source'
+      required:
+        - tool
+        - version
+        - result
+        - attribution
     ToolResponse:
       type: object
       properties:
@@ -3096,7 +5028,7 @@ components:
         - default_ammo
   responses:
     BadRequest:
-      description: 'The request is malformed: invalid JSON, or a missing or invalid parameter or header, or a tool call without a required argument (`invalid_request`, `janice_key_required`, `invalid_arguments`).'
+      description: 'The request is malformed: invalid JSON, or a missing or invalid parameter or header, or a tool call without a required argument (`invalid_request`, `invalid_arguments`).'
       content:
         application/json:
           schema:

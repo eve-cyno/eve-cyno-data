@@ -60,10 +60,11 @@ var (
 	_ dataapi.Usage         = (*Store)(nil)
 )
 
-// OwnerPattern is the accepted shape of a key owner id: "eve:<character id>" or
-// "discord:<user id>". Callers that validate an owner before it reaches the store
-// (for example an admin proxy) use this constant so the rule cannot drift.
-const OwnerPattern = `^(eve|discord):[A-Za-z0-9._-]{1,128}$`
+// OwnerPattern is the accepted shape of a key owner id: a canonical account ("acct:" and 16 lowercase hex digits)
+// or a sign-in identity ("eve:<character id>", "discord:<user id>"), the form keys were owned by before accounts
+// existed. A sign-in id that is linked to an account acts for that account. Callers that validate an owner before
+// it reaches the store (for example an admin proxy) use this constant so the rule cannot drift.
+const OwnerPattern = `^(?:acct:[0-9a-f]{16}|(?:eve|discord):[A-Za-z0-9._-]{1,128})$`
 
 var ownerRE = regexp.MustCompile(OwnerPattern)
 
@@ -77,7 +78,8 @@ CREATE TABLE IF NOT EXISTS api_keys (
   created_at  TEXT NOT NULL,
   last_used   TEXT,
   revoked_at  TEXT,
-  daily_cap   INTEGER NOT NULL
+  daily_cap   INTEGER NOT NULL,
+  revoked_by  TEXT
 );
 CREATE INDEX IF NOT EXISTS api_keys_owner ON api_keys(owner) WHERE revoked_at IS NULL;
 CREATE TABLE IF NOT EXISTS key_usage (
@@ -100,7 +102,23 @@ CREATE TABLE IF NOT EXISTS blocked_owners (
   owner      TEXT PRIMARY KEY,
   owner_name TEXT NOT NULL,
   blocked_at TEXT NOT NULL
-);`
+);
+CREATE TABLE IF NOT EXISTS accounts (
+  id             TEXT PRIMARY KEY,
+  created_at     TEXT NOT NULL,
+  tester_seen_at TEXT
+);
+CREATE TABLE IF NOT EXISTS identities (
+  provider   TEXT NOT NULL CHECK (provider IN ('eve', 'discord')),
+  subject    TEXT NOT NULL,
+  account    TEXT NOT NULL,
+  owner_hash TEXT,
+  linked_at  TEXT NOT NULL,
+  PRIMARY KEY (provider, subject),
+  CHECK ((provider = 'eve') = (owner_hash IS NOT NULL))
+);
+CREATE INDEX IF NOT EXISTS identities_account ON identities(account);
+CREATE UNIQUE INDEX IF NOT EXISTS identities_one_discord ON identities(account) WHERE provider = 'discord';`
 
 // Options configures Open.
 type Options struct {
@@ -132,6 +150,12 @@ type OwnedKey struct {
 	Owner        string `json:"owner"`
 	OwnerName    string `json:"owner_name"`
 	RefusedToday int    `json:"refused_today"` // requests answered 429 today
+	// RevokedAt and RevokedBy are set only for a revoked key (ListRevoked). RevokedBy is the
+	// role: RevokerOwner, RevokerAdmin, RevokerOperator or RevokerUnknown.
+	RevokedAt *time.Time `json:"revoked_at,omitempty"`
+	RevokedBy string     `json:"revoked_by,omitempty"`
+	// Identities are the sign-in identities of an account owner (operator list only; absent for a legacy owner id).
+	Identities []LinkedIdentity `json:"identities,omitempty"`
 }
 
 // activeKey is what the in-memory index knows of a live key.
@@ -147,7 +171,9 @@ type Store struct {
 	now func() time.Time
 	log *slog.Logger
 
-	adminMu sync.Mutex // serialises Create, SetCap, Block and Unblock (limit check, block check, insert)
+	// adminMu serialises Create, SetCap, Block and Unblock (limit check, block check, insert) and every write to
+	// accounts, identities and key owners.
+	adminMu sync.Mutex
 
 	mu     sync.RWMutex // guards the index
 	byHash map[string]string
@@ -168,6 +194,21 @@ type Store struct {
 	closeErr  error
 }
 
+// migrate brings a file created by an older version to the current schema. Every step is
+// additive, so the previous version still reads and writes the migrated file.
+func migrate(db *sql.DB) error {
+	var n int
+	if err := db.QueryRow(`SELECT COUNT(*) FROM pragma_table_info('api_keys') WHERE name = 'revoked_by'`).Scan(&n); err != nil {
+		return fmt.Errorf("keys: migrate: %w", err)
+	}
+	if n == 0 {
+		if _, err := db.Exec(`ALTER TABLE api_keys ADD COLUMN revoked_by TEXT`); err != nil {
+			return fmt.Errorf("keys: migrate: add revoked_by: %w", err)
+		}
+	}
+	return nil
+}
+
 // Open opens (creating if needed) the key database at path, loads the active keys and
 // today's usage counts, and starts the usage flusher.
 func Open(path string, opt Options) (*Store, error) {
@@ -179,6 +220,10 @@ func Open(path string, opt Options) (*Store, error) {
 	if _, err := db.Exec(schema); err != nil {
 		_ = db.Close()
 		return nil, fmt.Errorf("keys: create schema: %w", err)
+	}
+	if err := migrate(db); err != nil {
+		_ = db.Close()
+		return nil, err
 	}
 	s := &Store{
 		db: db, opt: opt, now: opt.Now, log: opt.Logger,
@@ -314,7 +359,9 @@ func randHex(n int) (string, error) {
 // Create makes a new key for owner and returns it with its secret. The secret is shown
 // only here; the store keeps just its hash. ownerName is the owner's display name for
 // the operator audit (may be empty). An owner may create MaxCreatesPerDay keys per UTC
-// day (ErrCreateLimit), however many of them they revoked.
+// day (ErrCreateLimit), however many of them they revoked. Limits are counted over the whole account when owner
+// is an account or a linked sign-in id, whichever id asks;
+// ErrNoAccount for an unknown account id.
 func (s *Store) Create(ctx context.Context, owner, ownerName, name string) (Key, string, error) {
 	return s.create(ctx, "owner", owner, ownerName, name)
 }
@@ -344,12 +391,27 @@ func (s *Store) create(ctx context.Context, actor, owner, ownerName, name string
 	s.adminMu.Lock()
 	defer s.adminMu.Unlock()
 
-	var blocked int
-	if err := s.db.QueryRowContext(ctx,
-		`SELECT COUNT(*) FROM blocked_owners WHERE owner = ?`, owner).Scan(&blocked); err != nil {
-		return Key{}, "", fmt.Errorf("keys: check block: %w", err)
+	if accountRE.MatchString(owner) {
+		var exists int
+		if err := s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM accounts WHERE id = ?`, owner).Scan(&exists); err != nil {
+			return Key{}, "", fmt.Errorf("keys: check account: %w", err)
+		}
+		if exists == 0 {
+			return Key{}, "", ErrNoAccount
+		}
 	}
-	if blocked > 0 {
+	// Blocks and limits cover the whole account (its own rows and its identities' legacy owner ids) for every
+	// caller: the new key lands in that set whichever id asked, so a narrower count would let it grow past the caps.
+	whole, err := s.ownerScope(ctx, owner, true)
+	if err != nil {
+		return Key{}, "", err
+	}
+	in, args := placeholders(len(whole)), anyArgs(whole)
+	blocked, err := s.ownersBlocked(ctx, whole)
+	if err != nil {
+		return Key{}, "", err
+	}
+	if blocked {
 		return Key{}, "", ErrOwnerBlocked
 	}
 	if actor == "owner" {
@@ -358,8 +420,8 @@ func (s *Store) create(ctx context.Context, actor, owner, ownerName, name string
 		day := s.now().UTC().Format(time.DateOnly)
 		var made int
 		if err := s.db.QueryRowContext(ctx,
-			`SELECT COUNT(*) FROM api_keys WHERE owner = ? AND substr(created_at, 1, 10) = ?`,
-			owner, day).Scan(&made); err != nil {
+			`SELECT COUNT(*) FROM api_keys WHERE owner IN (`+in+`) AND substr(created_at, 1, 10) = ?`,
+			append(append([]any{}, args...), day)...).Scan(&made); err != nil {
 			return Key{}, "", fmt.Errorf("keys: count creations: %w", err)
 		}
 		if made >= MaxCreatesPerDay {
@@ -368,7 +430,7 @@ func (s *Store) create(ctx context.Context, actor, owner, ownerName, name string
 	}
 	var n int
 	if err := s.db.QueryRowContext(ctx,
-		`SELECT COUNT(*) FROM api_keys WHERE owner = ? AND revoked_at IS NULL`, owner).Scan(&n); err != nil {
+		`SELECT COUNT(*) FROM api_keys WHERE owner IN (`+in+`) AND revoked_at IS NULL`, args...).Scan(&n); err != nil {
 		return Key{}, "", fmt.Errorf("keys: count keys: %w", err)
 	}
 	if n >= s.opt.MaxPerOwner {
@@ -405,24 +467,34 @@ func (s *Store) create(ctx context.Context, actor, owner, ownerName, name string
 	}
 }
 
-// Revoke revokes owner's key id; ErrNotFound when it is not theirs or already revoked.
+// Revoke revokes owner's key id; ErrNotFound when it is not in the owner's scope or already revoked.
 func (s *Store) Revoke(ctx context.Context, owner, id string) error {
 	if err := validateOwner(owner); err != nil {
 		return err
 	}
-	return s.revoke(ctx, id, `AND owner = ?`, []any{owner}, "owner")
+	scope, err := s.ownerScope(ctx, owner, false)
+	if err != nil {
+		return err
+	}
+	return s.revoke(ctx, id, `AND owner IN (`+placeholders(len(scope))+`)`, anyArgs(scope), RevokerOwner)
 }
 
-// RevokeAny revokes any active key by id (operator).
-func (s *Store) RevokeAny(ctx context.Context, id string) error {
-	return s.revoke(ctx, id, "", nil, "operator")
+// RevokeAny revokes any active key by id (operator). actor is the acting role: "" or
+// RevokerOperator for the token holder, RevokerAdmin for an admin in a front end's panel;
+// anything else is ErrBadActor. The role is stored as the key's RevokedBy and logged.
+func (s *Store) RevokeAny(ctx context.Context, id, actor string) error {
+	by, err := operatorActor(actor)
+	if err != nil {
+		return err
+	}
+	return s.revoke(ctx, id, "", nil, by)
 }
 
 func (s *Store) revoke(ctx context.Context, id, cond string, args []any, actor string) error {
-	args = append([]any{s.now().UTC().Format(time.RFC3339Nano), id}, args...)
+	args = append([]any{s.now().UTC().Format(time.RFC3339Nano), actor, id}, args...)
 	var hash string
 	err := s.db.QueryRowContext(ctx,
-		`UPDATE api_keys SET revoked_at = ? WHERE id = ? AND revoked_at IS NULL `+cond+` RETURNING hash`,
+		`UPDATE api_keys SET revoked_at = ?, revoked_by = ? WHERE id = ? AND revoked_at IS NULL `+cond+` RETURNING hash`,
 		args...).Scan(&hash)
 	if errors.Is(err, sql.ErrNoRows) {
 		return ErrNotFound
@@ -438,12 +510,17 @@ func (s *Store) revoke(ctx context.Context, id, cond string, args []any, actor s
 	return nil
 }
 
-// List returns owner's active keys, newest first, with today's usage.
+// List returns owner's active keys, newest first, with today's usage, including those under the legacy owner ids
+// of an account's identities.
 func (s *Store) List(ctx context.Context, owner string) ([]Key, error) {
 	if err := validateOwner(owner); err != nil {
 		return nil, err
 	}
-	all, err := s.query(ctx, `WHERE revoked_at IS NULL AND owner = ?`, owner)
+	scope, err := s.ownerScope(ctx, owner, false)
+	if err != nil {
+		return nil, err
+	}
+	all, err := s.query(ctx, `WHERE revoked_at IS NULL AND owner IN (`+placeholders(len(scope))+`)`, anyArgs(scope)...)
 	if err != nil {
 		return nil, err
 	}
@@ -456,7 +533,7 @@ func (s *Store) List(ctx context.Context, owner string) ([]Key, error) {
 
 func (s *Store) query(ctx context.Context, where string, args ...any) ([]OwnedKey, error) {
 	rows, err := s.db.QueryContext(ctx,
-		`SELECT id, owner, owner_name, name, created_at, last_used, daily_cap FROM api_keys `+where+
+		`SELECT id, owner, owner_name, name, created_at, last_used, daily_cap, revoked_at, revoked_by FROM api_keys `+where+
 			` ORDER BY rowid DESC`, args...)
 	if err != nil {
 		return nil, fmt.Errorf("keys: list keys: %w", err)
@@ -466,14 +543,24 @@ func (s *Store) query(ctx context.Context, where string, args ...any) ([]OwnedKe
 	for rows.Next() {
 		var k OwnedKey
 		var created string
-		var last sql.NullString
-		if err := rows.Scan(&k.ID, &k.Owner, &k.OwnerName, &k.Name, &created, &last, &k.DailyCap); err != nil {
+		var last, revokedAt, revokedBy sql.NullString
+		if err := rows.Scan(&k.ID, &k.Owner, &k.OwnerName, &k.Name, &created, &last, &k.DailyCap, &revokedAt, &revokedBy); err != nil {
 			return nil, fmt.Errorf("keys: list keys: %w", err)
 		}
 		if k.CreatedAt, err = time.Parse(time.RFC3339Nano, created); err != nil {
 			return nil, fmt.Errorf("keys: parse created_at: %w", err)
 		}
 		k.LastUsed = last.String
+		if revokedAt.Valid {
+			at, err := time.Parse(time.RFC3339Nano, revokedAt.String)
+			if err != nil {
+				return nil, fmt.Errorf("keys: parse revoked_at: %w", err)
+			}
+			k.RevokedAt, k.RevokedBy = &at, revokedBy.String
+			if k.RevokedBy == "" {
+				k.RevokedBy = RevokerUnknown
+			}
+		}
 		out = append(out, k)
 	}
 	if err := rows.Err(); err != nil {

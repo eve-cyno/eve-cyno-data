@@ -1,0 +1,95 @@
+{
+  "tool": "find_systems",
+  "request": {
+    "security": {
+      "min": 0.45
+    },
+    "ice_types": [
+      "Clear Icicle"
+    ],
+    "near": {
+      "origin": "C-N4OD"
+    },
+    "sort": "jumps",
+    "limit": 3
+  },
+  "prompt": "What are the three nearest highsec Clear Icicle systems to C-N4OD?",
+  "recorded": "2026-10-17",
+  "trimmed": false,
+  "response": {
+    "tool": "find_systems",
+    "version": "sha-b2a1483",
+    "result": {
+      "text": "Systems: 65 match, showing 1-3, sorted by jumps from C-N4OD.\nFilter: security 0.45 to 1.00; ice belt Clear Icicle; near C-N4OD\n  Erkinen +0.6 highsec · The Bleak Lands · 29 j · 2 stations, 12 belts · ice: Clear Icicle\n  Arveyil +0.5 highsec · Devoid · 30 j · 0 stations, 12 belts · ice: Clear Icicle\n  Dihra +0.6 highsec · Devoid · 30 j · 2 stations, 13 belts · ice: Clear Icicle\n  … 62 more; raise offset or narrow the filter.\nIce belts: highsec and lowsec systems listed by EVE University (CC BY-SA 4.0); nullsec ice systems are not covered.",
+      "data": {
+        "total": 65,
+        "offset": 0,
+        "shown": 3,
+        "sort": "jumps",
+        "origin": "C-N4OD",
+        "systems": [
+          {
+            "id": 30003078,
+            "name": "Erkinen",
+            "security": 0.592004,
+            "sec": "+0.6",
+            "class": "highsec",
+            "region": "The Bleak Lands",
+            "constellation": "Vaarma",
+            "jumps": 29,
+            "highsec_route": null,
+            "npc_stations": 2,
+            "belts": 12,
+            "ice_types": [
+              "Clear Icicle"
+            ]
+          },
+          {
+            "id": 30003007,
+            "name": "Arveyil",
+            "security": 0.525393,
+            "sec": "+0.5",
+            "class": "highsec",
+            "region": "Devoid",
+            "constellation": "Enka",
+            "jumps": 30,
+            "highsec_route": null,
+            "npc_stations": 0,
+            "belts": 12,
+            "ice_types": [
+              "Clear Icicle"
+            ]
+          },
+          {
+            "id": 30002967,
+            "name": "Dihra",
+            "security": 0.589287,
+            "sec": "+0.6",
+            "class": "highsec",
+            "region": "Devoid",
+            "constellation": "Ryra",
+            "jumps": 30,
+            "highsec_route": null,
+            "npc_stations": 2,
+            "belts": 13,
+            "ice_types": [
+              "Clear Icicle"
+            ]
+          }
+        ]
+      }
+    },
+    "attribution": [
+      {
+        "name": "EVE Static Data Export (via Fuzzwork)",
+        "url": "https://www.fuzzwork.co.uk/dump/",
+        "license": "CCP game data under the EVE Developer License Agreement; converted by Fuzzwork Enterprises"
+      },
+      {
+        "name": "EVE University Wiki (ice belt systems)",
+        "url": "https://wiki.eveuniversity.org/Ice_harvesting",
+        "license": "CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/); credit EVE University; the dataset stays CC BY-SA"
+      }
+    ]
+  }
+}

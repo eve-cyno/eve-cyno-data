@@ -12,7 +12,7 @@
 //     are stable: not_found, method_not_allowed, invalid_request,
 //     payload_too_large, rate_limited, daily_quota_exceeded, unavailable, upstream_error,
 //     upstream_busy, unknown_tool, tool_disabled, api_key_required, invalid_api_key,
-//     key_not_permitted, janice_key_required, timeout, internal_error.
+//     key_not_permitted, timeout, internal_error.
 //   - Every response carries X-Request-ID: the caller's value when it is a safe
 //     token ([A-Za-z0-9._-], 1-64 chars), otherwise a generated one. The same ID
 //     is attached to every log line the request produces.
@@ -25,11 +25,11 @@
 //     only be reachable through the Cloudflare tunnel (or loopback).
 //   - Request bodies are capped (256 KiB for the fit routes, 64 KiB for the tool
 //     API); an oversize body is a 413.
-//   - Tool tiers (R3.4, core/catalog): on an internet-facing service a tool is public
+//   - Tool tiers (core/catalog): on an internet-facing service a tool is public
 //     (anyone), keyed (a valid API key, from Config.Auth: Authorization: Bearer or
-//     X-API-Key), byo-key (appraise_items: the caller's own Janice key in X-Janice-Key,
-//     used for that request only and never logged or stored) or disabled. The same
-//     policy decides the REST tool endpoint and the MCP tool list per request.
+//     X-API-Key) or disabled; appraise_items also takes the caller's own Janice key in
+//     X-Janice-Key (optional; used for that request only, never stored or logged). The
+//     same policy decides the REST tool endpoint and the MCP tool list per request.
 //   - The tool API answers a JSON envelope (Config.ToolFormat), except where a
 //     legacy mount asks for the bare text.
 //   - Optional machine-readable surfaces, all generated from the same route table and
@@ -129,11 +129,11 @@ type Limits struct {
 	// MCP counts every request to the MCP endpoint (a session is a handful of requests
 	// plus one per tool call).
 	MCP Rate
-	// UpstreamTool is the fair-use budget per caller of the tools that read live ESI data
-	// (catalog.Tool.Upstream), REST and MCP together; build the limiter that enforces it
+	// UpstreamTool is the fair-use budget per caller of the tools that read a live upstream (ESI
+	// or EvE-Scout; catalog.Tool.Upstream), one budget across all of them, REST and MCP together; build the limiter that enforces it
 	// with NewUpstreamLimiter(limits.UpstreamTool, ...) and pass it as Config.Upstream and
 	// to the MCP handler. It is stated in the generated documents. KeyedMax is never a
-	// multiple of Max: it protects the shared ESI budget, so it is set explicitly.
+	// multiple of Max: it protects the live upstreams, so it is set explicitly.
 	UpstreamTool Rate
 	// Docs covers the description routes (OpenAPI, llms.txt).
 	Docs Rate
@@ -152,8 +152,9 @@ func DefaultLimits() Limits {
 		Tool:        Rate{Max: 10, KeyedMax: 60, Window: time.Minute},  // raw tools, internet-facing only
 		MCP:         Rate{Max: 20, KeyedMax: 120, Window: time.Minute}, // handshake (3 requests) + tool calls
 		Docs:        Rate{Max: 60, Window: time.Minute},                // static bytes, but anonymous
-		// Live ESI reads share one IP-level ESI budget for the whole project, so each caller
-		// gets a fraction of the route limit.
+		// Live upstream reads (ESI, EvE-Scout) share one per-caller budget across all live tools,
+		// and ESI's error budget is shared by the whole project, so each caller gets a fraction
+		// of the route limit.
 		UpstreamTool: Rate{Max: 5, KeyedMax: 10, Window: time.Minute},
 	}
 }
@@ -186,9 +187,9 @@ const (
 	ToolAPIOff ToolAPIMode = iota
 	// ToolAPIPublic registers the route for an internet-facing service: the Tool
 	// rate limit applies and the tool tiers are enforced (catalog.Tier): keyed tools
-	// need an API key (401 api_key_required / invalid_api_key), appraise_items needs
-	// the caller's own Janice key in X-Janice-Key (400 janice_key_required), disabled
-	// tools answer 403 tool_disabled. The project's Janice key is never used.
+	// need an API key (401 api_key_required / invalid_api_key), disabled tools answer
+	// 403 tool_disabled. appraise_items uses the caller's X-Janice-Key when sent; the
+	// project's Janice key is never used.
 	ToolAPIPublic
 	// ToolAPILoopback registers the route with no limit and no tiers, for a
 	// process that only serves its own user (the desktop app).
@@ -244,7 +245,7 @@ type Config struct {
 	// KeyedLimitFactor multiplies the route limits (Max) of an authenticated caller, who
 	// also gets buckets of its own; below 2 the limits are unchanged. A route with an
 	// explicit Rate.KeyedMax uses that instead, and UpstreamTool is never multiplied: it
-	// protects the shared ESI budget, whoever calls.
+	// protects the live upstreams, whoever calls.
 	KeyedLimitFactor int
 
 	// AnonDailyCap is the number of requests a client without an API key may make per UTC
@@ -285,7 +286,7 @@ type Config struct {
 	// ToolAPI selects the raw tool endpoint mode; zero is off.
 	ToolAPI ToolAPIMode
 
-	// Upstream limits the tools that read live ESI data (ToolAPIPublic only; share the same
+	// Upstream limits the tools that read a live upstream (ToolAPIPublic only; share the same
 	// *UpstreamLimiter with the MCP handler so REST and MCP spend one budget). Nil means no
 	// extra limit.
 	Upstream *UpstreamLimiter

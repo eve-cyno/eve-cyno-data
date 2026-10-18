@@ -2,6 +2,7 @@ package dataapi
 
 import (
 	"encoding/json"
+	"html/template"
 	"io/fs"
 	"regexp"
 	"strings"
@@ -37,7 +38,7 @@ func TestEveryOfferedToolHasAnExample(t *testing.T) {
 		require.NotEmpty(t, fx.Prompt, tl.Name)
 
 		if tl.Tier != catalog.TierPublic {
-			// a keyed or byo-key answer cannot be recorded here: request only, with a note
+			// a keyed answer cannot be recorded here: request only, with a note
 			require.Empty(t, fx.Response, "%s: no response is recorded for a credentialed tool", tl.Name)
 			require.NotEmpty(t, fx.Note, tl.Name)
 			continue
@@ -70,6 +71,28 @@ func TestEveryOfferedToolHasAnExample(t *testing.T) {
 		tl, ok := catalog.Lookup(name)
 		require.True(t, ok && tl.Tier.Offered(), "portal/examples/%s is not an offered tool", e.Name())
 	}
+}
+
+// Every tool that reads a live upstream has a live kind the docs describe (badge, callout and
+// access-page line), so a new upstream cannot ship without its copy.
+func TestLiveKind_CoversEveryUpstreamTool(t *testing.T) {
+	kinds := map[string]int{}
+	for _, tl := range catalog.Tools() {
+		k := liveKind(tl)
+		require.Equal(t, tl.Upstream, k != "", "%s: Upstream %v but live kind %q", tl.Name, tl.Upstream, k)
+		require.Equal(t, tl.Upstream, liveLabel(k) != "", tl.Name)
+		kinds[k]++
+	}
+	require.Positive(t, kinds[liveESI])
+	require.Positive(t, kinds[liveEveScout])
+	require.Positive(t, kinds[liveOptional])
+}
+
+func TestCodeList_JoinsWithTheConjunction(t *testing.T) {
+	require.Equal(t, template.HTML(""), codeList(nil, "or"))
+	require.Equal(t, template.HTML("<code>a</code>"), codeList([]string{"a"}, "or"))
+	require.Equal(t, template.HTML("<code>a</code> or <code>b</code>"), codeList([]string{"a", "b"}, "or"))
+	require.Equal(t, template.HTML("<code>a</code>, <code>b</code> and <code>c</code>"), codeList([]string{"a", "b", "c"}, "and"))
 }
 
 func TestInlineJSON_KeepsOrderAndSpacing(t *testing.T) {

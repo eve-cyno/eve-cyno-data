@@ -10,23 +10,32 @@ import (
 // RequiredColumns is the single source of truth for the SDE columns the readers in
 // this package depend on, per table. The readers swallow query errors (a missing
 // column makes GetEffectModifiers return nil, GetAttributeMeta a zero value,
-// GetDogma drop mass/volume/capacity), so a schema that lacks one of these degrades
-// silently: no skill/ship modifiers reach the dogma engine, no stacking penalties.
+// GetDogma drop mass/volume/capacity, TypeBasics loses the type description, PortionSize
+// the portion size and IsMarketTradable the market group, the system index loses its celestial
+// counts and wormhole classes (mapDenormalize, mapLocationWormholeClasses) and the jump index
+// its positions (mapSolarSystems x/y/z)), so a schema that lacks one of these degrades silently: no
+// skill/ship modifiers reach the dogma engine, no stacking penalties.
 //
 // Two checks consume it: the SDE builder's publish gate in core/sde/build (a build
 // missing a column never replaces the live file) and the open-time check in openHandle
 // (an already-deployed file missing one is reported at ERROR).
 //
 // Keep it in step with the CREATE TABLE statements in
-// core/sde/build/builder.go and with the queries in effects.go / dogma.go.
+// core/sde/build/builder.go and with the queries in effects.go, dogma.go, typebasics.go,
+// industry.go, systems.go and jumps.go.
 var RequiredColumns = map[string][]string{
-	"invTypes":          {"typeID", "groupID", "typeName", "published", "mass", "volume", "capacity"},
+	"invTypes":          {"typeID", "groupID", "typeName", "description", "published", "mass", "volume", "capacity", "portionSize", "marketGroupID"},
 	"dgmEffects":        {"effectID", "effectName", "effectCategory", "modifierInfo"},
 	"dgmAttributeTypes": {"attributeID", "attributeName", "defaultValue", "stackable", "highIsGood"},
 	// The Alpha clone skill caps (AlphaCloneSkills). They are loaded by the generic
 	// phase of the build, whose failures are non-fatal, so the gate must insist on them.
 	"chrCloneGrades":      {"cloneGradeID", "name"},
 	"chrCloneGradeSkills": {"cloneGradeID", "typeID", "level"},
+	// The system index (FindSystems): celestial counts and wormhole classes.
+	"mapDenormalize":             {"solarSystemID", "groupID", "typeID"},
+	"mapLocationWormholeClasses": {"locationID", "wormholeClassID"},
+	// The jump planner: light-year distances.
+	"mapSolarSystems": {"solarSystemID", "regionID", "security", "x", "y", "z"},
 }
 
 // MissingRequiredColumns returns every "table.column" from RequiredColumns that db
@@ -81,6 +90,6 @@ func logMissingRequiredColumns(db *sql.DB, path string) {
 	if len(missing) == 0 {
 		return
 	}
-	slog.Error("sde: file lacks columns the readers need; dogma modifiers, stacking, mass/volume/capacity degrade silently - rebuild it (go -C ingest run ./cmd/ingest sde)",
+	slog.Error("sde: file lacks columns the readers need; dogma modifiers, stacking, mass/volume/capacity, type descriptions and market groups, and the map and jump readers degrade silently - rebuild it (go -C ingest run ./cmd/ingest sde)",
 		"path", path, "missing", missing)
 }

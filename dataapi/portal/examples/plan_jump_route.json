@@ -1,0 +1,123 @@
+{
+  "tool": "plan_jump_route",
+  "request": {
+    "origin": "Amamake",
+    "destination": "1DQ1-A",
+    "ship": "Rhea"
+  },
+  "prompt": "Plan a Rhea jump-freighter route from Amamake to 1DQ1-A.",
+  "recorded": "2026-10-18",
+  "trimmed": false,
+  "response": {
+    "tool": "plan_jump_route",
+    "version": "sha-15fb840",
+    "result": {
+      "text": "Jump route Amamake → 1DQ1-A by Rhea (Jump Freighter): 5 jumps, 44.416 ly.\nRange 10.00 ly (Jump Drive Calibration 5); fuel 2,500 Nitrogen Isotopes per ly (Jump Fuel Conservation 5, Jump Freighters 5).\n  0. Heimatar / Amamake +0.4 lowsec · 20 NPC stations · start\n  1. The Bleak Lands / Ayeroilen +0.4 lowsec · 2 NPC stations · 7.121 ly · 8 gate jumps · 17,803 Nitrogen Isotopes\n  2. Kor-Azor / Ami +0.4 lowsec · 6 NPC stations · 9.700 ly · 15 gate jumps · 24,251 Nitrogen Isotopes\n  3. Khanid / Tegheon +0.4 lowsec · 9.765 ly · 11 gate jumps · 24,412 Nitrogen Isotopes\n  4. Querious / T8T-RA +0.0 nullsec · 8.173 ly · 16 gate jumps · 20,434 Nitrogen Isotopes\n  5. Delve / 1DQ1-A -0.4 nullsec · 9.656 ly · 12 gate jumps · 24,140 Nitrogen Isotopes\nTotal: 5 jumps, 44.416 ly, 111,040 Nitrogen Isotopes (3,331 m³).",
+      "data": {
+        "origin": "Amamake",
+        "origin_id": 30002537,
+        "destination": "1DQ1-A",
+        "destination_id": 30004759,
+        "waypoints": [],
+        "ship": "Rhea",
+        "ship_group": "Jump Freighter",
+        "skills": {
+          "jump_drive_calibration": 5,
+          "jump_fuel_conservation": 5,
+          "jump_freighters": 5
+        },
+        "range_ly": 10,
+        "fuel_type": "Nitrogen Isotopes",
+        "fuel_per_ly": 2500,
+        "jumps": 5,
+        "total_ly": 44.416,
+        "total_fuel": 111040,
+        "fuel_volume_m3": 3331.2,
+        "can_bridge": false,
+        "can_conduit": false,
+        "prefer_stations": false,
+        "avoid": [],
+        "avoid_regions": [],
+        "hops": [
+          {
+            "n": 1,
+            "system": "Ayeroilen",
+            "system_id": 30003093,
+            "region": "The Bleak Lands",
+            "security": 0.446568,
+            "sec": "+0.4",
+            "class": "lowsec",
+            "npc_stations": 2,
+            "ly": 7.121,
+            "gate_jumps": 8,
+            "fuel": 17803,
+            "waypoint": false
+          },
+          {
+            "n": 2,
+            "system": "Ami",
+            "system_id": 30005035,
+            "region": "Kor-Azor",
+            "security": 0.438171,
+            "sec": "+0.4",
+            "class": "lowsec",
+            "npc_stations": 6,
+            "ly": 9.7,
+            "gate_jumps": 15,
+            "fuel": 24251,
+            "waypoint": false
+          },
+          {
+            "n": 3,
+            "system": "Tegheon",
+            "system_id": 30003907,
+            "region": "Khanid",
+            "security": 0.413441,
+            "sec": "+0.4",
+            "class": "lowsec",
+            "npc_stations": 0,
+            "ly": 9.765,
+            "gate_jumps": 11,
+            "fuel": 24412,
+            "waypoint": false
+          },
+          {
+            "n": 4,
+            "system": "T8T-RA",
+            "system_id": 30003966,
+            "region": "Querious",
+            "security": -0.00699,
+            "sec": "+0.0",
+            "class": "nullsec",
+            "npc_stations": 0,
+            "ly": 8.173,
+            "gate_jumps": 16,
+            "fuel": 20434,
+            "waypoint": false
+          },
+          {
+            "n": 5,
+            "system": "1DQ1-A",
+            "system_id": 30004759,
+            "region": "Delve",
+            "security": -0.385782,
+            "sec": "-0.4",
+            "class": "nullsec",
+            "npc_stations": 0,
+            "ly": 9.656,
+            "gate_jumps": 12,
+            "fuel": 24140,
+            "waypoint": false
+          }
+        ]
+      }
+    },
+    "attribution": [
+      {
+        "name": "EVE Static Data Export (via Fuzzwork)",
+        "url": "https://www.fuzzwork.co.uk/dump/",
+        "license": "CCP game data under the EVE Developer License Agreement; converted by Fuzzwork Enterprises"
+      }
+    ]
+  }
+}

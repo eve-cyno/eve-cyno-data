@@ -22,7 +22,9 @@ const (
 	FrankfurterBase = "https://api.frankfurter.dev/v2"
 	WarBeaconBase   = "https://warbeacon.net/api"
 	EveToolsBase    = "https://br.evetools.org/newapi"
-	ForgeRegion     = 10000002
+	// EveScoutBase is EvE-Scout's public API (live Thera and Turnur connections).
+	EveScoutBase = "https://api.eve-scout.com/v2"
+	ForgeRegion  = 10000002
 )
 
 const (
@@ -36,7 +38,7 @@ const (
 // Client wraps http.Client with a pluggable transport (real or cassette).
 //
 // ESI traffic goes through ESI (core/esi); HTTP + Throttle serve the other upstreams
-// (Janice, Frankfurter, zKillboard, WarBeacon, br.evetools.org).
+// (Janice, Frankfurter, zKillboard, WarBeacon, br.evetools.org, EvE-Scout).
 type Client struct {
 	HTTP     *http.Client
 	Throttle *Throttle
@@ -46,6 +48,13 @@ type Client struct {
 	UserAgent string
 	// brCache keeps br.evetools.org responses for a few minutes (zero value is ready).
 	brCache responseCache
+	// prices is the day-long copy of ESI's /markets/prices behind the keyless appraisal
+	// (zero value is ready).
+	prices esiPriceBook
+	// thera is the short-lived copy of EvE-Scout's signature list (zero value is ready).
+	thera theraBook
+	// names caches /universe/names answers (alliance and corporation names; zero value is ready).
+	names idNameCache
 
 	// ESI is the shared ESI client. Nil means "build one from HTTP on first use", so a
 	// Client literal with only HTTP and Throttle still works.

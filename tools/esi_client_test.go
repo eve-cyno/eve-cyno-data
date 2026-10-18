@@ -109,7 +109,7 @@ func TestMarketPriceAggregatesPagesAndReusesThemUntilTheyExpire(t *testing.T) {
 	want := "Market data (The Forge / Jita) — type_id=34:\n" +
 		"Best sell: 999.25 ISK  (3 orders)\n" +
 		"Best buy:  950.00 ISK  (2 orders)"
-	got, _, err := getMarketPrice(context.Background(), c, nil, 34)
+	got, _, err := getMarketPrice(context.Background(), c, nil, 34, "")
 	require.NoError(t, err)
 	require.Equal(t, want, got)
 
@@ -123,13 +123,13 @@ func TestMarketPriceAggregatesPagesAndReusesThemUntilTheyExpire(t *testing.T) {
 	}
 
 	// The 5-minute price cache of the old code is the ESI Expires cache now: no request.
-	again, _, err := getMarketPrice(context.Background(), c, nil, 34)
+	again, _, err := getMarketPrice(context.Background(), c, nil, 34, "")
 	require.NoError(t, err)
 	require.Equal(t, want, again)
 	require.Len(t, f.requests(), 2)
 
 	// A different type is a different resource.
-	_, _, err = getMarketPrice(context.Background(), c, nil, 35)
+	_, _, err = getMarketPrice(context.Background(), c, nil, 35, "")
 	require.NoError(t, err)
 	require.Len(t, f.requests(), 4)
 }
@@ -170,7 +170,7 @@ func TestMarketPriceFailureMessages(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			c, _ := newFakeESIClient(t, tc.handler)
-			got, _, err := getMarketPrice(context.Background(), c, nil, 34)
+			got, _, err := getMarketPrice(context.Background(), c, nil, 34, "")
 			require.NoError(t, err)
 			require.Equal(t, tc.want, got)
 		})
@@ -179,7 +179,7 @@ func TestMarketPriceFailureMessages(t *testing.T) {
 	t.Run("transport failure", func(t *testing.T) {
 		c, f := newFakeESIClient(t, func(w http.ResponseWriter, r *http.Request, rec esiRec) {})
 		f.srv.Close()
-		got, _, err := getMarketPrice(context.Background(), c, nil, 34)
+		got, _, err := getMarketPrice(context.Background(), c, nil, 34, "")
 		require.NoError(t, err)
 		require.Equal(t, "ISK price unavailable for type_id=34 — ESI request failed.", got)
 	})
@@ -514,7 +514,7 @@ func TestMarketPricePLEXReadsGlobalPLEXMarket(t *testing.T) {
 		writeJSON(w, 200, `[{"price":4911000,"is_buy_order":false},{"price":4800000,"is_buy_order":true}]`, nil)
 	})
 
-	out, price, err := getMarketPrice(context.Background(), c, nil, 44992)
+	out, price, err := getMarketPrice(context.Background(), c, nil, 44992, "")
 	require.NoError(t, err)
 	require.Equal(t, fmt.Sprintf("/markets/%d/orders", PLEXRegion), f.requests()[0].Path)
 	require.Contains(t, out, "Market data (Global PLEX market) — type_id=44992:")
@@ -523,7 +523,7 @@ func TestMarketPricePLEXReadsGlobalPLEXMarket(t *testing.T) {
 	require.Equal(t, "Global PLEX market", price.Market)
 
 	// Every other item still reads The Forge.
-	_, _, err = getMarketPrice(context.Background(), c, nil, 34)
+	_, _, err = getMarketPrice(context.Background(), c, nil, 34, "")
 	require.NoError(t, err)
 	require.Equal(t, fmt.Sprintf("/markets/%d/orders", ForgeRegion), f.requests()[1].Path)
 }

@@ -6,14 +6,15 @@ Machine-readable description: [/v1/openapi.yaml](/v1/openapi.yaml) (OpenAPI 3.1;
 
 ## Conventions
 
-- Errors are JSON, always: `{"error":{"code":"...","message":"..."}}`. Codes: `not_found`, `method_not_allowed`, `invalid_request`, `payload_too_large`, `rate_limited`, `daily_quota_exceeded`, `unavailable`, `upstream_error`, `upstream_busy`, `unknown_tool`, `tool_disabled`, `api_key_required`, `invalid_api_key`, `key_not_permitted`, `janice_key_required`, `invalid_arguments`, `timeout`, `internal_error`.
+- Errors are JSON, always: `{"error":{"code":"...","message":"..."}}`. Codes: `not_found`, `method_not_allowed`, `invalid_request`, `payload_too_large`, `rate_limited`, `daily_quota_exceeded`, `unavailable`, `upstream_error`, `upstream_busy`, `unknown_tool`, `tool_disabled`, `api_key_required`, `invalid_api_key`, `key_not_permitted`, `invalid_arguments`, `timeout`, `internal_error`.
 - Every response carries `X-Request-ID`: your value when it is a token of 1-64 characters from `[A-Za-z0-9._-]`, otherwise a generated one.
 - Requests are rate limited per caller (sliding window): per API key when one is sent, otherwise per client IP. A refused request is `429` with `Retry-After`.
+- One call is one request against every limit, however long its list arguments; each list argument has its own cap (see the tool).
 - Without an API key the API is for trying it out: 200 requests per UTC day per client (counted per client IP; the documentation routes are not counted) and the lower per-minute limits stated on the operations. Over the day's budget a client gets `429` `daily_quota_exceeded` with `Retry-After` set to the seconds until 00:00 UTC. A free API key is for real use.
 - An API key raises the per-minute budgets: every operation states its limit without a key and with one, counted in the key's own window. The live-data tools keep a lower limit than the route.
 - A new API key has a daily cap of 10000 requests per UTC day by default (a cap can be changed per key, 0 meaning none). Over its cap a key gets `429` `daily_quota_exceeded` with `Retry-After` set to the seconds until 00:00 UTC.
 - Request bodies are capped: 256 KiB on the fit routes, 64 KiB on the tool and MCP endpoints (`413`).
-- Tool tiers: each tool is *public* (no key), *keyed* (an API key), *byo-key* (your own Janice key) or *disabled*. Public: `get_market_price`, `get_type_info`, `search_item_by_name`, `get_ship_stats`, `get_ship_bonuses`, `find_canonical_module`, `get_hull_facts`, `get_fits`, `list_fits`, `validate_fitting`, `compute_fit_stats`, `get_production_chain`, `get_jumps_between`, `get_systems_in_region`, `get_npc_stations`, `get_reprocessing_yield`, `get_required_skills`, `get_sovereignty`, `get_system_activity`. Keyed (send the key as `Authorization: Bearer <key>` or `X-API-Key`; `401 api_key_required` without one, `401 invalid_api_key` for a key that is not valid, on every tool): `analyze_battle`. Byo-key (the `X-Janice-Key` request header, used for that request only and never logged or stored; `400 janice_key_required` without it): `appraise_items`. Disabled tools are not offered on this service (`403 tool_disabled` over REST, absent from the MCP tool list).
+- Tool tiers: each tool is *public* (no key), *keyed* (an API key) or *disabled*. Public: `get_market_price`, `get_type_info`, `search_item_by_name`, `get_ship_stats`, `get_ship_bonuses`, `find_canonical_module`, `get_hull_facts`, `get_fits`, `list_fits`, `validate_fitting`, `compute_fit_stats`, `appraise_items`, `get_production_chain`, `get_jumps_between`, `get_jump_distances`, `plan_jump_route`, `get_systems_in_region`, `get_npc_stations`, `get_reprocessing_yield`, `get_required_skills`, `get_average_prices`, `get_market_history`, `get_sovereignty`, `get_system_activity`, `find_systems`, `get_system_info`, `get_thera_connections`. Keyed (send the key as `Authorization: Bearer <key>` or `X-API-Key`; `401 api_key_required` without one, `401 invalid_api_key` for a key that is not valid, on every tool): `analyze_battle`. Optional: your own Janice key in the `X-Janice-Key` request header (used for that request only, never logged or stored) turns `appraise_items` into a Janice appraisal; without it the answer is an estimate from ESI average prices. Disabled tools are not offered on this service (`403 tool_disabled` over REST, absent from the MCP tool list).
 
 ## Endpoints
 
@@ -129,21 +130,22 @@ Response `200`: The OpenAPI document.
 
 ## Tools
 
-Tools are listed public first, then keyed, then byo-key; each says how to authenticate.
+Tools are listed public first, then keyed; each says how to authenticate.
 
 The same tools are MCP tools of the same name at `/v1/mcp`; over MCP, `content[0]` is `result.text`, `structuredContent` is `result.data` and `_meta` carries the attribution.
 
 ### get_market_price
 
-Get current market prices for an EVE Online item in The Forge region (Jita hub). Returns best sell price, best buy price, and order counts.
+Get current market prices for an EVE Online item in The Forge region (Jita hub). Returns best sell price, best buy price, and order counts. Set hub (jita, amarr, dodixie, rens, hek) for the orders at that trade hub's main station; without hub the answer covers the whole region of The Forge.
 
 - Call: `POST /v1/tool/get_market_price` or MCP tool `get_market_price`
 - Access: public. No key needed.
-- Live ESI data: Reads live public data from EVE's ESI through a shared cache that follows ESI's `Expires`. Its own fair-use limit is 5 calls per minute per caller without an API key and 10 with one (REST and MCP together), on top of the route limit. When the shared ESI budget is nearly spent the call is refused with `503 upstream_busy` (MCP: an error result starting `upstream_busy`) and `Retry-After`; retry later.
+- Live ESI data: Reads live public data from EVE's ESI through a shared cache that follows ESI's `Expires`. All live-upstream calls share one fair-use limit of 5 calls per minute per caller without an API key and 10 with one (REST and MCP together, counted across every live tool), on top of the route limit. When the shared ESI budget is nearly spent the call is refused with `503 upstream_busy` (MCP: an error result starting `upstream_busy`) and `Retry-After`; retry later.
 - Arguments:
   - `type_id` (integer, required): The EVE type ID of the item (e.g. 34 for Tritanium, 44992 for PLEX)
+  - `hub` (string): Trade hub whose main station's orders to read, e.g. 'amarr'. Omit for the whole region of The Forge. Ignored for PLEX. One of: jita, amarr, dodixie, rens, hek.
   - `type_name` (string): Human-readable item name, for display only
-- Typed result (`result.data`): MarketPrice with fields `type_id`, `region_id`, `market`, `best_sell_isk`, `sell_orders`, `best_buy_isk`, `buy_orders`
+- Typed result (`result.data`): MarketPrice with fields `type_id`, `region_id`, `market`, `hub`, `best_sell_isk`, `sell_orders`, `best_buy_isk`, `buy_orders`
 - Sources: ESI (EVE Swagger Interface)
 
 ### get_type_info
@@ -152,11 +154,11 @@ Get information about an EVE Online item: name, description, volume, mass, group
 
 - Call: `POST /v1/tool/get_type_info` or MCP tool `get_type_info`
 - Access: public. No key needed.
-- Live ESI data: Reads live public data from EVE's ESI through a shared cache that follows ESI's `Expires`. Its own fair-use limit is 5 calls per minute per caller without an API key and 10 with one (REST and MCP together), on top of the route limit. When the shared ESI budget is nearly spent the call is refused with `503 upstream_busy` (MCP: an error result starting `upstream_busy`) and `Retry-After`; retry later.
+- Live ESI data: Reads live public data from EVE's ESI through a shared cache that follows ESI's `Expires`. All live-upstream calls share one fair-use limit of 5 calls per minute per caller without an API key and 10 with one (REST and MCP together, counted across every live tool), on top of the route limit. When the shared ESI budget is nearly spent the call is refused with `503 upstream_busy` (MCP: an error result starting `upstream_busy`) and `Retry-After`; retry later.
 - Arguments:
   - `type_id` (integer, required): The EVE type ID
 - Typed result (`result.data`): TypeInfo with fields `type_id`, `name`, `description`, `volume_m3`, `mass_kg`, `group_id`
-- Sources: ESI (EVE Swagger Interface)
+- Sources: EVE Static Data Export (via Fuzzwork); ESI (EVE Swagger Interface)
 
 ### search_item_by_name
 
@@ -216,7 +218,7 @@ Authoritative SDE snapshot of a hull's fitting envelope — slot/hardpoint count
 
 ### get_fits
 
-Retrieve community ship fits VERBATIM from the indexed fit database (EVE Workbench + Abysstracker + gustavmannfred.streamlit.app + caldarijoans.streamlit.app, ~8150 fits). Use this FIRST whenever the user asks for popular / community / top / proven / 'most-used' / meta / 'best' / Gustav's / CaldariJoans' fits — never invent a fit when this tool can answer. Returns the raw EFT text (header + modules + drones + ammo) and the source URL for each match. Filter by ship_name (exact), activity (pvp / pve / hauler / exploration / mining / logistics), context (wh, abyss, abyss-electrical / firestorm / exotic / gamma / dark, abyss-t1..t6, ratting, solo), cost_class (cheap < 50M / mid 50-500M / blingy > 500M ISK), alpha_clone (true for Alpha-skill-friendly), combat_role (solo / fleet / elite-flown — zKillboard only). If 0 matches, returns 'NO FITS FOUND' — follow the STEP decision tree: try ONE retry with the most restrictive filter dropped, then proceed to STEP 2 and generate a theorycrafted fit from game knowledge. NEVER tell the user this tool returned empty.
+Retrieve community ship fits from the indexed fit database, with author and source link for each. Returns the raw EFT text (header + modules + drones + ammo) and the source URL for each match. Filter by ship_name (exact), activity (pvp / pve / hauler / exploration / mining / logistics), context (wh, abyss, abyss-electrical / firestorm / exotic / gamma / dark, abyss-t1..t6, ratting, solo), cost_class (cheap < 50M / mid 50-500M / blingy > 500M ISK), alpha_clone (true for Alpha-skill-friendly), combat_role (solo / fleet — zKillboard only), source (workbench / abysstracker / gustavmannfred / caldarijoans: restrict to one source), limit (default 5, at most 10). If nothing matches, the answer says 'NO FITS FOUND'; dropping the most restrictive filter may find some.
 
 - Call: `POST /v1/tool/get_fits` or MCP tool `get_fits`
 - Access: public. No key needed.
@@ -284,14 +286,15 @@ Compute the real stats of an EVE Online fit from its EFT text with the dogma eng
 
 ### appraise_items
 
-Appraise a list of EVE Online items using Janice. Returns total buy/sell/split values in ISK and a link to the full appraisal.
+Appraise a list of EVE Online items and return the total ISK value. Without a Janice key the answer is an estimate from EVE's average prices (ESI /markets/prices, refreshed daily), not live Jita buy or sell prices. With a Janice key it is a Janice appraisal: Jita buy, sell and split totals and a link to the full appraisal. The answer names its price source: pass it on, and call an estimate an estimate.
 
 - Call: `POST /v1/tool/appraise_items` or MCP tool `appraise_items`
-- Access: byo-key. Send your own Janice API key in the `X-Janice-Key` header (REST and MCP over HTTP); `400 janice_key_required` over REST, and an error result naming the header over MCP, without it. The key is used for that request only and never logged or stored.
+- Access: public. No key needed.
+- Optional: your own Janice API key in the `X-Janice-Key` header (REST and MCP over HTTP) makes it a Janice appraisal instead of the ESI estimate; it is used for that request only and never logged or stored.
 - Arguments:
-  - `items` (string, required): Items in multi-buy or EFT format, one per line with quantity, e.g. 'Tritanium x1000'
+  - `items` (string, required): Items one per line with a quantity: multi-buy ('Tritanium x1000' or 'Tritanium 1000'), an inventory or contract copy, or an EFT fit
 - Typed result: none; the answer is `result.text`
-- Sources: Janice
+- Sources: ESI (EVE Swagger Interface); EVE Static Data Export (via Fuzzwork); Janice
 
 ### get_production_chain
 
@@ -311,16 +314,54 @@ Compute the full material breakdown to manufacture an EVE Online item, recursive
 
 ### get_jumps_between
 
-Compute the number of jumps and the route between two EVE solar systems. Default route is shortest (any security). Set prefer_high_sec=true to prefer highsec-only paths (longer but safer).
+Compute the number of jumps and the route between two EVE solar systems. Default route is shortest (any security). Set prefer_high_sec=true to prefer highsec-only paths (longer but safer). Set detail='summary' for one line (jump count, lowest-security hop, highsec/lowsec/nullsec counts and the highsec-only alternative) instead of the hop list. avoid: systems never to route through (up to 20); via: systems to pass through in order (up to 5).
 
 - Call: `POST /v1/tool/get_jumps_between` or MCP tool `get_jumps_between`
 - Access: public. No key needed.
 - Arguments:
   - `from_system` (string, required): Origin solar system name, e.g. 'Jita'
   - `to_system` (string, required): Destination solar system name, e.g. 'Amarr'
+  - `avoid` (array of string): Systems never to route through (up to 20), e.g. ['Ahbazon']. The origin and destination are never avoided.
+  - `detail` (string): 'route' (default) lists every hop; 'summary' answers in one line. One of: route, summary.
   - `prefer_high_sec` (boolean): If true, route via highsec only (default false)
-- Typed result (`result.data`): Route with fields `from`, `to`, `prefer_high_sec`, `highsec_satisfied`, `jumps`, `systems`
+  - `via` (array of string): Systems to pass through, in order (up to 5), e.g. ['Dodixie']
+- Typed result (`result.data`): Route with fields `from`, `to`, `prefer_high_sec`, `highsec_satisfied`, `jumps`, `systems`, `hops_omitted`, `detail`, `via`, `avoid`, `lowest_security_hop`, `counts_by_class`, `highsec_only_jumps`
 - Sources: EVE Static Data Export (via Fuzzwork)
+
+### get_jump_distances
+
+Jump counts from one origin system to up to 200 other systems in one call (one search over the stargate graph). Use it to rank candidates by distance, e.g. 'which of these systems is nearest to C-N4OD'. One line per system, nearest first; unknown names and systems without a gate route (wormhole space) are listed separately. prefer_high_sec counts highsec-only routes where one exists.
+
+- Call: `POST /v1/tool/get_jump_distances` or MCP tool `get_jump_distances`
+- Access: public. No key needed.
+- Arguments:
+  - `origin` (string, required): Origin solar system name, e.g. 'C-N4OD'
+  - `systems` (array of string, required): Solar system names to measure, e.g. ['Elonaya','Uchomida','Actee']
+  - `avoid` (array of string): Systems never to pass through (up to 20), e.g. ['Ahbazon']; a target you also list here still gets its own count, but no route passes through it.
+  - `prefer_high_sec` (boolean): If true, count highsec-only routes where one exists (default false)
+- Typed result (`result.data`): JumpDistances with fields `origin`, `origin_id`, `prefer_high_sec`, `avoid`, `distances`, `unreachable`, `unresolved`
+- Sources: EVE Static Data Export (via Fuzzwork)
+
+### plan_jump_route
+
+Plan a jump-drive route like a capital pilot's jump planner, for a jump freighter, Rorqual, Black Ops, carrier, dreadnought, Lancer, FAX, supercarrier or titan (give the hull name), or 'Jump Bridge' for a chain of Ansiblex jump bridges (5 ly): the fewest jumps from origin to destination through optional waypoints, then the fewest light-years. Every hop ends where a cynosural field can be lit (lowsec or nullsec; never highsec, wormhole space, Pochven or Zarzakh); capitals cannot start in highsec. One line per hop: region, system, security, NPC stations, light-years, the gate jumps between the same two systems and the isotopes burned; then the totals (light-years, fuel and its m³). Skills default to level 5. Titans, Black Ops and the Rorqual can also bridge, and carriers, supercarriers, Black Ops and the Rorqual can conduit jump, over the same hops; that fuel is not counted. Example: {"origin":"Amamake","destination":"1DQ1-A","ship":"Rhea"}. avoid_incursions and live_info read live ESI data and count against the live-data limit; without them the route comes from the SDE alone.
+
+- Call: `POST /v1/tool/plan_jump_route` or MCP tool `plan_jump_route`
+- Access: public. No key needed.
+- Live ESI data: Calls with `avoid_incursions` or `live_info` read live public data from EVE's ESI through a shared cache that follows ESI's `Expires`; only those calls count against the fair-use limit below. All live-upstream calls share one fair-use limit of 5 calls per minute per caller without an API key and 10 with one (REST and MCP together, counted across every live tool), on top of the route limit. When the shared ESI budget is nearly spent the call is refused with `503 upstream_busy` (MCP: an error result starting `upstream_busy`) and `Retry-After`; retry later.
+- Arguments:
+  - `origin` (string, required): Start solar system name, e.g. 'Amamake'
+  - `destination` (string, required): Last stop, a solar system name, e.g. '1DQ1-A'
+  - `ship` (string, required): Hull name, e.g. 'Rhea', 'Rorqual', 'Avatar', 'Panther', or 'Jump Bridge' for Ansiblex jump bridges
+  - `avoid` (array of string): Systems no hop may end in (up to 20), e.g. ['Tegheon']
+  - `avoid_incursions` (boolean): Read the active incursions from ESI (live) and never end a hop in an infested system; incursions jam cynosural fields. Costs one live call.
+  - `avoid_regions` (array of string): Regions no hop may end in (up to 10), e.g. ["Khanid"]
+  - `live_info` (boolean): Add each hop system's sovereignty holder and last-hour jumps and kills from ESI (live). Costs one live call.
+  - `prefer_stations` (boolean): If true, among the routes with the fewest jumps prefer hops that end in systems with an NPC station (default false)
+  - `skills` (object): Skill levels 0-5 (default 5 each), e.g. {"jump_drive_calibration": 4}. Jump freighters also use jump_freighters.
+  - `waypoints` (array of string): Systems the route must stop at, in order (up to 5), e.g. ["Sahda"]
+- Typed result (`result.data`): JumpRoute with fields `origin`, `origin_id`, `destination`, `destination_id`, `waypoints`, `ship`, `ship_group`, `skills`, `range_ly`, `fuel_type`, `fuel_per_ly`, `jumps`, `total_ly`, `total_fuel`, `fuel_volume_m3`, `can_bridge`, `can_conduit`, `prefer_stations`, `avoid`, `avoid_regions`, `avoid_incursions`, `incursion_systems`, `live_info`, `live_unavailable`, `hops`
+- Sources: EVE Static Data Export (via Fuzzwork); ESI (EVE Swagger Interface)
 
 ### get_systems_in_region
 
@@ -354,7 +395,7 @@ Compute the materials produced by reprocessing an EVE item (ore, ice, salvage, m
 - Access: public. No key needed.
 - Arguments:
   - `item_name` (string, required): Item name, e.g. 'Veldspar', 'Mexallon'
-  - `quantity` (integer): Number of units to reprocess (default 1)
+  - `quantity` (integer): Number of units to reprocess (default: one batch, e.g. 100 for most ores)
   - `refining_efficiency_pct` (number): Combined skill+facility yield 0-100 (default 50)
 - Typed result: none; the answer is `result.text`
 - Sources: EVE Static Data Export (via Fuzzwork)
@@ -371,29 +412,111 @@ List the skills required to fly a ship or build an item. Use for 'what skills to
 - Typed result: none; the answer is `result.text`
 - Sources: EVE Static Data Export (via Fuzzwork)
 
+### get_average_prices
+
+EVE's average price for up to 200 items in one call, by name (names) or type ID (type_ids), from ESI /markets/prices (refreshed daily, one shared copy). It is an average of recent trades across New Eden, not live Jita buy or sell orders: say so when you quote it. Use get_market_price for the live order book of one item.
+
+- Call: `POST /v1/tool/get_average_prices` or MCP tool `get_average_prices`
+- Access: public. No key needed.
+- Arguments:
+  - `names` (array of string): Exact item names, e.g. ['Tritanium', 'PLEX', 'Gila']; up to 200 together with type_ids
+  - `type_ids` (array of integer): Item type IDs, e.g. [34, 44992]; up to 200 together with names
+- Typed result (`result.data`): AveragePrices with fields `as_of`, `source`, `prices`, `unresolved`
+- Sources: ESI (EVE Swagger Interface); EVE Static Data Export (via Fuzzwork)
+
+### get_market_history
+
+Daily market history of one item in one region from ESI (/markets/{region_id}/history), summarised: average, low, high and volume per day or per week over the last 1-90 days, and the change from the first to the last bucket. Name the item (item_name) or give type_id; pick a hub (jita, amarr, dodixie, rens, hek) or a region name (default The Forge). Use for 'is X trending up' or 'how much X trades per day'.
+
+- Call: `POST /v1/tool/get_market_history` or MCP tool `get_market_history`
+- Access: public. No key needed.
+- Live ESI data: Reads live public data from EVE's ESI through a shared cache that follows ESI's `Expires`. All live-upstream calls share one fair-use limit of 5 calls per minute per caller without an API key and 10 with one (REST and MCP together, counted across every live tool), on top of the route limit. When the shared ESI budget is nearly spent the call is refused with `503 upstream_busy` (MCP: an error result starting `upstream_busy`) and `Retry-After`; retry later.
+- Arguments:
+  - `bucket` (string): Size of one row: 'week' (ISO weeks, Monday to Sunday; default) or 'day'. One of: day, week.
+  - `days` (integer): Length of the window in days, 1 to 90 (default 30), ending at the newest day ESI has
+  - `hub` (string): Trade hub whose region to read, e.g. 'amarr'. Wins over region. Omit for The Forge. One of: jita, amarr, dodixie, rens, hek.
+  - `item_name` (string): Exact item name, e.g. 'PLEX' or 'Tritanium'. Use this or type_id.
+  - `region` (string): Region name, e.g. 'Domain' or 'Sinq Laison'. Default The Forge. PLEX always uses the global PLEX market.
+  - `type_id` (integer): The EVE type ID of the item (e.g. 34 for Tritanium). Use this or item_name.
+- Typed result (`result.data`): MarketHistory with fields `type_id`, `name`, `region_id`, `region`, `hub`, `days`, `window_end`, `bucket`, `buckets`, `summary`
+- Sources: ESI (EVE Swagger Interface); EVE Static Data Export (via Fuzzwork)
+
 ### get_sovereignty
 
-Get the alliance / corporation holding sovereignty over an EVE solar system. Live data from ESI. Use for 'who controls X' or 'sov holder of Y' questions.
+Get who holds sovereignty (alliance and corporation, or NPC faction) over EVE solar systems. Live data from ESI. Pass systems (up to 50 names) for one line per system with the holders' names; system_name (one system) is the older form and answers with ids only. Use for 'who controls X' or 'sov holder of Y' questions.
 
 - Call: `POST /v1/tool/get_sovereignty` or MCP tool `get_sovereignty`
 - Access: public. No key needed.
-- Live ESI data: Reads live public data from EVE's ESI through a shared cache that follows ESI's `Expires`. Its own fair-use limit is 5 calls per minute per caller without an API key and 10 with one (REST and MCP together), on top of the route limit. When the shared ESI budget is nearly spent the call is refused with `503 upstream_busy` (MCP: an error result starting `upstream_busy`) and `Retry-After`; retry later.
+- Live ESI data: Reads live public data from EVE's ESI through a shared cache that follows ESI's `Expires`. All live-upstream calls share one fair-use limit of 5 calls per minute per caller without an API key and 10 with one (REST and MCP together, counted across every live tool), on top of the route limit. When the shared ESI budget is nearly spent the call is refused with `503 upstream_busy` (MCP: an error result starting `upstream_busy`) and `Retry-After`; retry later.
 - Arguments:
-  - `system_name` (string, required): Solar system name, e.g. 'Saranen'
-- Typed result: none; the answer is `result.text`
+  - `system_name` (string): Solar system name, e.g. 'Saranen' (single system; the older form, answers ids only)
+  - `systems` (array of string): Up to 50 solar system names, e.g. ['1DQ1-A', 'Jita']: one line each, with the alliance and corporation names or the NPC faction
+- Typed result (`result.data`): SovereigntyList with fields `systems`, `unresolved`, `names_unavailable`
 - Sources: EVE Static Data Export (via Fuzzwork); ESI (EVE Swagger Interface)
 
 ### get_system_activity
 
-Get the ship, pod and NPC kills of a solar system in the last hour from ESI (jumps are not included). Use for 'how many kills in X recently', 'is system Y active', 'is it safe to undock'.
+Get the activity of EVE solar systems in the last hour from ESI. Pass systems (up to 50 names) for one line per system with jumps, ship kills, pod kills and NPC kills; system_name (one system) is the older form and answers kills only. Use for 'how busy is X', 'how many kills in Y recently', 'is it safe to undock'.
 
 - Call: `POST /v1/tool/get_system_activity` or MCP tool `get_system_activity`
 - Access: public. No key needed.
-- Live ESI data: Reads live public data from EVE's ESI through a shared cache that follows ESI's `Expires`. Its own fair-use limit is 5 calls per minute per caller without an API key and 10 with one (REST and MCP together), on top of the route limit. When the shared ESI budget is nearly spent the call is refused with `503 upstream_busy` (MCP: an error result starting `upstream_busy`) and `Retry-After`; retry later.
+- Live ESI data: Reads live public data from EVE's ESI through a shared cache that follows ESI's `Expires`. All live-upstream calls share one fair-use limit of 5 calls per minute per caller without an API key and 10 with one (REST and MCP together, counted across every live tool), on top of the route limit. When the shared ESI budget is nearly spent the call is refused with `503 upstream_busy` (MCP: an error result starting `upstream_busy`) and `Retry-After`; retry later.
 - Arguments:
-  - `system_name` (string, required): Solar system name, e.g. 'Tama'
-- Typed result: none; the answer is `result.text`
+  - `system_name` (string): Solar system name, e.g. 'Tama' (single system; kills only)
+  - `systems` (array of string): Up to 50 solar system names, e.g. ['1DQ1-A', 'Jita']: one line each, with jumps, ship kills, pod kills and NPC kills of the last hour
+- Typed result (`result.data`): ActivityList with fields `systems`, `unresolved`
 - Sources: EVE Static Data Export (via Fuzzwork); ESI (EVE Swagger Interface)
+
+### find_systems
+
+Find solar systems by filters and rank them: security band, region, constellation, faction, wormhole class, NPC station and its services, asteroid belts, planet types, ice belts (EVE University's list of highsec and lowsec ice systems) and distance from an origin (near). One line per system, up to 100 per call (page with offset), with the total. Example, the three nearest highsec Clear Icicle systems to C-N4OD: {"security":{"min":0.45},"ice_types":["Clear Icicle"],"near":{"origin":"C-N4OD"},"sort":"jumps","limit":3}. Set jump_range {origin, ship, jump_drive_calibration (default 5)} to keep the systems that ship can jump to from the origin (cyno-able: lowsec or nullsec, not wormhole space, Pochven or Zarzakh; 'Jump Bridge' = Ansiblex reach), with the light-years, sorted nearest first; e.g. the nearest lowsec NPC-station systems a Rorqual can reach from EC-P8R: {"jump_range":{"origin":"EC-P8R","ship":"Rorqual"},"security":{"min":0.1,"max":0.4},"has_npc_station":true,"limit":3}.
+
+- Call: `POST /v1/tool/find_systems` or MCP tool `find_systems`
+- Access: public. No key needed.
+- Arguments:
+  - `constellation` (string): Constellation name, e.g. 'Kimotoro'
+  - `faction` (string): Faction name, e.g. 'Caldari State'
+  - `has_ice_belt` (boolean): true for systems EVE University lists with ice belts, false for systems it does not list (nullsec ice systems are not covered)
+  - `has_npc_station` (boolean): true for systems with an NPC station, false for systems without
+  - `ice_types` (array of string): Ice types, e.g. ['Clear Icicle', 'Blue Ice']; a system matches when it has any of them; implies has_ice_belt
+  - `jump_range` (object): Keep the systems a ship can jump to from an origin, with the light-years, nearest first, e.g. {"origin":"EC-P8R","ship":"Rorqual"}.
+  - `limit` (integer): Systems per call (default 20, at most 100)
+  - `min_asteroid_belts` (integer): At least this many asteroid belts, e.g. 3
+  - `near` (object): Rank by gate jumps from an origin system and leave out systems with no gate route, e.g. {"origin":"C-N4OD","max_jumps":10}. Without max_jumps every reachable system is ranked.
+  - `offset` (integer): Systems to skip, to read the next page (default 0)
+  - `planet_types` (array of string): Planet types the system must have at least one of each, e.g. ['Lava', 'Gas']; an unknown name lists the valid ones
+  - `region` (string): Region name, e.g. 'The Forge'
+  - `security` (object): Security band as shown in game, e.g. 0.5 includes systems with true security 0.45-0.5: {"min":0.5} is highsec, {"max":0.4} is lowsec and below. Wormhole systems carry a security of about -1.0; filter them with wormhole_class (7, 8 and 9 are known-space highsec, lowsec and nullsec).
+  - `sort` (string): Order: jumps (needs near; the default with near), security (most secure first), name (the default) or ly (needs jump_range; the default with jump_range). One of: jumps, security, name, ly.
+  - `station_services` (array of string): Station services every match must offer, e.g. ['Reprocessing Plant', 'Factory']; an unknown name lists the valid ones
+  - `wormhole_class` (integer): Wormhole class: 1-6 for C1-C6, 7 highsec, 8 lowsec, 9 nullsec, 12 Thera, 13 shattered frigate holes, 14-18 Drifter, 25 Pochven
+- Typed result (`result.data`): SystemList with fields `total`, `offset`, `shown`, `sort`, `origin`, `systems`, `jump_range`
+- Sources: EVE Static Data Export (via Fuzzwork); EVE University Wiki (ice belt systems)
+
+### get_system_info
+
+Facts about up to 50 solar systems in one call: security, region, constellation, faction, wormhole class and effect, neighbouring systems (stargates), counts of asteroid belts, moons, planets by type and NPC stations, and the ice belt when EVE University lists one. One line per system.
+
+- Call: `POST /v1/tool/get_system_info` or MCP tool `get_system_info`
+- Access: public. No key needed.
+- Arguments:
+  - `systems` (array of string, required): Up to 50 solar system names, e.g. ['Jita', 'Erkinen']: one line each
+- Typed result (`result.data`): SystemInfoList with fields `systems`, `unresolved`, `not_enterable`
+- Sources: EVE Static Data Export (via Fuzzwork); EVE University Wiki (ice belt systems)
+
+### get_thera_connections
+
+Live wormhole connections from Thera and Turnur into known space and wormhole space, from EvE-Scout (Signal Cartel's public scanning data; credit them as EvE-Scout / Signal Cartel). One line per connection: the exit system with its security and region, wormhole type and largest ship size, hours left and both signature ids. Set near {origin, max_jumps} to keep the exits closest to a system, sorted by jumps. Connections change every few hours.
+
+- Call: `POST /v1/tool/get_thera_connections` or MCP tool `get_thera_connections`
+- Access: public. No key needed.
+- Live EvE-Scout data: Reads live public data from EvE-Scout (Signal Cartel) through a shared cache that follows its cache headers (about 5 minutes). All live-upstream calls share one fair-use limit of 5 calls per minute per caller without an API key and 10 with one (REST and MCP together, counted across every live tool), on top of the route limit.
+- Arguments:
+  - `hub` (string): Which hub's connections: 'thera', 'turnur' or 'all' (default). One of: thera, turnur, all.
+  - `limit` (integer): Most connections to list (1-50, default 20); the answer says how many more there are
+  - `near` (object): Keep the exits with a gate route to an origin system and sort them by jumps, e.g. {"origin":"Jita","max_jumps":10}. Exits with no gate route from the origin are left out (counted in the answer).
+- Typed result (`result.data`): TheraConnections with fields `as_of`, `hub`, `origin`, `total`, `shown`, `left_out`, `connections`
+- Sources: EvE-Scout / Signal Cartel; EVE Static Data Export (via Fuzzwork)
 
 ## MCP
 
@@ -422,3 +545,5 @@ Sources behind the tool answers:
 - WarBeacon <https://warbeacon.net/>: No licence published; one report per user-supplied URL
 - br.evetools.org <https://br.evetools.org/>: No licence published; one report per user-supplied URL
 - Janice <https://janice.e-351.com/>: Private API used with a key granted by its creator
+- EVE University Wiki (ice belt systems) <https://wiki.eveuniversity.org/Ice_harvesting>: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/); credit EVE University; the dataset stays CC BY-SA
+- EvE-Scout / Signal Cartel <https://www.eve-scout.com/>: Public API without published terms, used with attribution; live scanning data by Signal Cartel

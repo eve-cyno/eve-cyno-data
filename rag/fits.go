@@ -74,7 +74,7 @@ type FitHit struct {
 	// FitName is the label list_fits prints per row: the fit_name, or the name
 	// fitDisplayName derives for a point that has none. Never empty, never a doc_kind.
 	FitName string
-	// Attribution is the credit the hit must carry wherever it is shown (R3.6).
+	// Attribution is the credit the hit must carry wherever it is shown.
 	Attribution Attribution
 }
 

@@ -1,17 +1,40 @@
 {
   "tool": "get_system_activity",
   "request": {
-    "system_name": "Tama"
+    "systems": [
+      "Tama",
+      "Jita"
+    ]
   },
-  "prompt": "How active is Tama right now?",
-  "recorded": "2026-10-09",
+  "prompt": "How busy are Tama and Jita right now?",
+  "recorded": "2026-10-17",
   "trimmed": false,
   "response": {
     "tool": "get_system_activity",
-    "version": "sha-aa76146",
+    "version": "sha-0d59efe",
     "result": {
-      "text": "System activity in **Tama** (last hour):\n  Ship kills: 7 | Pod kills: 7 | NPC kills: 49",
-      "data": null
+      "text": "System activity, last hour (live ESI), 2 systems:\n  Tama: 201 jumps, 20 ship kills, 16 pod kills, 145 NPC kills\n  Jita: 3015 jumps, 21 ship kills, 23 pod kills, 120 NPC kills",
+      "data": {
+        "systems": [
+          {
+            "system": "Tama",
+            "system_id": 30002813,
+            "jumps": 201,
+            "ship_kills": 20,
+            "pod_kills": 16,
+            "npc_kills": 145
+          },
+          {
+            "system": "Jita",
+            "system_id": 30000142,
+            "jumps": 3015,
+            "ship_kills": 21,
+            "pod_kills": 23,
+            "npc_kills": 120
+          }
+        ],
+        "unresolved": []
+      }
     },
     "attribution": [
       {

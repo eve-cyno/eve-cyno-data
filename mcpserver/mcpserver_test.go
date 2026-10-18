@@ -79,9 +79,10 @@ func TestListTools_DefaultIsThePublicTier(t *testing.T) {
 	names := toolNames(t, cs)
 
 	require.Equal(t, registryNames(catalog.TierPublic), names)
-	for _, denied := range []string{"appraise_items", "analyze_battle", "convert_isk_to_real"} {
+	for _, denied := range []string{"analyze_battle", "convert_isk_to_real"} {
 		require.NotContains(t, names, denied)
 	}
+	require.Contains(t, names, "appraise_items")
 }
 
 func TestListTools_AllExposesEveryTool(t *testing.T) {
@@ -108,7 +109,7 @@ func TestListTools_DefinitionsComeFromTheRegistry(t *testing.T) {
 func TestCallTool_DeniedToolIsRefusedByDefault(t *testing.T) {
 	cs := connect(t, mcpserver.New(&tools.Deps{}, mcpserver.Options{}))
 
-	for _, name := range []string{"appraise_items", "analyze_battle", "convert_isk_to_real"} {
+	for _, name := range []string{"analyze_battle", "convert_isk_to_real"} {
 		_, err := cs.CallTool(t.Context(), &mcp.CallToolParams{Name: name, Arguments: map[string]any{}})
 		require.Error(t, err, name)
 		require.Contains(t, err.Error(), "unknown tool", name)
@@ -166,7 +167,7 @@ func TestHTTPHandler_StatelessJSON(t *testing.T) {
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = cs.Close() })
 
-	require.Equal(t, registryNames(catalog.TierPublic, catalog.TierBYOKey), toolNames(t, cs))
+	require.Equal(t, registryNames(catalog.TierPublic), toolNames(t, cs))
 
 	res, err := cs.CallTool(t.Context(), &mcp.CallToolParams{
 		Name:      "get_jumps_between",

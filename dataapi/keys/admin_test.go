@@ -189,7 +189,7 @@ func TestAdminCreateErrors(t *testing.T) {
 	require.Equal(t, 400, code)
 	require.Equal(t, "invalid_owner_name", errCode(t, body))
 
-	_, err := e.store.Block(context.Background(), "eve:9")
+	_, err := e.store.Block(context.Background(), "eve:9", "")
 	require.NoError(t, err)
 	code, _, body = e.do(t, "POST", "/admin/v1/keys", `{}`, user("eve:9"))
 	require.Equal(t, 403, code)
@@ -214,7 +214,7 @@ func TestAdminOpsListAndDelete(t *testing.T) {
 	require.NoError(t, err)
 	_, _, err = e.store.Create(ctx, "eve:6", "", "b")
 	require.NoError(t, err)
-	_, err = e.store.Block(ctx, "eve:6")
+	_, err = e.store.Block(ctx, "eve:6", "")
 	require.NoError(t, err)
 
 	code, hd, body := e.do(t, "GET", "/admin/v1/ops/keys", "", nil)
@@ -331,7 +331,7 @@ func TestAdminOpsIssue(t *testing.T) {
 	require.Equal(t, 400, code)
 	require.Equal(t, "invalid_body", errCode(t, body))
 
-	_, err = e.store.Block(context.Background(), "eve:2")
+	_, err = e.store.Block(context.Background(), "eve:2", "")
 	require.NoError(t, err)
 	code, _, body = e.do(t, "POST", "/admin/v1/ops/keys", `{"owner":"eve:2"}`, nil)
 	require.Equal(t, 403, code)
@@ -511,4 +511,14 @@ func TestAdminOpsUsageAll(t *testing.T) {
 		require.Equal(t, 400, code, q)
 		require.Equal(t, "invalid_days", errCode(t, body))
 	}
+}
+
+func TestAdminUnknownAccountOwnerIs404NoAccount(t *testing.T) {
+	e := newAdmin(t, keys.Options{}, nil)
+	code, _, body := e.do(t, "POST", "/admin/v1/keys", `{"name":"x"}`, user("acct:0000000000000000"))
+	require.Equal(t, 404, code, body)
+	require.Contains(t, body, `"no_account"`)
+	code, _, body = e.do(t, "POST", "/admin/v1/ops/keys", `{"owner":"acct:0000000000000000","name":"x"}`, nil)
+	require.Equal(t, 404, code, body)
+	require.Contains(t, body, `"no_account"`)
 }

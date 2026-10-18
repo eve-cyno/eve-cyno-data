@@ -1,6 +1,6 @@
 // Package catalog is the one tool registry the generated public surfaces read: the
-// OpenAPI document, llms.txt / llms-full.txt, the REST tool endpoint and the MCP server
-// (R3.3). It joins what core/tools already owns, split across three places, into one
+// OpenAPI document, llms.txt / llms-full.txt, the REST tool endpoint and the MCP server.
+// It joins what core/tools already owns, split across three places, into one
 // value per tool:
 //
 //   - tools/tool_schemas.json: the name, the description (written as a prompt for the
@@ -31,7 +31,8 @@ import (
 type Tool struct {
 	// Name is the tool name as called (also the last segment of POST /v1/tool/{name}).
 	Name string
-	// Description is the tool description from tool_schemas.json.
+	// Description is the tool description from tool_schemas.json, except where publicDescriptions
+	// replaces it with a text free of chat-loop instructions (the chat brain reads the schema text).
 	Description string
 	// Summary is a one-line, human-written description for indexes and lists (the
 	// Description is written as a prompt for the model). TestEveryOfferedToolHasASummary
@@ -48,15 +49,47 @@ type Tool struct {
 	// local user's own surfaces (the native loopback mount, the chat, cmd/mcp -all)
 	// ignore it and run everything.
 	Tier Tier
-	// Upstream is true when a call can spend the project's shared ESI budget (a cache miss
-	// reaches ESI). Public surfaces give such tools their own, stricter per-caller limit.
+	// Upstream is true when a call can read a live upstream (ESI, or EvE-Scout: a cache miss
+	// reaches it). Public surfaces give such tools one shared, stricter per-caller limit.
 	Upstream bool
+	// UpstreamName names the live upstream behind an Upstream tool: "ESI" or "EvE-Scout";
+	// empty for any other tool.
+	UpstreamName string
+	// UpstreamArgs lists the boolean arguments that make a call of an Upstream tool live; a call
+	// with none of them true answers from the SDE and spends no upstream budget. Empty = every call.
+	UpstreamArgs []string
+	// AcceptsJaniceKey is true for a tool that takes the caller's own Janice API key in
+	// HeaderJaniceKey (REST and MCP over HTTP): with one it answers through Janice, without
+	// one it still runs (appraise_items then estimates from ESI's average prices). The key is
+	// per request, never logged or stored, and a public surface never substitutes its own.
+	AcceptsJaniceKey bool
 	// Data is the typed result struct that tools.Result.Data carries for this tool (the
 	// "data" of the REST envelope, the structuredContent of an MCP result), or nil for a
 	// tool that has only the text answer. A call can still end text-only: an unknown id
 	// or a parse failure leaves Data null and says why in the text.
 	Data reflect.Type
 }
+
+// SpendsUpstream reports whether a call with args reads a live upstream, and so counts against the
+// per-caller live budget: the tool is an Upstream tool and either names no UpstreamArgs or one of
+// them is true in args.
+func (t Tool) SpendsUpstream(args map[string]any) bool {
+	if !t.Upstream {
+		return false
+	}
+	if len(t.UpstreamArgs) == 0 {
+		return true
+	}
+	for _, a := range t.UpstreamArgs {
+		if v, _ := args[a].(bool); v {
+			return true
+		}
+	}
+	return false
+}
+
+// LiveESI reports whether the tool's live upstream is ESI (the shared ESI error budget applies).
+func (t Tool) LiveESI() bool { return t.UpstreamName == "ESI" }
 
 // Tools returns every registered tool in tool_schemas.json order. The slice is the
 // caller's; the values it points into are shared (see Tool).
@@ -74,21 +107,42 @@ var registry = sync.OnceValue(func() []Tool {
 			continue
 		}
 		desc, _ := fn["description"].(string)
+		if pub, ok := publicDescriptions()[name]; ok {
+			desc = pub
+		}
 		params, _ := fn["parameters"].(map[string]any)
 		out = append(out, Tool{
-			Name:        name,
-			Description: desc,
-			Summary:     summaryTable()[name],
-			Parameters:  params,
-			ParamOrder:  paramOrder(raw, name),
-			Attribution: tools.Attribution(name),
-			Tier:        tierOf(name),
-			Upstream:    upstreamTools[name],
-			Data:        dataType(name),
+			Name:             name,
+			Description:      desc,
+			Summary:          summaryTable()[name],
+			Parameters:       params,
+			ParamOrder:       paramOrder(raw, name),
+			Attribution:      tools.Attribution(name),
+			Tier:             tierOf(name),
+			Upstream:         upstreamTools[name] != "",
+			UpstreamName:     upstreamTools[name],
+			UpstreamArgs:     slices.Clone(upstreamArgs()[name]),
+			AcceptsJaniceKey: janiceKeyTools[name],
+			Data:             dataType(name),
 		})
 	}
 	return out
 })
+
+// publicDescriptions replaces the description of tools whose tool_schemas.json text steers the
+// chat brain (a decision tree, what to tell or hide from the user). The registry feeds the public
+// surfaces (REST, OpenAPI, llms.txt, MCP), which show the replacement; the chat keeps the schema text.
+func publicDescriptions() map[string]string {
+	return map[string]string{
+		"get_fits": "Retrieve community ship fits from the indexed fit database, with author and source link for each. " +
+			"Returns the raw EFT text (header + modules + drones + ammo) and the source URL for each match. " +
+			"Filter by ship_name (exact), activity (pvp / pve / hauler / exploration / mining / logistics), " +
+			"context (wh, abyss, abyss-electrical / firestorm / exotic / gamma / dark, abyss-t1..t6, ratting, solo), " +
+			"cost_class (cheap < 50M / mid 50-500M / blingy > 500M ISK), alpha_clone (true for Alpha-skill-friendly), " +
+			"combat_role (solo / fleet — zKillboard only), source (workbench / abysstracker / gustavmannfred / caldarijoans: restrict to one source), limit (default 5, at most 10). If nothing matches, the answer says 'NO FITS FOUND'; " +
+			"dropping the most restrictive filter may find some.",
+	}
+}
 
 // Lookup returns the tool called name.
 func Lookup(name string) (Tool, bool) {
@@ -105,7 +159,7 @@ func ToolsIn(tiers ...Tier) []Tool {
 	return slices.DeleteFunc(Tools(), func(t Tool) bool { return !slices.Contains(tiers, t.Tier) })
 }
 
-// Tier is the access level of a tool on an internet-facing surface (R3.4). The zero value
+// Tier is the access level of a tool on an internet-facing surface. The zero value
 // is TierDisabled, so a tool nobody classified is refused rather than offered.
 type Tier int
 
@@ -122,21 +176,17 @@ const (
 	// TierKeyed tools need a valid API key: they lean on shared upstreams the project pays
 	// for or must not hammer (the battle-report backends).
 	TierKeyed
-	// TierBYOKey tools run only with the caller's own credential for the upstream: the
-	// project's key is never used for them on a public surface. appraise_items takes the
-	// caller's Janice key in the X-Janice-Key header.
-	TierBYOKey
 )
 
-// HeaderJaniceKey is the request header that carries the caller's own Janice API key to
-// a TierBYOKey tool over REST and MCP-over-HTTP. It is per request, never logged and
-// never stored.
+// HeaderJaniceKey is the request header that carries the caller's own Janice API key to a
+// tool that accepts one (Tool.AcceptsJaniceKey) over REST and MCP-over-HTTP. It is per
+// request, never logged and never stored.
 const HeaderJaniceKey = "X-Janice-Key"
 
 // JaniceKeyFrom returns the caller's Janice key from h, trimmed, or "" when none was sent.
 // A value that is still an unexpanded config placeholder ("${...}", e.g. a Claude Code plugin
-// header whose variable is unset) counts as no key, so the caller gets the "send your own
-// key" answer instead of a failed upstream call with a bogus key.
+// header whose variable is unset) counts as no key, so the call answers with the ESI
+// estimate instead of a failed upstream call with a bogus key.
 func JaniceKeyFrom(h http.Header) string {
 	v := strings.TrimSpace(h.Get(HeaderJaniceKey))
 	if strings.HasPrefix(v, "${") {
@@ -152,15 +202,13 @@ func (t Tier) String() string {
 		return "public"
 	case TierKeyed:
 		return "keyed"
-	case TierBYOKey:
-		return "byo-key"
 	}
 	return "disabled"
 }
 
 // Offered reports whether a public surface lists tools of this tier at all (everything
 // but TierDisabled).
-func (t Tier) Offered() bool { return t == TierPublic || t == TierKeyed || t == TierBYOKey }
+func (t Tier) Offered() bool { return t == TierPublic || t == TierKeyed }
 
 // tierTable is the one place the policy lives. Flip a tool's tier here (convert_isk_to_real
 // to TierPublic, say, or analyze_battle to TierDisabled) and every surface follows.
@@ -169,8 +217,15 @@ func tierTable() map[string]Tier {
 	return map[string]Tier{
 		// SDE-only lookups and the Gofa fit calculations.
 		"get_jumps_between":      TierPublic,
+		"get_jump_distances":     TierPublic,
+		"plan_jump_route":        TierPublic,
+		"get_average_prices":     TierPublic,
+		"get_market_history":     TierPublic,
 		"get_systems_in_region":  TierPublic,
 		"get_npc_stations":       TierPublic,
+		"find_systems":           TierPublic,
+		"get_system_info":        TierPublic,
+		"get_thera_connections":  TierPublic,
 		"get_reprocessing_yield": TierPublic,
 		"get_required_skills":    TierPublic,
 		"get_production_chain":   TierPublic,
@@ -198,8 +253,10 @@ func tierTable() map[string]Tier {
 		"list_fits":      TierPublic,
 		"analyze_battle": TierKeyed,
 
-		// The caller's own Janice key.
-		"appraise_items": TierBYOKey,
+		// Item appraisal: an estimate from ESI's average prices (one shared daily snapshot,
+		// not a per-call ESI read, so not Upstream), or a Janice appraisal with the caller's
+		// own key in X-Janice-Key (Tool.AcceptsJaniceKey).
+		"appraise_items": TierPublic,
 
 		// Real-money conversion: RMT optics under the DLA on a public surface. The chat
 		// keeps it.
@@ -207,20 +264,33 @@ func tierTable() map[string]Tier {
 	}
 }
 
-// upstreamTools are the tools whose cache misses reach ESI on a public surface (see
-// Tool.Upstream). analyze_battle also calls ESI (and zKillboard, WarBeacon) but is keyed.
-var upstreamTools = map[string]bool{
-	"get_market_price":    true,
-	"get_type_info":       true,
-	"get_sovereignty":     true,
-	"get_system_activity": true,
+// upstreamTools are the tools whose cache misses reach a live upstream on a public surface
+// (see Tool.Upstream), with the upstream's name. analyze_battle also calls ESI (and
+// zKillboard, WarBeacon) but is keyed.
+var upstreamTools = map[string]string{
+	"get_market_price":      "ESI",
+	"get_type_info":         "ESI",
+	"get_sovereignty":       "ESI",
+	"get_system_activity":   "ESI",
+	"get_market_history":    "ESI",
+	"get_thera_connections": "EvE-Scout",
+	"plan_jump_route":       "ESI",
 }
+
+// upstreamArgs are the boolean arguments that make a call of a tool live (Tool.UpstreamArgs); a
+// tool in upstreamTools without an entry is live on every call.
+func upstreamArgs() map[string][]string {
+	return map[string][]string{"plan_jump_route": {"avoid_incursions", "live_info"}}
+}
+
+// janiceKeyTools are the tools that take the caller's own Janice key (Tool.AcceptsJaniceKey).
+var janiceKeyTools = map[string]bool{"appraise_items": true}
 
 // summaryTable holds the one-line human summary of each tool (Tool.Summary). Keep each
 // to one sentence without a trailing period issue: it is shown in lists and the site search.
 func summaryTable() map[string]string {
 	return map[string]string{
-		"get_market_price":       "Best sell and buy price and order counts for an item in Jita (The Forge).",
+		"get_market_price":       "Best sell and buy price and order counts for an item in The Forge or at a main trade hub.",
 		"get_type_info":          "Name, description, volume, mass and group of an item.",
 		"search_item_by_name":    "Resolve item, ship and module names to type IDs.",
 		"get_ship_stats":         "Slot layout, hardpoints and resource limits of a ship.",
@@ -231,13 +301,20 @@ func summaryTable() map[string]string {
 		"compute_fit_stats":      "DPS, EHP, speed, align time and capacitor of an EFT fit, from the Gofa engine.",
 		"get_production_chain":   "Full material breakdown to manufacture an item, down to base materials.",
 		"get_jumps_between":      "Jump count and route between two solar systems.",
+		"get_jump_distances":     "Jump counts from one solar system to up to 200 others in one call.",
+		"plan_jump_route":        "Jump-drive routes for any jump-capable hull or an Ansiblex chain: hops, light-years, gate jumps and fuel.",
+		"get_market_history":     "Price and volume history of an item in a region, by day or week (up to 90 days).",
+		"get_average_prices":     "Daily average prices of up to 200 items in one call (ESI /markets/prices).",
 		"get_systems_in_region":  "Solar systems of a region, filtered by security band.",
 		"get_npc_stations":       "NPC stations in a solar system, with owner and operation.",
+		"find_systems":           "Search solar systems by security, location, celestials, stations, ice belts and distance.",
+		"get_system_info":        "Security, location, neighbours, celestials, stations and ice belt of up to 50 systems.",
+		"get_thera_connections":  "Live Thera and Turnur wormhole connections from EvE-Scout, optionally nearest to a system.",
 		"get_reprocessing_yield": "Materials produced by reprocessing an item.",
 		"get_required_skills":    "Skills required to fly a ship or build an item.",
-		"get_sovereignty":        "The alliance and corporation holding sovereignty over a solar system.",
-		"get_system_activity":    "Ship, pod and NPC kills in a solar system in the last hour.",
-		"appraise_items":         "Appraise a list of items through Janice, with your own Janice key.",
+		"get_sovereignty":        "Alliance, corporation or faction holding sovereignty over up to 50 solar systems.",
+		"get_system_activity":    "Jumps and ship, pod and NPC kills in up to 50 solar systems in the last hour.",
+		"appraise_items":         "Total ISK value of an item list: an estimate from ESI average prices, or a Janice appraisal with your own Janice key.",
 		"get_fits":               "Community fits for a ship, by activity, cost and source, with author credit.",
 		"list_fits":              "List community fits by exact filters: source, ship, tag or filament.",
 		"analyze_battle":         "Summarise a battle report from zKillboard, WarBeacon or br.evetools.org.",
@@ -302,8 +379,26 @@ func dataType(name string) reflect.Type {
 		return reflect.TypeFor[tools.TypeInfo]()
 	case "get_market_price":
 		return reflect.TypeFor[tools.MarketPrice]()
+	case "get_average_prices":
+		return reflect.TypeFor[tools.AveragePrices]()
+	case "get_market_history":
+		return reflect.TypeFor[tools.MarketHistory]()
 	case "get_jumps_between":
 		return reflect.TypeFor[tools.Route]()
+	case "get_jump_distances":
+		return reflect.TypeFor[tools.JumpDistances]()
+	case "plan_jump_route":
+		return reflect.TypeFor[tools.JumpRoute]()
+	case "find_systems":
+		return reflect.TypeFor[tools.SystemList]()
+	case "get_thera_connections":
+		return reflect.TypeFor[tools.TheraConnections]()
+	case "get_system_info":
+		return reflect.TypeFor[tools.SystemInfoList]()
+	case "get_sovereignty":
+		return reflect.TypeFor[tools.SovereigntyList]()
+	case "get_system_activity":
+		return reflect.TypeFor[tools.ActivityList]()
 	case "get_ship_stats":
 		return reflect.TypeFor[tools.ShipStats]()
 	case "validate_fitting":
