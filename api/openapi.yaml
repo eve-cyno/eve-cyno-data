@@ -2113,7 +2113,7 @@ paths:
 
         Rate limit: 10 requests per minute per client IP without an API key, 60 per minute per API key with one.
 
-        Reads live public data from EvE-Scout (Signal Cartel) through a shared cache that follows its cache headers (about 5 minutes). All live-upstream calls share one fair-use limit of 5 calls per minute per caller without an API key and 10 with one (REST and MCP together, counted across every live tool), on top of the route limit.
+        Reads live Thera and Turnur connections from EvE-Scout (Signal Cartel) through a shared cache that follows its cache headers (one to ten minutes, five when they set none). When EvE-Scout does not answer, it serves its last copy if that is at most an hour old, with the copy's time in `as_of`; otherwise `result.text` says the connections are unavailable. All live-upstream calls share one fair-use limit of 5 calls per minute per caller without an API key and 10 with one (REST and MCP together, counted across every live tool), on top of the route limit.
       operationId: get_thera_connections
       parameters:
         - $ref: '#/components/parameters/RequestID'

@@ -84,8 +84,17 @@ func TestLiveKind_CoversEveryUpstreamTool(t *testing.T) {
 		kinds[k]++
 	}
 	require.Positive(t, kinds[liveESI])
-	require.Positive(t, kinds[liveEveScout])
 	require.Positive(t, kinds[liveOptional])
+	// The EvE-Scout copy (callout, access page, landing card, llms and OpenAPI) names Thera and
+	// Turnur connections: it describes one tool. A second EvE-Scout tool needs its own copy.
+	var scout []string
+	for _, tl := range catalog.Tools() {
+		if tl.UpstreamName == catalog.UpstreamEveScout {
+			scout = append(scout, tl.Name)
+		}
+	}
+	require.Equal(t, []string{"get_thera_connections"}, scout)
+	require.Equal(t, 1, kinds[liveEveScout])
 }
 
 func TestCodeList_JoinsWithTheConjunction(t *testing.T) {

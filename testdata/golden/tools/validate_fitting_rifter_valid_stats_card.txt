@@ -12,7 +12,7 @@ Fit stats: Rifter (all-V)
 DPS 107 · volley 181
   3x 200mm AutoCannon II [Barrage S]: 107 DPS
 EHP 2955 (shield 887, armor 980, hull 1088)
-Resists EM/Th/Kin/Exp %: shield 12/56/48/30 · armor 66/24/36/45 · hull 60/60/60/60
+Resists EM/Th/Kin/Exp %: shield 12/30/48/56 · armor 66/45/36/24 · hull 60/60/60/60
 Speed 1193 m/s (prop on) · align 4.7s · signature 35 m
 Cap: stable · 312 GJ
 Basis: no implants or boosters; theoretical DPS (no reload); EHP at a uniform 25/25/25/25 damage profile.

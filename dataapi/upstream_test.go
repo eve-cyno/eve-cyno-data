@@ -145,9 +145,11 @@ func TestGeneratedDocs_EveScoutToolNamesItsUpstream(t *testing.T) {
 	if j := strings.Index(section[4:], "\n### "); j >= 0 {
 		section = section[:4+j]
 	}
-	require.Contains(t, section, "- Live EvE-Scout data: ")
-	require.Contains(t, section, "EvE-Scout (Signal Cartel)")
+	require.Contains(t, section, "- Live EvE-Scout data: Reads live Thera and Turnur connections from EvE-Scout (Signal Cartel)")
+	require.Contains(t, section, "follows its cache headers (one to ten minutes, five when they set none)", "the portal's cache wording")
+	require.Contains(t, section, "it serves its last copy if that is at most an hour old, with the copy's time in `as_of`")
 	require.Contains(t, section, "fair-use limit of 5 calls per minute per caller without an API key and 10 with one")
+	require.NotContains(t, section, "about 5 minutes")
 	require.NotContains(t, section, "upstream_busy")
 	require.NotContains(t, section, "ESI's `Expires`")
 }

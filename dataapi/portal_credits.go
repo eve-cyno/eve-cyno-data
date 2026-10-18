@@ -39,7 +39,7 @@ func credits() []credit {
 		{"community", community, "BR", "WarBeacon and br.evetools", "Battle report sites. A report is fetched only when you give its link.",
 			[]creditLink{{"https://warbeacon.net/", "warbeacon.net"}, {"https://br.evetools.org/", "br.evetools.org"}}, "No published terms. One report per request, no crawling."},
 		{"community", community, "ES", "EvE-Scout / Signal Cartel", "Live Thera and Turnur wormhole connections, scanned by Signal Cartel, for <code>get_thera_connections</code>.",
-			[]creditLink{{"https://www.eve-scout.com/", "eve-scout.com"}}, "Public API without published terms, used with attribution. One shared cached copy, never more than one request per cache lifetime."},
+			[]creditLink{{"https://www.eve-scout.com/", "eve-scout.com"}}, "Public API without published terms, used with attribution. One shared cached copy: at most one request per cache lifetime, or one a minute while EvE-Scout does not answer."},
 		{"tool", tool, "JN", "Janice", "Market appraisals for <code>appraise_items</code>.",
 			[]creditLink{{"https://janice.e-351.com/", "janice.e-351.com"}}, "Optional: with your own Janice key, sent per request and never stored. Without one, appraisals are ESI estimates."},
 		{"tool", tool, "PF", "Pyfa", "The fitting tool we check our fit engine against. Its numbers are the yardstick in our tests.",

@@ -44,7 +44,7 @@
 {{end}}{{range .LiveOptional}}      <li><code>{{.Name}}</code> answers from the SDE and reads live ESI only when a call sets {{.Args}}; only those calls count against the limit.</li>
 {{end}}{{if .LiveScoutTools.N}}      <li>{{.LiveScoutTools.Names}} {{plural .LiveScoutTools.N "reads" "read"}} live Thera and Turnur connections from EvE-Scout (Signal Cartel) through a shared cache that follows its cache headers (one to ten minutes).</li>
 {{end}}    </ul>
-    <p>When the shared ESI budget is nearly spent, the ESI tools are refused with <code>503 upstream_busy</code> and <code>Retry-After</code>{{if .LiveScoutTools.N}}; {{.LiveScoutTools.Names}} never {{plural .LiveScoutTools.N "answers" "answer"}} it{{end}}.</p>
+    <p>When the shared ESI budget is nearly spent, the ESI tools are refused with <code>503 upstream_busy</code> and <code>Retry-After</code>{{if .LiveOptionalTools.N}} ({{.LiveOptionalTools.Names}} only on calls with {{plural .LiveOptionalTools.N "its" "their"}} live options){{end}}{{if .LiveScoutTools.N}}; {{.LiveScoutTools.Names}} never {{plural .LiveScoutTools.N "answers" "answer"}} it{{end}}.</p>
     <aside class="callout" data-kind="warning"><svg class="ico" aria-hidden="true"><use href="#i-warn"/></svg><div><p class="callout-title">Don't mirror ESI or EvE-Scout</p><p>Do not use these tools to mirror or bulk-collect ESI or EvE-Scout data: use ESI itself, EvE-Scout's own API or a dataset such as EVE Ref for that.</p></div></aside>
 
     <h2 id="access-caps">Body caps<a class="h-anchor" href="#access-caps" aria-label="Link to this section">#</a></h2>

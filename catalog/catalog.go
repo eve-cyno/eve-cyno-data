@@ -52,8 +52,8 @@ type Tool struct {
 	// Upstream is true when a call can read a live upstream (ESI, or EvE-Scout: a cache miss
 	// reaches it). Public surfaces give such tools one shared, stricter per-caller limit.
 	Upstream bool
-	// UpstreamName names the live upstream behind an Upstream tool: "ESI" or "EvE-Scout";
-	// empty for any other tool.
+	// UpstreamName names the live upstream behind an Upstream tool: UpstreamESI or
+	// UpstreamEveScout; empty for any other tool.
 	UpstreamName string
 	// UpstreamArgs lists the boolean arguments that make a call of an Upstream tool live; a call
 	// with none of them true answers from the SDE and spends no upstream budget. Empty = every call.
@@ -89,7 +89,7 @@ func (t Tool) SpendsUpstream(args map[string]any) bool {
 }
 
 // LiveESI reports whether the tool's live upstream is ESI (the shared ESI error budget applies).
-func (t Tool) LiveESI() bool { return t.UpstreamName == "ESI" }
+func (t Tool) LiveESI() bool { return t.UpstreamName == UpstreamESI }
 
 // Tools returns every registered tool in tool_schemas.json order. The slice is the
 // caller's; the values it points into are shared (see Tool).
@@ -264,17 +264,23 @@ func tierTable() map[string]Tier {
 	}
 }
 
+// The live upstreams a tool can read (Tool.UpstreamName).
+const (
+	UpstreamESI      = "ESI"
+	UpstreamEveScout = "EvE-Scout"
+)
+
 // upstreamTools are the tools whose cache misses reach a live upstream on a public surface
 // (see Tool.Upstream), with the upstream's name. analyze_battle also calls ESI (and
 // zKillboard, WarBeacon) but is keyed.
 var upstreamTools = map[string]string{
-	"get_market_price":      "ESI",
-	"get_type_info":         "ESI",
-	"get_sovereignty":       "ESI",
-	"get_system_activity":   "ESI",
-	"get_market_history":    "ESI",
-	"get_thera_connections": "EvE-Scout",
-	"plan_jump_route":       "ESI",
+	"get_market_price":      UpstreamESI,
+	"get_type_info":         UpstreamESI,
+	"get_sovereignty":       UpstreamESI,
+	"get_system_activity":   UpstreamESI,
+	"get_market_history":    UpstreamESI,
+	"get_thera_connections": UpstreamEveScout,
+	"plan_jump_route":       UpstreamESI,
 }
 
 // upstreamArgs are the boolean arguments that make a call of a tool live (Tool.UpstreamArgs); a

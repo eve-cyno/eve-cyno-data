@@ -100,8 +100,8 @@ func TestPortal_ExamplesByTier(t *testing.T) {
 		case catalog.TierKeyed:
 			require.Contains(t, body, "Authorization: Bearer &lt;your API key&gt;", tl.Name)
 		}
-		if tl.LiveESI() && len(tl.UpstreamArgs) == 0 {
-			require.Contains(t, body, "live ESI values change", "%s: a live-ESI response is a snapshot", tl.Name)
+		if tl.Upstream && len(tl.UpstreamArgs) == 0 {
+			require.Contains(t, body, "live "+tl.UpstreamName+" values change", "%s: a live response is a snapshot", tl.Name)
 		}
 		require.Contains(t, body, "Node 18+", tl.Name)
 	}
@@ -267,7 +267,9 @@ func TestPortal_LiveCopyByKind(t *testing.T) {
 	require.Contains(t, scout, `<span class="badge badge-live">live EvE-Scout</span>`)
 	require.Contains(t, scout, `<p class="callout-title">Live EvE-Scout data</p><p>Reads live Thera and Turnur connections from EvE-Scout (Signal Cartel)`)
 	require.Contains(t, scout, "Every call counts against "+limit)
-	require.Contains(t, scout, "It never answers <code>upstream_busy</code>")
+	require.Contains(t, scout, "It never answers <code>upstream_busy</code>: when EvE-Scout does not answer, it serves its last copy if that is at most an hour old, with the copy's time in <code>as_of</code>; otherwise <code>result.text</code> says the connections are unavailable.")
+	require.Contains(t, scout, "; live EvE-Scout values change.</p>", "the example caption says the connections change")
+	require.Contains(t, scout, `/llms-full.txt#get_thera_connections"><svg class="ico" aria-hidden="true"><use href="#i-ext"/></svg>In llms-full.txt</a>`)
 	require.Contains(t, scout, row429)
 	require.NotContains(t, scout, "live ESI")
 	require.NotContains(t, scout, "Live ESI")
@@ -306,7 +308,7 @@ func TestPortal_LiveCopyByKind(t *testing.T) {
 		" read live public data from EVE's ESI",
 		"<li><code>plan_jump_route</code> answers from the SDE and reads live ESI only when a call sets <code>avoid_incursions</code> or <code>live_info</code>; only those calls count against the limit.</li>",
 		"<li><code>get_thera_connections</code> reads live Thera and Turnur connections from EvE-Scout (Signal Cartel)",
-		"the ESI tools are refused with <code>503 upstream_busy</code> and <code>Retry-After</code>; <code>get_thera_connections</code> never answers it.",
+		"the ESI tools are refused with <code>503 upstream_busy</code> and <code>Retry-After</code> (<code>plan_jump_route</code> only on calls with its live options); <code>get_thera_connections</code> never answers it.",
 		"<dt>Live tools</dt><dd>5 calls per minute per caller without a key, 10 with one, counted across every live tool",
 	} {
 		require.Contains(t, access, want)
@@ -323,10 +325,12 @@ func TestPortal_LiveCopyByKind(t *testing.T) {
 		`<li class="tool-row" data-tier="public" data-upstream="true"><a class="tool-name" href="/docs/tools/get_thera_connections">get_thera_connections</a><span class="tool-badges"><span class="badge badge-live">live EvE-Scout</span></span>`,
 		`<li class="tool-row" data-tier="public" data-upstream="true"><a class="tool-name" href="/docs/tools/plan_jump_route">plan_jump_route</a><span class="tool-badges"><span class="badge badge-live">live with options</span></span>`,
 		`<h3>EvE-Scout / Signal Cartel</h3><span class="cr-cat">Community</span>`,
+		"One shared cached copy: at most one request per cache lifetime, or one a minute while EvE-Scout does not answer.",
 		"live ESI and EvE-Scout reads and community fits",
 	} {
 		require.Contains(t, home, want)
 	}
+	require.NotContains(t, home, "never more than one request per cache lifetime", "an outage retries once a minute")
 	for _, gone := range []string{"Live ESI tools", "live ESI tools", "live ESI reads", "<h3>Live ESI</h3>"} {
 		require.NotContains(t, home, gone)
 	}
@@ -339,11 +343,17 @@ func TestPortal_LiveCopyByKind(t *testing.T) {
 func TestPortal_KeysNote(t *testing.T) {
 	withKeys := do(portalAPI(t), http.MethodGet, "/docs/access", "").Body.String()
 	require.NotContains(t, withKeys, "no keys are issued")
+	// The start tip spells out a count of one, as the design does.
+	start := do(portalAPI(t), http.MethodGet, "/docs/", "").Body.String()
+	require.Contains(t, start, " tools are public;</b> one needs ")
+	require.NotContains(t, start, "</b> 1 need")
 
 	cfg := publicConfig()
 	cfg.Auth = nil
 	without := do(newAPI(t, cfg), http.MethodGet, "/docs/access", "").Body.String()
 	require.Contains(t, without, "no keys are issued on this service yet")
+	startWithout := do(newAPI(t, cfg), http.MethodGet, "/docs/", "").Body.String()
+	require.Contains(t, startWithout, " tools are public;</b> one needs an API key, and no keys are issued yet.")
 }
 
 // With keys on, the pages explain how to get a key and state the limits and the daily cap

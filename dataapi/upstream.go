@@ -64,27 +64,27 @@ func retrySeconds(d time.Duration) int {
 	return max(1, int((d+time.Second-1)/time.Second))
 }
 
-// eveScoutSentenceSource is how the generated documents name the Thera upstream.
-const eveScoutSentenceSource = "EvE-Scout (Signal Cartel)"
-
 // upstreamSentence states the stricter limit and the busy answer of an Upstream tool in the
-// generated documents ("" for any other tool or an unlimited surface).
+// generated documents ("" for any other tool or an unlimited surface). It follows the tool's
+// live kind (liveKind), like the portal.
 func upstreamSentence(s Surface, t catalog.Tool) string {
 	if !t.Upstream || !tiered(s) {
 		return ""
 	}
 	var b strings.Builder
-	switch {
-	case t.LiveESI() && len(t.UpstreamArgs) > 0:
+	switch liveKind(t) {
+	case liveOptional:
 		quoted := make([]string, len(t.UpstreamArgs))
 		for i, a := range t.UpstreamArgs {
 			quoted[i] = "`" + a + "`"
 		}
 		fmt.Fprintf(&b, "Calls with %s read live public data from EVE's ESI through a shared cache that follows ESI's `Expires`; only those calls count against the fair-use limit below.", strings.Join(quoted, " or "))
-	case t.LiveESI():
+	case liveESI:
 		b.WriteString("Reads live public data from EVE's ESI through a shared cache that follows ESI's `Expires`.")
+	case liveEveScout:
+		b.WriteString("Reads live Thera and Turnur connections from EvE-Scout (Signal Cartel) through a shared cache that follows its cache headers (one to ten minutes, five when they set none). When EvE-Scout does not answer, it serves its last copy if that is at most an hour old, with the copy's time in `as_of`; otherwise `result.text` says the connections are unavailable.")
 	default:
-		b.WriteString("Reads live public data from " + eveScoutSentenceSource + " through a shared cache that follows its cache headers (about 5 minutes).")
+		return ""
 	}
 	if r := s.Limits.UpstreamTool; r.Max > 0 && r.Window > 0 {
 		if k := s.keyedRate(r); s.Auth && k.Max != r.Max {
@@ -121,11 +121,11 @@ func (h callerHasher) hash(key string) string {
 	return hex.EncodeToString(m.Sum(nil)[:8])
 }
 
-// upstreamLabel names the live upstream of a tool for error messages ("ESI" when the tool
+// upstreamLabel names the live upstream of a tool for error messages (ESI when the tool
 // is not known to have another).
 func upstreamLabel(tool string) string {
 	if t, ok := catalog.Lookup(tool); ok && t.UpstreamName != "" {
 		return t.UpstreamName
 	}
-	return "ESI"
+	return catalog.UpstreamESI
 }

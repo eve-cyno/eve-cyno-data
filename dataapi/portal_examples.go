@@ -105,8 +105,8 @@ func newExampleView(t catalog.Tool, fx exampleFixture, origin, prefix string) (e
 		}
 		v.ResponseLabel = "200 · application/json"
 		v.Caption = "Captured from the live service on " + fx.Recorded + "."
-		if t.LiveESI() && t.SpendsUpstream(exampleArgs(fx.Request)) {
-			v.Caption = "Example from the live service on " + fx.Recorded + "; live ESI values change."
+		if t.SpendsUpstream(exampleArgs(fx.Request)) {
+			v.Caption = "Example from the live service on " + fx.Recorded + "; live " + t.UpstreamName + " values change."
 		}
 		if fx.Trimmed {
 			v.ResponseLabel += " · trimmed"

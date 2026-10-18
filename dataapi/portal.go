@@ -99,7 +99,7 @@ func liveKind(t catalog.Tool) string {
 		return liveOptional
 	case t.LiveESI():
 		return liveESI
-	case t.UpstreamName == "EvE-Scout" && len(t.UpstreamArgs) == 0:
+	case t.UpstreamName == catalog.UpstreamEveScout && len(t.UpstreamArgs) == 0:
 		return liveEveScout
 	}
 	return ""
@@ -226,10 +226,11 @@ type pageData struct {
 
 	KeyedNames template.HTML
 	// LiveESITools and LiveScoutTools list the tools whose every call can read live ESI or
-	// EvE-Scout; LiveOptional the tools that read live ESI only with some arguments.
-	LiveESITools, LiveScoutTools liveGroup
-	LiveOptional                 []liveOption
-	FirstTool                    string
+	// EvE-Scout; LiveOptional the tools that read live ESI only with some arguments, and
+	// LiveOptionalTools names them.
+	LiveESITools, LiveScoutTools, LiveOptionalTools liveGroup
+	LiveOptional                                    []liveOption
+	FirstTool                                       string
 
 	Example exampleView
 	T       *toolPage
@@ -400,7 +401,7 @@ func newPageData(in portalInput, assetVersion string) pageData {
 	offered := offeredTools()
 	pub, keyed := catalog.ToolsIn(catalog.TierPublic), catalog.ToolsIn(catalog.TierKeyed)
 	live := 0
-	var liveESITools, liveScoutTools []catalog.Tool
+	var liveESITools, liveScoutTools, liveOptionalTools []catalog.Tool
 	var optional []liveOption
 	for _, t := range offered {
 		if t.Upstream {
@@ -412,6 +413,7 @@ func newPageData(in portalInput, assetVersion string) pageData {
 		case liveEveScout:
 			liveScoutTools = append(liveScoutTools, t)
 		case liveOptional:
+			liveOptionalTools = append(liveOptionalTools, t)
 			optional = append(optional, liveOption{Name: t.Name, Args: codeList(t.UpstreamArgs, "or")})
 		}
 	}
@@ -447,15 +449,16 @@ func newPageData(in portalInput, assetVersion string) pageData {
 			Offered: len(offered), Public: len(pub), Keyed: len(keyed),
 			Disabled: len(catalog.ToolsIn(catalog.TierDisabled)), Live: live, FitMax: rag.FitPageMax,
 		},
-		Lim:            limitsView(s, false),
-		KeyLim:         limitsView(s, true),
-		Tools:          toolGroups{Public: rowsOf(pub), Keyed: rowsOf(keyed)},
-		Credits:        credits(),
-		Sources:        sourcesOf(offered),
-		KeyedNames:     codeNames(keyed),
-		LiveESITools:   liveGroup{Names: codeNames(liveESITools), N: len(liveESITools)},
-		LiveScoutTools: liveGroup{Names: codeNames(liveScoutTools), N: len(liveScoutTools)},
-		LiveOptional:   optional,
+		Lim:               limitsView(s, false),
+		KeyLim:            limitsView(s, true),
+		Tools:             toolGroups{Public: rowsOf(pub), Keyed: rowsOf(keyed)},
+		Credits:           credits(),
+		Sources:           sourcesOf(offered),
+		KeyedNames:        codeNames(keyed),
+		LiveESITools:      liveGroup{Names: codeNames(liveESITools), N: len(liveESITools)},
+		LiveScoutTools:    liveGroup{Names: codeNames(liveScoutTools), N: len(liveScoutTools)},
+		LiveOptionalTools: liveGroup{Names: codeNames(liveOptionalTools), N: len(liveOptionalTools)},
+		LiveOptional:      optional,
 	}
 	d.NavGroups = []navGroup{
 		{Label: "Public", Open: true, Tools: d.Tools.Public},
