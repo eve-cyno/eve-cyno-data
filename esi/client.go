@@ -57,6 +57,18 @@ type Request struct {
 	// "auth:unscoped" and is never cached, so one character's data cannot leak to another.
 	Scope string
 
+	// CachePartition, when set, joins the response-cache key (and the in-flight coalescing
+	// key) instead of Scope, so callers sharing one rate-limit Scope still never see each
+	// other's cached responses (for example one partition per plugin). Scope alone keeps
+	// choosing the rate-limit bucket. An authenticated request without a Scope is never
+	// cached, whatever its CachePartition.
+	CachePartition string
+
+	// UserAgentSuffix is appended to the client's User-Agent after one space (for example
+	// "plugin/x@1.0.0"). Allowed: printable ASCII without '"' or '\\', at most 100 bytes;
+	// anything else makes Do return an error before any HTTP call.
+	UserAgentSuffix string
+
 	// CompatibilityDate overrides the client's pinned X-Compatibility-Date for this request.
 	CompatibilityDate string
 }
@@ -241,6 +253,7 @@ type prepared struct {
 	compat            string
 	route             string
 	key               string // cache key; "" when the request is not cacheable
+	userAgent         string // full User-Agent for this request
 }
 
 var reservedHeaders = []string{"User-Agent", "X-Compatibility-Date", "Authorization", "If-None-Match", "If-Modified-Since", "Content-Type", "Host"}
@@ -252,6 +265,13 @@ func (c *Client) prepare(req Request) (*prepared, error) {
 	}
 	if !strings.HasPrefix(req.Path, "/") || strings.ContainsAny(req.Path, "?#") {
 		return nil, fmt.Errorf("esi: invalid path %q (want \"/route\" without a query string)", req.Path)
+	}
+	if err := validateUserAgentSuffix(req.UserAgentSuffix); err != nil {
+		return nil, err
+	}
+	p.userAgent = c.userAgent
+	if req.UserAgentSuffix != "" {
+		p.userAgent += " " + req.UserAgentSuffix
 	}
 	p.compat = req.CompatibilityDate
 	if p.compat == "" {
@@ -278,9 +298,25 @@ func (c *Client) prepare(req Request) (*prepared, error) {
 
 	cacheable := p.method == http.MethodGet && c.cache != nil && (req.AccessToken == "" || req.Scope != "")
 	if cacheable {
-		p.key = cacheKey(p.method, p.url, req.Scope, p.compat, p.header.Get("Accept-Language")+"|"+p.header.Get("X-Tenant"))
+		p.key = cacheKey(p.method, p.url, req.Scope, req.CachePartition, p.compat, p.header.Get("Accept-Language")+"|"+p.header.Get("X-Tenant"))
 	}
 	return p, nil
+}
+
+// maxUserAgentSuffix is the longest Request.UserAgentSuffix, in bytes.
+const maxUserAgentSuffix = 100
+
+// validateUserAgentSuffix accepts printable ASCII without '"' or '\\' up to maxUserAgentSuffix bytes.
+func validateUserAgentSuffix(s string) error {
+	if len(s) > maxUserAgentSuffix {
+		return fmt.Errorf("esi: User-Agent suffix longer than %d bytes", maxUserAgentSuffix)
+	}
+	for i := 0; i < len(s); i++ {
+		if b := s[i]; b < 0x20 || b > 0x7e || b == '"' || b == '\\' {
+			return fmt.Errorf("esi: User-Agent suffix has a character that is not allowed (printable ASCII without quote or backslash)")
+		}
+	}
+	return nil
 }
 
 // Do sends req and returns ESI's answer.
@@ -530,7 +566,7 @@ func (c *Client) exchange(ctx context.Context, p *prepared, ent *entry, tk *tick
 			hreq.Header.Add(k, v)
 		}
 	}
-	hreq.Header.Set("User-Agent", c.userAgent)
+	hreq.Header.Set("User-Agent", p.userAgent)
 	hreq.Header.Set("X-Compatibility-Date", p.compat)
 	if hreq.Header.Get("Accept") == "" {
 		hreq.Header.Set("Accept", "application/json")

@@ -111,8 +111,11 @@ func (c *cache) len() int {
 
 // cacheKey identifies a cacheable request: ESI varies responses on X-Compatibility-Date,
 // Accept-Language and X-Tenant ("Vary" header), and authenticated responses are only
-// valid for their own scope.
-func cacheKey(method, fullURL, scope, compat, lang string) string {
+// valid for their own scope. A non-empty partition replaces the scope in the key.
+func cacheKey(method, fullURL, scope, partition, compat, lang string) string {
+	if partition != "" {
+		scope = "partition:" + partition
+	}
 	return strings.Join([]string{method, scope, compat, lang, fullURL}, "\x00")
 }
 
