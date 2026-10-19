@@ -132,3 +132,18 @@ func TestCachePartition_ScopeTextNeverCollides(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 2, f.Count())
 }
+
+func TestCachePartition_PathCannotForgePartition(t *testing.T) {
+	ctx := context.Background()
+	f := newFakeESI(t, partitionHandler)
+	c, _ := newTestClient(t, f, Config{})
+	_, err := c.Do(ctx, Request{Path: "/status", CachePartition: "plugin:a"})
+	require.NoError(t, err)
+	require.Equal(t, 1, f.Count())
+
+	for _, p := range []string{"/status\x00partition\x00plugin:a", "/status\n", "/status\x7f", "/sta\ttus"} {
+		_, err = c.Do(ctx, Request{Path: p})
+		require.Error(t, err, "path %q", p)
+	}
+	require.Equal(t, 1, f.Count(), "a refused path makes no HTTP call and reads no cache")
+}

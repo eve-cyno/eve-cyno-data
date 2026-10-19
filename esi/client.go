@@ -52,17 +52,17 @@ type Request struct {
 	AccessToken string
 
 	// Scope picks the rate-limit bucket and is part of the response-cache key (CachePartition
-	// adds to it, never replaces it): ESI keeps one bucket per
-	// (group, application, character). Authenticated callers pass a stable key such as
-	// "character:12345". Without a Scope an authenticated request shares the bucket
-	// "auth:unscoped" and is never cached, so one character's data cannot leak to another.
+	// adds to it, never replaces it): ESI keeps one bucket per (group, application,
+	// character). Authenticated callers pass a stable key such as "character:12345".
+	// Without a Scope an authenticated request shares the bucket "auth:unscoped" and is
+	// never cached, so one character's data cannot leak to another.
 	Scope string
 
 	// CachePartition, when set, partitions the response cache (and the in-flight coalescing)
 	// alongside Scope: it never merges scopes, so one partition keeps characters apart, and
 	// callers sharing one Scope never see each other's cached responses (for example one
-	// partition per plugin). Scope alone keeps choosing the rate-limit bucket. An authenticated request without a Scope is never
-	// cached, whatever its CachePartition.
+	// partition per plugin). Scope alone keeps choosing the rate-limit bucket. An
+	// authenticated request without a Scope is never cached, whatever its CachePartition.
 	CachePartition string
 
 	// UserAgentSuffix is appended to the client's User-Agent after one space (for example
@@ -257,6 +257,17 @@ type prepared struct {
 	userAgent         string // full User-Agent for this request
 }
 
+// hasControlByte reports whether s holds a byte below 0x20 or 0x7f. The cache key joins its fields
+// with a NUL byte, so a path holding one could forge the fields that follow it.
+func hasControlByte(s string) bool {
+	for i := 0; i < len(s); i++ {
+		if s[i] < 0x20 || s[i] == 0x7f {
+			return true
+		}
+	}
+	return false
+}
+
 var reservedHeaders = []string{"User-Agent", "X-Compatibility-Date", "Authorization", "If-None-Match", "If-Modified-Since", "Content-Type", "Host"}
 
 func (c *Client) prepare(req Request) (*prepared, error) {
@@ -264,8 +275,8 @@ func (c *Client) prepare(req Request) (*prepared, error) {
 	if p.method == "" {
 		p.method = http.MethodGet
 	}
-	if !strings.HasPrefix(req.Path, "/") || strings.ContainsAny(req.Path, "?#") {
-		return nil, fmt.Errorf("esi: invalid path %q (want \"/route\" without a query string)", req.Path)
+	if !strings.HasPrefix(req.Path, "/") || strings.ContainsAny(req.Path, "?#") || hasControlByte(req.Path) {
+		return nil, fmt.Errorf("esi: invalid path %q (want \"/route\" without a query string or control characters)", req.Path)
 	}
 	if err := validateUserAgentSuffix(req.UserAgentSuffix); err != nil {
 		return nil, err
