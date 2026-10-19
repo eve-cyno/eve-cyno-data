@@ -111,12 +111,14 @@ func (c *cache) len() int {
 
 // cacheKey identifies a cacheable request: ESI varies responses on X-Compatibility-Date,
 // Accept-Language and X-Tenant ("Vary" header), and authenticated responses are only
-// valid for their own scope. A non-empty partition replaces the scope in the key.
+// valid for their own scope. A non-empty partition is an extra key field alongside the
+// scope (an empty one leaves the key unchanged), so it never merges scopes.
 func cacheKey(method, fullURL, scope, partition, compat, lang string) string {
+	parts := []string{method, scope, compat, lang, fullURL}
 	if partition != "" {
-		scope = "partition:" + partition
+		parts = append(parts, "partition", partition)
 	}
-	return strings.Join([]string{method, scope, compat, lang, fullURL}, "\x00")
+	return strings.Join(parts, "\x00")
 }
 
 // storable reports whether a response may be cached: GET 200 without no-store, with an

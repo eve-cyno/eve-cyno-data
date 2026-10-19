@@ -51,16 +51,17 @@ type Request struct {
 	// AccessToken is an EVE SSO bearer token for authenticated routes.
 	AccessToken string
 
-	// Scope partitions the response cache and the rate-limit bucket: ESI keeps one bucket per
+	// Scope picks the rate-limit bucket and is part of the response-cache key (CachePartition
+	// adds to it, never replaces it): ESI keeps one bucket per
 	// (group, application, character). Authenticated callers pass a stable key such as
 	// "character:12345". Without a Scope an authenticated request shares the bucket
 	// "auth:unscoped" and is never cached, so one character's data cannot leak to another.
 	Scope string
 
-	// CachePartition, when set, joins the response-cache key (and the in-flight coalescing
-	// key) instead of Scope, so callers sharing one rate-limit Scope still never see each
-	// other's cached responses (for example one partition per plugin). Scope alone keeps
-	// choosing the rate-limit bucket. An authenticated request without a Scope is never
+	// CachePartition, when set, partitions the response cache (and the in-flight coalescing)
+	// alongside Scope: it never merges scopes, so one partition keeps characters apart, and
+	// callers sharing one Scope never see each other's cached responses (for example one
+	// partition per plugin). Scope alone keeps choosing the rate-limit bucket. An authenticated request without a Scope is never
 	// cached, whatever its CachePartition.
 	CachePartition string
 

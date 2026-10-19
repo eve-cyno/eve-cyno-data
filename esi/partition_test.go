@@ -105,3 +105,30 @@ func TestUserAgentSuffix_Rejected(t *testing.T) {
 	_, err := c.Do(context.Background(), Request{Path: "/status", UserAgentSuffix: strings.Repeat("x", 100)})
 	require.NoError(t, err)
 }
+
+func TestCachePartition_KeepsScopesApart(t *testing.T) {
+	ctx := context.Background()
+	f := newFakeESI(t, func(w http.ResponseWriter, r *http.Request, n int) {
+		ok200(w, `{"auth":"`+r.Header.Get("Authorization")+`"}`,
+			map[string]string{"ETag": `"e"`, "Date": httpDate(t0), "Expires": httpDate(t0.Add(time.Hour))})
+	})
+	c, _ := newTestClient(t, f, Config{})
+	a, err := c.Do(ctx, Request{Path: "/universe/structures/1", AccessToken: "tok-1", Scope: "character:1", CachePartition: "plugin:a"})
+	require.NoError(t, err)
+	b, err := c.Do(ctx, Request{Path: "/universe/structures/1", AccessToken: "tok-2", Scope: "character:2", CachePartition: "plugin:a"})
+	require.NoError(t, err)
+	require.Equal(t, 2, f.Count())
+	require.Contains(t, string(a.Body), "tok-1")
+	require.Contains(t, string(b.Body), "tok-2")
+}
+
+func TestCachePartition_ScopeTextNeverCollides(t *testing.T) {
+	ctx := context.Background()
+	f := newFakeESI(t, partitionHandler)
+	c, _ := newTestClient(t, f, Config{})
+	_, err := c.Do(ctx, Request{Path: "/characters/1/assets", AccessToken: "tok", Scope: "character:1", CachePartition: "plugin:a"})
+	require.NoError(t, err)
+	_, err = c.Do(ctx, Request{Path: "/characters/1/assets", AccessToken: "tok", Scope: "partition:plugin:a"})
+	require.NoError(t, err)
+	require.Equal(t, 2, f.Count())
+}
