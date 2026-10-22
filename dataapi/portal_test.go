@@ -174,20 +174,22 @@ func TestPortal_AssetsAreVersionedAndVerbatim(t *testing.T) {
 
 	// CSS and JS are the design files, byte for byte. The snapshots in testdata/design are
 	// copies of the Claude Design files the portal assets come from; line 1 of each names the
-	// design source and etag. A design sync replaces the snapshots together with the assets,
-	// so this check fails until both agree. A missing snapshot fails the test: it never skips.
-	// The one allowed difference is a code comment: the design says "in core/dataapi", the
-	// served file "in dataapi" (the package path after the repository split).
+	// design file and its etag (the project id is left out of this public repository). A design
+	// sync replaces the snapshots together with the assets, so this check fails until both
+	// agree. A missing snapshot fails the test: it never skips.
 	for _, asset := range []string{"portal.css", "docs.css", "site.js"} {
 		want, err := os.ReadFile(filepath.Join("testdata", "design", asset))
 		require.NoError(t, err, "design snapshot for %s", asset)
 		first, body, _ := strings.Cut(string(want), "\n")
-		body = strings.Replace(body, "in core/dataapi", "in dataapi", 1)
-		require.Contains(t, first, "source: claude-design", "line 1 of the %s snapshot names its source and etag", asset)
+		require.Regexp(t, snapshotSourceRE, first, "line 1 of the %s snapshot names its design file and etag", asset)
 		got := do(api, http.MethodGet, "/assets/"+versionOf(t, urls)+"/"+asset, "").Body.String()
 		require.Equal(t, body, got, "%s differs from the design snapshot", asset)
 	}
 }
+
+// snapshotSourceRE is line 1 of a design snapshot: the Claude Design file and its etag, in a
+// CSS or JS comment.
+var snapshotSourceRE = regexp.MustCompile(`^(/\*|//) source: claude-design eve-cyno/project/[a-z-]+\.(css|js) etag [0-9]+( \*/)?$`)
 
 func versionOf(t *testing.T, urls [][]string) string {
 	t.Helper()

@@ -1,4 +1,4 @@
-// source: claude-design 75eb7196-d2f2-4b49-bad6-7cefca04f645 eve-cyno/project/data-site.js etag 1792305978964503
+// source: claude-design eve-cyno/project/data-site.js etag 1792305978964503
 /* EVE-CYNO DATA · data-site.js
    Behaviour for the portal and the docs. Vanilla, no dependencies, served verbatim.
    Every feature starts only when its data-* hooks are on the page:

@@ -27,10 +27,11 @@ import (
 
 // The data portal: the landing page at GET / (for browsers) and the developer docs under
 // /docs/. Markup, class names and data-* hooks come from the Claude Design files
-// data-portal.html and data-docs.html (snapshots in docs/open_design_sync/); the styles
-// and data-site.js are served verbatim from portal/static. Every list, count and limit on
-// the pages is generated from the tool catalog, the route table and the Surface, so the
-// pages cannot drift from what the service does. Pages are rendered once in New.
+// data-portal.html and data-docs.html; the styles and data-site.js are served verbatim from
+// portal/static and checked against the design snapshots in dataapi/testdata/design/.
+// Every list, count and limit on the pages is generated from the tool catalog, the route
+// table and the Surface, so the pages cannot drift from what the service does. Pages are
+// rendered once in New.
 
 //go:embed portal/templates/*.gohtml
 var portalTemplates embed.FS
