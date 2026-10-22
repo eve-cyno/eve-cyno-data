@@ -232,6 +232,81 @@ func TestESIPriceBook_AnExpiredCopyIsServedWhileOneRefreshRuns(t *testing.T) {
 	require.Equal(t, 2, pricesCalls(f))
 }
 
+// hammer runs many callers that each ask for a snapshot until landed holds after one of
+// their calls; every call a caller made before that, and the refresh it asked for, came
+// earlier. The callers' context is already cancelled, so a caller that would wait for a
+// fetch returns at once (the fetch runs on, detached) and asks again. hammer then waits out
+// a flight that may still run (by joining it), so fetch counts read afterwards are final.
+func hammer(t *testing.T, c *Client, landed func() bool) {
+	t.Helper()
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	deadline := time.Now().Add(10 * time.Second)
+	var wg sync.WaitGroup
+	for range 32 {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for time.Now().Before(deadline) {
+				_, _ = c.prices.snapshot(ctx, c.esiClient())
+				if landed() {
+					return
+				}
+			}
+		}()
+	}
+	wg.Wait()
+	require.True(t, landed(), "the fetch landed before the deadline")
+	<-c.prices.flight.DoChan("prices", func() (any, error) { return nil, nil })
+}
+
+// Callers that read the expired copy just before the refresh lands go on to ask for a
+// refresh after it has landed. The flight checks the book again before it fetches, so they
+// start no second request.
+func TestESIPriceBook_CallersRacingTheSwapStartNoSecondFetch(t *testing.T) {
+	for round := range 50 {
+		c, f, ps := newPricesClient(t)
+		now := time.Date(2026, 10, 14, 12, 0, 0, 0, time.UTC)
+		c.prices.now = func() time.Time { return now }
+		_, err := c.prices.snapshot(context.Background(), c.esiClient())
+		require.NoError(t, err)
+		ps.set(http.StatusOK, `[{"type_id":34,"average_price":5}]`)
+		now = now.Add(esiPricesTTL + time.Minute)
+
+		hammer(t, c, func() bool { return c.prices.current().Average[34] == 5 })
+		require.Equal(t, 2, pricesCalls(f), "round %d: the first load and one refresh, nothing more", round)
+		require.EqualValues(t, 2, c.prices.fetches.Load(), "round %d", round)
+	}
+}
+
+// The same race on a failed fetch: callers that ask after it failed are inside the retry
+// pause and start no request, with a copy (they get it) or without one (they get the error).
+func TestESIPriceBook_CallersRacingAFailedFetchStartNoSecondFetch(t *testing.T) {
+	for _, withCopy := range []bool{true, false} {
+		for round := range 50 {
+			c, f, ps := newPricesClient(t)
+			now := time.Date(2026, 10, 14, 12, 0, 0, 0, time.UTC)
+			c.prices.now = func() time.Time { return now }
+			want := 1
+			if withCopy {
+				_, err := c.prices.snapshot(context.Background(), c.esiClient())
+				require.NoError(t, err)
+				now, want = now.Add(esiPricesTTL+time.Minute), 2
+			}
+			ps.set(http.StatusServiceUnavailable, `{"error":"down"}`)
+			ps.setDelay(2 * time.Millisecond)
+
+			hammer(t, c, func() bool {
+				c.prices.mu.Lock()
+				defer c.prices.mu.Unlock()
+				return c.prices.lastErr != nil
+			})
+			require.Equal(t, want, pricesCalls(f), "copy %v, round %d: one failed fetch, then the retry pause", withCopy, round)
+			require.EqualValues(t, want, c.prices.fetches.Load(), "copy %v, round %d", withCopy, round)
+		}
+	}
+}
+
 func TestESIPriceBook_WithoutACopyAFailureIsTheErrorUntilTheRetry(t *testing.T) {
 	c, f, ps := newPricesClient(t)
 	ps.set(http.StatusInternalServerError, `{"error":"boom"}`)

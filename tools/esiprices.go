@@ -105,10 +105,23 @@ func (b *esiPriceBook) snapshot(ctx context.Context, e *esi.Client) (*priceSnaps
 }
 
 // refresh starts a fetch, or joins the one running: any number of callers share one request.
-// The fetch gets its own context (detached from ctx, bounded by esiPricesTimeout), so the
-// caller that started it can go away without failing the others.
+// A flight first reads the book again: a caller that saw the expired copy just before another
+// flight replaced it gets the new copy (or, inside the retry pause, the old copy or the last
+// error) without a second request. The fetch gets its own context (detached from ctx, bounded
+// by esiPricesTimeout), so the caller that started it can go away without failing the others.
 func (b *esiPriceBook) refresh(ctx context.Context, e *esi.Client) <-chan singleflight.Result {
 	return b.flight.DoChan("prices", func() (any, error) {
+		b.mu.Lock()
+		cur, curErr, curRetry := b.snap, b.lastErr, b.retryAt
+		b.mu.Unlock()
+		if n := b.clock(); cur != nil && n.Sub(cur.fetched) < esiPricesTTL {
+			return cur, nil
+		} else if n.Before(curRetry) {
+			if cur != nil {
+				return cur, nil
+			}
+			return nil, curErr
+		}
 		b.fetches.Add(1)
 		fctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), esiPricesTimeout)
 		defer cancel()
