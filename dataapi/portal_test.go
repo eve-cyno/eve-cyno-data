@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
@@ -161,8 +162,8 @@ func TestPortal_AssetsAreVersionedAndVerbatim(t *testing.T) {
 		require.Equal(t, "nosniff", rec.Header().Get("X-Content-Type-Options"), u)
 		require.NotEmpty(t, rec.Body.Bytes(), u)
 	}
-	for _, f := range []string{"portal.css", "docs.css", "site.js"} {
-		require.True(t, seen["/assets/"+versionOf(t, urls)+"/"+f] || f == "docs.css", f)
+	for _, f := range []string{"portal.css", "site.js"} {
+		require.True(t, seen["/assets/"+versionOf(t, urls)+"/"+f], f)
 	}
 
 	// a stale version still finds the file, but is only briefly cacheable
@@ -171,19 +172,18 @@ func TestPortal_AssetsAreVersionedAndVerbatim(t *testing.T) {
 	require.Equal(t, "public, max-age=300", stale.Header().Get("Cache-Control"))
 	requireError(t, do(api, http.MethodGet, "/assets/"+versionOf(t, urls)+"/nope.css", ""), http.StatusNotFound, "not_found")
 
-	// CSS and JS are the design files, byte for byte (the snapshots live outside this module,
-	// so the check is skipped in the public mirror).
-	for asset, snap := range map[string]string{
-		"portal.css": "../../docs/open_design_sync/data-portal-css-2026-10-09.css",
-		"docs.css":   "../../docs/open_design_sync/data-docs-css-2026-10-09.css",
-		"site.js":    "../../docs/open_design_sync/data-site-js-2026-10-18.js",
-	} {
-		want, err := os.ReadFile(snap)
-		if err != nil {
-			t.Logf("skip %s: design snapshot not available (%v)", asset, err)
-			continue
-		}
-		_, body, _ := strings.Cut(string(want), "\n") // line 1 is the source and etag
+	// CSS and JS are the design files, byte for byte. The snapshots in testdata/design are
+	// copies of the Claude Design files the portal assets come from; line 1 of each names the
+	// design source and etag. A design sync replaces the snapshots together with the assets,
+	// so this check fails until both agree. A missing snapshot fails the test: it never skips.
+	// The one allowed difference is a code comment: the design says "in core/dataapi", the
+	// served file "in dataapi" (the package path after the repository split).
+	for _, asset := range []string{"portal.css", "docs.css", "site.js"} {
+		want, err := os.ReadFile(filepath.Join("testdata", "design", asset))
+		require.NoError(t, err, "design snapshot for %s", asset)
+		first, body, _ := strings.Cut(string(want), "\n")
+		body = strings.Replace(body, "in core/dataapi", "in dataapi", 1)
+		require.Contains(t, first, "source: claude-design", "line 1 of the %s snapshot names its source and etag", asset)
 		got := do(api, http.MethodGet, "/assets/"+versionOf(t, urls)+"/"+asset, "").Body.String()
 		require.Equal(t, body, got, "%s differs from the design snapshot", asset)
 	}
