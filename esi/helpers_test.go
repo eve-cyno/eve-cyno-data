@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -122,3 +123,30 @@ func ok200(w http.ResponseWriter, body string, hdr map[string]string) {
 
 // httpDate formats t as ESI does.
 func httpDate(t time.Time) string { return t.UTC().Format(http.TimeFormat) }
+
+// roundTripFunc is an http.RoundTripper made of a function, for tests that read the
+// request's context or hold a request open inside the client.
+type roundTripFunc func(*http.Request) (*http.Response, error)
+
+func (f roundTripFunc) RoundTrip(r *http.Request) (*http.Response, error) { return f(r) }
+
+// stubResponse is a JSON answer with the given status, for a roundTripFunc.
+func stubResponse(r *http.Request, status int, body string) *http.Response {
+	return &http.Response{
+		StatusCode: status,
+		Header:     http.Header{"Content-Type": {"application/json"}},
+		Body:       io.NopCloser(strings.NewReader(body)),
+		Request:    r,
+	}
+}
+
+// flightWaiters is the number of callers waiting on shared upstream requests.
+func flightWaiters(c *Client) int {
+	c.flightMu.Lock()
+	defer c.flightMu.Unlock()
+	n := 0
+	for _, fl := range c.flights {
+		n += fl.waiters
+	}
+	return n
+}

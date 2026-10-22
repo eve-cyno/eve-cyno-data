@@ -27,7 +27,6 @@ import (
 	"time"
 
 	"golang.org/x/sync/semaphore"
-	"golang.org/x/sync/singleflight"
 )
 
 // Request describes one ESI call.
@@ -133,10 +132,12 @@ type Client struct {
 	cache       *cache
 	store       Store
 	lim         *limiter
-	flights     singleflight.Group
-	flightMu    sync.Mutex
-	flightWait  map[string]*flight
 	observer    func(CallEvent)
+
+	// flights holds the shared upstream requests by cache key, guarded by flightMu.
+	flightMu      sync.Mutex
+	flights       map[string]*flight
+	flightTimeout time.Duration
 
 	// Clock and sleeper; tests replace them.
 	now   func() time.Time
@@ -146,9 +147,10 @@ type Client struct {
 // New validates cfg and returns a Client.
 func New(cfg Config) (*Client, error) {
 	c := &Client{
-		now:   time.Now,
-		sleep: sleepCtx,
-		lim:   newLimiter(),
+		now:           time.Now,
+		sleep:         sleepCtx,
+		lim:           newLimiter(),
+		flightTimeout: defaultFlightTimeout,
 	}
 	if cfg.Now != nil {
 		c.now = cfg.Now
@@ -350,6 +352,15 @@ func validateUserAgentSuffix(s string) error {
 // sending anything. A 420/429 is retried after its Retry-After (up to MaxRetries, each
 // wait within MaxWait) and otherwise returned as the Response.
 //
+// Callers asking for the same expired or missing cache entry share one upstream request (a
+// burst on a cold key costs ESI one call, not one per caller), and each gets its own copy
+// of the answer. The shared request runs on a context of its own: the values of the caller
+// that started it (they reach Store.Save) without that caller's cancellation, bounded by
+// two minutes, rate-limit waits included. One caller leaving does not cut it for the
+// others, but it is cancelled once its last caller has left: a caller that gives up (its
+// context ends, for example on a tool timeout) no longer lets the request finish to warm
+// the cache and the Store, and the next caller sends a new request.
+//
 // The error is non-nil only when no usable response exists: transport failure, a
 // back-off (*BackoffError), an oversized body or an invalid request. HTTP error statuses
 // are in Response.Status; Response.Err types them.
@@ -370,72 +381,84 @@ func (c *Client) Do(ctx context.Context, req Request) (*Response, error) {
 		return ent.response(p, true, false), nil
 	}
 
-	// Callers asking for the same expired or missing entry share one upstream request (a
-	// burst on a cold key costs ESI one call, not one per caller). The shared request is
-	// not tied to any single caller's context, so one caller leaving does not cut it for
-	// the others; it is cancelled when its last caller has left, and in any case bounded
-	// by flightTimeout. Each caller leaves when its own context ends. Store.Save runs
-	// after the request without cancellation or that deadline, so a Store bounds its own
-	// I/O time.
-	fl := c.joinFlight(ctx, p.key)
+	// Share the upstream request (see above); each caller leaves when its own context
+	// ends. Store.Save runs after the request without cancellation or the flight's
+	// deadline, so a Store bounds its own I/O time.
+	fl := c.joinFlight(ctx, p, ent)
 	defer c.leaveFlight(p.key, fl)
-	ch := c.flights.DoChan(p.key, func() (any, error) {
-		return c.fetch(fl.ctx, p, ent)
-	})
 	select {
 	case <-ctx.Done():
 		return nil, &BackoffError{Until: c.now(), Reason: "context ended", Err: ctx.Err()}
-	case res := <-ch:
-		if res.Err != nil {
-			return nil, res.Err
+	case <-fl.done:
+		if fl.err != nil {
+			return nil, fl.err
 		}
-		return res.Val.(*Response).clone(), nil
+		return fl.res.clone(), nil
 	}
 }
 
-// flight is the context of one shared upstream request and the number of callers still
-// waiting for it.
+// flight is one shared upstream request: the callers waiting for it and, once done is
+// closed, its result.
 type flight struct {
-	ctx     context.Context
 	cancel  context.CancelFunc
-	waiters int
+	waiters int           // guarded by Client.flightMu
+	done    chan struct{} // closed once res and err are set
+	res     *Response     // shared by every caller: each one returns a clone
+	err     error
 }
 
-// joinFlight registers a caller for key and returns the flight it waits on, creating it
-// (detached from ctx's cancellation, bounded by flightTimeout) for the first caller.
-func (c *Client) joinFlight(ctx context.Context, key string) *flight {
+// joinFlight registers a caller for p.key and returns the flight it waits on. The first
+// caller starts the request in a goroutine (Do describes its context). Joining and starting
+// are one locked step, and a flight leaves the map when its request returns or its last
+// caller leaves, so no caller joins a finished or cancelled request and every request runs
+// on the context made for it.
+func (c *Client) joinFlight(ctx context.Context, p *prepared, ent *entry) *flight {
 	c.flightMu.Lock()
 	defer c.flightMu.Unlock()
-	fl := c.flightWait[key]
-	if fl == nil {
-		fctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), flightTimeout)
-		fl = &flight{ctx: fctx, cancel: cancel}
-		if c.flightWait == nil {
-			c.flightWait = make(map[string]*flight)
-		}
-		c.flightWait[key] = fl
+	if fl := c.flights[p.key]; fl != nil {
+		fl.waiters++
+		return fl
 	}
-	fl.waiters++
+	fctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), c.flightTimeout)
+	fl := &flight{cancel: cancel, waiters: 1, done: make(chan struct{})}
+	if c.flights == nil {
+		c.flights = make(map[string]*flight)
+	}
+	c.flights[p.key] = fl
+	go c.runFlight(fctx, p, ent, fl)
 	return fl
 }
 
-// leaveFlight unregisters a caller; the last one to leave cancels the shared request
-// (a no-op when it already finished).
+// runFlight sends a shared request and hands its result to the callers. The flight leaves
+// the map before done is closed, so a caller that has its answer and asks again starts a
+// new request instead of getting this one back.
+func (c *Client) runFlight(ctx context.Context, p *prepared, ent *entry, fl *flight) {
+	defer fl.cancel()
+	fl.res, fl.err = c.fetch(ctx, p, ent)
+	c.flightMu.Lock()
+	if c.flights[p.key] == fl {
+		delete(c.flights, p.key)
+	}
+	c.flightMu.Unlock()
+	close(fl.done)
+}
+
+// leaveFlight unregisters a caller. The last one to leave cancels the request (a no-op when
+// it has already returned) and removes the flight, so the next caller starts a new one.
 func (c *Client) leaveFlight(key string, fl *flight) {
 	c.flightMu.Lock()
 	defer c.flightMu.Unlock()
-	fl.waiters--
-	if fl.waiters > 0 {
+	if fl.waiters--; fl.waiters > 0 {
 		return
 	}
 	fl.cancel()
-	if c.flightWait[key] == fl {
-		delete(c.flightWait, key)
+	if c.flights[key] == fl {
+		delete(c.flights, key)
 	}
 }
 
-// flightTimeout bounds one shared upstream request (waits for the rate limit included).
-const flightTimeout = 2 * time.Minute
+// defaultFlightTimeout bounds one shared upstream request (waits for the rate limit included).
+const defaultFlightTimeout = 2 * time.Minute
 
 // clone returns a Response whose Header and Body the caller may modify.
 func (r *Response) clone() *Response {

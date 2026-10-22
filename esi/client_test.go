@@ -3,10 +3,12 @@ package esi
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -557,7 +559,7 @@ func TestSharedRequestSurvivesOneCallerLeaving(t *testing.T) {
 		stayerDone <- r
 	}()
 	// Let the second caller join the flight before the first one leaves.
-	time.Sleep(50 * time.Millisecond)
+	require.Eventually(t, func() bool { return flightWaiters(c) == 2 }, 5*time.Second, time.Millisecond)
 	leave()
 	require.Error(t, <-leaverDone)
 	close(release)
@@ -566,4 +568,121 @@ func TestSharedRequestSurvivesOneCallerLeaving(t *testing.T) {
 	require.NotNil(t, r)
 	require.Equal(t, http.StatusOK, r.Status)
 	require.Equal(t, 1, f.Count())
+}
+
+// A caller that arrives after the last caller of a shared request has left, while that
+// cancelled request is still unwinding, sends a new request: joining the cancelled one
+// would hand it "context canceled".
+func TestCallerAfterACancelledSharedRequestSendsANewOne(t *testing.T) {
+	var n atomic.Int32
+	started, cancelled, unwind := make(chan struct{}), make(chan struct{}), make(chan struct{})
+	rt := roundTripFunc(func(r *http.Request) (*http.Response, error) {
+		if n.Add(1) > 1 {
+			return stubResponse(r, http.StatusOK, `{"ok":true}`), nil
+		}
+		close(started)
+		<-r.Context().Done()
+		close(cancelled)
+		<-unwind // the cancelled request is still on its way out when the next caller comes
+		return nil, r.Context().Err()
+	})
+	c, err := New(Config{BaseURL: "https://esi.example.test", HTTPClient: &http.Client{Transport: rt}})
+	require.NoError(t, err)
+	var once sync.Once
+	release := func() { once.Do(func() { close(unwind) }) }
+	t.Cleanup(release)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	firstDone := make(chan error, 1)
+	go func() {
+		_, err := c.Get(ctx, "/slow", nil)
+		firstDone <- err
+	}()
+	<-started
+	cancel()
+	require.Error(t, <-firstDone)
+	<-cancelled
+
+	type result struct {
+		r   *Response
+		err error
+	}
+	lateDone := make(chan result, 1)
+	go func() {
+		r, err := c.Get(context.Background(), "/slow", nil)
+		lateDone <- result{r, err}
+	}()
+	var late result
+	select {
+	case late = <-lateDone:
+	case <-time.After(5 * time.Second):
+		release() // it waits on the cancelled request: let that end to see what it gets
+		late = <-lateDone
+	}
+	require.NoError(t, late.err, "the late caller got the cancelled request's answer")
+	require.Equal(t, http.StatusOK, late.r.Status)
+	require.EqualValues(t, 2, n.Load(), "the late caller sent a request of its own")
+}
+
+// Every shared request runs on the context made for it. Under steady overlapping traffic on
+// a key that is never cached, no request may run on an earlier caller's context: its values
+// (a Store generation, for one) would be stale, and once its deadline passed every later
+// call would fail without sending anything. A caller that asks again after its answer
+// never gets that same answer back.
+func TestSharedRequestsDoNotReuseAnEarlierCallersContext(t *testing.T) {
+	type callerID struct{}
+	var mu sync.Mutex
+	requestsPerCaller := map[int64]int{}
+	var sent atomic.Int64
+	rt := roundTripFunc(func(r *http.Request) (*http.Response, error) {
+		id, _ := r.Context().Value(callerID{}).(int64)
+		mu.Lock()
+		requestsPerCaller[id]++
+		mu.Unlock()
+		n := sent.Add(1)
+		time.Sleep(200 * time.Microsecond)
+		return stubResponse(r, http.StatusServiceUnavailable, fmt.Sprintf(`{"request":%d}`, n)), nil
+	})
+	c, err := New(Config{BaseURL: "https://esi.example.test", HTTPClient: &http.Client{Transport: rt}, ErrorLimitFloor: -1, MaxConcurrent: 64})
+	require.NoError(t, err)
+	c.flightTimeout = 200 * time.Millisecond
+
+	var calls, expired, repeated atomic.Int64
+	stop := time.Now().Add(4 * c.flightTimeout)
+	var wg sync.WaitGroup
+	for range 32 {
+		wg.Go(func() {
+			var last int64
+			for time.Now().Before(stop) {
+				ctx := context.WithValue(context.Background(), callerID{}, calls.Add(1))
+				r, err := c.Get(ctx, "/hot", nil)
+				if errors.Is(err, context.DeadlineExceeded) {
+					expired.Add(1)
+				}
+				var body struct{ Request int64 }
+				if err != nil || r.DecodeJSON(&body) != nil {
+					continue
+				}
+				if body.Request <= last {
+					repeated.Add(1)
+				}
+				last = body.Request
+			}
+		})
+	}
+	wg.Wait()
+
+	mu.Lock()
+	defer mu.Unlock()
+	reused := 0
+	for _, n := range requestsPerCaller {
+		if n > 1 {
+			reused++
+		}
+	}
+	t.Logf("calls=%d requests=%d", calls.Load(), sent.Load())
+	require.Less(t, sent.Load(), calls.Load(), "the callers shared requests")
+	require.Zero(t, reused, "caller contexts that ran more than one upstream request")
+	require.Zero(t, expired.Load(), "calls that failed on an earlier request's deadline")
+	require.Zero(t, repeated.Load(), "calls answered by a request no newer than the caller's previous answer")
 }

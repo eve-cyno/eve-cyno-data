@@ -120,7 +120,7 @@ func TestConcurrentCallersOnAColdKeyShareOneRequest(t *testing.T) {
 		}()
 	}
 	require.Eventually(t, func() bool { return f.Count() >= 1 }, 5*time.Second, 5*time.Millisecond)
-	time.Sleep(50 * time.Millisecond) // let the other callers join the flight
+	require.Eventually(t, func() bool { return flightWaiters(c) == callers }, 5*time.Second, time.Millisecond, "every caller joins the flight")
 	close(release)
 	wg.Wait()
 
