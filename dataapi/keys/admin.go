@@ -39,8 +39,11 @@ const maxAdminBody = 1 << 10 // 1 KiB
 //
 //	GET    /admin/v1/ops/keys                  the active keys, the blocked owners and the per-owner limit;
 //	                                           ?status=revoked: the keys revoked in the last 30 days instead,
-//	                                           newest first, at most 1000 (then "capped": true), each with revoked_at and revoked_by
-//	                                           (?status=active or none: the default; else 400 invalid_status)
+//	                                           newest first, each with revoked_at and revoked_by
+//	                                           (?status=active or none: the default; else 400 invalid_status).
+//	                                           The answer stays within MaxOpsListBytes: the revoked keys (at most
+//	                                           1000) and the blocked owners are cut to fit, newest kept, and a cut
+//	                                           list adds "capped": true (revoked keys) or "blocked_capped": true
 //	POST   /admin/v1/ops/keys                  issue a key for an owner
 //	PATCH  /admin/v1/ops/keys/{id}             change the daily cap
 //	DELETE /admin/v1/ops/keys/{id}             revoke any key
@@ -301,21 +304,31 @@ func (a *admin) noContent(w http.ResponseWriter) {
 // actorHeader carries the role behind an operator revoke or block (see AdminHandler).
 const actorHeader = "X-Actor"
 
+// MaxOpsListBytes budgets the operator key list answer (GET /admin/v1/ops/keys) as a.write
+// encodes it: the web server reads at most 1 MiB of it. The blocked owners and the revoked
+// keys are cut to fit, newest kept, and the answer says so ("blocked_capped": true, "capped":
+// true); the active keys are never cut. MaxRevokedListed caps the revoked rows too.
+const MaxOpsListBytes = 900 << 10
+
 func (a *admin) opsList(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	list := func(ctx context.Context) ([]OwnedKey, bool, error) {
-		ks, err := a.s.ListAll(ctx)
-		return ks, false, err
-	}
+	revoked := false
 	switch r.URL.Query().Get("status") {
 	case "", "active":
 	case "revoked":
-		list = a.s.listRevoked
+		revoked = true
 	default:
 		a.fail(w, http.StatusBadRequest, "invalid_status", "status must be active or revoked")
 		return
 	}
-	ks, capped, err := list(ctx)
+	var ks []OwnedKey
+	var capped bool
+	var err error
+	if revoked {
+		ks, capped, err = a.s.listRevoked(ctx)
+	} else {
+		ks, err = a.s.ListAll(ctx)
+	}
 	if err != nil {
 		a.storeErr(w, r, err)
 		return
@@ -346,12 +359,62 @@ func (a *admin) opsList(w http.ResponseWriter, r *http.Request) {
 	for i := range bl {
 		bl[i].Identities = ids[bl[i].Owner]
 	}
-	resp := map[string]any{"keys": ks, "blocked": bl, "max": a.s.MaxPerOwner()}
+
+	// The byte budget: the envelope with both flags, then the active keys whole, then as many
+	// blocked owners as fit, then (on the revoked list) as many revoked keys as fit.
+	perOwner := a.s.MaxPerOwner()
+	left := MaxOpsListBytes - encodedLen(map[string]any{
+		"keys": []OwnedKey{}, "blocked": []BlockedOwner{}, "max": perOwner, "capped": true, "blocked_capped": true})
+	if !revoked {
+		left -= encodedLen(ks) - len("[]")
+	}
+	nb, left := fitRows(bl, left)
+	blockedCapped := nb < len(bl)
+	bl = bl[:nb]
+	if revoked {
+		nk, _ := fitRows(ks, left)
+		capped = capped || nk < len(ks)
+		ks = ks[:nk]
+	}
+	resp := map[string]any{"keys": ks, "blocked": bl, "max": perOwner}
+	// The flags appear only on a cut list, so no other answer changes shape.
 	if capped {
-		// Only on a capped revoked list, so no other answer changes shape.
 		resp["capped"] = true
 	}
+	if blockedCapped {
+		resp["blocked_capped"] = true
+	}
 	a.write(w, http.StatusOK, resp)
+}
+
+// fitRows returns how many of rows, from the first, fit in budget bytes of a JSON array (each
+// row with its comma), and the budget left after them.
+func fitRows[T any](rows []T, budget int) (n, left int) {
+	for n < len(rows) {
+		size := encodedLen(rows[n]) + len(",")
+		if size > budget {
+			break
+		}
+		budget -= size
+		n++
+	}
+	return n, budget
+}
+
+// encodedLen is the size of v as a.write encodes it (json.Encoder, HTML escaping on), without
+// the encoder's trailing newline.
+func encodedLen(v any) int {
+	var c byteCounter
+	_ = json.NewEncoder(&c).Encode(v)
+	return max(int(c)-1, 0)
+}
+
+// byteCounter is an io.Writer that only counts.
+type byteCounter int
+
+func (c *byteCounter) Write(p []byte) (int, error) {
+	*c += byteCounter(len(p))
+	return len(p), nil
 }
 
 func (a *admin) opsIssue(w http.ResponseWriter, r *http.Request) {

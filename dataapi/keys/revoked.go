@@ -42,7 +42,8 @@ func revokedCutoff(end time.Time) string {
 }
 
 // MaxRevokedListed caps ListRevoked: the web server reads a bounded admin response, so a
-// longer list would be cut. The newest revocations are the ones kept.
+// longer list would be cut. The newest revocations are the ones kept. The operator list also
+// cuts by size (MaxOpsListBytes).
 const MaxRevokedListed = 1000
 
 // ListRevoked returns the keys revoked in the last 30 days (the rows the store still keeps),
