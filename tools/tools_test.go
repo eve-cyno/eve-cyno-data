@@ -216,7 +216,7 @@ func TestValidateFittingCPUOverGolden(t *testing.T) {
 }
 
 func TestAnalyzeBattle(t *testing.T) {
-	t.Skip("OPUS-REVIEW: analyze_battle cassette-backed test pending (zKill/WarBeacon/evetools)")
+	t.Skip("analyze_battle needs a recorded-response test, which does not exist yet (zKill/WarBeacon/evetools)")
 }
 
 func TestGetMarketPrice(t *testing.T) {

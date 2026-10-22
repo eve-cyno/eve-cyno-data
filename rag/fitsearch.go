@@ -540,7 +540,7 @@ func hasFilamentHardener(eft, filament string) bool {
 // from the ORIGINAL query and threaded through every relaxation pass — see
 // the SearchFits doc comment for why these must survive facet drops.
 type boostSpec struct {
-	tested       bool                    // D5: doubles a tested hit's composite score
+	tested       bool                    // doubles a tested hit's composite score
 	pvpTackle    bool                    // quadruples a tackle-fitted hit's composite score (Activity=="pvp")
 	weaponFamily string                  // quadruples a hit matching this weaponFamilyMarkers key
 	tankType     string                  // quadruples a hit matching this tankTypeMarkers key
@@ -574,7 +574,7 @@ type boostSpec struct {
 //     offBonusPenalty (÷50), so it loses to every on-bonus fit that is merely
 //     missing one ×4 boost and only wins when nothing on-bonus matches. Skipped
 //     when the query names a weapon family (the user's explicit choice wins).
-//   - D5 tested boost: when the query asked for tested fits (spec.tested==true),
+//   - tested boost: when the query asked for tested fits (spec.tested==true),
 //     a player-tested hit's composite score is doubled.
 //   - pvp tackle boost: when the query's Activity is "pvp" (spec.pvpTackle==true),
 //     a hit whose EFT carries a tackle module (see pvpTackleMarkers) has its
@@ -754,7 +754,7 @@ const (
 //     composite tiebreak. On embed failure it degrades to the scroll path so
 //     facet search keeps working when the embed model is down.
 //
-// Stepwise relaxation (D4): the full condition set is tried first. On zero hits,
+// Stepwise relaxation: the full condition set is tried first. On zero hits,
 // facets are dropped ONE at a time in order (CostClass → Tier → Filament →
 // Activity → Source), each dropped label appended to Dropped, re-querying after
 // each drop until hits are found or all facets are exhausted. ship_name, the
@@ -763,7 +763,7 @@ const (
 // and the quarantine must_not rides every pass. Relaxed is true iff at least one
 // facet was dropped AND the relaxed query found hits.
 //
-// D5: when q.Tested is set, tested hits get a doubled composite score in ranking
+// Tested boost: when q.Tested is set, tested hits get a doubled composite score in ranking
 // (a preference, never a filter) — see boostedComposite.
 //
 // pvp tackle boost: when q.Activity == "pvp", tackle-fitted hits (see

@@ -388,7 +388,7 @@ const scrollTestedVsUntested = `{"result":{"points":[
  {"id":"t","payload":{"ship_name":"Gila","fit_name":"tested-weak","source":"workbench","source_url":"u2","fit_tags":["pvp"],"views":0,"is_tested":true,"score":0.5,"text":"[Gila,t]"}}
 ]}}`
 
-// TestSearchFits_testedBoostFloatsTestedFirst covers point 5 (D5): Tested=true in
+// TestSearchFits_testedBoostFloatsTestedFirst covers the tested boost: Tested=true in
 // the query doubles the composite score of tested hits in rankAndTrim. The control
 // (no Tested) keeps the stronger-base untested fit first, proving the boost flips it.
 func TestSearchFits_testedBoostFloatsTestedFirst(t *testing.T) {

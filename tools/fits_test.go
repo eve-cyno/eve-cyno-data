@@ -91,7 +91,7 @@ func golden(t *testing.T, rel string) string {
 	return string(b)
 }
 
-// TestGetFitsGilaSkeleton — structural assertions; exact bytes OPUS-REVIEW gated.
+// TestGetFitsGilaSkeleton — structural assertions only; the exact bytes are not pinned.
 func TestGetFitsGilaSkeleton(t *testing.T) {
 	deps := liveDepsOrSkip(t)
 	out, err := ExecuteTool(ctx(t), deps, "get_fits", map[string]any{"ship_name": "Gila"})

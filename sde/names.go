@@ -116,7 +116,7 @@ func (s *SDE) ResolveNameLoose(name string, maxDrop int) *[2]any {
 
 // FuzzyMatch suggests the closest typeName matches for a possibly-misspelled item.
 // Uses the same scoring as Python's difflib.SequenceMatcher(None, a, b).ratio().
-// [OPUS-REVIEW] if ratio ordering diverges from Python golden.
+// The ordering is pinned against outputs recorded from the earlier Python implementation.
 func (s *SDE) FuzzyMatch(name string, limit int, cutoff float64) [][2]any {
 	if name == "" {
 		return nil

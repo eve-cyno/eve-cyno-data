@@ -313,7 +313,6 @@ func typeInfoResult(info *TypeInfo) (string, *TypeInfo, error) {
 }
 
 // getShipStats mirrors Python _get_ship_stats — ESI attributes for a ship.
-// [OPUS-REVIEW] full parity test pending cassette capture
 // The ShipStats is nil for every text-only answer (no SDE, unknown ship, no attributes).
 func getShipStats(ctx context.Context, c *Client, s *sde.SDE, shipName string) (string, *ShipStats, error) {
 	if !s.Available() {
@@ -439,7 +438,7 @@ func inWormholeSpace(s *sde.SDE, systemID int) bool {
 	return region >= wormholeRegionMin && region < wormholeRegionMax
 }
 
-// getSovereignty mirrors Python _get_sovereignty. [OPUS-REVIEW] cassette test pending.
+// getSovereignty mirrors the earlier Python implementation's get_sovereignty.
 //
 // It reads GET /sovereignty/systems, which lists the claim of every known-space (K-space)
 // system and replaced /sovereignty/map from compatibility date 2026-05-19. The claim is
@@ -507,7 +506,7 @@ func getSovereignty(ctx context.Context, c *Client, s *sde.SDE, systemName strin
 	return fmt.Sprintf("%s has no sovereignty entry.", systemName), nil
 }
 
-// getSystemActivity mirrors Python _get_system_activity. [OPUS-REVIEW] cassette pending.
+// getSystemActivity mirrors the earlier Python implementation's get_system_activity.
 func getSystemActivity(ctx context.Context, c *Client, s *sde.SDE, systemName string) (string, error) {
 	if !s.Available() {
 		return "SDE not loaded — activity query unavailable.", nil

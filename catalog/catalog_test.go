@@ -41,7 +41,7 @@ func TestLookup(t *testing.T) {
 }
 
 // The tier table is the policy the project approved; a change here is a deliberate policy
-// change. Project decision 2026-10-13: fit lookups (get_fits, list_fits) are public with trial limits.
+// change. Fit lookups (get_fits, list_fits) are public with trial limits.
 func TestTiers_Policy(t *testing.T) {
 	want := map[catalog.Tier][]string{
 		catalog.TierPublic: {
