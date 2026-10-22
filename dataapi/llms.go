@@ -41,7 +41,7 @@ func llmsTxt(s Surface) string {
 	b.WriteString("> Deterministic EVE Online data and calculation tools over REST (OpenAPI 3.1) and MCP: SDE lookups " +
 		"(items, ships, skills, stations, routes), fit validation and statistics (Gofa dogma engine), market prices, " +
 		"sovereignty and system activity, community-fit search. No language model is in the loop, and every answer names its sources.\n\n")
-	b.WriteString("EVE Online and its game data are the property of CCP Games / Fenris Creations and are used under the EVE Developer " +
+	b.WriteString("EVE Online and its game data are the property of Fenris Creations and are used under the EVE Developer " +
 		"License Agreement. This service is non-commercial and not affiliated with or endorsed by them. The complete notice and " +
 		"the licence of each data source are in llms-full.txt.\n\n")
 

@@ -90,7 +90,7 @@ func TestOutputCapacity_EachModifier(t *testing.T) {
 }
 
 // Fitting-output attributes (ship powerOutput = 11, cpuOutput = 48) are
-// stackable=1 in the SDE, so CCP applies NO stacking penalty to RCU/PDS/
+// stackable=1 in the SDE, so FC applies NO stacking penalty to RCU/PDS/
 // Co-Processor/ACR/POU bonuses (EVE University "Stacking penalty": Powergrid
 // and CPU = "no"; Pyfa reproduces the plain product). Two identical modules
 // therefore compose multiplicatively — NOT with exp(-(n/2.67)^2) damping.

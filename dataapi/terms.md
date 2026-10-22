@@ -4,7 +4,7 @@ Last updated: 2026-10-18
 
 ## What this is
 
-The EVE-Cyno Data API is a free, hobby-run service by Bythlak that gives developers and AI agents deterministic EVE Online data: static-data lookups, fit statistics and a community-fit search, over REST and MCP. It is not an official EVE Online or CCP service.
+The EVE-Cyno Data API is a free, hobby-run service by Bythlak that gives developers and AI agents deterministic EVE Online data: static-data lookups, fit statistics and a community-fit search, over REST and MCP. It is not an official EVE Online or Fenris Creations service.
 
 ## No warranty, no SLA
 

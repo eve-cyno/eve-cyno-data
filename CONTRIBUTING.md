@@ -34,6 +34,6 @@ under the MIT licence of this repository.
 ## Data and licensing
 
 - Do not add game data dumps, SDE databases, scraped community fits, or anything under a licence incompatible with MIT.
-  See `NOTICE` for how CCP / EVE material is handled.
+  See `NOTICE` for how EVE material is handled.
 - Do not add any dependency that is not under a permissive licence (MIT, BSD, Apache-2.0, ISC, MPL-2.0); CI checks it.
 - English only: code, comments, commit messages, and docs.

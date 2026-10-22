@@ -181,7 +181,7 @@ Tengu Offensive - Accelerated Ejection Bay
 	require.Contains(t, fd.Violations[len(fd.Violations)-1], "missing subsystem")
 }
 
-// The Alpha caps are CCP's (chrCloneGradeSkills), not a hand-kept list: these were
+// The Alpha caps are FC's (chrCloneGradeSkills), not a hand-kept list: these were
 // flagged Omega-only by the old embedded JSON.
 func TestAlphaLegality_FollowsTheSDECloneGrades(t *testing.T) {
 	deps := testDeps(t)

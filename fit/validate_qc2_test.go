@@ -190,7 +190,7 @@ func TestValidate_QC2HawkHasNoCPUNote(t *testing.T) {
 // OutputCapacity to its SDE name and to the dogma effect that applies it
 // (operation: 2 = ModAdd, 4 = PostMul, 6 = PostPercent). The order of operations
 // (flat adds, then multipliers, then percent bonuses) is what the capacity
-// formula encodes; a CCP change to any of this must fail here, not silently skew
+// formula encodes; an FC change to any of this must fail here, not silently skew
 // every fit.
 func TestFittingModifierAttributesMatchSDE(t *testing.T) {
 	s := qc2OpenSDE(t)
@@ -233,9 +233,9 @@ func TestFittingModifierAttributesMatchSDE(t *testing.T) {
 
 // TestFittingOutputAttributesAreNotStackingPenalised documents why the capacity
 // formula has no stacking-penalty helper: ship powerOutput (11) and cpuOutput
-// (48) are stackable=1 in the SDE, i.e. CCP does not penalise RCU/PDS/
+// (48) are stackable=1 in the SDE, i.e. FC does not penalise RCU/PDS/
 // Co-Processor/ACR/POU bonuses (EVE University "Stacking penalty" table:
-// "Powergrid: no, CPU: no"; Pyfa gives the plain product). If CCP ever flips the
+// "Powergrid: no, CPU: no"; Pyfa gives the plain product). If FC ever flips the
 // flag this test fails and a penalty helper (exp(-(i/2.67)^2) over the sorted
 // bonuses, as in fit/gofa/stacking.go) must be added to OutputCapacity.
 func TestFittingOutputAttributesAreNotStackingPenalised(t *testing.T) {

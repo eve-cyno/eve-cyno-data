@@ -9,7 +9,7 @@
 #   openapi.yaml              GET /meta/openapi.yaml sent with X-Compatibility-Date: <DefaultCompatibilityDate>,
 #                             i.e. the exact contract the client is pinned to
 #
-# A change means CCP released a new compatibility date, raised the minimum date or edited the
+# A change means FC released a new compatibility date, raised the minimum date or edited the
 # pinned spec. Read the diff, re-check every ESI caller (tools, ingest/intel), then either
 # bump DefaultCompatibilityDate in esi/config.go or just accept the new snapshots.
 #

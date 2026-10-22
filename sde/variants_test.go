@@ -56,7 +56,7 @@ func TestMetaVariants_NoFamily(t *testing.T) {
 	require.Empty(t, s.MetaVariants(id))
 }
 
-// TestNearestModuleNames_RenamedModules pins the hint for names CCP renamed: the
+// TestNearestModuleNames_RenamedModules pins the hint for names FC renamed: the
 // old name is not in the SDE as a published item, the new one is.
 func TestNearestModuleNames_RenamedModules(t *testing.T) {
 	s, err := Open(dbPath(t))

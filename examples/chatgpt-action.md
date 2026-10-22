@@ -21,7 +21,7 @@ A custom GPT Action calls your API from OpenAI's servers, so it needs a **public
    - `appraise_items` also takes the caller's own Janice key in `X-Janice-Key` for a Janice appraisal; a GPT Action cannot
      supply that per user safely, so the Action gets the ESI estimate.
 6. Suggested instruction for the GPT: "Use the Action for every EVE Online number (jumps, fit stats, item data); do not
-   guess. When an answer lists sources, name them." The responses carry an `attribution` array; CCP's licence and the
+   guess. When an answer lists sources, name them." The responses carry an `attribution` array; Fenris Creations' licence and the
    community-fit sources require it to be shown.
 
 Limits to keep in mind: the tool endpoint is rate limited to 10 requests per minute per caller without a key and 60 with a key, and an Action is easier

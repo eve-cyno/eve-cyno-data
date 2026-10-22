@@ -107,12 +107,12 @@
       {
         "name": "EVE Static Data Export (via Fuzzwork)",
         "url": "https://www.fuzzwork.co.uk/dump/",
-        "license": "CCP game data under the EVE Developer License Agreement; converted by Fuzzwork Enterprises"
+        "license": "Fenris Creations game data under the EVE Developer License Agreement; converted by Fuzzwork Enterprises"
       },
       {
         "name": "ESI (EVE Swagger Interface)",
         "url": "https://esi.evetech.net/",
-        "license": "EVE Developer License Agreement (CCP Games / Fenris Creations); non-commercial use"
+        "license": "EVE Developer License Agreement (Fenris Creations); non-commercial use"
       }
     ]
   }

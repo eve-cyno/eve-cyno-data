@@ -76,8 +76,8 @@ const (
 const instructions = "Deterministic EVE Online data and calculation tools: SDE lookups (items, ships, skills, " +
 	"stations, routes, jump distances, system search and facts), fit validation and stats, market prices and history, " +
 	"sovereignty and system activity, and live Thera connections. " +
-	"Answers are computed from CCP's Static Data Export and ESI, with EVE University's ice-belt list and EvE-Scout's Thera data, not generated. " +
-	"EVE Online and its data are the property of CCP Games / Fenris Creations; this service is " +
+	"Answers are computed from Fenris Creations' Static Data Export and ESI, with EVE University's ice-belt list and EvE-Scout's Thera data, not generated. " +
+	"EVE Online and its data are the property of Fenris Creations; this service is " +
 	"non-commercial and unaffiliated (EVE Developer License Agreement). Each answer names its sources."
 
 // Options configures a server.

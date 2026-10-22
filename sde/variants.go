@@ -102,7 +102,7 @@ func weightedWords(content []string) map[string]float64 {
 // SDE uses now, so the pair counts as a match in NearestModuleNames. Only renames
 // and spellings seen in model output and in the SDE belong here:
 //
-//   - adaptive: CCP renamed the omni-resist armor membrane "Energized Adaptive Nano
+//   - adaptive: FC renamed the omni-resist armor membrane "Energized Adaptive Nano
 //     Membrane" to "Multispectrum Energized Membrane" (the six resist variants of the
 //     group tie on every other word, so this is what puts Multispectrum first);
 //   - armour: British spelling, the SDE says "armor";
@@ -129,7 +129,7 @@ const (
 
 // NearestModuleNames returns up to limit published module / rig / drone /
 // subsystem names closest to a name that does not resolve in the SDE: a
-// fabricated name or one CCP has renamed ("Energized Adaptive Nano Membrane II" is
+// fabricated name or one FC has renamed ("Energized Adaptive Nano Membrane II" is
 // now "Multispectrum Energized Membrane II"). It is deterministic and uses no LLM:
 //
 //   - candidates are published items of categories Module, Drone and Subsystem
@@ -253,7 +253,7 @@ func (s *SDE) NearestModuleNames(name string, limit int) []string {
 }
 
 // oldNameGroups returns the groups of the unpublished module-like items whose
-// names contain every word of the query: CCP keeps the old type of a renamed
+// names contain every word of the query: FC keeps the old type of a renamed
 // module in the SDE, unpublished, in the group the new one lives in.
 func (s *SDE) oldNameGroups(qWords map[string]float64) map[int]bool {
 	out := map[int]bool{}

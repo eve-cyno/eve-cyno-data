@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// The Alpha clone skill caps come from CCP's chrCloneGrades / chrCloneGradeSkills.
+// The Alpha clone skill caps come from FC's chrCloneGrades / chrCloneGradeSkills.
 func TestAlphaCloneSkills_FromTheSDE(t *testing.T) {
 	s := testSDE(t)
 	got, err := s.AlphaCloneSkills()

@@ -362,7 +362,7 @@ to run before a pull request.
 
 Read this before you show answers to other people.
 
-- **CCP / Fenris Creations.** EVE Online data (SDE, ESI) is used under the EVE Developer License Agreement; this software is
+- **Fenris Creations.** EVE Online data (SDE, ESI) is used under the EVE Developer License Agreement; this software is
   non-commercial. Show this notice wherever you publish answers: "(c) 2014 Fenris Creations hf. All rights reserved. 'EVE',
   'EVE Online', 'Fenris Creations', and all related logos and images are trademarks or registered trademarks of Fenris Creations
   hf. This material is used with limited permission of Fenris Creations. No official affiliation or endorsement by Fenris
@@ -383,7 +383,7 @@ Read this before you show answers to other people.
 
 ## Licence and notices
 
-Code: [MIT](LICENSE), Copyright (c) 2026 Bythlak. EVE Online data and trademarks belong to CCP Games / Fenris Creations and are
+Code: [MIT](LICENSE), Copyright (c) 2026 Bythlak. EVE Online data and trademarks belong to Fenris Creations and are
 used under the EVE Developer License Agreement; see [`NOTICE`](NOTICE) (including the required disclaimer, the EVE University Wiki
 attribution, and the Pyfa validation note) and [`THIRD_PARTY.md`](THIRD_PARTY.md). Contributions: [`CONTRIBUTING.md`](CONTRIBUTING.md).
 Vulnerabilities: [`SECURITY.md`](SECURITY.md).

@@ -146,7 +146,7 @@ func (s *SDE) GetReprocessingYield(typeID, runs int, refiningEfficiencyPct float
 }
 
 // AlphaCloneSkills returns skill typeID → the highest level an Alpha clone can train it
-// to, from CCP's clone grades (chrCloneGrades / chrCloneGradeSkills: one set of skills
+// to, from FC's clone grades (chrCloneGrades / chrCloneGradeSkills: one set of skills
 // per Alpha race grade, levels stored as text). It errors, rather than returning an
 // empty map, when the tables are missing or empty: callers treat the result as an
 // allowlist, and an empty one would flag everything as Omega-only.

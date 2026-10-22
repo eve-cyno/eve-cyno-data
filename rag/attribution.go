@@ -79,7 +79,7 @@ var sourceLicenses = map[string]SourceLicense{
 		Credit:  "caldarijoans", Author: "caldarijoans",
 	},
 	corpus.SourceZkillboardMeta: {
-		License: "Public API under zKillboard's usage etiquette; killmails are CCP game data (EVE Developer License Agreement)",
+		License: "Public API under zKillboard's usage etiquette; killmails are Fenris Creations game data (EVE Developer License Agreement)",
 	},
 	// Curated docs written for this project; the wiki_supplement ones rework EVE
 	// University material, so they carry the wiki's share-alike terms, unless their

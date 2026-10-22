@@ -17,7 +17,7 @@ func NewLegality(s LegalitySDE, al *AlphaAllowlist) *Legality {
 }
 
 // IsAlphaLegalType reports whether an Alpha clone can use the given typeID: every
-// skill the type requires must be on the Alpha allowlist (CCP's clone grades, see
+// skill the type requires must be on the Alpha allowlist (FC's clone grades, see
 // LoadAlphaAllowlist) at or above the required level.
 //
 // This is the whole rule; there is deliberately no meta-tier reject. The game gates

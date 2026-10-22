@@ -60,7 +60,7 @@ func TestCall_SuccessMapsTextDataAndAttribution(t *testing.T) {
 	f := &fakeExec{res: tools.Result{
 		Tool: "get_jumps_between", Version: "v-test", Text: "Jita to Amarr: 11 jumps",
 		Data:        &payload{TypeID: 34, Name: "Tritanium"},
-		Attribution: []tools.Source{{Name: "EVE Static Data Export (via Fuzzwork)", URL: "https://www.fuzzwork.co.uk/dump/", License: "CCP data"}},
+		Attribution: []tools.Source{{Name: "EVE Static Data Export (via Fuzzwork)", URL: "https://www.fuzzwork.co.uk/dump/", License: "Fenris Creations data"}},
 	}}
 	cs := connect(t, newServer(&tools.Deps{}, Options{}, f.exec))
 
@@ -85,7 +85,7 @@ func TestCall_SuccessMapsTextDataAndAttribution(t *testing.T) {
 	attr, ok := res.Meta[MetaPrefix+"attribution"].([]any)
 	require.True(t, ok)
 	require.Len(t, attr, 1)
-	require.Equal(t, "CCP data", attr[0].(map[string]any)["license"])
+	require.Equal(t, "Fenris Creations data", attr[0].(map[string]any)["license"])
 }
 
 func TestCall_TextOnlyResultHasNoStructuredContent(t *testing.T) {

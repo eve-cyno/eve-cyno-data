@@ -1,5 +1,5 @@
 // Command sde builds (or refreshes) the SDE SQLite file that every other core binary
-// reads, from the Fuzzwork dump of CCP's Static Data Export. It is the standalone
+// reads, from the Fuzzwork dump of Fenris Creations' Static Data Export. It is the standalone
 // counterpart of the ingest pipeline's SDE step and runs the same builder
 // (sde/build), so a checkout of this module alone can make its own SDE.
 //

@@ -14,7 +14,7 @@ type AlphaAllowlist struct {
 	byTypeID map[int]int
 }
 
-// LoadAlphaAllowlist builds the allowlist from CCP's own Alpha clone grades in the SDE
+// LoadAlphaAllowlist builds the allowlist from FC's own Alpha clone grades in the SDE
 // (chrCloneGrades / chrCloneGradeSkills), so it follows the game instead of a hand-kept
 // list. A source that fails or has no skills is an error: an empty allowlist would
 // silently make every module with a skill requirement Alpha-illegal.

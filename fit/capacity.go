@@ -131,7 +131,7 @@ func ModuleLoad(groupID *int, dogma map[int]float64) (cpu, pg float64) {
 //	CPU = shipCPU                  x Π cpuMultiplier        x 1.25 (CPU Management V) x Π (1 + cpuOutputBonus2/100)
 //	PG  = (shipPG + Σ powerIncrease) x Π powerOutputMultiplier x 1.25 (Power Grid Management V) x Π (1 + powerEngineeringOutputBonus/100)
 //
-// The factor order is CCP's dogma operation order: ModAdd (the MAPC's flat MW)
+// The factor order is FC's dogma operation order: ModAdd (the MAPC's flat MW)
 // runs first, so the multipliers and the skill scale it; then PostMul (RCU, PDS,
 // Co-Processor); then PostPercent (the skill and the rigs, each multiplying).
 // Verified against Pyfa on Hawk (Co-Processor II + Vigor MAPC: PG (45+11)*1.25 =
@@ -141,7 +141,7 @@ func ModuleLoad(groupID *int, dogma map[int]float64) (cpu, pg float64) {
 // There is NO stacking penalty: ship powerOutput/cpuOutput are stackable=1 in
 // the SDE (the EVE University stacking-penalty table lists Powergrid and CPU as
 // "no"), so two RCUs give the plain product. TestFittingOutputAttributesAreNot
-// StackingPenalised fails if CCP ever flips the flag.
+// StackingPenalised fails if FC ever flips the flag.
 //
 // modules are the dogma maps of the fitted high/mid/low (and subsystem) modules;
 // rigs the dogma maps of the rigs. The rig percent attributes are only read from

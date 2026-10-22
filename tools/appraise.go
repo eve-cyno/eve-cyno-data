@@ -140,7 +140,7 @@ func convertISKToReal(ctx context.Context, c *Client, iskAmount float64, currenc
 
 	usdToEur := usdToEURRate(ctx, c)
 
-	// 500 PLEX = $20 USD (CCP pricing)
+	// 500 PLEX = $20 USD (FC pricing)
 	plexPerUSD := plexISK * 500.0 / 20.0
 	iskInUSD := iskAmount / plexPerUSD
 	iskInEUR := iskInUSD * usdToEur

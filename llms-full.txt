@@ -535,13 +535,13 @@ Community fits (get_fits, list_fits, /fits/search) belong to their authors and s
 
 Sources behind the tool answers:
 
-- ESI (EVE Swagger Interface) <https://esi.evetech.net/>: EVE Developer License Agreement (CCP Games / Fenris Creations); non-commercial use
-- EVE Static Data Export (via Fuzzwork) <https://www.fuzzwork.co.uk/dump/>: CCP game data under the EVE Developer License Agreement; converted by Fuzzwork Enterprises
+- ESI (EVE Swagger Interface) <https://esi.evetech.net/>: EVE Developer License Agreement (Fenris Creations); non-commercial use
+- EVE Static Data Export (via Fuzzwork) <https://www.fuzzwork.co.uk/dump/>: Fenris Creations game data under the EVE Developer License Agreement; converted by Fuzzwork Enterprises
 - EVE Workbench <https://eveworkbench.com/>: No licence published
 - Abysstracker <https://abysstracker.com/>: No licence published
 - gustavmannfred (abyss fits) <https://gustavmannfred.streamlit.app/>: No licence published; used with the author's permission
 - caldarijoans (abyss fits) <https://caldarijoans.streamlit.app/>: No licence published; used with the author's permission
-- zKillboard <https://zkillboard.com/>: Public API under zKillboard's usage etiquette; killmails are CCP game data (EVE Developer License Agreement)
+- zKillboard <https://zkillboard.com/>: Public API under zKillboard's usage etiquette; killmails are Fenris Creations game data (EVE Developer License Agreement)
 - WarBeacon <https://warbeacon.net/>: No licence published; one report per user-supplied URL
 - br.evetools.org <https://br.evetools.org/>: No licence published; one report per user-supplied URL
 - Janice <https://janice.e-351.com/>: Private API used with a key granted by its creator

@@ -6,7 +6,7 @@ compared against these numbers in the tests; they are an external reference
 for checking the engine's results, not part of the engine.
 
 **What these files are (and are not).** Each `oracle/*.json` is a numeric dump:
-CCP attribute data plus numbers computed by running a separately obtained,
+FC attribute data plus numbers computed by running a separately obtained,
 locally cloned [Pyfa](https://github.com/pyfa-org/Pyfa) (GPL-3.0) as an
 external validation reference. No Pyfa source code, data file or binary is
 part of this repository, and Gofa does not import or link Pyfa; the numbers

@@ -14,12 +14,12 @@ var (
 	sourceESI = Source{
 		Name:    "ESI (EVE Swagger Interface)",
 		URL:     "https://esi.evetech.net/",
-		License: "EVE Developer License Agreement (CCP Games / Fenris Creations); non-commercial use",
+		License: "EVE Developer License Agreement (Fenris Creations); non-commercial use",
 	}
 	sourceSDE = Source{
 		Name:    "EVE Static Data Export (via Fuzzwork)",
 		URL:     "https://www.fuzzwork.co.uk/dump/",
-		License: "CCP game data under the EVE Developer License Agreement; converted by Fuzzwork Enterprises",
+		License: "Fenris Creations game data under the EVE Developer License Agreement; converted by Fuzzwork Enterprises",
 	}
 	sourceEVEUniversityIce = Source{
 		Name:    "EVE University Wiki (ice belt systems)",
