@@ -25,13 +25,20 @@ const (
 	// esiPricesTTL is how long one copy is used. The prices are averages and move slowly, so
 	// one request a day per process is enough.
 	esiPricesTTL = 24 * time.Hour
+	// esiPricesStale is how long past esiPricesTTL an expired copy is still served at once while
+	// a refresh runs behind it. A copy older than that (a process nobody asked for a day or
+	// more) is not: the caller waits for the refresh, as on the first load.
+	esiPricesStale = 24 * time.Hour
+	// esiPricesMaxAge bounds the copy kept as the fallback when a refresh fails: an older one
+	// is never served, and the answer says the prices are unavailable instead.
+	esiPricesMaxAge = 7 * 24 * time.Hour
 	// esiPricesRetry is the pause after a failed fetch: an ESI outage costs one request per
 	// pause, not one per appraisal.
 	esiPricesRetry = 5 * time.Minute
 	// esiPricesTimeout bounds one fetch. The fetch runs detached from the caller that started
 	// it, so a caller that gives up does not fail the callers waiting on the same fetch. It is
-	// below the 30 s tool timeout: a slow ESI refresh then ends in the old copy or "No estimate"
-	// instead of the caller timing out first.
+	// below the 30 s tool timeout: a caller that waits for a slow fetch (the first load, or a
+	// copy too old to serve at once) gets the old copy or "No estimate" before its own deadline.
 	esiPricesTimeout = 20 * time.Second
 )
 
@@ -67,29 +74,39 @@ func (b *esiPriceBook) clock() time.Time {
 	return time.Now()
 }
 
-// snapshot returns a copy no older than esiPricesTTL, fetching one through e when needed.
-// Only the very first load waits for a fetch. Once a copy exists, an expired one is served at
-// once while a single fetch refreshes it in the background (stale-while-revalidate); the
-// answer states the copy's date. A failed refresh keeps the old copy and is not tried again
-// before esiPricesRetry; without a copy a failure is the error. A caller whose ctx ends while
-// it waits for the first load gets ctx's error; the fetch itself carries on.
+// snapshot returns the copy to answer with, fetching one through e when needed; the answer
+// states the copy's date. By the copy's age:
+//   - younger than esiPricesTTL: served as is;
+//   - up to esiPricesStale past the TTL: served at once while a single fetch refreshes it in
+//     the background (stale-while-revalidate);
+//   - older, or no copy: the caller waits for the fetch (bounded by esiPricesTimeout). When the
+//     fetch fails, a copy younger than esiPricesMaxAge is the answer, otherwise the failure.
+//
+// A failed fetch is not tried again before esiPricesRetry; inside that pause the copy (if
+// younger than esiPricesMaxAge) or the failure is the answer. A caller whose ctx ends while it
+// waits gets ctx's error; the fetch itself carries on.
 func (b *esiPriceBook) snapshot(ctx context.Context, e *esi.Client) (*priceSnapshot, error) {
 	b.mu.Lock()
 	snap, lastErr, retryAt := b.snap, b.lastErr, b.retryAt
 	b.mu.Unlock()
 	now := b.clock()
-	if snap != nil && now.Sub(snap.fetched) < esiPricesTTL {
+	var age time.Duration
+	if snap != nil {
+		age = now.Sub(snap.fetched)
+	}
+	if snap != nil && age < esiPricesTTL {
 		return snap, nil
 	}
+	fallback := snap != nil && age < esiPricesMaxAge
 	if now.Before(retryAt) {
-		if snap != nil {
+		if fallback {
 			return snap, nil
 		}
 		return nil, lastErr
 	}
 
 	ch := b.refresh(ctx, e)
-	if snap != nil {
+	if snap != nil && age < esiPricesTTL+esiPricesStale {
 		// The refresh runs on without this caller; its result lands in b.snap.
 		return snap, nil
 	}
@@ -98,6 +115,12 @@ func (b *esiPriceBook) snapshot(ctx context.Context, e *esi.Client) (*priceSnaps
 		return nil, ctx.Err()
 	case r := <-ch:
 		if r.Err != nil {
+			if ctx.Err() != nil {
+				return nil, ctx.Err() // the caller gave up: that, not the fetch failure, is the answer
+			}
+			if fallback {
+				return snap, nil
+			}
 			return nil, r.Err
 		}
 		return r.Val.(*priceSnapshot), nil
@@ -105,10 +128,12 @@ func (b *esiPriceBook) snapshot(ctx context.Context, e *esi.Client) (*priceSnaps
 }
 
 // refresh starts a fetch, or joins the one running: any number of callers share one request.
-// A flight first reads the book again: a caller that saw the expired copy just before another
-// flight replaced it gets the new copy (or, inside the retry pause, the old copy or the last
-// error) without a second request. The fetch gets its own context (detached from ctx, bounded
-// by esiPricesTimeout), so the caller that started it can go away without failing the others.
+// Its result is a new copy or the fetch's error. A flight first reads the book again: a caller
+// that saw the expired copy just before another flight replaced it gets the new copy, and one
+// that saw it just before a fetch failed gets that failure (it then falls back like the callers
+// of the failed fetch), without a second request. The fetch gets its own context (detached
+// from ctx, bounded by esiPricesTimeout), so the caller that started it can go away without
+// failing the others.
 func (b *esiPriceBook) refresh(ctx context.Context, e *esi.Client) <-chan singleflight.Result {
 	return b.flight.DoChan("prices", func() (any, error) {
 		b.mu.Lock()
@@ -117,9 +142,6 @@ func (b *esiPriceBook) refresh(ctx context.Context, e *esi.Client) <-chan single
 		if n := b.clock(); cur != nil && n.Sub(cur.fetched) < esiPricesTTL {
 			return cur, nil
 		} else if n.Before(curRetry) {
-			if cur != nil {
-				return cur, nil
-			}
 			return nil, curErr
 		}
 		b.fetches.Add(1)

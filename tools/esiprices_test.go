@@ -2,6 +2,7 @@ package tools
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -229,6 +230,131 @@ func TestESIPriceBook_AnExpiredCopyIsServedWhileOneRefreshRuns(t *testing.T) {
 	again, err := c.prices.snapshot(context.Background(), c.esiClient())
 	require.NoError(t, err)
 	require.Same(t, fresh, again)
+	require.Equal(t, 2, pricesCalls(f))
+}
+
+// How old the copy is decides what a caller gets: up to a day past the TTL it is served at
+// once while a refresh runs behind it; an older copy makes the caller wait for the refresh, as
+// on the first load, and is the fallback only when that refresh fails, never past
+// esiPricesMaxAge.
+func TestESIPriceBook_TheCopysAgeDecidesWhetherACallerWaits(t *testing.T) {
+	fresh := `[{"type_id":34,"average_price":5}]`
+	for _, tc := range []struct {
+		name string
+		age  time.Duration
+		down bool
+		// want: "old" the first copy, "new" the refreshed one, "error" no copy.
+		want string
+	}{
+		{"just past the TTL", esiPricesTTL, false, "old"},
+		{"a day past the TTL, less a minute", esiPricesTTL + esiPricesStale - time.Minute, false, "old"},
+		{"a day past the TTL: waits", esiPricesTTL + esiPricesStale, false, "new"},
+		{"six days: waits", 6 * 24 * time.Hour, false, "new"},
+		{"eight days: waits", 8 * 24 * time.Hour, false, "new"},
+		{"a day past the TTL, ESI down: the old copy", esiPricesTTL + esiPricesStale, true, "old"},
+		{"a week less a minute, ESI down: the old copy", esiPricesMaxAge - time.Minute, true, "old"},
+		{"a week, ESI down: no copy", esiPricesMaxAge, true, "error"},
+		{"eight days, ESI down: no copy", 8 * 24 * time.Hour, true, "error"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			c, f, ps := newPricesClient(t)
+			now := time.Date(2026, 10, 14, 12, 0, 0, 0, time.UTC)
+			c.prices.now = func() time.Time { return now }
+			first, err := c.prices.snapshot(context.Background(), c.esiClient())
+			require.NoError(t, err)
+			if tc.down {
+				ps.set(http.StatusServiceUnavailable, `{"error":"down"}`)
+			} else {
+				ps.set(http.StatusOK, fresh)
+			}
+			now = now.Add(tc.age)
+
+			got, err := c.prices.snapshot(context.Background(), c.esiClient())
+			switch tc.want {
+			case "old":
+				require.NoError(t, err)
+				require.Same(t, first, got)
+			case "new":
+				require.NoError(t, err)
+				require.Equal(t, 5.0, got.Average[34], "the caller waited for the refresh")
+			case "error":
+				require.ErrorContains(t, err, "503")
+				require.Nil(t, got)
+			}
+			if tc.want == "old" && !tc.down {
+				waitSwapped(t, &c.prices, first) // the refresh ran behind the answer
+			}
+			require.Equal(t, 2, pricesCalls(f))
+
+			// Inside the retry pause after a failure the answer is the same, with no request.
+			if tc.down {
+				now = now.Add(time.Second)
+				again, err := c.prices.snapshot(context.Background(), c.esiClient())
+				if tc.want == "error" {
+					require.ErrorContains(t, err, "503")
+				} else {
+					require.NoError(t, err)
+					require.Same(t, first, again)
+				}
+				require.Equal(t, 2, pricesCalls(f), "no request inside the retry pause")
+			}
+		})
+	}
+}
+
+// A flight that starts inside the retry pause (its caller read the book just before a fetch
+// failed) answers with that failure, not the copy, so the caller falls back by the copy's age
+// and never gets one past esiPricesMaxAge.
+func TestESIPriceBook_AFlightInsideTheRetryPauseAnswersWithTheFailure(t *testing.T) {
+	c, f, _ := newPricesClient(t)
+	now := time.Date(2026, 10, 14, 12, 0, 0, 0, time.UTC)
+	c.prices.now = func() time.Time { return now }
+	failure := errors.New("GET /markets/prices: 503")
+	c.prices.snap = &priceSnapshot{Average: map[int]float64{34: 4}, fetched: now.Add(-8 * 24 * time.Hour)}
+	c.prices.lastErr, c.prices.retryAt = failure, now.Add(time.Minute)
+
+	r := <-c.prices.refresh(context.Background(), c.esiClient())
+	require.ErrorIs(t, r.Err, failure)
+	require.Nil(t, r.Val)
+	require.Zero(t, pricesCalls(f))
+}
+
+// A copy too old to serve while ESI is down gives the usual "unavailable" estimate.
+func TestEstimateAppraisal_AWeekOldCopyIsNotQuoted(t *testing.T) {
+	s := testSDE(t)
+	c, _, ps := newPricesClient(t)
+	now := time.Date(2026, 10, 14, 12, 0, 0, 0, time.UTC)
+	c.prices.now = func() time.Time { return now }
+	out, err := estimateAppraisal(context.Background(), c, s, "Tritanium x1000")
+	require.NoError(t, err)
+	require.Contains(t, out, "4,000.00 ISK")
+
+	ps.set(http.StatusServiceUnavailable, `{"error":"down"}`)
+	now = now.Add(esiPricesMaxAge)
+	out, err = estimateAppraisal(context.Background(), c, s, "Tritanium x1000")
+	require.NoError(t, err)
+	require.True(t, strings.HasPrefix(out, "No estimate (ESI average prices): the prices are unavailable right now ("), out)
+}
+
+// A caller that waits for the refresh of a copy too old to serve gives up on its own deadline;
+// the refresh runs on and the next caller gets its result.
+func TestESIPriceBook_ACallerWaitingOnAnOldCopyCanGiveUp(t *testing.T) {
+	c, f, ps := newPricesClient(t)
+	now := time.Date(2026, 10, 14, 12, 0, 0, 0, time.UTC)
+	c.prices.now = func() time.Time { return now }
+	_, err := c.prices.snapshot(context.Background(), c.esiClient())
+	require.NoError(t, err)
+	ps.set(http.StatusOK, `[{"type_id":34,"average_price":5}]`)
+	ps.setDelay(200 * time.Millisecond)
+	now = now.Add(esiPricesTTL + esiPricesStale)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Millisecond)
+	defer cancel()
+	_, err = c.prices.snapshot(ctx, c.esiClient())
+	require.ErrorIs(t, err, context.DeadlineExceeded)
+	got, err := c.prices.snapshot(context.Background(), c.esiClient())
+	require.NoError(t, err)
+	require.Equal(t, 5.0, got.Average[34])
 	require.Equal(t, 2, pricesCalls(f))
 }
 
