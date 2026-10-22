@@ -23,6 +23,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"golang.org/x/sync/semaphore"
@@ -133,6 +134,8 @@ type Client struct {
 	store       Store
 	lim         *limiter
 	flights     singleflight.Group
+	flightMu    sync.Mutex
+	flightWait  map[string]*flight
 	observer    func(CallEvent)
 
 	// Clock and sleeper; tests replace them.
@@ -368,14 +371,16 @@ func (c *Client) Do(ctx context.Context, req Request) (*Response, error) {
 	}
 
 	// Callers asking for the same expired or missing entry share one upstream request (a
-	// burst on a cold key costs ESI one call, not one per caller). The shared request runs
-	// detached from any single caller's context, bounded by flightTimeout; each caller
-	// still leaves when its own context ends. Store.Save runs after the request without
-	// cancellation or that deadline, so a Store bounds its own I/O time.
+	// burst on a cold key costs ESI one call, not one per caller). The shared request is
+	// not tied to any single caller's context, so one caller leaving does not cut it for
+	// the others; it is cancelled when its last caller has left, and in any case bounded
+	// by flightTimeout. Each caller leaves when its own context ends. Store.Save runs
+	// after the request without cancellation or that deadline, so a Store bounds its own
+	// I/O time.
+	fl := c.joinFlight(ctx, p.key)
+	defer c.leaveFlight(p.key, fl)
 	ch := c.flights.DoChan(p.key, func() (any, error) {
-		fctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), flightTimeout)
-		defer cancel()
-		return c.fetch(fctx, p, ent)
+		return c.fetch(fl.ctx, p, ent)
 	})
 	select {
 	case <-ctx.Done():
@@ -385,6 +390,47 @@ func (c *Client) Do(ctx context.Context, req Request) (*Response, error) {
 			return nil, res.Err
 		}
 		return res.Val.(*Response).clone(), nil
+	}
+}
+
+// flight is the context of one shared upstream request and the number of callers still
+// waiting for it.
+type flight struct {
+	ctx     context.Context
+	cancel  context.CancelFunc
+	waiters int
+}
+
+// joinFlight registers a caller for key and returns the flight it waits on, creating it
+// (detached from ctx's cancellation, bounded by flightTimeout) for the first caller.
+func (c *Client) joinFlight(ctx context.Context, key string) *flight {
+	c.flightMu.Lock()
+	defer c.flightMu.Unlock()
+	fl := c.flightWait[key]
+	if fl == nil {
+		fctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), flightTimeout)
+		fl = &flight{ctx: fctx, cancel: cancel}
+		if c.flightWait == nil {
+			c.flightWait = make(map[string]*flight)
+		}
+		c.flightWait[key] = fl
+	}
+	fl.waiters++
+	return fl
+}
+
+// leaveFlight unregisters a caller; the last one to leave cancels the shared request
+// (a no-op when it already finished).
+func (c *Client) leaveFlight(key string, fl *flight) {
+	c.flightMu.Lock()
+	defer c.flightMu.Unlock()
+	fl.waiters--
+	if fl.waiters > 0 {
+		return
+	}
+	fl.cancel()
+	if c.flightWait[key] == fl {
+		delete(c.flightWait, key)
 	}
 }
 

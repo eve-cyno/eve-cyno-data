@@ -500,3 +500,70 @@ func TestNewZeroConfig(t *testing.T) {
 	require.Equal(t, DefaultBaseURL, c.baseURL)
 	require.Equal(t, DefaultCompatibilityDate, c.CompatibilityDate())
 }
+
+// A shared upstream request ends once its last caller has left: nobody is waiting for the
+// answer, so the connection and the rate-limit slot must not stay held until flightTimeout.
+func TestSharedRequestEndsWhenLastCallerLeaves(t *testing.T) {
+	started := make(chan struct{})
+	ended := make(chan struct{})
+	f := newFakeESI(t, func(w http.ResponseWriter, r *http.Request, n int) {
+		close(started)
+		<-r.Context().Done()
+		close(ended)
+	})
+	c, _ := newTestClient(t, f, Config{})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan error, 1)
+	go func() {
+		_, err := c.Get(ctx, "/slow", nil)
+		done <- err
+	}()
+	<-started
+	cancel()
+	require.Error(t, <-done)
+
+	select {
+	case <-ended:
+	case <-time.After(5 * time.Second):
+		t.Fatal("upstream request kept running after its only caller left")
+	}
+}
+
+// One caller leaving must not cut the shared request while another still waits for it.
+func TestSharedRequestSurvivesOneCallerLeaving(t *testing.T) {
+	started := make(chan struct{})
+	release := make(chan struct{})
+	f := newFakeESI(t, func(w http.ResponseWriter, r *http.Request, n int) {
+		close(started)
+		select {
+		case <-release:
+			ok200(w, `{"ok":true}`, nil)
+		case <-r.Context().Done():
+		}
+	})
+	c, _ := newTestClient(t, f, Config{})
+
+	leaverCtx, leave := context.WithCancel(context.Background())
+	leaverDone := make(chan error, 1)
+	go func() {
+		_, err := c.Get(leaverCtx, "/shared", nil)
+		leaverDone <- err
+	}()
+	<-started
+	stayerDone := make(chan *Response, 1)
+	go func() {
+		r, _ := c.Get(context.Background(), "/shared", nil)
+		stayerDone <- r
+	}()
+	// Let the second caller join the flight before the first one leaves.
+	time.Sleep(50 * time.Millisecond)
+	leave()
+	require.Error(t, <-leaverDone)
+	close(release)
+
+	r := <-stayerDone
+	require.NotNil(t, r)
+	require.Equal(t, http.StatusOK, r.Status)
+	require.Equal(t, 1, f.Count())
+}
