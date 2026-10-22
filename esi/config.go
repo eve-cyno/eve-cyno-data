@@ -100,6 +100,11 @@ type Config struct {
 	// disables caching.
 	CacheBytes int64
 
+	// Store, when set, is a persistent tier behind the in-memory cache: it is consulted on a
+	// memory miss and receives every stored or revalidated response (see Store). nil keeps the
+	// cache in memory only. It has no effect when caching is disabled (negative CacheBytes).
+	Store Store
+
 	// MaxBodyBytes bounds one response body. 0 means 64 MiB.
 	MaxBodyBytes int64
 

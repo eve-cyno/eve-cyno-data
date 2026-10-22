@@ -5,7 +5,8 @@
 // https://developers.eveonline.com/docs/services/esi/: a descriptive User-Agent, a pinned X-Compatibility-Date on every
 // request, an Expires-respecting ETag/If-None-Match cache, per-group token buckets driven
 // by the X-Ratelimit-* headers plus the legacy error limit, Retry-After handling and
-// X-Pages pagination. It uses net/http and golang.org/x/sync only and imports nothing
+// X-Pages pagination. An optional persistent tier (Config.Store) sits behind the memory
+// cache, and Forget drops entries by partition and scope. It uses net/http and golang.org/x/sync only and imports nothing
 // in-repo (importcheck rule "esi-is-leaf").
 //
 // A Client is safe for concurrent use; build one per process with New and share it.
@@ -129,6 +130,7 @@ type Client struct {
 	errFloor    int
 	maxBody     int64
 	cache       *cache
+	store       Store
 	lim         *limiter
 	flights     singleflight.Group
 	observer    func(CallEvent)
@@ -189,6 +191,7 @@ func New(cfg Config) (*Client, error) {
 		c.maxWait = cfg.MaxWait
 	}
 	c.observer = cfg.Observer
+	c.store = cfg.Store
 	if cfg.GuardPercent > 0 {
 		c.lim.floorPct = min(cfg.GuardPercent, 90)
 	}
@@ -251,6 +254,8 @@ type prepared struct {
 	header            http.Header
 	token             string
 	scope             string // rate-limit bucket scope; "" is the unauthenticated IP-level bucket
+	partition         string // Request.CachePartition
+	cacheScope        string // Request.Scope (the cache-key scope, "" when none)
 	compat            string
 	route             string
 	key               string // cache key; "" when the request is not cacheable
@@ -306,6 +311,8 @@ func (c *Client) prepare(req Request) (*prepared, error) {
 	if p.token != "" && p.scope == "" {
 		p.scope = unscopedAuth
 	}
+	p.partition = req.CachePartition
+	p.cacheScope = req.Scope
 	p.route = routeKey(p.method, req.Path)
 
 	cacheable := p.method == http.MethodGet && c.cache != nil && (req.AccessToken == "" || req.Scope != "")
@@ -352,6 +359,9 @@ func (c *Client) Do(ctx context.Context, req Request) (*Response, error) {
 		return c.fetch(ctx, p, nil)
 	}
 	ent := c.cache.get(p.key)
+	if ent == nil {
+		ent = c.loadPersisted(ctx, p)
+	}
 	if ent != nil && c.now().Before(ent.expires) {
 		c.observe(CallEvent{Route: p.route, Cache: CacheHit, RateRemaining: -1, RateLimit: -1, ErrorLimitRemain: -1})
 		return ent.response(p, true, false), nil
@@ -420,6 +430,7 @@ func (c *Client) fetch(ctx context.Context, p *prepared, ent *entry) (*Response,
 			c.observe(sentEvent(p, ent, r, took))
 			ne := ent.revalidated(r.Header, now)
 			c.cache.put(ne)
+			c.persist(ctx, ne)
 			return ne.response(p, true, true), nil
 
 		case r.Status == 420 || r.Status == http.StatusTooManyRequests:
@@ -434,10 +445,13 @@ func (c *Client) fetch(ctx context.Context, p *prepared, ent *entry) (*Response,
 		default:
 			c.observe(sentEvent(p, ent, r, took))
 			if storable(p.method, r.Status, r.Header, r.Expires, now) && p.key != "" {
-				c.cache.put(&entry{
+				ne := &entry{
 					key: p.key, status: r.Status, header: cloneHeader(r.Header), body: cloneBytes(r.Body),
 					etag: r.ETag, lastModified: r.LastModified, expires: r.Expires,
-				})
+					partition: p.partition, scope: p.cacheScope, storedAt: now,
+				}
+				c.cache.put(ne)
+				c.persist(ctx, ne)
 			}
 			return r, nil
 		}
@@ -666,6 +680,7 @@ func (e *entry) response(p *prepared, fromCache, revalidated bool) *Response {
 func (e *entry) revalidated(h http.Header, now time.Time) *entry {
 	ne := *e
 	ne.elem = nil
+	ne.storedAt = now
 	ne.header = cloneHeader(e.header)
 	for _, k := range []string{"Expires", "Last-Modified", "Date", "Cache-Control", "ETag"} {
 		if v := h.Get(k); v != "" {

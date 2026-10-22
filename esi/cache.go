@@ -30,6 +30,9 @@ type entry struct {
 	etag         string
 	lastModified time.Time
 	expires      time.Time // client clock, adjusted for skew via the Date header
+	partition    string    // Request.CachePartition the entry was stored under
+	scope        string    // Request.Scope the entry was stored under
+	storedAt     time.Time
 	size         int64
 	elem         *list.Element
 }
@@ -91,6 +94,23 @@ func (c *cache) put(e *entry) {
 		}
 		c.remove(back.Value.(*entry))
 	}
+}
+
+// forget removes every entry whose (partition, scope) match accepts and returns how many.
+func (c *cache) forget(match func(partition, scope string) bool) int {
+	if c == nil || match == nil {
+		return 0
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	n := 0
+	for _, e := range c.items {
+		if match(e.partition, e.scope) {
+			c.remove(e)
+			n++
+		}
+	}
+	return n
 }
 
 func (c *cache) remove(e *entry) {
