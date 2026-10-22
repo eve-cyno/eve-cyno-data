@@ -39,7 +39,7 @@ const maxAdminBody = 1 << 10 // 1 KiB
 //
 //	GET    /admin/v1/ops/keys                  the active keys, the blocked owners and the per-owner limit;
 //	                                           ?status=revoked: the keys revoked in the last 30 days instead,
-//	                                           newest first, each with revoked_at and revoked_by
+//	                                           newest first, at most 1000 (then "capped": true), each with revoked_at and revoked_by
 //	                                           (?status=active or none: the default; else 400 invalid_status)
 //	POST   /admin/v1/ops/keys                  issue a key for an owner
 //	PATCH  /admin/v1/ops/keys/{id}             change the daily cap
@@ -303,16 +303,19 @@ const actorHeader = "X-Actor"
 
 func (a *admin) opsList(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	list := a.s.ListAll
+	list := func(ctx context.Context) ([]OwnedKey, bool, error) {
+		ks, err := a.s.ListAll(ctx)
+		return ks, false, err
+	}
 	switch r.URL.Query().Get("status") {
 	case "", "active":
 	case "revoked":
-		list = a.s.ListRevoked
+		list = a.s.listRevoked
 	default:
 		a.fail(w, http.StatusBadRequest, "invalid_status", "status must be active or revoked")
 		return
 	}
-	ks, err := list(ctx)
+	ks, capped, err := list(ctx)
 	if err != nil {
 		a.storeErr(w, r, err)
 		return
@@ -343,7 +346,12 @@ func (a *admin) opsList(w http.ResponseWriter, r *http.Request) {
 	for i := range bl {
 		bl[i].Identities = ids[bl[i].Owner]
 	}
-	a.write(w, http.StatusOK, map[string]any{"keys": ks, "blocked": bl, "max": a.s.MaxPerOwner()})
+	resp := map[string]any{"keys": ks, "blocked": bl, "max": a.s.MaxPerOwner()}
+	if capped {
+		// Only on a capped revoked list, so no other answer changes shape.
+		resp["capped"] = true
+	}
+	a.write(w, http.StatusOK, resp)
 }
 
 func (a *admin) opsIssue(w http.ResponseWriter, r *http.Request) {

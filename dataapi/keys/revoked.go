@@ -41,14 +41,27 @@ func revokedCutoff(end time.Time) string {
 	return end.AddDate(0, 0, -revokedRetainDays).Format(time.DateOnly)
 }
 
+// MaxRevokedListed caps ListRevoked: the web server reads a bounded admin response, so a
+// longer list would be cut. The newest revocations are the ones kept.
+const MaxRevokedListed = 1000
+
 // ListRevoked returns the keys revoked in the last 30 days (the rows the store still keeps),
 // most recently revoked first, with RevokedAt, RevokedBy and the fields ListAll returns
-// (operator audit).
+// (operator audit). At most MaxRevokedListed rows come back, the newest.
 func (s *Store) ListRevoked(ctx context.Context) ([]OwnedKey, error) {
-	ks, err := s.query(ctx, `WHERE revoked_at IS NOT NULL AND revoked_at >= ?`, revokedCutoff(s.now().UTC()))
+	ks, _, err := s.listRevoked(ctx)
+	return ks, err
+}
+
+// listRevoked is ListRevoked plus whether older rows were left out of the list.
+func (s *Store) listRevoked(ctx context.Context) (ks []OwnedKey, capped bool, err error) {
+	ks, err = s.query(ctx, `WHERE revoked_at IS NOT NULL AND revoked_at >= ?`, revokedCutoff(s.now().UTC()))
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	slices.SortStableFunc(ks, func(a, b OwnedKey) int { return b.RevokedAt.Compare(*a.RevokedAt) })
-	return ks, nil
+	if len(ks) > MaxRevokedListed {
+		return ks[:MaxRevokedListed], true, nil
+	}
+	return ks, false, nil
 }
