@@ -7,7 +7,7 @@ import (
 )
 
 // TestGetEffectModifiers_Effect21 verifies that effectID 21 (shieldCapacityBonusOnline)
-// has at least one modifier with the expected field values as ingested by Task 1.
+// has at least one modifier with the expected field values from the SDE build.
 func TestGetEffectModifiers_Effect21(t *testing.T) {
 	s := testSDE(t)
 	defer s.Close()

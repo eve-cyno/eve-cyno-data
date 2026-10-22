@@ -25,7 +25,7 @@ var executeToolSwitchNames = map[string]bool{
 	"find_canonical_module":  true,
 	"get_hull_facts":         true,
 	"get_fits":               true,
-	"list_fits":              true, // Task 6: executor added
+	"list_fits":              true,
 	"analyze_battle":         true,
 	"validate_fitting":       true,
 	"compute_fit_stats":      true,
