@@ -1,7 +1,7 @@
 // Package esi is the EVE Online ESI client shared by the data/tools platform (tools),
 // the desktop app and the ingest pollers.
 //
-// It implements the contract CCP documents at
+// It implements the ESI contract documented at
 // https://developers.eveonline.com/docs/services/esi/: a descriptive User-Agent, a pinned X-Compatibility-Date on every
 // request, an Expires-respecting ETag/If-None-Match cache, per-group token buckets driven
 // by the X-Ratelimit-* headers plus the legacy error limit, Retry-After handling and
