@@ -320,6 +320,7 @@ func TestStore_ZeroStoredAtIsMiss(t *testing.T) {
 	_, err := c.Do(context.Background(), storeReq)
 	require.NoError(t, err)
 	require.Equal(t, 2, f.Count(), "an entry without StoredAt cannot be trusted as fresh")
+	require.Empty(t, f.Requests()[1].Header.Get("If-None-Match"), "a miss, not a revalidation")
 }
 
 func TestStore_ForeignEntryNotServed(t *testing.T) {

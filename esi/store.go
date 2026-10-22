@@ -43,8 +43,10 @@ type Store interface {
 // persistedHeaders is the response-header allowlist a Store receives.
 var persistedHeaders = []string{"ETag", "Last-Modified", "Expires", "Date", "Cache-Control", "Content-Type", "X-Pages"}
 
-// loadPersisted fetches p's entry from the Store and puts it in the memory cache. The result
-// is nil on a miss or when the stored entry does not belong to p.
+// loadPersisted fetches p's entry from the Store and adds it to the memory cache unless a
+// newer entry is already there. The result is the entry now in memory: the stored one, that
+// newer one, or nil on a miss, when the stored entry does not belong to p, or when it is too
+// big for the memory cache.
 func (c *Client) loadPersisted(ctx context.Context, p *prepared) *entry {
 	if c.store == nil || c.cache == nil {
 		return nil

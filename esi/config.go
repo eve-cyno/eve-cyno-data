@@ -53,7 +53,7 @@ type Config struct {
 	// Empty means "dev".
 	Version string
 
-	// Contact is how the ESI operators can reach the operator (an e-mail address, "discord:name" or
+	// Contact is how the ESI team can reach this application's operator (an e-mail address, "discord:name" or
 	// "eve:Character Name"). Optional: when empty the User-Agent carries the project URL
 	// only. Never hardcode a personal address; set ESI_CONTACT.
 	Contact string
@@ -129,8 +129,8 @@ func FromEnv(getenv func(string) string) Config {
 }
 
 // UserAgent renders "EVE-Cyno/<version> (+https://eve-cyno.dev; <contact>)" (the contact
-// part is left out when empty). the ESI documentation asks for an app name with version plus a contact
-// ("Information to transmit", ESI best practices).
+// part is left out when empty). The ESI documentation asks for an app name with version plus a
+// contact ("Information to transmit", ESI best practices).
 func UserAgent(version, contact string) string {
 	v := sanitizeToken(version)
 	if v == "" {

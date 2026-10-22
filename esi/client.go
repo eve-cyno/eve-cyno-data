@@ -370,7 +370,8 @@ func (c *Client) Do(ctx context.Context, req Request) (*Response, error) {
 	// Callers asking for the same expired or missing entry share one upstream request (a
 	// burst on a cold key costs ESI one call, not one per caller). The shared request runs
 	// detached from any single caller's context, bounded by flightTimeout; each caller
-	// still leaves when its own context ends.
+	// still leaves when its own context ends. Store.Save runs after the request without
+	// cancellation or that deadline, so a Store bounds its own I/O time.
 	ch := c.flights.DoChan(p.key, func() (any, error) {
 		fctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), flightTimeout)
 		defer cancel()
