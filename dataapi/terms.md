@@ -1,6 +1,6 @@
 # EVE-Cyno Data API: terms of use
 
-Last updated: 2026-10-18
+Last updated: 2026-10-23
 
 ## What this is
 
@@ -12,7 +12,7 @@ The service is provided as is, for free, with no warranty and no uptime promise.
 
 ## Attribution
 
-- EVE Online, its game data and trademarks belong to Fenris Creations hf (the game is developed by CCP Games). Wherever you publish answers from this service, show the Fenris Creations notice from the [home page](/) (it is also in [llms-full.txt](/llms-full.txt)).
+- EVE Online, its game data and trademarks belong to Fenris Creations hf. (formerly CCP Games). Wherever you publish answers from this service, show the Fenris Creations notice from the [home page](/) (it is also in [llms-full.txt](/llms-full.txt)).
 - Some reference text is condensed from the [EVE University Wiki](https://wiki.eveuniversity.org/) and is licensed [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/). Keep the attribution, and share derived text under the same licence.
 - Community fits belong to their authors and sites. Every fit carries an `attribution` object: keep its source link and credit wherever you show the fit. Do not bulk-copy fits and do not republish them as a dataset.
 - Every tool answer names its upstream sources in `attribution`; keep that with the data.
