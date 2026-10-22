@@ -70,17 +70,31 @@ func (c *cache) get(key string) *entry {
 }
 
 // put stores (or replaces) an entry, evicting the least recently used ones to fit.
-// Entries bigger than a quarter of the cache are not stored.
-func (c *cache) put(e *entry) {
+// Entries bigger than a quarter of the cache are not stored; the result says whether e was.
+func (c *cache) put(e *entry) bool {
+	return c.store(e, true) == e
+}
+
+// add stores e only when the key is absent. It returns the entry now in the cache for the
+// key: e, an existing newer one, or nil when e is too big to keep.
+func (c *cache) add(e *entry) *entry {
+	return c.store(e, false)
+}
+
+func (c *cache) store(e *entry, replace bool) *entry {
 	if c == nil {
-		return
+		return nil
 	}
 	e.size = int64(len(e.body)) + int64(len(e.key)) + 512
 	if e.size > c.maxEntry {
-		return
+		return nil
 	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	if old := c.items[e.key]; old != nil && !replace {
+		c.lru.MoveToFront(old.elem)
+		return old
+	}
 	if old := c.items[e.key]; old != nil {
 		c.remove(old)
 	}
@@ -94,9 +108,11 @@ func (c *cache) put(e *entry) {
 		}
 		c.remove(back.Value.(*entry))
 	}
+	return e
 }
 
 // forget removes every entry whose (partition, scope) match accepts and returns how many.
+// match runs under the cache mutex.
 func (c *cache) forget(match func(partition, scope string) bool) int {
 	if c == nil || match == nil {
 		return 0

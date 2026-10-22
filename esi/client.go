@@ -429,8 +429,9 @@ func (c *Client) fetch(ctx context.Context, p *prepared, ent *entry) (*Response,
 			}
 			c.observe(sentEvent(p, ent, r, took))
 			ne := ent.revalidated(r.Header, now)
-			c.cache.put(ne)
-			c.persist(ctx, ne)
+			if c.cache.put(ne) {
+				c.persist(context.WithoutCancel(ctx), ne)
+			}
 			return ne.response(p, true, true), nil
 
 		case r.Status == 420 || r.Status == http.StatusTooManyRequests:
@@ -450,8 +451,9 @@ func (c *Client) fetch(ctx context.Context, p *prepared, ent *entry) (*Response,
 					etag: r.ETag, lastModified: r.LastModified, expires: r.Expires,
 					partition: p.partition, scope: p.cacheScope, storedAt: now,
 				}
-				c.cache.put(ne)
-				c.persist(ctx, ne)
+				if c.cache.put(ne) {
+					c.persist(context.WithoutCancel(ctx), ne)
+				}
 			}
 			return r, nil
 		}

@@ -191,6 +191,9 @@ func TestStore_NotStorableNotSaved(t *testing.T) {
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("ETag", `"e404"`)
+		w.Header().Set("Date", httpDate(t0))
+		w.Header().Set("Expires", httpDate(t0.Add(time.Hour)))
 		w.WriteHeader(http.StatusNotFound)
 		_, _ = w.Write([]byte(`{"error":"x"}`))
 	})
@@ -214,6 +217,9 @@ func TestStore_CtxPassedToSave(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, st.saveCtx, 1)
 	require.Equal(t, "marker", st.saveCtx[0].Value(ctxKey{}))
+	_, hasDeadline := st.saveCtx[0].Deadline()
+	require.False(t, hasDeadline, "Save's context drops the flight deadline")
+	require.NoError(t, st.saveCtx[0].Err(), "Save's context is not cancelled when the flight returns")
 }
 
 func TestForget_ByPartitionAndScope(t *testing.T) {
@@ -255,4 +261,87 @@ func TestStore_NilIsTodaysBehaviour(t *testing.T) {
 	}
 	require.Equal(t, 1, f.Count())
 	require.Nil(t, c.store)
+}
+
+func TestStore_TooBigForMemoryNotPersisted(t *testing.T) {
+	big := string(make([]byte, 2000))
+	f := newFakeESI(t, func(w http.ResponseWriter, r *http.Request, n int) {
+		ok200(w, big, map[string]string{"ETag": `"e1"`, "Date": httpDate(t0), "Expires": httpDate(t0.Add(time.Hour))})
+	})
+	st := newMemStore()
+	c, _ := newTestClient(t, f, Config{Store: st, CacheBytes: 4000})
+	_, err := c.Do(context.Background(), storeReq)
+	require.NoError(t, err)
+	require.Empty(t, st.Saves(), "an entry the memory cache rejects is not persisted")
+}
+
+// hookStore runs onLoad inside Load, to model a slow Load that a concurrent request overtakes.
+type hookStore struct {
+	*memStore
+	onLoad func()
+}
+
+func (h *hookStore) Load(ctx context.Context, key string) (PersistedEntry, bool) {
+	e, ok := h.memStore.Load(ctx, key)
+	if h.onLoad != nil {
+		h.onLoad()
+	}
+	return e, ok
+}
+
+func TestStore_LoadKeepsNewerMemoryEntry(t *testing.T) {
+	f := newFakeESI(t, freshHandler)
+	st := &hookStore{memStore: newMemStore()}
+	first, _ := newTestClient(t, f, Config{Store: st})
+	_, err := first.Do(context.Background(), storeReq)
+	require.NoError(t, err)
+
+	c, _ := newTestClient(t, f, Config{Store: st})
+	st.onLoad = func() {
+		k, e := st.memStore.Only()
+		c.cache.put(&entry{
+			key: k, status: 200, header: http.Header{}, body: []byte(`{"n":2}`), etag: `"e2"`,
+			expires: t0.Add(time.Hour), storedAt: t0, partition: e.Partition, scope: e.Scope,
+		})
+	}
+	r, err := c.Do(context.Background(), storeReq)
+	require.NoError(t, err)
+	require.JSONEq(t, `{"n":2}`, string(r.Body), "the newer memory entry survives the slower disk copy")
+	require.Equal(t, 1, f.Count())
+}
+
+func TestStore_ZeroStoredAtIsMiss(t *testing.T) {
+	f := newFakeESI(t, freshHandler)
+	st := newMemStore()
+	c := seeded(t, f, st)
+	_, e := st.Only()
+	e.StoredAt = time.Time{}
+	st.Put(e)
+	_, err := c.Do(context.Background(), storeReq)
+	require.NoError(t, err)
+	require.Equal(t, 2, f.Count(), "an entry without StoredAt cannot be trusted as fresh")
+}
+
+func TestStore_ForeignEntryNotServed(t *testing.T) {
+	rows := map[string]func(e *PersistedEntry){
+		"key":       func(e *PersistedEntry) { e.Key = "other" },
+		"partition": func(e *PersistedEntry) { e.Partition = "plugin:b" },
+		"scope":     func(e *PersistedEntry) { e.Scope = "character:2" },
+		"status":    func(e *PersistedEntry) { e.Status = http.StatusNotFound },
+	}
+	for name, mutate := range rows {
+		t.Run(name, func(t *testing.T) {
+			f := newFakeESI(t, freshHandler)
+			st := newMemStore()
+			c := seeded(t, f, st)
+			k, e := st.Only()
+			mutate(&e)
+			delete(st.m, k)
+			st.m[k] = e // served under the requested key, whatever it claims to be
+			r, err := c.Do(context.Background(), storeReq)
+			require.NoError(t, err)
+			require.Equal(t, 2, f.Count(), "a mismatching stored entry is not served")
+			require.False(t, r.FromCache)
+		})
+	}
 }

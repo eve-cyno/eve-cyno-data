@@ -29,8 +29,10 @@ type PersistedEntry struct {
 //
 // Load is called on a memory miss with the request's context; ok is false when the key is
 // absent or unusable (a Store drops a corrupt or foreign entry and reports a miss). Save is
-// called after every stored response and every 304 revalidation, with the request's context
-// (its values, not its cancellation, reach Save); it is best effort and has no result.
+// called after every response kept in the memory cache and every 304 revalidation, with the
+// request's context stripped of cancellation and deadline (context.WithoutCancel: its values
+// reach Save, so a Store may carry a generation in them). A Store bounds its own I/O time.
+// Save is best effort and has no result.
 // Implementations must be safe for concurrent use and must not retain the Header or Body
 // they are handed beyond the call unless they copy them.
 type Store interface {
@@ -48,7 +50,7 @@ func (c *Client) loadPersisted(ctx context.Context, p *prepared) *entry {
 		return nil
 	}
 	pe, ok := c.store.Load(ctx, p.key)
-	if !ok || pe.Key != p.key || pe.Status != http.StatusOK || pe.Partition != p.partition || pe.Scope != p.cacheScope {
+	if !ok || pe.StoredAt.IsZero() || pe.Key != p.key || pe.Status != http.StatusOK || pe.Partition != p.partition || pe.Scope != p.cacheScope {
 		return nil
 	}
 	e := &entry{
@@ -64,11 +66,9 @@ func (c *Client) loadPersisted(ctx context.Context, p *prepared) *entry {
 	if !e.expires.IsZero() && e.expires.Sub(c.now()) > e.expires.Sub(e.storedAt) {
 		e.expires = time.Time{}
 	}
-	c.cache.put(e)
-	if c.cache.get(p.key) == nil {
-		return nil // too big for the memory cache
-	}
-	return e
+	// Keep a newer memory entry that a concurrent request stored while Load ran; nil when
+	// the entry is too big for the memory cache.
+	return c.cache.add(e)
 }
 
 // persist hands e to the Store, headers reduced to the allowlist.
@@ -92,6 +92,10 @@ func (c *Client) persist(ctx context.Context, e *entry) {
 // Forget drops every in-memory cache entry whose partition and scope match accepts and
 // returns how many it dropped. Partition is Request.CachePartition ("" when none) and scope
 // is Request.Scope. A Store keeps its own entries; the caller drops those itself.
+//
+// A request in flight, or a Store Load, when Forget runs can store its result again in memory
+// and through Store.Save; the Store guards Save (for example with a generation carried in
+// the context). match runs while the cache lock is held and must not call back into the Client.
 func (c *Client) Forget(match func(partition, scope string) bool) int {
 	return c.cache.forget(match)
 }
