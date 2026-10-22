@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"golang.org/x/sync/singleflight"
@@ -53,6 +54,8 @@ type esiPriceBook struct {
 	lastErr error
 	retryAt time.Time
 	flight  singleflight.Group
+	// fetches counts the fetches started; tests use it to prove callers share one.
+	fetches atomic.Int64
 	// now is the clock; nil means time.Now (tests set it).
 	now func() time.Time
 }
@@ -65,9 +68,11 @@ func (b *esiPriceBook) clock() time.Time {
 }
 
 // snapshot returns a copy no older than esiPricesTTL, fetching one through e when needed.
-// When a fetch fails it returns the previous copy if there is one (the answer states its
-// date) and does not try again before esiPricesRetry; without a copy it returns the error.
-// A caller whose ctx ends while waiting gets ctx's error; the fetch itself carries on.
+// Only the very first load waits for a fetch. Once a copy exists, an expired one is served at
+// once while a single fetch refreshes it in the background (stale-while-revalidate); the
+// answer states the copy's date. A failed refresh keeps the old copy and is not tried again
+// before esiPricesRetry; without a copy a failure is the error. A caller whose ctx ends while
+// it waits for the first load gets ctx's error; the fetch itself carries on.
 func (b *esiPriceBook) snapshot(ctx context.Context, e *esi.Client) (*priceSnapshot, error) {
 	b.mu.Lock()
 	snap, lastErr, retryAt := b.snap, b.lastErr, b.retryAt
@@ -83,7 +88,28 @@ func (b *esiPriceBook) snapshot(ctx context.Context, e *esi.Client) (*priceSnaps
 		return nil, lastErr
 	}
 
-	ch := b.flight.DoChan("prices", func() (any, error) {
+	ch := b.refresh(ctx, e)
+	if snap != nil {
+		// The refresh runs on without this caller; its result lands in b.snap.
+		return snap, nil
+	}
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	case r := <-ch:
+		if r.Err != nil {
+			return nil, r.Err
+		}
+		return r.Val.(*priceSnapshot), nil
+	}
+}
+
+// refresh starts a fetch, or joins the one running: any number of callers share one request.
+// The fetch gets its own context (detached from ctx, bounded by esiPricesTimeout), so the
+// caller that started it can go away without failing the others.
+func (b *esiPriceBook) refresh(ctx context.Context, e *esi.Client) <-chan singleflight.Result {
+	return b.flight.DoChan("prices", func() (any, error) {
+		b.fetches.Add(1)
 		fctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), esiPricesTimeout)
 		defer cancel()
 		s, err := fetchESIPrices(fctx, e, b.clock())
@@ -96,18 +122,6 @@ func (b *esiPriceBook) snapshot(ctx context.Context, e *esi.Client) (*priceSnaps
 		b.snap, b.lastErr, b.retryAt = s, nil, time.Time{}
 		return s, nil
 	})
-	select {
-	case <-ctx.Done():
-		return nil, ctx.Err()
-	case r := <-ch:
-		if r.Err != nil {
-			if snap != nil {
-				return snap, nil
-			}
-			return nil, r.Err
-		}
-		return r.Val.(*priceSnapshot), nil
-	}
 }
 
 // fetchESIPrices reads /markets/prices into a snapshot. An answer without a single average

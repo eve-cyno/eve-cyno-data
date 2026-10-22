@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"eve-cyno.dev/go/data/esi"
@@ -75,6 +76,30 @@ func pricesCalls(f *fakeESI) int {
 	return n
 }
 
+// current is the book's stored copy.
+func (b *esiPriceBook) current() *priceSnapshot {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.snap
+}
+
+// waitSwapped waits until a background refresh has replaced old and returns the new copy.
+func waitSwapped(t *testing.T, b *esiPriceBook, old *priceSnapshot) *priceSnapshot {
+	t.Helper()
+	require.Eventually(t, func() bool { return b.current() != old }, 5*time.Second, time.Millisecond)
+	return b.current()
+}
+
+// waitFailed waits until a background refresh has failed (the retry pause is then set).
+func waitFailed(t *testing.T, b *esiPriceBook) {
+	t.Helper()
+	require.Eventually(t, func() bool {
+		b.mu.Lock()
+		defer b.mu.Unlock()
+		return b.lastErr != nil
+	}, 5*time.Second, time.Millisecond)
+}
+
 func TestESIPriceBook_ReadsAveragePricesOnly(t *testing.T) {
 	c, f, _ := newPricesClient(t)
 	snap, err := c.prices.snapshot(context.Background(), c.esiClient())
@@ -128,10 +153,14 @@ func TestESIPriceBook_RefreshesAfterADay(t *testing.T) {
 	require.Equal(t, 1, pricesCalls(f))
 
 	now = now.Add(2 * time.Minute)
-	next, err := c.prices.snapshot(context.Background(), c.esiClient())
+	stale, err := c.prices.snapshot(context.Background(), c.esiClient())
 	require.NoError(t, err)
-	require.NotSame(t, first, next)
+	require.Same(t, first, stale, "the expired copy answers at once; the refresh runs behind it")
+	next := waitSwapped(t, &c.prices, first)
 	require.Equal(t, 2, pricesCalls(f))
+	got, err := c.prices.snapshot(context.Background(), c.esiClient())
+	require.NoError(t, err)
+	require.Same(t, next, got, "after the refresh the new copy is served")
 }
 
 func TestESIPriceBook_AFailedRefreshKeepsTheOldCopyAndWaits(t *testing.T) {
@@ -146,7 +175,9 @@ func TestESIPriceBook_AFailedRefreshKeepsTheOldCopyAndWaits(t *testing.T) {
 	again, err := c.prices.snapshot(context.Background(), c.esiClient())
 	require.NoError(t, err)
 	require.Same(t, first, again, "the old copy answers while ESI is down; the answer states its date")
+	waitFailed(t, &c.prices)
 	require.Equal(t, 2, pricesCalls(f))
+	require.Same(t, first, c.prices.current(), "a failed refresh keeps the old copy")
 
 	now = now.Add(esiPricesRetry - time.Second)
 	_, err = c.prices.snapshot(context.Background(), c.esiClient())
@@ -155,10 +186,50 @@ func TestESIPriceBook_AFailedRefreshKeepsTheOldCopyAndWaits(t *testing.T) {
 
 	ps.set(http.StatusOK, testPricesBody)
 	now = now.Add(2 * time.Second)
-	fresh, err := c.prices.snapshot(context.Background(), c.esiClient())
+	stale, err := c.prices.snapshot(context.Background(), c.esiClient())
 	require.NoError(t, err)
-	require.NotSame(t, first, fresh)
+	require.Same(t, first, stale, "retried on the next expiry, still without making the caller wait")
+	waitSwapped(t, &c.prices, first)
 	require.Equal(t, 3, pricesCalls(f))
+}
+
+func TestESIPriceBook_AnExpiredCopyIsServedWhileOneRefreshRuns(t *testing.T) {
+	c, f, ps := newPricesClient(t)
+	now := time.Date(2026, 10, 14, 12, 0, 0, 0, time.UTC)
+	c.prices.now = func() time.Time { return now }
+	first, err := c.prices.snapshot(context.Background(), c.esiClient())
+	require.NoError(t, err)
+
+	ps.setDelay(300 * time.Millisecond)
+	ps.set(http.StatusOK, `[{"type_id":34,"average_price":5}]`)
+	now = now.Add(esiPricesTTL + time.Minute)
+	const n = 16
+	start := time.Now()
+	got := make([]*priceSnapshot, n)
+	var wg sync.WaitGroup
+	for i := range n {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			var err error
+			got[i], err = c.prices.snapshot(context.Background(), c.esiClient())
+			assert.NoError(t, err)
+		}()
+	}
+	wg.Wait()
+	require.Less(t, time.Since(start), 150*time.Millisecond, "no caller waits for the slow refresh")
+	for i := range n {
+		require.Same(t, first, got[i], "every caller gets the old copy")
+	}
+
+	fresh := waitSwapped(t, &c.prices, first)
+	require.Equal(t, 5.0, fresh.Average[34])
+	require.Equal(t, 2, pricesCalls(f))
+	require.EqualValues(t, 2, c.prices.fetches.Load(), "the first load and one refresh for all the callers")
+	again, err := c.prices.snapshot(context.Background(), c.esiClient())
+	require.NoError(t, err)
+	require.Same(t, fresh, again)
+	require.Equal(t, 2, pricesCalls(f))
 }
 
 func TestESIPriceBook_WithoutACopyAFailureIsTheErrorUntilTheRetry(t *testing.T) {
