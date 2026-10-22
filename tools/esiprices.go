@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -152,6 +153,9 @@ func (b *esiPriceBook) refresh(ctx context.Context, e *esi.Client) <-chan single
 		defer b.mu.Unlock()
 		if err != nil {
 			b.lastErr, b.retryAt = err, b.clock().Add(esiPricesRetry)
+			// Most fetches run behind an answer that already went out, so the log is the only
+			// place a failure shows.
+			slog.Warn("tools: ESI market prices unavailable", "err", err)
 			return nil, err
 		}
 		b.snap, b.lastErr, b.retryAt = s, nil, time.Time{}

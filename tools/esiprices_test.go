@@ -1,8 +1,10 @@
 package tools
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"log/slog"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -34,6 +36,20 @@ type pricesServer struct {
 	status int
 	body   string
 	delay  time.Duration
+	gate   chan struct{} // when set, every answer waits until it is closed
+}
+
+// hold makes the server hold every answer until the returned release is called; the test's
+// cleanup releases it too, before the server closes.
+func (p *pricesServer) hold(t *testing.T) (release func()) {
+	gate := make(chan struct{})
+	p.mu.Lock()
+	p.gate = gate
+	p.mu.Unlock()
+	var once sync.Once
+	release = func() { once.Do(func() { close(gate) }) }
+	t.Cleanup(release)
+	return release
 }
 
 func (p *pricesServer) set(status int, body string) {
@@ -55,9 +71,12 @@ func newPricesClient(t *testing.T) (*Client, *fakeESI, *pricesServer) {
 	ps := &pricesServer{status: http.StatusOK, body: testPricesBody}
 	c, f := newFakeESIClient(t, func(w http.ResponseWriter, r *http.Request, _ esiRec) {
 		ps.mu.Lock()
-		status, body, delay := ps.status, ps.body, ps.delay
+		status, body, delay, gate := ps.status, ps.body, ps.delay, ps.gate
 		ps.mu.Unlock()
 		time.Sleep(delay)
+		if gate != nil {
+			<-gate
+		}
 		if r.URL.Path != esiPricesPath {
 			writeJSON(w, http.StatusNotFound, `{"error":"not found"}`, nil)
 			return
@@ -201,11 +220,12 @@ func TestESIPriceBook_AnExpiredCopyIsServedWhileOneRefreshRuns(t *testing.T) {
 	first, err := c.prices.snapshot(context.Background(), c.esiClient())
 	require.NoError(t, err)
 
-	ps.setDelay(300 * time.Millisecond)
+	// The server holds the refresh until every caller has its answer: a caller that waited
+	// for the refresh would never return.
+	release := ps.hold(t)
 	ps.set(http.StatusOK, `[{"type_id":34,"average_price":5}]`)
 	now = now.Add(esiPricesTTL + time.Minute)
 	const n = 16
-	start := time.Now()
 	got := make([]*priceSnapshot, n)
 	var wg sync.WaitGroup
 	for i := range n {
@@ -217,11 +237,20 @@ func TestESIPriceBook_AnExpiredCopyIsServedWhileOneRefreshRuns(t *testing.T) {
 			assert.NoError(t, err)
 		}()
 	}
-	wg.Wait()
-	require.Less(t, time.Since(start), 150*time.Millisecond, "no caller waits for the slow refresh")
+	answered := make(chan struct{})
+	go func() { wg.Wait(); close(answered) }()
+	select {
+	case <-answered:
+	case <-time.After(5 * time.Second):
+		t.Fatal("a caller waited for the refresh")
+	}
 	for i := range n {
 		require.Same(t, first, got[i], "every caller gets the old copy")
 	}
+	require.Eventually(t, func() bool { return pricesCalls(f) == 2 }, 5*time.Second, time.Millisecond,
+		"the refresh is at the server, held")
+	require.Same(t, first, c.prices.current(), "the refresh has not landed yet")
+	release()
 
 	fresh := waitSwapped(t, &c.prices, first)
 	require.Equal(t, 5.0, fresh.Average[34])
@@ -300,6 +329,47 @@ func TestESIPriceBook_TheCopysAgeDecidesWhetherACallerWaits(t *testing.T) {
 			}
 		})
 	}
+}
+
+// lockedBuffer is a bytes.Buffer safe for a logger writing from another goroutine.
+type lockedBuffer struct {
+	mu sync.Mutex
+	b  bytes.Buffer
+}
+
+func (l *lockedBuffer) Write(p []byte) (int, error) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return l.b.Write(p)
+}
+
+func (l *lockedBuffer) String() string {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return l.b.String()
+}
+
+// A refresh that fails behind an answer already given is logged: nothing else shows it.
+func TestESIPriceBook_AFailedBackgroundRefreshIsLogged(t *testing.T) {
+	var logs lockedBuffer
+	prev := slog.Default()
+	slog.SetDefault(slog.New(slog.NewTextHandler(&logs, nil)))
+	t.Cleanup(func() { slog.SetDefault(prev) })
+
+	c, _, ps := newPricesClient(t)
+	now := time.Date(2026, 10, 14, 12, 0, 0, 0, time.UTC)
+	c.prices.now = func() time.Time { return now }
+	first, err := c.prices.snapshot(context.Background(), c.esiClient())
+	require.NoError(t, err)
+
+	ps.set(http.StatusServiceUnavailable, `{"error":"down"}`)
+	now = now.Add(esiPricesTTL + time.Minute)
+	got, err := c.prices.snapshot(context.Background(), c.esiClient())
+	require.NoError(t, err)
+	require.Same(t, first, got)
+	waitFailed(t, &c.prices)
+	require.Contains(t, logs.String(), `level=WARN msg="tools: ESI market prices unavailable" err="GET /markets/prices: `)
+	require.Contains(t, logs.String(), "503")
 }
 
 // A flight that starts inside the retry pause (its caller read the book just before a fetch
