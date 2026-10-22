@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -231,4 +232,51 @@ func TestAdminOpsBlockedListFitsTheWebLimit(t *testing.T) {
 	// A short list keeps its old shape: no flag.
 	b := opsList(t, seedWorstCase(t, 3, 3, base), "")
 	require.NotContains(t, string(b), "capped")
+}
+
+// Keys revoked at the same instant are listed newest-inserted first, also where the cap cuts
+// between them: of the two oldest revocations, made at one instant, the later-inserted key is
+// kept.
+func TestListRevokedBreaksTiesNewestInsertedFirst(t *testing.T) {
+	base := time.Date(2026, 10, 14, 0, 0, 0, 0, time.UTC)
+	path := filepath.Join(t.TempDir(), "keys.db")
+	s, err := keys.Open(path, keys.Options{})
+	require.NoError(t, err)
+	require.NoError(t, s.Close())
+	db, err := sql.Open("sqlite", "file:"+path)
+	require.NoError(t, err)
+	tx, err := db.Begin()
+	require.NoError(t, err)
+	insert := func(id string, at time.Time) {
+		_, err := tx.Exec(`INSERT INTO api_keys(id, hash, owner, name, created_at, revoked_at, revoked_by, daily_cap)
+			VALUES(?, ?, 'eve:1', 'k', ?, ?, 'owner', 0)`, id, "h-"+id, at.Format(time.RFC3339Nano), at.Format(time.RFC3339Nano))
+		require.NoError(t, err)
+	}
+	// Inserted: the first of the tied pair, then MaxRevokedListed-1 newer keys (the middle two
+	// tied as well), then the second of the tied pair.
+	insert("key_tie_first", base)
+	for i := 1; i < keys.MaxRevokedListed; i++ {
+		at := base.Add(time.Duration(i) * time.Minute)
+		if i == 501 {
+			at = base.Add(500 * time.Minute)
+		}
+		insert(fmt.Sprintf("key_%012d", i), at)
+	}
+	insert("key_tie_second", base)
+	require.NoError(t, tx.Commit())
+	require.NoError(t, db.Close())
+	now := base.Add(2 * time.Duration(keys.MaxRevokedListed) * time.Minute)
+	s, err = keys.Open(path, keys.Options{Now: clockAt(&now)})
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = s.Close() })
+
+	l, err := s.ListRevoked(bg)
+	require.NoError(t, err)
+	require.Len(t, l, keys.MaxRevokedListed)
+	require.Equal(t, "key_tie_second", l[len(l)-1].ID, "the later-inserted of the tied pair is kept")
+	for _, k := range l {
+		require.NotEqual(t, "key_tie_first", k.ID)
+	}
+	i := slices.IndexFunc(l, func(k keys.OwnedKey) bool { return k.ID == fmt.Sprintf("key_%012d", 500) })
+	require.Equal(t, fmt.Sprintf("key_%012d", 501), l[i-1].ID, "a tie in the middle: newest-inserted first")
 }

@@ -1,6 +1,7 @@
 package keys
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"slices"
@@ -47,8 +48,9 @@ func revokedCutoff(end time.Time) string {
 const MaxRevokedListed = 1000
 
 // ListRevoked returns the keys revoked in the last 30 days (the rows the store still keeps),
-// most recently revoked first, with RevokedAt, RevokedBy and the fields ListAll returns
-// (operator audit). At most MaxRevokedListed rows come back, the newest.
+// most recently revoked first (keys revoked at the same instant: the newest-inserted first),
+// with RevokedAt, RevokedBy and the fields ListAll returns (operator audit). At most
+// MaxRevokedListed rows come back, the first in that order.
 func (s *Store) ListRevoked(ctx context.Context) ([]OwnedKey, error) {
 	ks, _, err := s.listRevoked(ctx)
 	return ks, err
@@ -60,7 +62,18 @@ func (s *Store) listRevoked(ctx context.Context) (ks []OwnedKey, capped bool, er
 	if err != nil {
 		return nil, false, err
 	}
-	slices.SortStableFunc(ks, func(a, b OwnedKey) int { return b.RevokedAt.Compare(*a.RevokedAt) })
+	// query returns the rows newest-inserted first (rowid DESC); that position is the second
+	// key, so equal revocation times keep the newest-inserted key, also at the cap.
+	pos := make(map[string]int, len(ks))
+	for i, k := range ks {
+		pos[k.ID] = i
+	}
+	slices.SortFunc(ks, func(a, b OwnedKey) int {
+		if c := b.RevokedAt.Compare(*a.RevokedAt); c != 0 {
+			return c
+		}
+		return cmp.Compare(pos[a.ID], pos[b.ID])
+	})
 	if len(ks) > MaxRevokedListed {
 		return ks[:MaxRevokedListed], true, nil
 	}
