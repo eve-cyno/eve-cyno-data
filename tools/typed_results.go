@@ -893,7 +893,8 @@ type SkillPlan struct {
 	// Combined is the union of the skills of all items (each at its highest level); null for
 	// one item or without training_time.
 	Combined *SkillTotals `json:"combined"`
-	// Unresolved lists the requested names that match no item.
+	// Unresolved lists the requested names that match no item; with purpose "build" it also
+	// lists an item no blueprint makes, as "Name (no blueprint produces it)".
 	Unresolved []string `json:"unresolved"`
 }
 
@@ -917,7 +918,8 @@ type ItemSkills struct {
 	Name string `json:"name"`
 	// TypeID is the item's type id.
 	TypeID int `json:"type_id"`
-	// Direct lists the skills the item itself requires (a build plan: the blueprint's skills).
+	// Direct lists the skills the item itself requires (a build plan: the blueprint's skills), in
+	// the order the SDE gives them; a level is raised when another skill's chain needs it higher.
 	Direct []SkillLevel `json:"direct"`
 	// Chain lists the skills those need in turn, highest level first; direct skills are left out.
 	Chain []SkillLevel `json:"chain"`
@@ -949,4 +951,6 @@ type SkillTotals struct {
 	SP int `json:"sp"`
 	// TrainingSeconds is the time to train all of them from zero, rounded once.
 	TrainingSeconds int `json:"training_seconds"`
+	// seconds is the unrounded total, for the text's minutes.
+	seconds float64
 }

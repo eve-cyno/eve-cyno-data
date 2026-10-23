@@ -104,6 +104,71 @@ func TestSkillPlan_ItemNameIsPrependedAndBuildUsesBlueprintSkills(t *testing.T) 
 	require.Equal(t, "build", plan.Purpose)
 	require.True(t, strings.HasPrefix(text, "Skills to build 1 item (training"), text)
 	require.NotContains(t, text, "Minmatar Frigate") // the blueprint's skills, not the hull's
+	require.Equal(t, "Rifter: 1 skill, 250 SP, 7m — Industry I", strings.Split(text, "\n")[1])
+}
+
+func TestSkillPlan_BuildItemNoBlueprintMakesIsUnresolvedWithReason(t *testing.T) {
+	text, plan := skillPlan(testSDE(t), skillPlanRequest{Items: []string{"Rifter", "Tritanium"}, Purpose: "build", TrainingTime: true})
+	lines := strings.Split(text, "\n")
+	require.Equal(t, "Rifter: 1 skill, 250 SP, 7m — Industry I", lines[1])
+	require.Equal(t, "Tritanium: no blueprint produces it.", lines[2])
+	require.NotContains(t, text, "no skills found")
+	require.NotContains(t, text, "Unknown items")
+	require.Len(t, plan.Items, 1)
+	require.Equal(t, []string{"Tritanium (no blueprint produces it)"}, plan.Unresolved)
+}
+
+func TestSkillPlan_BlankRequestIsAsked(t *testing.T) {
+	want := "item_name or items: give one, e.g. item_name 'Rifter' or items ['Paladin', 'Rifter']."
+	for _, args := range []map[string]any{{}, {"training_time": true}, {"item_name": "  ", "items": []any{}}} {
+		out, err := ExecuteTool(context.Background(), testDeps(t), "get_required_skills", args)
+		require.NoError(t, err)
+		require.Equal(t, want, out)
+	}
+	res, err := ExecuteToolResult(context.Background(), testDeps(t), "get_required_skills", map[string]any{})
+	require.NoError(t, err)
+	require.Nil(t, res.Data)
+}
+
+func TestSkillPlan_AllNullAttributesCountAsAbsent(t *testing.T) {
+	s := testSDE(t)
+	base, _ := skillPlan(s, skillPlanRequest{Items: []string{"Rifter"}, TrainingTime: true})
+	text, plan := skillPlan(s, skillPlanRequest{Items: []string{"Rifter"}, TrainingTime: true,
+		Attributes: map[string]any{"perception": nil, "memory": nil, "willpower": nil, "intelligence": nil, "charisma": nil}})
+	require.Equal(t, base, text)
+	require.True(t, plan.Attributes.BestRemapPerSkill)
+}
+
+func TestSkillPlan_TrainingTextMinutesComeFromTheExactTotal(t *testing.T) {
+	// The Gila totals 127,289.6 s: 2,121.49 minutes. Rounding to 127,290 s first would print 2,122.
+	text, plan := skillPlan(testSDE(t), skillPlanRequest{Items: []string{"Gila"}, TrainingTime: true})
+	require.Equal(t, 127290, plan.Items[0].Totals.TrainingSeconds)
+	require.Contains(t, text, "1d 11h 21m")
+	text, _ = skillPlan(testSDE(t), skillPlanRequest{ItemName: "Gila", TrainingTime: true})
+	require.Contains(t, text, ", 1d 11h 21m.")
+}
+
+func TestSkillPlan_ChainRaisesADirectSkillLevel(t *testing.T) {
+	// Mjolnir Cruise Missile needs Missile Launcher Operation I itself; Cruise Missiles needs it at V.
+	s := testSDE(t)
+	tid := s.ResolveNames([]string{"Mjolnir Cruise Missile"})["Mjolnir Cruise Missile"]
+	var rawLevel int
+	for _, d := range s.GetRequiredSkillsFromDogma(tid) {
+		if d[0] == 3319 {
+			rawLevel = d[1]
+		}
+	}
+	require.Equal(t, 1, rawLevel)
+	text, plan := skillPlan(s, skillPlanRequest{Items: []string{"Mjolnir Cruise Missile"}})
+	got := map[string]int{}
+	for _, sl := range plan.Items[0].Direct {
+		got[sl.Name] = sl.Level
+	}
+	require.Equal(t, 5, got["Missile Launcher Operation"])
+	require.Contains(t, text, "Missile Launcher Operation V")
+	for _, sl := range plan.Items[0].Chain {
+		require.NotEqual(t, "Missile Launcher Operation", sl.Name)
+	}
 }
 
 func TestRequiredSkills_SingleWithTrainingTimeAppends(t *testing.T) {
@@ -137,7 +202,7 @@ func TestRequiredSkills_DispatchBatchIsTyped(t *testing.T) {
 }
 
 func TestFmtTrainingTime(t *testing.T) {
-	for sec, want := range map[int]string{0: "0m", 29: "0m", 30: "1m", 1200: "20m", 3600: "1h 0m", 5 * 3600: "5h 0m", 86400: "1d 0h 0m", 7309741: "84d 14h 29m"} {
+	for sec, want := range map[float64]string{0: "0m", 29: "0m", 29.6: "0m", 30: "1m", 1200: "20m", 3600: "1h 0m", 5 * 3600: "5h 0m", 86400: "1d 0h 0m", 7309741: "84d 14h 29m"} {
 		require.Equal(t, want, fmtTrainingTime(sec), sec)
 	}
 }
@@ -177,9 +242,16 @@ func TestSkillPlan_ChainLeavesOutDirectSkills(t *testing.T) {
 	require.Equal(t, len(plan.Items[0].Direct)+len(plan.Items[0].Chain), plan.Items[0].Totals.Skills)
 }
 
-func TestSkillPlan_TwoSpellingsOfOneItemCollapse(t *testing.T) {
+func TestSkillPlan_LooseNamesSayWhatTheyResolvedTo(t *testing.T) {
 	// "Rifter Zzzz" resolves loosely to the Rifter, as get_required_skills always has.
-	text, plan := skillPlan(testSDE(t), skillPlanRequest{Items: []string{"Rifter", "Rifter Zzzz"}})
+	s := testSDE(t)
+	text, plan := skillPlan(s, skillPlanRequest{Items: []string{"Rifter Zzzz"}})
+	require.True(t, strings.HasPrefix(strings.Split(text, "\n")[1], "Rifter Zzzz (as Rifter): 2 skills"), text)
+	require.Equal(t, "Rifter", plan.Items[0].Name)
+	text, plan = skillPlan(s, skillPlanRequest{Items: []string{"Rifter", "Rifter Zzzz"}})
 	require.Len(t, plan.Items, 1, text)
 	require.Empty(t, plan.Unresolved)
+	require.Equal(t, "Rifter Zzzz: same as Rifter.", strings.Split(text, "\n")[2])
+	text, _ = skillPlan(s, skillPlanRequest{Items: []string{"rifter", "Rifter "}}) // the same name twice is not noise worth a line
+	require.Len(t, strings.Split(text, "\n"), 2, text)
 }

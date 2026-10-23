@@ -116,7 +116,8 @@ func (s *SDE) TypeFactsFor(ids []int) map[int]TypeFacts {
 		args = append(args, id)
 		marks = append(marks, "?")
 	}
-	// invMetaTypes and invMetaGroups keep their ids as TEXT: compare as integers, as GetItemMetaTier does.
+	// invMetaTypes keeps its ids as TEXT: the type id is joined in its text form so the index is used;
+	// invMetaGroups is a few rows and compared as integers, as GetItemMetaTier does.
 	q := `SELECT t.typeID, t.typeName, t.published, t.groupID, g.groupName, g.categoryID, c.categoryName,
 		mt.metaGroupID, mg.metaGroupName, t.metaLevel, t.techLevel, t.marketGroupID, t.basePrice,
 		t.portionSize, t.volume, t.capacity, t.mass, t.packagedVolume

@@ -3567,7 +3567,7 @@ components:
           description: TypeID is the item's type id.
         direct:
           type: array
-          description: 'Direct lists the skills the item itself requires (a build plan: the blueprint''s skills).'
+          description: 'Direct lists the skills the item itself requires (a build plan: the blueprint''s skills), in the order the SDE gives them; a level is raised when another skill''s chain needs it higher.'
           items:
             $ref: '#/components/schemas/SkillLevel'
         chain:
@@ -4485,7 +4485,7 @@ components:
             - type: "null"
         unresolved:
           type: array
-          description: Unresolved lists the requested names that match no item.
+          description: Unresolved lists the requested names that match no item; with purpose "build" it also lists an item no blueprint makes, as "Name (no blueprint produces it)".
           items:
             type: string
       required:

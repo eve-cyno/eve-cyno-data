@@ -124,7 +124,7 @@ func (t trainer) apply(items []ItemSkills) {
 				sec += secs
 			}
 		}
-		tot.TrainingSeconds = int(math.Round(sec))
+		tot.TrainingSeconds, tot.seconds = int(math.Round(sec)), sec
 		it.Totals = &tot
 	}
 }
@@ -149,14 +149,20 @@ func (t trainer) combined(items []ItemSkills) *SkillTotals {
 			sec += secs
 		}
 	}
-	tot.TrainingSeconds = int(math.Round(sec))
+	tot.TrainingSeconds, tot.seconds = int(math.Round(sec)), sec
 	return &tot
 }
 
 // parseAttributes validates the attributes of a request: unknown names first, then each value's
 // range, then completeness. It returns nil attributes (and no error text) for an empty map.
 func parseAttributes(raw map[string]any) (map[string]int, string) {
-	if len(raw) == 0 {
+	given := false
+	for _, v := range raw {
+		if v != nil && !blankString(v) {
+			given = true
+		}
+	}
+	if !given { // empty, or every value null: not given
 		return nil, ""
 	}
 	known := trainingAttributeIDs()
@@ -214,9 +220,10 @@ func trainingBasis(attrs map[string]int) string {
 	return "Omega, " + strings.Join(parts, ", ") + ", as given"
 }
 
-// fmtTrainingTime formats seconds as "84d 14h 16m": minutes rounded half up, leading zero units dropped.
-func fmtTrainingTime(seconds int) string {
-	mins := (seconds + 30) / 60
+// fmtTrainingTime formats seconds as "84d 14h 16m": minutes rounded half up from the exact
+// value (not from seconds already rounded), leading zero units dropped.
+func fmtTrainingTime(seconds float64) string {
+	mins := int(math.Floor(seconds/60 + 0.5))
 	d, h, m := mins/1440, mins%1440/60, mins%60
 	switch {
 	case d > 0:
@@ -252,12 +259,12 @@ func skillPlan(s *sde.SDE, req skillPlanRequest) (string, *SkillPlan) {
 		purpose = "build"
 	}
 	batch := len(req.Items) > 0
+	if !batch && strings.TrimSpace(req.ItemName) == "" {
+		return "item_name or items: give one, e.g. item_name 'Rifter' or items ['Paladin', 'Rifter'].", nil
+	}
 	var names []string
 	if batch {
-		names = req.Items
-		if strings.TrimSpace(req.ItemName) != "" {
-			names = append([]string{req.ItemName}, req.Items...)
-		}
+		names = batchSystems(req.ItemName, req.Items) // the generic "name beside a list" rule
 		if len(names) > maxSkillItems {
 			return listCapError("items", maxSkillItems, len(names)), nil
 		}
@@ -295,7 +302,7 @@ func skillPlan(s *sde.SDE, req skillPlanRequest) (string, *SkillPlan) {
 		if req.TrainingTime {
 			tr.apply(plan.Items)
 			t := plan.Items[0].Totals
-			text += fmt.Sprintf("\n\nTraining from zero SP (%s): %d %s, %s SP, %s.", basis, t.Skills, skillWord(t.Skills), fmtThousands(t.SP), fmtTrainingTime(t.TrainingSeconds))
+			text += fmt.Sprintf("\n\nTraining from zero SP (%s): %d %s, %s SP, %s.", basis, t.Skills, skillWord(t.Skills), fmtThousands(t.SP), fmtTrainingTime(t.seconds))
 		}
 		return text, plan
 	}
@@ -304,7 +311,8 @@ func skillPlan(s *sde.SDE, req skillPlanRequest) (string, *SkillPlan) {
 		return "SDE not loaded — skill query unavailable.", nil
 	}
 	seenName := map[string]bool{}
-	seenType := map[int]bool{}
+	firstOf := map[int]string{} // type id → name of the item that took it
+	var labels, notes, unknown []string
 	for _, raw := range names {
 		name := strings.TrimSpace(raw)
 		if name == "" || seenName[strings.ToLower(name)] {
@@ -314,12 +322,24 @@ func skillPlan(s *sde.SDE, req skillPlanRequest) (string, *SkillPlan) {
 		_, it := getRequiredSkills(s, name, purpose)
 		if it == nil {
 			plan.Unresolved = append(plan.Unresolved, name)
+			unknown = append(unknown, name)
 			continue
 		}
-		if seenType[it.TypeID] {
+		if first, dup := firstOf[it.TypeID]; dup {
+			notes = append(notes, fmt.Sprintf("%s: same as %s.", name, first))
 			continue
 		}
-		seenType[it.TypeID] = true
+		if purpose == "build" && len(it.Direct) == 0 && s.GetBlueprintForProduct(it.TypeID) == nil {
+			plan.Unresolved = append(plan.Unresolved, it.Name+" (no blueprint produces it)")
+			notes = append(notes, it.Name+": no blueprint produces it.")
+			continue
+		}
+		firstOf[it.TypeID] = it.Name
+		label := it.Name
+		if !strings.EqualFold(name, it.Name) {
+			label = name + " (as " + it.Name + ")" // a loose match: say what it resolved to
+		}
+		labels = append(labels, label)
 		plan.Items = append(plan.Items, *it)
 	}
 	if req.TrainingTime {
@@ -345,15 +365,15 @@ func skillPlan(s *sde.SDE, req skillPlanRequest) (string, *SkillPlan) {
 		}
 		lines = append(lines, header+":")
 	}
-	for _, it := range plan.Items {
+	for i, it := range plan.Items {
 		n := len(it.Direct) + len(it.Chain)
 		if n == 0 {
-			lines = append(lines, it.Name+": no skills found")
+			lines = append(lines, labels[i]+": no skills found")
 			continue
 		}
-		line := fmt.Sprintf("%s: %d %s", it.Name, n, skillWord(n))
+		line := fmt.Sprintf("%s: %d %s", labels[i], n, skillWord(n))
 		if it.Totals != nil {
-			line += fmt.Sprintf(", %s SP, %s", fmtThousands(it.Totals.SP), fmtTrainingTime(it.Totals.TrainingSeconds))
+			line += fmt.Sprintf(", %s SP, %s", fmtThousands(it.Totals.SP), fmtTrainingTime(it.Totals.seconds))
 		}
 		line += " — " + skillNames(it.Direct)
 		if len(it.Chain) > 0 {
@@ -361,11 +381,12 @@ func skillPlan(s *sde.SDE, req skillPlanRequest) (string, *SkillPlan) {
 		}
 		lines = append(lines, line)
 	}
+	lines = append(lines, notes...)
 	if c := plan.Combined; c != nil {
-		lines = append(lines, fmt.Sprintf("All %d items: %d %s, %s SP, %s", len(plan.Items), c.Skills, skillWord(c.Skills), fmtThousands(c.SP), fmtTrainingTime(c.TrainingSeconds)))
+		lines = append(lines, fmt.Sprintf("All %d items: %d %s, %s SP, %s", len(plan.Items), c.Skills, skillWord(c.Skills), fmtThousands(c.SP), fmtTrainingTime(c.seconds)))
 	}
-	if len(plan.Unresolved) > 0 {
-		lines = append(lines, fmt.Sprintf("Unknown items: %s (resolve names with search_item_by_name).", strings.Join(plan.Unresolved, ", ")))
+	if len(unknown) > 0 {
+		lines = append(lines, fmt.Sprintf("Unknown items: %s (resolve names with search_item_by_name).", strings.Join(unknown, ", ")))
 	}
 	return strings.Join(lines, "\n"), plan
 }
