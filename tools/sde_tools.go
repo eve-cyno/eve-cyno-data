@@ -221,7 +221,7 @@ func unitWord(n int) string {
 	return "units"
 }
 
-// getRequiredSkills mirrors Python _get_required_skills.
+// getRequiredSkills answers the skills of one item.
 // purpose: "fly" (default) → dogma prereqs to use the ship/module;
 // "build" → industryActivitySkills manufacturing prereqs for its blueprint.
 //
@@ -237,11 +237,8 @@ func getRequiredSkills(s *sde.SDE, itemName, purpose string) (string, *ItemSkill
 	if matched == nil {
 		return fmt.Sprintf("Unknown item: %s. Try search_item_by_name first.", itemName), nil
 	}
-	resolvedName := (*matched)[0].(string)
+	itemName = (*matched)[0].(string)
 	tid := (*matched)[1].(int)
-	if resolvedName != itemName {
-		itemName = resolvedName
-	}
 	none := &ItemSkills{Name: itemName, TypeID: tid, Direct: []SkillLevel{}, Chain: []SkillLevel{}}
 
 	if purpose == "build" {
@@ -258,7 +255,7 @@ func getRequiredSkills(s *sde.SDE, itemName, purpose string) (string, *ItemSkill
 			skillIDs = append(skillIDs, sk[0])
 		}
 		names := s.GetTypeNames(skillIDs)
-		// Python: sorted(skills, key=lambda x: -x[1]) — by level desc.
+		// Highest level first (stable, so equal levels keep the SDE order).
 		sorted := make([][2]int, len(skills))
 		copy(sorted, skills)
 		sort.SliceStable(sorted, func(i, j int) bool { return sorted[i][1] > sorted[j][1] })
@@ -328,11 +325,11 @@ func getRequiredSkills(s *sde.SDE, itemName, purpose string) (string, *ItemSkill
 	return strings.Join(lines, "\n"), newItemSkills(s, itemName, tid, skills, chain)
 }
 
-// _skillChainMaxDepth caps the recursive prerequisite-chain DFS in
+// skillChainMaxDepth caps the recursive prerequisite-chain DFS in
 // skillPrerequisiteChain so a malformed or cyclical dogma graph can never spin
 // forever — five levels comfortably covers every real EVE skill tree (frigate
 // → cruiser → capital chains bottom out well before that).
-const _skillChainMaxDepth = 5
+const skillChainMaxDepth = 5
 
 // skillPrerequisiteChain walks the transitive dogma requirements of each
 // directly-required skill (NOT the directly-required skills themselves —
@@ -354,7 +351,7 @@ func skillPrerequisiteChain(s *sde.SDE, directSkills [][2]int) map[int]int {
 	visited := map[int]int{}
 	var dfs func(skillID, depth int)
 	dfs = func(skillID, depth int) {
-		if depth > _skillChainMaxDepth {
+		if depth > skillChainMaxDepth {
 			return
 		}
 		for _, req := range s.GetRequiredSkillsFromDogma(skillID) {
