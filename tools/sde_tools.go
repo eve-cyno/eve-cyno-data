@@ -438,8 +438,9 @@ func planProduction(s *sde.SDE, blueprintID, runs, meLevel int) ([]productionJob
 	walk(blueprintID)
 
 	// Pass 2: one job per blueprint, sized from the units the jobs above it need.
-	// What a job needs of itself or of a job above it (a loop) is added after that
-	// job was sized, so it is never read: that material is left out.
+	// What a job needs of itself or of a job above it (a loop) arrives after that
+	// job was sized, so it cannot grow the job: it is a leaf the user supplies.
+	sized := map[int]bool{}
 	needed := map[int]int{}
 	leaves := map[int]int{}
 	jobs := make([]productionJob, 0, len(postOrder))
@@ -451,9 +452,10 @@ func planProduction(s *sde.SDE, blueprintID, runs, meLevel int) ([]productionJob
 			jobRuns = (needed[bp] + perRun - 1) / perRun
 		}
 		jobs = append(jobs, productionJob{BlueprintID: bp, Runs: jobRuns})
+		sized[bp] = true
 		for _, mat := range s.GetBlueprintMaterials(bp, jobRuns, meLevel) {
 			matID, qty := mat[0], mat[1]
-			if sub, ok := subBlueprint(matID); ok {
+			if sub, ok := subBlueprint(matID); ok && !sized[sub] {
 				needed[sub] += qty
 			} else {
 				leaves[matID] += qty

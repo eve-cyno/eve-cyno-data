@@ -167,11 +167,21 @@ func TestPlanProduction_OneJobPerBlueprint(t *testing.T) {
 	require.Equal(t, 2, runsOf(jobs, 11891)) // R.A.M.- Weapon Tech Blueprint
 
 	// A starbase structure whose blueprint needs the structure itself ends after
-	// one job, with nothing to list.
+	// one job; the structure it needs is a leaf the user supplies.
 	jobs, leaves := planProduction(s, *s.GetBlueprintForProduct(14343), 1, 10) // Silo
 	require.Len(t, jobs, 1)
-	require.Empty(t, leaves)
-	require.Equal(t, "No material breakdown found for Silo.", getProductionChain(s, "Silo", 1, 10, 0, 0.0, 0))
+	require.Equal(t, map[int]int{14343: 1}, leaves)
+}
+
+// TestProductionChain_LoopMaterialIsALeaf pins that a material whose job is already
+// sized (a blueprint needing its own product) is listed as a leaf, so the answer
+// never understates what the user must supply.
+func TestProductionChain_LoopMaterialIsALeaf(t *testing.T) {
+	s := openCorpusSDE(t)
+	out := getProductionChain(s, "Silo", 3, 10, 0, 0.0, 0)
+	require.Regexp(t, `(?m)^Silo +3$`, out)
+	require.Contains(t, out, "Total unique material types: 1")
+	require.NotContains(t, out, "No material breakdown found")
 }
 
 func TestProductionChainPESkillReducesLeafMaterials(t *testing.T) {
