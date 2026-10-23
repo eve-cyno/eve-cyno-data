@@ -491,7 +491,7 @@ func getProductionChain(s *sde.SDE, itemName string, runs, meLevel, stationRigLe
 	peSavings := float64(clampInt(peSkill, 0, 5)) * 0.005         // 0% to 2.5% (legacy)
 	extraMultiplier := (1.0 - rigSavings) * (1.0 - peSavings)
 
-	_, accumulated := planProduction(s, *bpID, runs, meLevel)
+	jobs, accumulated := planProduction(s, *bpID, runs, meLevel)
 
 	if len(accumulated) == 0 {
 		return fmt.Sprintf("No material breakdown found for %s.", itemName)
@@ -535,7 +535,7 @@ func getProductionChain(s *sde.SDE, itemName string, runs, meLevel, stationRigLe
 		extras = append(extras, fmt.Sprintf("station rig %d", stationRigLevel))
 	}
 	if systemCostIndex > 0 {
-		extras = append(extras, fmt.Sprintf("cost index %.3f", systemCostIndex))
+		extras = append(extras, fmt.Sprintf("cost index %.4f", systemCostIndex))
 	}
 	if peSkill > 0 {
 		extras = append(extras, fmt.Sprintf("PE skill %d", peSkill))
@@ -567,18 +567,24 @@ func getProductionChain(s *sde.SDE, itemName string, runs, meLevel, stationRigLe
 
 	// Manufacturing fee section — only when a cost index is given. The tool knows
 	// no prices, so it states the job cost formula and the share of the estimated
-	// item value it comes to in an NPC station.
+	// item value it comes to in an NPC station. Every job of the chain pays its own
+	// fee; a structure's bonuses multiply the cost index part (EVE University).
 	if systemCostIndex > 0.0 {
 		lines = append(lines, "")
 		lines = append(lines, "Manufacturing fees:")
 		lines = append(lines, fmt.Sprintf("  Job cost = estimated item value × (system cost index + facility tax + %.0f%% SCC surcharge); "+
 			"the estimated item value is the ME 0 inputs at ESI adjusted prices, not their market cost.", sccSurcharge*100))
 		lines = append(lines, fmt.Sprintf(
-			"  At cost index %.3f in an NPC station (facility tax %.2f%%), the job costs %.2f%% of the estimated item value.",
+			"  At cost index %.4f in an NPC station (facility tax %.2f%%), the job costs %.2f%% of the estimated item value.",
 			systemCostIndex, npcFacilityTax*100, (systemCostIndex+npcFacilityTax+sccSurcharge)*100))
 		lines = append(lines, "  Multiply the estimated item value by that percentage to estimate the job cost.")
+		if sub := len(jobs) - 1; sub > 0 {
+			lines = append(lines, fmt.Sprintf(
+				"  Each sub-component job (%d in this chain) pays its own fee, on its own estimated item value.", sub))
+		}
 		lines = append(lines, fmt.Sprintf(
-			"  An Alpha clone pays another %.2f%%; a player structure sets its own facility tax.", alphaCloneTax*100))
+			"  An Alpha clone pays another %.2f%%. A player structure sets its own facility tax, and its bonuses lower the cost index part.",
+			alphaCloneTax*100))
 	}
 
 	lines = append(lines, "")

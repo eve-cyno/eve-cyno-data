@@ -76,23 +76,31 @@ func TestProductionChainStationRigInHeaderAndNote(t *testing.T) {
 }
 
 // TestProductionChain_FeeNoteUsesTheJobCostFormula pins the fee note to the EVE
-// University job cost: estimated item value × (cost index + facility tax + SCC
-// surcharge). At index 0.05 in an NPC station that is 5% + 0.25% + 4% = 9.25%.
+// University job cost: estimated item value × (cost index × structure bonuses +
+// facility tax + SCC surcharge). At index 0.0512 in an NPC station that is 5.12% +
+// 0.25% + 4% = 9.37%. A chain with sub-component jobs says each pays its own fee.
 func TestProductionChain_FeeNoteUsesTheJobCostFormula(t *testing.T) {
 	s := openCorpusSDE(t)
 
-	out := getProductionChain(s, "Rifter", 1, 10, 0, 0.05, 0)
-	require.Contains(t, out, "cost index 0.050")
+	out := getProductionChain(s, "Rifter", 1, 10, 0, 0.0512, 0)
+	require.Contains(t, out, "(1 run, ME 10 — cost index 0.0512):")
 	require.Contains(t, out, "\n\nManufacturing fees:\n"+
 		"  Job cost = estimated item value × (system cost index + facility tax + 4% SCC surcharge); the estimated item value is the ME 0 inputs at ESI adjusted prices, not their market cost.\n"+
-		"  At cost index 0.050 in an NPC station (facility tax 0.25%), the job costs 9.25% of the estimated item value.\n"+
+		"  At cost index 0.0512 in an NPC station (facility tax 0.25%), the job costs 9.37% of the estimated item value.\n"+
 		"  Multiply the estimated item value by that percentage to estimate the job cost.\n"+
-		"  An Alpha clone pays another 0.25%; a player structure sets its own facility tax.\n\n")
+		"  An Alpha clone pays another 0.25%. A player structure sets its own facility tax, and its bonuses lower the cost index part.\n\n")
+	require.NotContains(t, out, "sub-component job", "a Rifter is one job")
 	require.NotContains(t, out, "1.04")
 	require.NotContains(t, out, "input ISK value")
+
+	dc := getProductionChain(s, "Damage Control II", 10, 10, 0, 0.0512, 0)
+	require.Contains(t, dc, "  Multiply the estimated item value by that percentage to estimate the job cost.\n"+
+		"  Each sub-component job (6 in this chain) pays its own fee, on its own estimated item value.\n")
+
 	// The system_cost_index description gives the same formula.
 	schemas := string(ToolSchemasJSON())
 	require.Contains(t, schemas, "job cost = estimated item value × (cost index + facility tax + 4% SCC surcharge)")
+	require.Contains(t, schemas, "its bonuses lower the cost index part, and each sub-component job pays its own fee")
 	require.NotContains(t, schemas, "ISK-value-of-inputs × 1.04")
 
 	// Default (cost index 0) must NOT print the fee section.
