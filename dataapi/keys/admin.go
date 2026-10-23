@@ -41,7 +41,8 @@ const maxAdminBody = 1 << 10 // 1 KiB
 //	                                           ?status=revoked: the keys revoked in the last 30 days instead,
 //	                                           newest first, each with revoked_at and revoked_by
 //	                                           (?status=active or none: the default; else 400 invalid_status).
-//	                                           The answer stays within MaxOpsListBytes: the revoked keys (at most
+//	                                           The answer stays within MaxOpsListBytes unless the active keys alone
+//	                                           exceed it (they are never cut): the revoked keys (at most
 //	                                           1000) and the blocked owners are cut to fit, newest kept, and a cut
 //	                                           list adds "capped": true (revoked keys) or "blocked_capped": true
 //	POST   /admin/v1/ops/keys                  issue a key for an owner
@@ -307,7 +308,9 @@ const actorHeader = "X-Actor"
 // MaxOpsListBytes budgets the operator key list answer (GET /admin/v1/ops/keys) as a.write
 // encodes it: the web server reads at most 1 MiB of it. The blocked owners and the revoked
 // keys are cut to fit, newest kept, and the answer says so ("blocked_capped": true, "capped":
-// true); the active keys are never cut. MaxRevokedListed caps the revoked rows too.
+// true); the active keys are never cut, so the answer holds the budget unless they alone
+// exceed it (a warning is logged then, and whenever a list is cut). On the revoked view the
+// revoked keys are fitted before the blocked owners. MaxRevokedListed caps the revoked rows too.
 const MaxOpsListBytes = 900 << 10
 
 func (a *admin) opsList(w http.ResponseWriter, r *http.Request) {
@@ -365,16 +368,33 @@ func (a *admin) opsList(w http.ResponseWriter, r *http.Request) {
 	perOwner := a.s.MaxPerOwner()
 	left := MaxOpsListBytes - encodedLen(map[string]any{
 		"keys": []OwnedKey{}, "blocked": []BlockedOwner{}, "max": perOwner, "capped": true, "blocked_capped": true})
+	activeOver := false
 	if !revoked {
 		left -= encodedLen(ks) - len("[]")
+		activeOver = left < 0
 	}
-	nb, left := fitRows(bl, left)
-	blockedCapped := nb < len(bl)
-	bl = bl[:nb]
+	var blockedCapped bool
 	if revoked {
-		nk, _ := fitRows(ks, left)
+		// The revoked view reads only "keys", so they are fitted before the blocked owners.
+		var nk int
+		nk, left = fitRows(ks, left)
 		capped = capped || nk < len(ks)
 		ks = ks[:nk]
+		var nb int
+		nb, _ = fitRows(bl, left)
+		blockedCapped = nb < len(bl)
+		bl = bl[:nb]
+	} else {
+		var nb int
+		nb, _ = fitRows(bl, left)
+		blockedCapped = nb < len(bl)
+		bl = bl[:nb]
+	}
+	if capped || blockedCapped || activeOver {
+		// Counts and bytes only: no key names, no owner ids.
+		a.log.Warn("ops_list_cut", "revoked_view", revoked, "capped", capped, "blocked_capped", blockedCapped,
+			"active_over_budget", activeOver, "keys_listed", len(ks), "blocked_listed", len(bl),
+			"budget_bytes", MaxOpsListBytes)
 	}
 	resp := map[string]any{"keys": ks, "blocked": bl, "max": perOwner}
 	// The flags appear only on a cut list, so no other answer changes shape.

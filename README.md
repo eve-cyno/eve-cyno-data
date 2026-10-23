@@ -152,7 +152,7 @@ requests that carry `CF-Connecting-IP`). Every request needs `Authorization: Bea
 | Route | Does |
 |---|---|
 | `GET /admin/v1/keys`, `POST /admin/v1/keys`, `DELETE /admin/v1/keys/{id}` | list, create (optional `X-User-Name`, percent-encoded) and revoke the owner's keys |
-| `GET`/`POST /admin/v1/ops/keys` | operator: the active keys plus the block list (`?status=revoked`: the keys revoked in the last 30 days instead, newest first, with `revoked_at` and `revoked_by`); the answer stays under 900 KiB, so the revoked keys (at most 1000) and the block list are cut to fit, newest kept, and say so with `"capped": true` or `"blocked_capped": true`; issue a key for any owner (exempt from the per-day create limit) |
+| `GET`/`POST /admin/v1/ops/keys` | operator: the active keys plus the block list (`?status=revoked`: the keys revoked in the last 30 days instead, newest first, with `revoked_at` and `revoked_by`); the answer stays within 900 KiB unless the active keys alone exceed it (they are never cut), so the revoked keys (at most 1000) and the block list are cut to fit, newest kept, and say so with `"capped": true` or `"blocked_capped": true`; issue a key for any owner (exempt from the per-day create limit) |
 | `PATCH`/`DELETE /admin/v1/ops/keys/{id}` | operator: change the daily cap; revoke any key (optional `X-Actor`) |
 | `GET /admin/v1/ops/keys/{id}/usage` | operator: request history (`?days=1..30`) |
 | `GET /admin/v1/ops/usage` | operator: day history of every key with usage (`?days=1..30`; `{"days","keys":{id:[day rows]}}`) |
