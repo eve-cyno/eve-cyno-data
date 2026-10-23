@@ -20,8 +20,8 @@ func TestGeneratedFilesAreCurrent(t *testing.T) {
 
 	for rel, want := range files {
 		got, err := os.ReadFile(filepath.Join("..", filepath.FromSlash(rel)))
-		require.NoError(t, err, "%s is missing: run `go generate ./...`", rel)
+		require.NoError(t, err, "%s is missing: run `go generate ./dataapi`", rel)
 		require.Equal(t, string(want), string(got),
-			"%s is stale: run `go generate ./...` and commit the result", rel)
+			"%s is stale: run `go generate ./dataapi` and commit the result", rel)
 	}
 }

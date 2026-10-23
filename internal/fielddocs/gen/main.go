@@ -1,5 +1,5 @@
 // Command gen writes dataapi/fielddocs.json from the struct field comments of this
-// module (see package fielddocs). Run it through `go generate ./...`.
+// module (see package fielddocs). Run it through `go generate ./dataapi`.
 package main
 
 import (

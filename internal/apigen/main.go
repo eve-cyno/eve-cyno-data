@@ -6,8 +6,8 @@
 //	llms-full.txt      everything in one file for an agent
 //
 // It describes dataapi.PublicSurface: the internet-facing cmd/dataapi with the tool
-// endpoint, MCP and the description routes all on. Run it through `go generate ./...` in
-// this module (the directive is in dataapi/generate.go); TestGeneratedFilesAreCurrent
+// endpoint, MCP and the description routes all on. Run it through `go generate ./dataapi`
+// (the directive is in dataapi/generate.go); TestGeneratedFilesAreCurrent
 // in dataapi fails when a committed file is stale.
 package main
 

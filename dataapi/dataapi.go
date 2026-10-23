@@ -45,8 +45,7 @@
 //     (items search) for five minutes, and /health, every POST and the MCP endpoint are
 //     no-store. Only a 200 is cacheable; every error is no-store.
 //
-// Dependencies arrive through Config; the package has no globals and imports
-// only the data API packages (enforced by internal/tools/importcheck).
+// Dependencies arrive through Config, and the package has no globals.
 package dataapi
 
 import (

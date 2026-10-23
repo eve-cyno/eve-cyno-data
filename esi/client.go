@@ -6,8 +6,8 @@
 // request, an Expires-respecting ETag/If-None-Match cache, per-group token buckets driven
 // by the X-Ratelimit-* headers plus the legacy error limit, Retry-After handling and
 // X-Pages pagination. An optional persistent tier (Config.Store) sits behind the memory
-// cache, and Forget drops entries by partition and scope. It uses net/http and golang.org/x/sync only and imports nothing
-// in-repo (importcheck rule "esi-is-leaf").
+// cache, and Forget drops entries by partition and scope. It uses net/http and golang.org/x/sync
+// only and imports nothing in-repo.
 //
 // A Client is safe for concurrent use; build one per process with New and share it.
 package esi

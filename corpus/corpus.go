@@ -10,11 +10,11 @@
 // sides spell a key as corpus.KeyShipName and a rename is one edit plus a
 // compiler error everywhere else.
 //
-// The package is a leaf: it imports nothing from this repository (importcheck
-// rule corpus-is-leaf), so the data API (reader) and the ingest side can both depend
-// on it without creating a path between them. It holds no behaviour, only the
-// vocabulary; the contract test in ingest/corpuscontract pins that what the
-// real writers produce is what the real reader consumes.
+// The package is a leaf: it imports nothing from this repository, so the data
+// API (reader) and the ingest side can both depend on it without creating a
+// path between them. It holds no behaviour, only the vocabulary; the contract
+// test in ingest/corpuscontract pins that what the real writers produce is what
+// the real reader consumes.
 //
 // # Conventions
 //

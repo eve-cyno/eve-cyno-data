@@ -5,7 +5,8 @@ import "fmt"
 // The committed descriptions of the public API (api/openapi.yaml, llms.txt, llms-full.txt,
 // paths relative to the repository root) are generated from the route table and the tool
 // registry. After changing a route, a tool schema, tool_schemas.json or a response type,
-// run `go generate ./...`; TestGeneratedFilesAreCurrent fails until the
+// run `go generate ./dataapi` from the repository root (not `./...`, which also rewrites
+// abyss/abyss_data.json from the local SDE); TestGeneratedFilesAreCurrent fails until the
 // files are regenerated.
 //
 //go:generate go run ../internal/fielddocs/gen -root .. -out fielddocs.json
