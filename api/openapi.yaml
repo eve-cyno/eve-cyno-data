@@ -439,7 +439,7 @@ paths:
       description: |-
         Resolve one or more EVE Online item, ship, or module names to their type_id. Call this BEFORE get_market_price or get_type_info when you only have a name, not a type_id.
 
-        Sources: EVE Static Data Export (via Fuzzwork).
+        Sources: EVE Static Data Export (via Fuzzwork). `result.data` is a `ItemList` object when the call succeeds.
 
         Access tier: **public**. No key needed.
 
@@ -454,6 +454,9 @@ paths:
             schema:
               type: object
               properties:
+                details:
+                  type: boolean
+                  description: 'true: one line of facts per item (group, category, meta group and level, market group, volume, Alpha usability) for up to 50 names; use it to classify a list (''which of these are Tech II or faction'')'
                 names:
                   type: array
                   description: List of item/ship/module names to resolve, e.g. ['Stabber', 'PLEX', 'Gila']
@@ -467,7 +470,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ToolResponse'
+                $ref: '#/components/schemas/ItemListToolResponse'
           headers:
             X-Request-ID:
               $ref: '#/components/headers/RequestID'
@@ -3376,6 +3379,147 @@ components:
         - belts
         - ice_types
         - source_urls
+    ItemFacts:
+      type: object
+      properties:
+        query:
+          type: string
+          description: Query is the name as the request spelled it (trimmed).
+        type_id:
+          type: integer
+          description: TypeID is the item's type id.
+        name:
+          type: string
+          description: Name is the SDE's spelling of the name.
+        published:
+          type: boolean
+          description: Published is whether the item is in the live game.
+        group_id:
+          type: integer
+          description: GroupID and Group are the item's group ("Damage Control").
+        group:
+          type: string
+        category_id:
+          type: integer
+          description: CategoryID and Category are the group's category ("Module", "Ship").
+        category:
+          type: string
+        meta_group:
+          type:
+            - string
+            - "null"
+          description: MetaGroup is the meta group ("Tech II", "Faction"); null when the SDE has none for the item.
+        meta_level:
+          type:
+            - integer
+            - "null"
+          description: MetaLevel is the SDE meta level (0 for Tech I); null when the SDE leaves it empty.
+        tech_level:
+          type:
+            - integer
+            - "null"
+          description: TechLevel is 1, 2 or 3; null when the SDE leaves it empty.
+        market_group_path:
+          type: array
+          description: MarketGroupPath names the market groups from the root down; [] when the item has no market group.
+          items:
+            type: string
+        base_price:
+          type:
+            - number
+            - "null"
+          description: BasePrice is the SDE base price in ISK, not a market price; null when the SDE leaves it empty.
+        portion_size:
+          type: integer
+          description: PortionSize is how many units one reprocessing or production portion covers (1 when the SDE leaves it empty).
+        volume_m3:
+          type: number
+          description: VolumeM3 is the volume in m³; for a ship, the assembled volume.
+        packaged_volume_m3:
+          type:
+            - number
+            - "null"
+          description: PackagedVolumeM3 is the volume once packaged; null when the SDE leaves it empty.
+        capacity_m3:
+          type: number
+          description: CapacityM3 is the cargo or hold capacity in m³.
+        mass_kg:
+          type: number
+          description: MassKg is the mass in kg.
+        alpha_usable:
+          type:
+            - boolean
+            - "null"
+          description: AlphaUsable says whether an Alpha clone can use the item (every skill it needs is within the Alpha caps); null when the Alpha list is unavailable and for NPC types.
+      required:
+        - query
+        - type_id
+        - name
+        - published
+        - group_id
+        - group
+        - category_id
+        - category
+        - meta_group
+        - meta_level
+        - tech_level
+        - market_group_path
+        - base_price
+        - portion_size
+        - volume_m3
+        - packaged_volume_m3
+        - capacity_m3
+        - mass_kg
+        - alpha_usable
+    ItemList:
+      type: object
+      properties:
+        items:
+          type: array
+          description: Items has one row per distinct resolved name (two spellings of one item collapse to the first).
+          items:
+            $ref: '#/components/schemas/ItemFacts'
+        unresolved:
+          type: array
+          description: Unresolved lists the names that match no item, each with up to three close matches.
+          items:
+            $ref: '#/components/schemas/UnknownName'
+      required:
+        - items
+        - unresolved
+    ItemListToolResponse:
+      type: object
+      properties:
+        tool:
+          type: string
+          description: The tool that ran.
+        version:
+          type: string
+          description: The build version of the service.
+        result:
+          type: object
+          properties:
+            text:
+              type: string
+              description: The answer as the chat assistant reads it.
+            data:
+              description: The typed answer, or null when the tool has none or the call ended in a text-only answer (an unknown id, a parse failure); `text` then says why.
+              oneOf:
+                - $ref: '#/components/schemas/ItemList'
+                - type: "null"
+          required:
+            - text
+            - data
+        attribution:
+          type: array
+          description: The upstreams behind the answer; attribution is a condition of several of their licences.
+          items:
+            $ref: '#/components/schemas/Source'
+      required:
+        - tool
+        - version
+        - result
+        - attribution
     JumpDistance:
       type: object
       properties:
@@ -4941,6 +5085,46 @@ components:
           type: number
         group_id:
           type: integer
+        meta_group:
+          type:
+            - string
+            - "null"
+          description: MetaGroup is the item's meta group ("Tech II", "Faction"); null when the SDE has none for it (a mineral, say) or does not know the type. It is never guessed as "Tech I".
+        meta_level:
+          type:
+            - integer
+            - "null"
+          description: MetaLevel is the SDE meta level (0 for Tech I); null when the SDE leaves it empty.
+        tech_level:
+          type:
+            - integer
+            - "null"
+          description: TechLevel is 1, 2 or 3; null when the SDE leaves it empty.
+        market_group_path:
+          type: array
+          description: MarketGroupPath names the market groups from the root down, e.g. Ship Equipment, Hull & Armor, Damage Controls; [] when the type has no market group.
+          items:
+            type: string
+        base_price:
+          type:
+            - number
+            - "null"
+          description: BasePrice is the SDE base price in ISK, not a market price; null when the SDE leaves it empty.
+        portion_size:
+          type:
+            - integer
+            - "null"
+          description: PortionSize is how many units one reprocessing or production portion covers; null when the SDE does not know the type.
+        packaged_volume_m3:
+          type:
+            - number
+            - "null"
+          description: PackagedVolumeM3 is the volume once the ship is packaged; null when the SDE leaves it empty.
+        capacity_m3:
+          type:
+            - number
+            - "null"
+          description: CapacityM3 is the cargo or hold capacity in m³; null when the SDE does not know the type.
       required:
         - type_id
         - name
@@ -4948,6 +5132,14 @@ components:
         - volume_m3
         - mass_kg
         - group_id
+        - meta_group
+        - meta_level
+        - tech_level
+        - market_group_path
+        - base_price
+        - portion_size
+        - packaged_volume_m3
+        - capacity_m3
     TypeInfoToolResponse:
       type: object
       properties:
@@ -4981,6 +5173,32 @@ components:
         - version
         - result
         - attribution
+    TypeRef:
+      type: object
+      properties:
+        type_id:
+          type: integer
+          description: TypeID is the item's type id.
+        name:
+          type: string
+          description: Name is the SDE's spelling of the name.
+      required:
+        - type_id
+        - name
+    UnknownName:
+      type: object
+      properties:
+        query:
+          type: string
+          description: Query is the name as the request spelled it (trimmed).
+        closest:
+          type: array
+          description: Closest lists up to three items with similar names, best first; [] when none is close.
+          items:
+            $ref: '#/components/schemas/TypeRef'
+      required:
+        - query
+        - closest
     ValidationSlots:
       type: object
       properties:

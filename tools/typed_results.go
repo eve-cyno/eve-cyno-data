@@ -20,6 +20,91 @@ type TypeInfo struct {
 	VolumeM3    float64 `json:"volume_m3"`
 	MassKg      float64 `json:"mass_kg"`
 	GroupID     int     `json:"group_id"`
+	// MetaGroup is the item's meta group ("Tech II", "Faction"); null when the SDE has none for
+	// it (a mineral, say) or does not know the type. It is never guessed as "Tech I".
+	MetaGroup *string `json:"meta_group"`
+	// MetaLevel is the SDE meta level (0 for Tech I); null when the SDE leaves it empty.
+	MetaLevel *int `json:"meta_level"`
+	// TechLevel is 1, 2 or 3; null when the SDE leaves it empty.
+	TechLevel *int `json:"tech_level"`
+	// MarketGroupPath names the market groups from the root down, e.g. Ship Equipment, Hull & Armor,
+	// Damage Controls; [] when the type has no market group.
+	MarketGroupPath []string `json:"market_group_path"`
+	// BasePrice is the SDE base price in ISK, not a market price; null when the SDE leaves it empty.
+	BasePrice *float64 `json:"base_price"`
+	// PortionSize is how many units one reprocessing or production portion covers; null when the SDE
+	// does not know the type.
+	PortionSize *int `json:"portion_size"`
+	// PackagedVolumeM3 is the volume once the ship is packaged; null when the SDE leaves it empty.
+	PackagedVolumeM3 *float64 `json:"packaged_volume_m3"`
+	// CapacityM3 is the cargo or hold capacity in m³; null when the SDE does not know the type.
+	CapacityM3 *float64 `json:"capacity_m3"`
+}
+
+// ItemList is the result of search_item_by_name: one row per resolved name, in request order, with
+// the facts the SDE holds, and the names that did not resolve.
+type ItemList struct {
+	// Items has one row per distinct resolved name (two spellings of one item collapse to the first).
+	Items []ItemFacts `json:"items"`
+	// Unresolved lists the names that match no item, each with up to three close matches.
+	Unresolved []UnknownName `json:"unresolved"`
+}
+
+// ItemFacts is what the SDE says about one resolved item.
+type ItemFacts struct {
+	// Query is the name as the request spelled it (trimmed).
+	Query string `json:"query"`
+	// TypeID is the item's type id.
+	TypeID int `json:"type_id"`
+	// Name is the SDE's spelling of the name.
+	Name string `json:"name"`
+	// Published is whether the item is in the live game.
+	Published bool `json:"published"`
+	// GroupID and Group are the item's group ("Damage Control").
+	GroupID int    `json:"group_id"`
+	Group   string `json:"group"`
+	// CategoryID and Category are the group's category ("Module", "Ship").
+	CategoryID int    `json:"category_id"`
+	Category   string `json:"category"`
+	// MetaGroup is the meta group ("Tech II", "Faction"); null when the SDE has none for the item.
+	MetaGroup *string `json:"meta_group"`
+	// MetaLevel is the SDE meta level (0 for Tech I); null when the SDE leaves it empty.
+	MetaLevel *int `json:"meta_level"`
+	// TechLevel is 1, 2 or 3; null when the SDE leaves it empty.
+	TechLevel *int `json:"tech_level"`
+	// MarketGroupPath names the market groups from the root down; [] when the item has no market group.
+	MarketGroupPath []string `json:"market_group_path"`
+	// BasePrice is the SDE base price in ISK, not a market price; null when the SDE leaves it empty.
+	BasePrice *float64 `json:"base_price"`
+	// PortionSize is how many units one reprocessing or production portion covers (1 when the SDE leaves it empty).
+	PortionSize int `json:"portion_size"`
+	// VolumeM3 is the volume in m³; for a ship, the assembled volume.
+	VolumeM3 float64 `json:"volume_m3"`
+	// PackagedVolumeM3 is the volume once packaged; null when the SDE leaves it empty.
+	PackagedVolumeM3 *float64 `json:"packaged_volume_m3"`
+	// CapacityM3 is the cargo or hold capacity in m³.
+	CapacityM3 float64 `json:"capacity_m3"`
+	// MassKg is the mass in kg.
+	MassKg float64 `json:"mass_kg"`
+	// AlphaUsable says whether an Alpha clone can use the item (every skill it needs is within the
+	// Alpha caps); null when the Alpha list is unavailable and for NPC types.
+	AlphaUsable *bool `json:"alpha_usable"`
+}
+
+// UnknownName is a requested name that matches no item.
+type UnknownName struct {
+	// Query is the name as the request spelled it (trimmed).
+	Query string `json:"query"`
+	// Closest lists up to three items with similar names, best first; [] when none is close.
+	Closest []TypeRef `json:"closest"`
+}
+
+// TypeRef names one item.
+type TypeRef struct {
+	// TypeID is the item's type id.
+	TypeID int `json:"type_id"`
+	// Name is the SDE's spelling of the name.
+	Name string `json:"name"`
 }
 
 // MarketPrice is the result of get_market_price: the best open orders in The Forge, or at

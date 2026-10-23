@@ -260,7 +260,8 @@ func dispatch(ctx context.Context, deps *Deps, name string, arguments map[string
 		if len(names) == 0 {
 			names = stringSlice(arguments["name"]) // tolerate singular alias
 		}
-		return plainErr(searchItemByName(ctx, deps.Client, deps.SDE, names, deps.Public))
+		details, _ := arguments["details"].(bool)
+		return typed(searchItemByName(ctx, deps.Client, deps.SDE, deps.AlphaLegality(), names, details, deps.Public))
 
 	case "appraise_items":
 		items, _ := arguments["items"].(string)

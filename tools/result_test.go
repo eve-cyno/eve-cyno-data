@@ -220,6 +220,8 @@ func TestExecuteToolResult_TextMatchesExecuteTool(t *testing.T) {
 		{"get_ship_bonuses", map[string]any{"ship_name": "Rifter"}, sdeDeps},
 		{"find_canonical_module", map[string]any{"family": "Steel Plates", "size": "Large"}, sdeDeps},
 		{"search_item_by_name", map[string]any{"names": []any{"Rifter", "Armagedon", "Zzzzqq"}}, sdeDeps},
+		{"search_item_by_name", map[string]any{"names": []any{"Rifter", "Armagedon", "Zzzzqq"}, "details": true}, sdeDeps},
+		{"search_item_by_name", map[string]any{"names": []any{"Rifter"}, "details": nil}, sdeDeps},
 		{"get_ship_stats", map[string]any{"ship_name": "Rifter"}, sdeDeps},
 		{"get_ship_stats", map[string]any{"ship_name": "Zzzzqq"}, sdeDeps},
 		{"validate_fitting", map[string]any{"eft_block": rifterCPUOverEFT}, sdeDeps},
@@ -277,7 +279,6 @@ func TestExecuteToolResult_DataIsNilForTextOnlyTools(t *testing.T) {
 		args map[string]any
 	}{
 		{"get_npc_stations", map[string]any{"system_name": "Jita"}},
-		{"search_item_by_name", map[string]any{"names": []any{"Rifter"}}},
 		{"appraise_items", map[string]any{"items": "Tritanium 10"}},
 	} {
 		res, err := ExecuteToolResult(context.Background(), deps, c.tool, c.args)

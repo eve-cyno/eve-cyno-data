@@ -53,8 +53,8 @@ func TestTypedResult_GetTypeInfo(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "Name: Rifter\nVolume: 27289.0 m³\nMass: 1067000.0 kg\nGroup ID: 25\nDescription: The <b>Rifter</b>", res.Text)
 	info := requireDataIs[TypeInfo](t, res)
-	require.Equal(t, TypeInfo{TypeID: 587, Name: "Rifter", Description: "The <b>Rifter</b>", VolumeM3: 27289, MassKg: 1067000, GroupID: 25}, *info)
-	require.JSONEq(t, `{"type_id":587,"name":"Rifter","description":"The <b>Rifter</b>","volume_m3":27289,"mass_kg":1067000,"group_id":25}`, jsonOf(t, info))
+	require.Equal(t, TypeInfo{TypeID: 587, Name: "Rifter", Description: "The <b>Rifter</b>", VolumeM3: 27289, MassKg: 1067000, GroupID: 25, MarketGroupPath: []string{}}, *info)
+	require.JSONEq(t, `{"type_id":587,"name":"Rifter","description":"The <b>Rifter</b>","volume_m3":27289,"mass_kg":1067000,"group_id":25,"meta_group":null,"meta_level":null,"tech_level":null,"market_group_path":[],"base_price":null,"portion_size":null,"packaged_volume_m3":null,"capacity_m3":null}`, jsonOf(t, info))
 
 	// An unknown type is a text-only answer: nothing typed to hand over.
 	unknown, err := ExecuteToolResult(context.Background(), deps, "get_type_info", map[string]any{"type_id": 999})

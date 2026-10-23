@@ -60,6 +60,10 @@
               "type": "string"
             },
             "description": "List of item/ship/module names to resolve, e.g. ['Stabber', 'PLEX', 'Gila']"
+          },
+          "details": {
+            "type": "boolean",
+            "description": "true: one line of facts per item (group, category, meta group and level, market group, volume, Alpha usability) for up to 50 names; use it to classify a list ('which of these are Tech II or faction')"
           }
         },
         "required": [

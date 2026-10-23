@@ -137,6 +137,8 @@ func minimalFuzzwork(t *testing.T) *fakeFuzzwork {
 		"staServices":                   "serviceID,serviceName,description\n1,Market,Trade your goods here\n",
 		"industryActivityProbabilities": "typeID,activityID,productTypeID,probability\n587,8,589,0.3\n",
 		"invMarketGroups":               "marketGroupID,parentGroupID,marketGroupName,description,iconID,hasTypes\n4,2,Ships,,0,0\n",
+		"invMetaTypes":                  "typeID,parentTypeID,metaGroupID\n",
+		"invMetaGroups":                 "metaGroupID,metaGroupName,description,iconID\n",
 		"crpNPCCorporations":            "corporationID,size,extent,solarSystemID,investorID1,investorShares1,investorID2,investorShares2,investorID3,investorShares3,investorID4,investorShares4,friendID,enemyID,publicShares,initialPrice,minSecurity,scattered,fringe,corridor,hub,border,factionID,sizeFactor,stationCount,stationSystemCount,description,iconID\n1000051,L,R,30004759,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,500002,5,10,5,Brutor Tribe,0\n",
 		// Extra generic table (not in curatedSet).
 		"extraTable": "colA,colB,colC\nalpha,beta,gamma\ndelta,,zeta\n",
@@ -360,7 +362,7 @@ func TestBuildSQLite_NullHandling(t *testing.T) {
 	// Minimal fake: only the tables we need to check NULL handling.
 	fw := &fakeFuzzwork{
 		tables: map[string]string{
-			"invTypes": "typeID,groupID,typeName,description,published,portionSize,marketGroupID\n100,,MyType,,0,,\n",
+			"invTypes": "typeID,groupID,typeName,description,published,portionSize,marketGroupID,basePrice,metaLevel,techLevel,packagedVolume\n100,,MyType,,0,,,,,,\n",
 			// All other curated tables are empty (header only).
 			"dgmTypeAttributes":             "typeID,attributeID,valueInt,valueFloat\n",
 			"dgmTypeEffects":                "typeID,effectID,isDefault\n",
@@ -389,6 +391,8 @@ func TestBuildSQLite_NullHandling(t *testing.T) {
 			"staServices":                   "serviceID,serviceName,description\n",
 			"industryActivityProbabilities": "typeID,activityID,productTypeID,probability\n",
 			"invMarketGroups":               "marketGroupID,parentGroupID,marketGroupName,hasTypes\n",
+			"invMetaTypes":                  "typeID,parentTypeID,metaGroupID\n",
+			"invMetaGroups":                 "metaGroupID,metaGroupName,description,iconID\n",
 			"crpNPCCorporations":            "corporationID,factionID,solarSystemID,description\n",
 		},
 	}

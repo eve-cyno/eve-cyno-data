@@ -18,6 +18,9 @@ type SDE struct {
 	factsMu sync.Mutex   // guards facts
 	facts   *systemIndex // lazily built per-system profiles, tied to one db generation
 
+	marketMu sync.Mutex   // guards market
+	market   *marketIndex // lazily built market-group tree, tied to one db generation
+
 	jumpMu sync.Mutex // guards jumps
 	jumps  *jumpIndex // lazily built jump-drive index (positions, network, hulls), tied to one db generation
 }

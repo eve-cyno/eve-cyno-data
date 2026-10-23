@@ -25,7 +25,13 @@ import (
 // sde/build/builder.go and with the queries in effects.go, dogma.go, typebasics.go,
 // industry.go, systems.go and jumps.go.
 var RequiredColumns = map[string][]string{
-	"invTypes":          {"typeID", "groupID", "typeName", "description", "published", "mass", "volume", "capacity", "portionSize", "marketGroupID"},
+	"invTypes": {"typeID", "groupID", "typeName", "description", "published", "mass", "volume", "capacity", "portionSize", "marketGroupID", "metaLevel", "techLevel", "basePrice", "packagedVolume"},
+	// The item facts (TypeFacts): group, category, meta group and market group path.
+	"invGroups":         {"groupID", "groupName", "categoryID"},
+	"invCategories":     {"categoryID", "categoryName"},
+	"invMetaTypes":      {"typeID", "metaGroupID"},
+	"invMetaGroups":     {"metaGroupID", "metaGroupName"},
+	"invMarketGroups":   {"marketGroupID", "parentGroupID", "marketGroupName"},
 	"dgmEffects":        {"effectID", "effectName", "effectCategory", "modifierInfo"},
 	"dgmAttributeTypes": {"attributeID", "attributeName", "defaultValue", "stackable", "highIsGood"},
 	// The Alpha clone skill caps (AlphaCloneSkills). They are loaded by the generic

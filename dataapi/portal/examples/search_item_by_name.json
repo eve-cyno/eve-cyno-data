@@ -7,14 +7,69 @@
     ]
   },
   "prompt": "What are the type IDs of Gila and Tritanium?",
-  "recorded": "2026-10-09",
+  "recorded": "2026-10-23",
   "trimmed": false,
   "response": {
     "tool": "search_item_by_name",
-    "version": "sha-aa76146",
+    "version": "sha-e3f5d71",
     "result": {
       "text": "Gila: type_id=17715\nTritanium: type_id=34",
-      "data": null
+      "data": {
+        "items": [
+          {
+            "query": "Gila",
+            "type_id": 17715,
+            "name": "Gila",
+            "published": true,
+            "group_id": 26,
+            "group": "Cruiser",
+            "category_id": 6,
+            "category": "Ship",
+            "meta_group": "Faction",
+            "meta_level": 8,
+            "tech_level": 1,
+            "market_group_path": [
+              "Ships",
+              "Cruisers",
+              "Faction Cruisers",
+              "Pirate Faction"
+            ],
+            "base_price": 36000000,
+            "portion_size": 1,
+            "volume_m3": 101000,
+            "packaged_volume_m3": 10000,
+            "capacity_m3": 440,
+            "mass_kg": 9600000,
+            "alpha_usable": true
+          },
+          {
+            "query": "Tritanium",
+            "type_id": 34,
+            "name": "Tritanium",
+            "published": true,
+            "group_id": 18,
+            "group": "Mineral",
+            "category_id": 4,
+            "category": "Material",
+            "meta_group": null,
+            "meta_level": null,
+            "tech_level": null,
+            "market_group_path": [
+              "Manufacture & Research",
+              "Materials",
+              "Minerals"
+            ],
+            "base_price": 2,
+            "portion_size": 1,
+            "volume_m3": 0.01,
+            "packaged_volume_m3": 0.01,
+            "capacity_m3": 0,
+            "mass_kg": 0,
+            "alpha_usable": true
+          }
+        ],
+        "unresolved": []
+      }
     },
     "attribution": [
       {

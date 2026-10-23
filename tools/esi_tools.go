@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"eve-cyno.dev/go/data/esi"
+	"eve-cyno.dev/go/data/fit"
 	"eve-cyno.dev/go/data/sde"
 )
 
@@ -247,10 +248,10 @@ func getTypeInfoFor(ctx context.Context, c *Client, s *sde.SDE, typeID int, publ
 	}
 	if s != nil && s.Available() {
 		if b, ok := s.TypeBasics(typeID); ok && strings.TrimSpace(b.Description) != "" {
-			return typeInfoResult(&TypeInfo{
+			return typeInfoResult(withTypeFacts(s, &TypeInfo{
 				TypeID: typeID, Name: b.Name, Description: strings.TrimSpace(b.Description),
 				VolumeM3: b.VolumeM3, MassKg: b.MassKg, GroupID: b.GroupID,
-			})
+			}))
 		}
 	}
 	if c == nil {
@@ -289,7 +290,32 @@ func getTypeInfoFor(ctx context.Context, c *Client, s *sde.SDE, typeID int, publ
 		TypeID: typeID, Name: t.Name, Description: strings.TrimSpace(t.Description),
 		VolumeM3: t.Volume, MassKg: t.Mass, GroupID: t.GroupID,
 	}
-	return typeInfoResult(info)
+	return typeInfoResult(withTypeFacts(s, info))
+}
+
+// withTypeFacts adds the SDE's facts (meta group and level, market path, base price, portion
+// size, packaged volume, capacity) to info whenever the SDE has the type, also when ESI supplied
+// the rest. Without the type they stay null, and the market path is [].
+func withTypeFacts(s *sde.SDE, info *TypeInfo) *TypeInfo {
+	info.MarketGroupPath = []string{}
+	if s == nil || !s.Available() {
+		return info
+	}
+	f, ok := s.TypeFacts(info.TypeID)
+	if !ok {
+		return info
+	}
+	if f.MetaGroup != "" {
+		mg := f.MetaGroup
+		info.MetaGroup = &mg
+	}
+	info.MetaLevel, info.TechLevel, info.BasePrice = f.MetaLevel, f.TechLevel, f.BasePrice
+	if f.MarketGroupPath != nil {
+		info.MarketGroupPath = f.MarketGroupPath
+	}
+	portion, capacity := f.PortionSize, f.CapacityM3
+	info.PortionSize, info.CapacityM3, info.PackagedVolumeM3 = &portion, &capacity, f.PackagedVolumeM3
+	return info
 }
 
 // typeInfoResult renders info as the tool text (description cut at 400 bytes) and returns
@@ -374,25 +400,55 @@ func getShipStats(ctx context.Context, c *Client, s *sde.SDE, shipName string) (
 // the previous single-string signature could not read the array argument at all
 // (→ empty → "No items found" → the model hallucinated names → invalid fits).
 // Exact matches via SDE ResolveNames; per-name fuzzy suggestions for typo recovery.
-func searchItemByName(ctx context.Context, c *Client, s *sde.SDE, names []string, public bool) (string, error) {
+//
+// With details the answer is one line of facts per distinct item (see itemFactsLine) for up
+// to maxItemFacts names. The ItemList is the structured twin of the names that resolved or
+// not; it is nil for every answer that is only a sentence (SDE not loaded, no names, over the cap).
+func searchItemByName(ctx context.Context, c *Client, s *sde.SDE, legality *fit.Legality, names []string, details, public bool) (string, *ItemList, error) {
 	if !s.Available() {
-		return "SDE not loaded.", nil
+		return "SDE not loaded.", nil, nil
 	}
 	names = slices.Clone(names)
 	for i, n := range names {
 		names[i] = strings.TrimSpace(n)
 	}
 	if len(names) == 0 {
-		return "No names provided to search_item_by_name.", nil
+		return "No names provided to search_item_by_name.", nil, nil
+	}
+	if details && len(names) > maxItemFacts {
+		return fmt.Sprintf("names: at most %d per call with details (got %d); split the list.", maxItemFacts, len(names)), nil, nil
 	}
 	ids := s.ResolveNames(names)
+	list := &ItemList{Items: []ItemFacts{}, Unresolved: []UnknownName{}}
 	var out []string
+	seen := map[string]bool{}
+	slot := map[int]int{} // with details: line number in out → index in list.Items
 	for _, name := range names {
+		dup := seen[strings.ToLower(name)]
+		seen[strings.ToLower(name)] = true
+		if dup && details {
+			continue
+		}
 		if tid, ok := ids[name]; ok {
-			out = append(out, fmt.Sprintf("%s: type_id=%d", name, tid))
+			if !dup {
+				list.Items = append(list.Items, ItemFacts{Query: name, TypeID: tid})
+			}
+			if details {
+				slot[len(out)] = len(list.Items) - 1
+				out = append(out, "")
+			} else {
+				out = append(out, fmt.Sprintf("%s: type_id=%d", name, tid))
+			}
 			continue
 		}
 		sugg := s.FuzzyMatch(name, 3, 0.6)
+		if !dup {
+			un := UnknownName{Query: name, Closest: []TypeRef{}}
+			for _, m := range sugg {
+				un.Closest = append(un.Closest, TypeRef{TypeID: m[0].(int), Name: m[1].(string)})
+			}
+			list.Unresolved = append(list.Unresolved, un)
+		}
 		if len(sugg) == 0 {
 			if public {
 				out = append(out, fmt.Sprintf("'%s' is not a known EVE item (ships/modules/charges/drones).", name))
@@ -423,7 +479,14 @@ func searchItemByName(ctx context.Context, c *Client, s *sde.SDE, names []string
 				"Other candidates: %s. If this is the item the user meant, use this type_id directly. "+
 				"If unsure, ASK the user to confirm the spelling.", name, topName, topID, others))
 	}
-	return strings.Join(out, "\n"), nil
+	fillItemFacts(s, legality, list.Items)
+	if !details {
+		return strings.Join(out, "\n"), list, nil
+	}
+	for line, i := range slot { // the facts lines sit in request order among the unresolved sentences
+		out[line] = itemFactsLine(list.Items[i])
+	}
+	return strings.Join(out, "\n"), list, nil
 }
 
 // wormholeRegionMin and wormholeRegionMax bound the SDE region IDs of wormhole space

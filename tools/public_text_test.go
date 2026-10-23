@@ -102,9 +102,9 @@ func TestHullFactsExample_PublicKeepsAuthorAndLink(t *testing.T) {
 func TestSearchItemByName_PublicMissTextsHaveNoInstructions(t *testing.T) {
 	s := testDeps(t).SDE
 	for _, name := range []string{"Zzqxfakeitem", "Tritanum"} {
-		pub, err := searchItemByName(testCtx(t), nil, s, []string{name}, true)
+		pub, _, err := searchItemByName(testCtx(t), nil, s, nil, []string{name}, false, true)
 		require.NoError(t, err)
-		chat, err := searchItemByName(testCtx(t), nil, s, []string{name}, false)
+		chat, _, err := searchItemByName(testCtx(t), nil, s, nil, []string{name}, false, false)
 		require.NoError(t, err)
 		require.NotEqual(t, chat, pub, name)
 		for _, bad := range []string{"ask the user", "ASK the user", "Cannot proceed", "the user meant"} {
@@ -112,7 +112,7 @@ func TestSearchItemByName_PublicMissTextsHaveNoInstructions(t *testing.T) {
 		}
 		require.Contains(t, pub, "'"+name+"'")
 	}
-	pub, _ := searchItemByName(testCtx(t), nil, s, []string{"Tritanum"}, true)
+	pub, _, _ := searchItemByName(testCtx(t), nil, s, nil, []string{"Tritanum"}, false, true)
 	require.Contains(t, pub, "Closest SDE match: Tritanium (type_id=34)")
 }
 
@@ -144,7 +144,7 @@ func TestUnknownTypeID_PublicTextHasNoInstructions(t *testing.T) {
 
 func TestSearchItemByName_TrimsSurroundingSpaces(t *testing.T) {
 	s := testDeps(t).SDE
-	got, err := searchItemByName(testCtx(t), nil, s, []string{"  Tritanium  "}, true)
+	got, _, err := searchItemByName(testCtx(t), nil, s, nil, []string{"  Tritanium  "}, false, true)
 	require.NoError(t, err)
 	require.Equal(t, "Tritanium: type_id=34", got)
 }

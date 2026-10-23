@@ -141,7 +141,7 @@ func TestTypeInfoFromSDEMakesNoESIRequest(t *testing.T) {
 	got, info, err := getTypeInfo(context.Background(), c, s, 587)
 	require.NoError(t, err)
 	require.Equal(t, "Name: Rifter\nVolume: 27289.0 m³\nMass: 1067000.0 kg\nGroup ID: 25\nDescription: A fast frigate.", got)
-	require.Equal(t, &TypeInfo{TypeID: 587, Name: "Rifter", Description: "A fast frigate.", VolumeM3: 27289, MassKg: 1067000, GroupID: 25}, info)
+	require.Equal(t, &TypeInfo{TypeID: 587, Name: "Rifter", Description: "A fast frigate.", VolumeM3: 27289, MassKg: 1067000, GroupID: 25, MarketGroupPath: []string{}}, info)
 	require.Zero(t, calls.Load())
 }
 

@@ -157,7 +157,7 @@ Get information about an EVE Online item: name, description, volume, mass, group
 - Live ESI data: Reads live public data from EVE's ESI through a shared cache that follows ESI's `Expires`. All live-upstream calls share one fair-use limit of 5 calls per minute per caller without an API key and 10 with one (REST and MCP together, counted across every live tool), on top of the route limit. When the shared ESI budget is nearly spent the call is refused with `503 upstream_busy` (MCP: an error result starting `upstream_busy`) and `Retry-After`; retry later.
 - Arguments:
   - `type_id` (integer, required): The EVE type ID
-- Typed result (`result.data`): TypeInfo with fields `type_id`, `name`, `description`, `volume_m3`, `mass_kg`, `group_id`
+- Typed result (`result.data`): TypeInfo with fields `type_id`, `name`, `description`, `volume_m3`, `mass_kg`, `group_id`, `meta_group`, `meta_level`, `tech_level`, `market_group_path`, `base_price`, `portion_size`, `packaged_volume_m3`, `capacity_m3`
 - Sources: EVE Static Data Export (via Fuzzwork); ESI (EVE Swagger Interface)
 
 ### search_item_by_name
@@ -168,7 +168,8 @@ Resolve one or more EVE Online item, ship, or module names to their type_id. Cal
 - Access: public. No key needed.
 - Arguments:
   - `names` (array of string, required): List of item/ship/module names to resolve, e.g. ['Stabber', 'PLEX', 'Gila']
-- Typed result: none; the answer is `result.text`
+  - `details` (boolean): true: one line of facts per item (group, category, meta group and level, market group, volume, Alpha usability) for up to 50 names; use it to classify a list ('which of these are Tech II or faction')
+- Typed result (`result.data`): ItemList with fields `items`, `unresolved`
 - Sources: EVE Static Data Export (via Fuzzwork)
 
 ### get_ship_stats

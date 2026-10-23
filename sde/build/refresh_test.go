@@ -38,7 +38,7 @@ func (f *fakeRemote) ListTables(ctx context.Context) ([]string, error) {
 // header-only (no data rows), and a single generic table for phase 2.
 func allCuratedEmpty() map[string]string {
 	return map[string]string{
-		"invTypes":                      "typeID,groupID,typeName,description,published,portionSize,marketGroupID\n",
+		"invTypes":                      "typeID,groupID,typeName,description,published,portionSize,marketGroupID,basePrice,metaLevel,techLevel,packagedVolume\n",
 		"dgmTypeAttributes":             "typeID,attributeID,valueInt,valueFloat\n",
 		"dgmTypeEffects":                "typeID,effectID,isDefault\n",
 		"dgmEffects":                    "effectID,effectName,effectCategory,displayName,published\n",
@@ -66,6 +66,8 @@ func allCuratedEmpty() map[string]string {
 		"staServices":                   "serviceID,serviceName,description\n",
 		"industryActivityProbabilities": "typeID,activityID,productTypeID,probability\n",
 		"invMarketGroups":               "marketGroupID,parentGroupID,marketGroupName,hasTypes\n",
+		"invMetaTypes":                  "typeID,parentTypeID,metaGroupID\n",
+		"invMetaGroups":                 "metaGroupID,metaGroupName,description,iconID\n",
 		"crpNPCCorporations":            "corporationID,factionID,solarSystemID,description\n",
 	}
 }
