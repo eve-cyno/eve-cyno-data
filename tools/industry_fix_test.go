@@ -75,14 +75,25 @@ func TestProductionChainStationRigInHeaderAndNote(t *testing.T) {
 	require.Contains(t, out, "Rig 5 (~10% material savings)")
 }
 
-func TestProductionChainCostIndexFeeSection(t *testing.T) {
+// TestProductionChain_FeeNoteUsesTheJobCostFormula pins the fee note to the EVE
+// University job cost: estimated item value × (cost index + facility tax + SCC
+// surcharge). At index 0.05 in an NPC station that is 5% + 0.25% + 4% = 9.25%.
+func TestProductionChain_FeeNoteUsesTheJobCostFormula(t *testing.T) {
 	s := openCorpusSDE(t)
 
 	out := getProductionChain(s, "Rifter", 1, 10, 0, 0.05, 0)
 	require.Contains(t, out, "cost index 0.050")
-	require.Contains(t, out, "Manufacturing fees:")
-	// 0.05 * 1.04 * 100 = 5.20%
-	require.Contains(t, out, "5.20% of input ISK value")
+	require.Contains(t, out, "\n\nManufacturing fees:\n"+
+		"  Job cost = estimated item value × (system cost index + facility tax + 4% SCC surcharge); the estimated item value is the ME 0 inputs at ESI adjusted prices, not their market cost.\n"+
+		"  At cost index 0.050 in an NPC station (facility tax 0.25%), the job costs 9.25% of the estimated item value.\n"+
+		"  Multiply the estimated item value by that percentage to estimate the job cost.\n"+
+		"  An Alpha clone pays another 0.25%; a player structure sets its own facility tax.\n\n")
+	require.NotContains(t, out, "1.04")
+	require.NotContains(t, out, "input ISK value")
+	// The system_cost_index description gives the same formula.
+	schemas := string(ToolSchemasJSON())
+	require.Contains(t, schemas, "job cost = estimated item value × (cost index + facility tax + 4% SCC surcharge)")
+	require.NotContains(t, schemas, "ISK-value-of-inputs × 1.04")
 
 	// Default (cost index 0) must NOT print the fee section.
 	plain := getProductionChain(s, "Rifter", 1, 10, 0, 0.0, 0)

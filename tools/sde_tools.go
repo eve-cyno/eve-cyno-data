@@ -377,6 +377,14 @@ var _leafMaterialGroups = map[int]bool{
 
 const _productionChainMaxDepth = 6
 
+// The taxes of a manufacturing job, as fractions of its estimated item value
+// (EVE University, Manufacturing: Total job cost).
+const (
+	sccSurcharge   = 0.04   // SCC surcharge, every job
+	npcFacilityTax = 0.0025 // facility tax of an NPC station
+	alphaCloneTax  = 0.0025 // Alpha clone tax, Alpha clones only
+)
+
 // getProductionChain mirrors Python _get_production_chain.
 // stationRigLevel (0-5) and peSkill (0-5, from industry_skills.production_efficiency)
 // apply an extra material multiplier to leaf quantities; systemCostIndex drives the
@@ -504,16 +512,20 @@ func getProductionChain(s *sde.SDE, itemName string, runs, meLevel, stationRigLe
 	lines = append(lines, "")
 	lines = append(lines, fmt.Sprintf("Total unique material types: %d", len(sorted)))
 
-	// Manufacturing fee section (Phase C.4) — only when a cost index is given.
+	// Manufacturing fee section — only when a cost index is given. The tool knows
+	// no prices, so it states the job cost formula and the share of the estimated
+	// item value it comes to in an NPC station.
 	if systemCostIndex > 0.0 {
 		lines = append(lines, "")
 		lines = append(lines, "Manufacturing fees:")
-		lines = append(lines, "  Install fee = system_cost_index × ISK-value-of-inputs × 1.04 (4% NPC tax)")
+		lines = append(lines, fmt.Sprintf("  Job cost = estimated item value × (system cost index + facility tax + %.0f%% SCC surcharge); "+
+			"the estimated item value is the ME 0 inputs at ESI adjusted prices, not their market cost.", sccSurcharge*100))
 		lines = append(lines, fmt.Sprintf(
-			"  At cost index %.3f, fees ≈ %.2f%% of input ISK value.",
-			systemCostIndex, systemCostIndex*1.04*100))
-		lines = append(lines, "  Multiply the total ISK cost of materials by that percentage "+
-			"to estimate the install fee.")
+			"  At cost index %.3f in an NPC station (facility tax %.2f%%), the job costs %.2f%% of the estimated item value.",
+			systemCostIndex, npcFacilityTax*100, (systemCostIndex+npcFacilityTax+sccSurcharge)*100))
+		lines = append(lines, "  Multiply the estimated item value by that percentage to estimate the job cost.")
+		lines = append(lines, fmt.Sprintf(
+			"  An Alpha clone pays another %.2f%%; a player structure sets its own facility tax.", alphaCloneTax*100))
 	}
 
 	lines = append(lines, "")

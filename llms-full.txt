@@ -308,7 +308,7 @@ Compute the full material breakdown to manufacture an EVE Online item, recursive
   - `me_level` (integer): Material Efficiency level 0-10 (default 10 — fully researched BPO)
   - `runs` (integer): Number of runs (default 1)
   - `station_rig_level` (integer): Structure rig material-savings level 0-5 (default 0). M-Set Manufacturing Material Efficiency rig at level 5 = 10% material savings. Use only when the user explicitly mentions a structure or its rigs.
-  - `system_cost_index` (number): System manufacturing cost index 0.0-0.20 (default 0.0). Drives the install fee: fee = index × ISK-value-of-inputs × 1.04 (4% NPC tax). Set to the user's quoted system index when they ask for a fee estimate.
+  - `system_cost_index` (number): System manufacturing cost index 0.0-0.20 (default 0.0). Adds a job fee note: job cost = estimated item value × (cost index + facility tax + 4% SCC surcharge), where the estimated item value is the ME 0 inputs at ESI adjusted prices and an NPC station charges 0.25% facility tax. Set to the user's quoted system index when they ask for a fee estimate.
 - Typed result: none; the answer is `result.text`
 - Sources: EVE Static Data Export (via Fuzzwork)
 

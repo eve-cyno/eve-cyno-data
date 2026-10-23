@@ -371,7 +371,7 @@
           },
           "system_cost_index": {
             "type": "number",
-            "description": "System manufacturing cost index 0.0-0.20 (default 0.0). Drives the install fee: fee = index × ISK-value-of-inputs × 1.04 (4% NPC tax). Set to the user's quoted system index when they ask for a fee estimate."
+            "description": "System manufacturing cost index 0.0-0.20 (default 0.0). Adds a job fee note: job cost = estimated item value × (cost index + facility tax + 4% SCC surcharge), where the estimated item value is the ME 0 inputs at ESI adjusted prices and an NPC station charges 0.25% facility tax. Set to the user's quoted system index when they ask for a fee estimate."
           },
           "industry_skills": {
             "type": "object",
