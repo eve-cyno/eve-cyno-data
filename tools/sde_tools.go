@@ -365,14 +365,16 @@ func skillPrerequisiteChain(s *sde.SDE, directSkills [][2]int) map[int]int {
 	return visited
 }
 
-// _leafMaterialGroups mirrors Python _LEAF_MATERIAL_GROUPS verbatim.
+// _leafMaterialGroups mirrors Python _LEAF_MATERIAL_GROUPS verbatim: the chain
+// stops at these groups even when a blueprint makes them (fuel blocks). The
+// comments are the invGroups names.
 var _leafMaterialGroups = map[int]bool{
 	18:   true, // Mineral
 	423:  true, // Ice Product
-	428:  true, // Moon Materials
-	429:  true, // Salvaged Materials
-	1136: true, // Datacore
-	711:  true, // Hybrid Tech Components
+	428:  true, // Intermediate Materials
+	429:  true, // Composite
+	1136: true, // Fuel Block
+	711:  true, // Harvestable Cloud
 }
 
 const _productionChainMaxDepth = 6
