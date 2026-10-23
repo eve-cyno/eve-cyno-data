@@ -23,7 +23,7 @@ import (
 //
 // Keep it in step with the CREATE TABLE statements in
 // sde/build/builder.go and with the queries in effects.go, dogma.go, typebasics.go,
-// industry.go, systems.go and jumps.go.
+// industry.go, systems.go, jumps.go and typefacts.go.
 var RequiredColumns = map[string][]string{
 	"invTypes": {"typeID", "groupID", "typeName", "description", "published", "mass", "volume", "capacity", "portionSize", "marketGroupID", "metaLevel", "techLevel", "basePrice", "packagedVolume"},
 	// The item facts (TypeFacts): group, category, meta group and market group path.

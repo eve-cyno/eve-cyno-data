@@ -298,7 +298,7 @@ func summaryTable() map[string]string {
 	return map[string]string{
 		"get_market_price":       "Best sell and buy price and order counts for an item in The Forge or at a main trade hub.",
 		"get_type_info":          "Name, description, volume, mass and group of an item.",
-		"search_item_by_name":    "Resolve item names to type IDs; with details, the group, meta level, market group, volume and Alpha use of up to 50.",
+		"search_item_by_name":    "Resolve item names to type IDs; with details, group, meta level, market group, volume and Alpha use of up to 50 items.",
 		"get_ship_stats":         "Slot layout, hardpoints and resource limits of a ship.",
 		"get_ship_bonuses":       "Hull bonuses of a ship: per skill level, role bonuses and ship class.",
 		"find_canonical_module":  "Find the canonical module names of a module family.",

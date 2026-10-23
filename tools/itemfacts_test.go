@@ -2,6 +2,7 @@ package tools
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"path/filepath"
@@ -9,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	_ "modernc.org/sqlite"
 )
 
 // must returns the text of a searchItemByName answer and fails on an error.
@@ -167,4 +169,38 @@ func TestItemFacts_UnresolvedNameListsThreeClosest(t *testing.T) {
 	require.Empty(t, list.Items)
 	require.Equal(t, []int{523, 1183, 11355}, typeIDsOf(list.Unresolved[0].Closest))
 	require.Equal(t, "Small Armor Repairer I", list.Unresolved[0].Closest[0].Name)
+}
+
+func TestItemFacts_NoFactsRowPrintsPlainLine(t *testing.T) {
+	// tinyTypesSDE has no group, meta or market tables: the facts query finds nothing, so the
+	// text must not invent a volume or an Alpha verdict.
+	text, list, err := searchItemByName(context.Background(), nil, tinyTypesSDE(t), nil, []string{"Rifter"}, true, true)
+	require.NoError(t, err)
+	require.Equal(t, "Rifter: type_id=587", text)
+	require.Len(t, list.Items, 1)
+}
+
+func TestItemFacts_FiftyRealNames(t *testing.T) {
+	db, err := sql.Open("sqlite", realSDEPathOrSkip(t))
+	require.NoError(t, err)
+	defer db.Close()
+	rows, err := db.Query(`SELECT typeName FROM invTypes WHERE published = 1 AND marketGroupID IS NOT NULL ORDER BY typeID LIMIT 50`)
+	require.NoError(t, err)
+	var names []string
+	for rows.Next() {
+		var n string
+		require.NoError(t, rows.Scan(&n))
+		names = append(names, n)
+	}
+	require.NoError(t, rows.Close())
+	require.Len(t, names, 50)
+	text, list, err := searchItemByName(context.Background(), nil, testSDE(t), nil, names, true, true)
+	require.NoError(t, err)
+	require.NotContains(t, text, "at most 50")
+	require.Empty(t, list.Unresolved)
+	require.Len(t, list.Items, len(strings.Split(text, "\n")))
+	for _, it := range list.Items {
+		require.NotEmpty(t, it.Group, it.Name)
+		require.NotEmpty(t, it.MarketGroupPath, it.Name)
+	}
 }

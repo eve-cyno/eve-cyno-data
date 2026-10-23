@@ -123,7 +123,7 @@ func (s *SDE) TypeFactsFor(ids []int) map[int]TypeFacts {
 		FROM invTypes t
 		LEFT JOIN invGroups g ON g.groupID = t.groupID
 		LEFT JOIN invCategories c ON c.categoryID = g.categoryID
-		LEFT JOIN invMetaTypes mt ON CAST(mt.typeID AS INTEGER) = t.typeID
+		LEFT JOIN invMetaTypes mt ON mt.typeID = CAST(t.typeID AS TEXT)
 		LEFT JOIN invMetaGroups mg ON CAST(mg.metaGroupID AS INTEGER) = CAST(mt.metaGroupID AS INTEGER)
 		WHERE t.typeID IN (` + strings.Join(marks, ",") + `)`
 	rows, err := s.db.Query(q, args...)

@@ -52,6 +52,8 @@ type ItemList struct {
 
 // ItemFacts is what the SDE says about one resolved item.
 type ItemFacts struct {
+	// known is whether the SDE returned a facts row; without one the details text stays plain.
+	known bool
 	// Query is the name as the request spelled it (trimmed).
 	Query string `json:"query"`
 	// TypeID is the item's type id.

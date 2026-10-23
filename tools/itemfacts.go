@@ -27,6 +27,7 @@ func fillItemFacts(s *sde.SDE, legality *fit.Legality, items []ItemFacts) {
 			it.Name = it.Query
 			continue
 		}
+		it.known = true
 		it.Name, it.Published = f.Name, f.Published
 		it.GroupID, it.Group, it.CategoryID, it.Category = f.GroupID, f.Group, f.CategoryID, f.Category
 		if f.MetaGroup != "" {
@@ -50,6 +51,9 @@ func fillItemFacts(s *sde.SDE, legality *fit.Legality, items []ItemFacts) {
 // facts that exist, joined by " · ": group and category, meta group and level, market
 // group path, volume, Alpha usability.
 func itemFactsLine(it ItemFacts) string {
+	if !it.known {
+		return it.Query + ": type_id=" + strconv.Itoa(it.TypeID)
+	}
 	parts := []string{}
 	if it.Group != "" {
 		g := it.Group

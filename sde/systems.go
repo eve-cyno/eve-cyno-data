@@ -343,7 +343,7 @@ func DisplaySecurity(raw float64) float64 {
 func eachRow(db *sql.DB, name, q string, fn func(*sql.Rows) error) {
 	rows, err := db.Query(q)
 	if err != nil {
-		slog.Warn("sde system index: query failed", "query", name, "error", err)
+		slog.Warn("sde index: query failed", "query", name, "error", err)
 		return
 	}
 	defer rows.Close()
@@ -358,10 +358,10 @@ func eachRow(db *sql.DB, name, q string, fn func(*sql.Rows) error) {
 		}
 	}
 	if failed > 0 {
-		slog.Warn("sde system index: scan failed", "query", name, "error", first, "failed_rows", failed)
+		slog.Warn("sde index: scan failed", "query", name, "error", first, "failed_rows", failed)
 	}
 	if err := rows.Err(); err != nil {
-		slog.Warn("sde system index: iteration failed", "query", name, "error", err)
+		slog.Warn("sde index: iteration failed", "query", name, "error", err)
 	}
 }
 
