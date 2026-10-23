@@ -406,12 +406,15 @@ func getProductionChain(s *sde.SDE, itemName string, runs, meLevel, stationRigLe
 	extraMultiplier := (1.0 - rigSavings) * (1.0 - peSavings)
 
 	accumulated := map[int]int{}
-	var expand func(blueprintID, mult, depth int)
-	expand = func(blueprintID, mult, depth int) {
+	// expand adds the leaf materials of one manufacturing job of jobRuns runs. A
+	// sub-component is built by its own job, whose runs are the units needed divided
+	// by the units one run makes, rounded up (one R.A.M. run makes 100 units).
+	var expand func(blueprintID, jobRuns, depth int)
+	expand = func(blueprintID, jobRuns, depth int) {
 		if depth >= _productionChainMaxDepth {
 			return
 		}
-		for _, mat := range s.GetBlueprintMaterials(blueprintID, mult, meLevel) {
+		for _, mat := range s.GetBlueprintMaterials(blueprintID, jobRuns, meLevel) {
 			matID, qty := mat[0], mat[1]
 			grp := s.GetGroupID(matID)
 			if grp == nil || _leafMaterialGroups[*grp] {
@@ -423,7 +426,8 @@ func getProductionChain(s *sde.SDE, itemName string, runs, meLevel, stationRigLe
 				accumulated[matID] += qty
 				continue
 			}
-			expand(*subBP, qty, depth+1)
+			perRun := s.BlueprintOutputPerRun(*subBP)
+			expand(*subBP, (qty+perRun-1)/perRun, depth+1)
 		}
 	}
 	expand(*bpID, runs, 0)

@@ -33,6 +33,30 @@ func (s *SDE) GetBlueprintForProduct(productTypeID int) *int {
 	return &bpID
 }
 
+// BlueprintOutputPerRun returns how many units one manufacturing run of the blueprint
+// makes (industryActivityProducts.quantity: 100 for an R.A.M. blueprint, 1 for most).
+// It is 1 when the blueprint is unknown or the value is missing or below 1.
+func (s *SDE) BlueprintOutputPerRun(blueprintTypeID int) int {
+	if !s.HasTable("industryActivityProducts") {
+		return 1
+	}
+	var n sql.NullInt64
+	err := s.db.QueryRow(
+		"SELECT quantity FROM industryActivityProducts "+
+			"WHERE blueprint_typeID = ? AND activityID = ? LIMIT 1",
+		blueprintTypeID, ActivityManufacturing).Scan(&n)
+	if err != nil {
+		if !errors.Is(err, sql.ErrNoRows) {
+			slog.Warn("sde: blueprint output lookup failed, assuming 1 per run", "blueprint_type_id", blueprintTypeID, "error", err)
+		}
+		return 1
+	}
+	if !n.Valid || n.Int64 < 1 {
+		return 1
+	}
+	return int(n.Int64)
+}
+
 // GetBlueprintMaterials returns [(material_typeID, quantity), ...] for one blueprint manufacturing job.
 // Applies ME discount and run multiplier: actual_qty = max(runs, ceil(base_qty * runs * (1 - me/100))).
 func (s *SDE) GetBlueprintMaterials(blueprintTypeID, runs, meLevel int) [][2]int {

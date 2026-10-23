@@ -89,6 +89,21 @@ func TestProductionChainCostIndexFeeSection(t *testing.T) {
 	require.NotContains(t, plain, "Manufacturing fees:")
 }
 
+// TestProductionChain_MultiUnitComponentsUseRunsNeeded pins the leaves of a chain
+// with a sub-component made several units per run: the R.A.M.- Armor/Hull Tech
+// blueprint makes 100 per run, so 10 Damage Control II need one R.A.M. run, not 10.
+// The numbers are from SDE build 3607705 at ME 10 on every blueprint.
+func TestProductionChain_MultiUnitComponentsUseRunsNeeded(t *testing.T) {
+	out := getProductionChain(openCorpusSDE(t), "Damage Control II", 10, 10, 0, 0.0, 0)
+	for _, leaf := range []string{
+		"Tritanium +10,059", "Mexallon +677", "Pyerite +418", "Isogen +74",
+		"Nocxium +33", "Crystalline Carbonide +441", "Fernite Carbide +396", "Morphite +10",
+	} {
+		require.Regexp(t, `(?m)^`+leaf+`$`, out)
+	}
+	require.NotContains(t, out, "4,014", "R.A.M. expanded as 10 runs (1,000 units) gives Pyerite 4,014")
+}
+
 func TestProductionChainPESkillReducesLeafMaterials(t *testing.T) {
 	s := openCorpusSDE(t)
 

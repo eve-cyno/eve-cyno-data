@@ -13,7 +13,8 @@ import (
 // GetDogma drop mass/volume/capacity, TypeBasics loses the type description, PortionSize
 // the portion size and IsMarketTradable the market group, the system index loses its celestial
 // counts and wormhole classes (mapDenormalize, mapLocationWormholeClasses) and the jump index
-// its positions (mapSolarSystems x/y/z)), so a schema that lacks one of these degrades silently: no
+// its positions (mapSolarSystems x/y/z), BlueprintOutputPerRun the units per run
+// (industryActivityProducts.quantity)), so a schema that lacks one of these degrades silently: no
 // skill/ship modifiers reach the dogma engine, no stacking penalties.
 //
 // Two checks consume it: the SDE builder's publish gate in sde/build (a build
@@ -36,6 +37,10 @@ var RequiredColumns = map[string][]string{
 	"mapLocationWormholeClasses": {"locationID", "wormholeClassID"},
 	// The jump planner: light-year distances.
 	"mapSolarSystems": {"solarSystemID", "regionID", "security", "x", "y", "z"},
+	// The production chain: the blueprint that makes a type, and the units one run
+	// makes (BlueprintOutputPerRun; without quantity every sub-component job would
+	// silently take one run per unit needed).
+	"industryActivityProducts": {"blueprint_typeID", "activityID", "product_typeID", "quantity"},
 }
 
 // MissingRequiredColumns returns every "table.column" from RequiredColumns that db
@@ -90,6 +95,6 @@ func logMissingRequiredColumns(db *sql.DB, path string) {
 	if len(missing) == 0 {
 		return
 	}
-	slog.Error("sde: file lacks columns the readers need; dogma modifiers, stacking, mass/volume/capacity, type descriptions and market groups, and the map and jump readers degrade silently - rebuild it (go run ./cmd/sde -force)",
+	slog.Error("sde: file lacks columns the readers need; dogma modifiers, stacking, mass/volume/capacity, type descriptions and market groups, the map and jump readers, and production-chain runs degrade silently - rebuild it (go run ./cmd/sde -force)",
 		"path", path, "missing", missing)
 }
