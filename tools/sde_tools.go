@@ -224,28 +224,34 @@ func unitWord(n int) string {
 // getRequiredSkills mirrors Python _get_required_skills.
 // purpose: "fly" (default) → dogma prereqs to use the ship/module;
 // "build" → industryActivitySkills manufacturing prereqs for its blueprint.
-func getRequiredSkills(s *sde.SDE, itemName, purpose string) string {
+//
+// Besides the text it returns the item's skills as data: nil when the item did not resolve (or
+// the SDE is not loaded), otherwise the item with its direct skills and prerequisite chain, both
+// empty when the text says there is nothing to train. The chain of a build plan is the
+// prerequisite chain of the blueprint skills, which the build text does not list.
+func getRequiredSkills(s *sde.SDE, itemName, purpose string) (string, *ItemSkills) {
 	if !s.Available() {
-		return "SDE not loaded — skill query unavailable."
+		return "SDE not loaded — skill query unavailable.", nil
 	}
 	matched := s.ResolveNameLoose(itemName, 5)
 	if matched == nil {
-		return fmt.Sprintf("Unknown item: %s. Try search_item_by_name first.", itemName)
+		return fmt.Sprintf("Unknown item: %s. Try search_item_by_name first.", itemName), nil
 	}
 	resolvedName := (*matched)[0].(string)
 	tid := (*matched)[1].(int)
 	if resolvedName != itemName {
 		itemName = resolvedName
 	}
+	none := &ItemSkills{Name: itemName, TypeID: tid, Direct: []SkillLevel{}, Chain: []SkillLevel{}}
 
 	if purpose == "build" {
 		bpID := s.GetBlueprintForProduct(tid)
 		if bpID == nil {
-			return fmt.Sprintf("No blueprint produces %s.", itemName)
+			return fmt.Sprintf("No blueprint produces %s.", itemName), none
 		}
 		skills := s.GetBlueprintSkills(*bpID, sde.ActivityManufacturing)
 		if len(skills) == 0 {
-			return fmt.Sprintf("No skill requirements found for blueprint %s.", itemName)
+			return fmt.Sprintf("No skill requirements found for blueprint %s.", itemName), none
 		}
 		skillIDs := make([]int, 0, len(skills))
 		for _, sk := range skills {
@@ -264,12 +270,12 @@ func getRequiredSkills(s *sde.SDE, itemName, purpose string) string {
 			}
 			lines = append(lines, fmt.Sprintf("  • %s %s", name, romanNumeral(sk[1])))
 		}
-		return strings.Join(lines, "\n")
+		return strings.Join(lines, "\n"), newItemSkills(s, itemName, tid, sorted, skillPrerequisiteChain(s, sorted))
 	}
 
 	skills := s.GetRequiredSkillsFromDogma(tid)
 	if len(skills) == 0 {
-		return fmt.Sprintf("No skill prerequisites found for %s (might be unrestricted).", itemName)
+		return fmt.Sprintf("No skill prerequisites found for %s (might be unrestricted).", itemName), none
 	}
 	skillIDs := make([]int, 0, len(skills))
 	for _, sk := range skills {
@@ -287,7 +293,8 @@ func getRequiredSkills(s *sde.SDE, itemName, purpose string) string {
 	lines = append(lines, "")
 	lines = append(lines, "Note: also requires the parent skill chain (e.g. Spaceship Command V for capitals).")
 
-	if chain := skillPrerequisiteChain(s, skills); len(chain) > 0 {
+	chain := skillPrerequisiteChain(s, skills)
+	if len(chain) > 0 {
 		chainIDs := make([]int, 0, len(chain))
 		for id := range chain {
 			chainIDs = append(chainIDs, id)
@@ -318,7 +325,7 @@ func getRequiredSkills(s *sde.SDE, itemName, purpose string) string {
 		}
 	}
 
-	return strings.Join(lines, "\n")
+	return strings.Join(lines, "\n"), newItemSkills(s, itemName, tid, skills, chain)
 }
 
 // _skillChainMaxDepth caps the recursive prerequisite-chain DFS in

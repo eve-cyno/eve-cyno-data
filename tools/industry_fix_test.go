@@ -269,8 +269,8 @@ func TestReprocessingDispatchReadsQuantityKey(t *testing.T) {
 func TestRequiredSkillsFlyVsBuild(t *testing.T) {
 	s := openCorpusSDE(t)
 
-	fly := getRequiredSkills(s, "Rifter", "fly")
-	build := getRequiredSkills(s, "Rifter", "build")
+	fly, _ := getRequiredSkills(s, "Rifter", "fly")
+	build, _ := getRequiredSkills(s, "Rifter", "build")
 
 	require.Contains(t, fly, "Skills required to use **Rifter**")
 	require.Contains(t, build, "Manufacturing skills required to build **Rifter**")
@@ -304,7 +304,7 @@ func TestRequiredSkillsDispatchPurpose(t *testing.T) {
 func TestRequiredSkillsFlyIncludesPrerequisiteChain(t *testing.T) {
 	s := openCorpusSDE(t)
 
-	revelation := getRequiredSkills(s, "Revelation", "fly")
+	revelation, _ := getRequiredSkills(s, "Revelation", "fly")
 	require.Contains(t, revelation, "Full prerequisite chain:",
 		"fly purpose must append the recursive prerequisite chain section, got:\n"+revelation)
 	require.Contains(t, revelation, "Amarr Battleship",
@@ -314,7 +314,7 @@ func TestRequiredSkillsFlyIncludesPrerequisiteChain(t *testing.T) {
 
 	// Frigate sanity case: a shallow ship's chain stays small and the existing
 	// direct-requirements assertions (FIX 7 above) stay green.
-	rifter := getRequiredSkills(s, "Rifter", "fly")
+	rifter, _ := getRequiredSkills(s, "Rifter", "fly")
 	require.Contains(t, rifter, "Skills required to use **Rifter**")
 	require.Contains(t, rifter, "Minmatar Frigate")
 }

@@ -653,13 +653,21 @@
     "type": "function",
     "function": {
       "name": "get_required_skills",
-      "description": "List the skills required to fly a ship or build an item. Use for 'what skills to fly X' or 'what skills to build Y' questions.",
+      "description": "List the skills required to fly a ship or build an item, for one item (item_name) or up to 20 at once (items). Use for 'what skills to fly X' or 'what skills to build Y' questions. With training_time it adds the skill points and the training time from zero SP for an Omega clone; without attributes each skill is at its best remap (27/21). Several items also get the union of their skills, each at its highest level.",
       "parameters": {
         "type": "object",
         "properties": {
           "item_name": {
             "type": "string",
             "description": "Ship or blueprint name, e.g. 'Avatar', 'Nyx', 'Revelation', 'Damage Control II'"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 20,
+            "description": "Up to 20 item names for a plan with one line each, e.g. ['Paladin', 'Rifter']; item_name given beside it is added to the list"
           },
           "purpose": {
             "type": "string",
@@ -668,11 +676,48 @@
               "build"
             ],
             "description": "'fly' for ship/module skills (default), 'build' for blueprint manufacturing skills"
+          },
+          "training_time": {
+            "type": "boolean",
+            "description": "true: add SP and the training time from zero SP for an Omega clone, e.g. for 'how long to train into a Paladin'. Without attributes each skill is trained at its best remap (primary 27 / secondary 21, no implants, 37.5 SP/min)."
+          },
+          "attributes": {
+            "type": "object",
+            "description": "The character's five attributes, all or none, e.g. {'perception': 20, 'memory': 20, 'willpower': 20, 'intelligence': 20, 'charisma': 19}; each skill then trains by its own two attributes. Only used with training_time.",
+            "properties": {
+              "perception": {
+                "type": "integer",
+                "minimum": 17,
+                "maximum": 50,
+                "description": "Perception, 17 to 50"
+              },
+              "memory": {
+                "type": "integer",
+                "minimum": 17,
+                "maximum": 50,
+                "description": "Memory, 17 to 50"
+              },
+              "willpower": {
+                "type": "integer",
+                "minimum": 17,
+                "maximum": 50,
+                "description": "Willpower, 17 to 50"
+              },
+              "intelligence": {
+                "type": "integer",
+                "minimum": 17,
+                "maximum": 50,
+                "description": "Intelligence, 17 to 50"
+              },
+              "charisma": {
+                "type": "integer",
+                "minimum": 17,
+                "maximum": 50,
+                "description": "Charisma, 17 to 50"
+              }
+            }
           }
-        },
-        "required": [
-          "item_name"
-        ]
+        }
       }
     }
   },

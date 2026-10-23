@@ -317,7 +317,7 @@ func summaryTable() map[string]string {
 		"get_system_info":        "Security, location, neighbours, celestials, stations and ice belt of up to 50 systems.",
 		"get_thera_connections":  "Live Thera and Turnur wormhole connections from EvE-Scout, optionally nearest to a system.",
 		"get_reprocessing_yield": "Materials produced by reprocessing an item.",
-		"get_required_skills":    "Skills required to fly a ship or build an item.",
+		"get_required_skills":    "Skills to fly a ship or build an item, for up to 20 items at once, with SP and training time.",
 		"get_sovereignty":        "Alliance, corporation or faction holding sovereignty over up to 50 solar systems.",
 		"get_system_activity":    "Jumps and ship, pod and NPC kills in up to 50 solar systems in the last hour.",
 		"appraise_items":         "Total ISK value of an item list: an estimate from ESI average prices, or a Janice appraisal with your own Janice key.",
@@ -413,6 +413,8 @@ func dataType(name string) reflect.Type {
 		return reflect.TypeFor[tools.FitValidation]()
 	case "compute_fit_stats":
 		return reflect.TypeFor[tools.FitStatCard]()
+	case "get_required_skills":
+		return reflect.TypeFor[tools.SkillPlan]()
 	case "get_fits":
 		return reflect.TypeFor[tools.CommunityFits]()
 	case "list_fits":

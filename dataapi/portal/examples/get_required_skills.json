@@ -1,18 +1,185 @@
 {
   "tool": "get_required_skills",
   "request": {
-    "item_name": "Gila",
-    "purpose": "fly"
+    "items": [
+      "Paladin",
+      "Rifter"
+    ],
+    "training_time": true
   },
-  "prompt": "Which skills do I need to fly a Gila?",
-  "recorded": "2026-10-09",
+  "prompt": "How long to train into a Paladin and a Rifter from scratch?",
+  "recorded": "2026-10-23",
   "trimmed": false,
   "response": {
     "tool": "get_required_skills",
-    "version": "sha-aa76146",
+    "version": "sha-db46de6",
     "result": {
-      "text": "Skills required to use **Gila**:\n\n  • Caldari Cruiser II\n  • Gallente Cruiser II\n\nNote: also requires the parent skill chain (e.g. Spaceship Command V for capitals).\n\nFull prerequisite chain:\n  • Caldari Destroyer III\n  • Caldari Frigate III\n  • Gallente Destroyer III\n  • Gallente Frigate III\n  • Spaceship Command II",
-      "data": null
+      "text": "Skills to fly 2 items (training from zero SP: Omega, primary 27 / secondary 21 for every skill, its best remap, no implants):\nPaladin: 13 skills, 4,568,088 SP, 84d 14h 16m — Amarr Battleship V, Marauders I; chain: Advanced Weapon Upgrades V, Energy Grid Upgrades V, Spaceship Command V, Weapon Upgrades IV, Amarr Battlecruiser III, Amarr Cruiser III, Amarr Destroyer III, Amarr Frigate III, Gunnery II, Power Grid Management II, Science I\nRifter: 2 skills, 750 SP, 20m — Minmatar Frigate I; chain: Spaceship Command I\nAll 2 items: 14 skills, 4,568,588 SP, 84d 14h 29m",
+      "data": {
+        "purpose": "fly",
+        "attributes": {
+          "perception": null,
+          "memory": null,
+          "willpower": null,
+          "intelligence": null,
+          "charisma": null,
+          "best_remap_per_skill": true
+        },
+        "items": [
+          {
+            "name": "Paladin",
+            "type_id": 28659,
+            "direct": [
+              {
+                "skill_id": 3339,
+                "name": "Amarr Battleship",
+                "level": 5,
+                "rank": 8,
+                "sp": 2048000,
+                "training_seconds": 3276800
+              },
+              {
+                "skill_id": 28667,
+                "name": "Marauders",
+                "level": 1,
+                "rank": 10,
+                "sp": 2500,
+                "training_seconds": 4000
+              }
+            ],
+            "chain": [
+              {
+                "skill_id": 11207,
+                "name": "Advanced Weapon Upgrades",
+                "level": 5,
+                "rank": 6,
+                "sp": 1536000,
+                "training_seconds": 2457600
+              },
+              {
+                "skill_id": 3424,
+                "name": "Energy Grid Upgrades",
+                "level": 5,
+                "rank": 2,
+                "sp": 512000,
+                "training_seconds": 819200
+              },
+              {
+                "skill_id": 3327,
+                "name": "Spaceship Command",
+                "level": 5,
+                "rank": 1,
+                "sp": 256000,
+                "training_seconds": 409600
+              },
+              {
+                "skill_id": 3318,
+                "name": "Weapon Upgrades",
+                "level": 4,
+                "rank": 2,
+                "sp": 90510,
+                "training_seconds": 144816
+              },
+              {
+                "skill_id": 33095,
+                "name": "Amarr Battlecruiser",
+                "level": 3,
+                "rank": 6,
+                "sp": 48000,
+                "training_seconds": 76800
+              },
+              {
+                "skill_id": 3335,
+                "name": "Amarr Cruiser",
+                "level": 3,
+                "rank": 5,
+                "sp": 40000,
+                "training_seconds": 64000
+              },
+              {
+                "skill_id": 33091,
+                "name": "Amarr Destroyer",
+                "level": 3,
+                "rank": 2,
+                "sp": 16000,
+                "training_seconds": 25600
+              },
+              {
+                "skill_id": 3331,
+                "name": "Amarr Frigate",
+                "level": 3,
+                "rank": 2,
+                "sp": 16000,
+                "training_seconds": 25600
+              },
+              {
+                "skill_id": 3300,
+                "name": "Gunnery",
+                "level": 2,
+                "rank": 1,
+                "sp": 1414,
+                "training_seconds": 2262
+              },
+              {
+                "skill_id": 3413,
+                "name": "Power Grid Management",
+                "level": 2,
+                "rank": 1,
+                "sp": 1414,
+                "training_seconds": 2262
+              },
+              {
+                "skill_id": 3402,
+                "name": "Science",
+                "level": 1,
+                "rank": 1,
+                "sp": 250,
+                "training_seconds": 400
+              }
+            ],
+            "totals": {
+              "skills": 13,
+              "sp": 4568088,
+              "training_seconds": 7308941
+            }
+          },
+          {
+            "name": "Rifter",
+            "type_id": 587,
+            "direct": [
+              {
+                "skill_id": 3329,
+                "name": "Minmatar Frigate",
+                "level": 1,
+                "rank": 2,
+                "sp": 500,
+                "training_seconds": 800
+              }
+            ],
+            "chain": [
+              {
+                "skill_id": 3327,
+                "name": "Spaceship Command",
+                "level": 1,
+                "rank": 1,
+                "sp": 250,
+                "training_seconds": 400
+              }
+            ],
+            "totals": {
+              "skills": 2,
+              "sp": 750,
+              "training_seconds": 1200
+            }
+          }
+        ],
+        "combined": {
+          "skills": 14,
+          "sp": 4568588,
+          "training_seconds": 7309741
+        },
+        "unresolved": []
+      }
     },
     "attribution": [
       {

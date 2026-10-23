@@ -880,3 +880,73 @@ type JumpRouteHop struct {
 	// Live is the hop system's live ESI profile; null unless live_info was set and ESI answered.
 	Live *JumpHopLive `json:"live"`
 }
+
+// SkillPlan is the result of get_required_skills: the skills of one or more items and, with
+// training_time, how long they take to train from zero SP.
+type SkillPlan struct {
+	// Purpose is "fly" (the skills to use the item) or "build" (the blueprint's manufacturing skills).
+	Purpose string `json:"purpose"`
+	// Attributes holds the training attributes behind the times; null without training_time.
+	Attributes *TrainingAttributes `json:"attributes"`
+	// Items has one row per distinct resolved item, in request order.
+	Items []ItemSkills `json:"items"`
+	// Combined is the union of the skills of all items (each at its highest level); null for
+	// one item or without training_time.
+	Combined *SkillTotals `json:"combined"`
+	// Unresolved lists the requested names that match no item.
+	Unresolved []string `json:"unresolved"`
+}
+
+// TrainingAttributes are the attributes a training time was computed with.
+type TrainingAttributes struct {
+	// Perception, Memory, Willpower, Intelligence and Charisma are the character's attributes
+	// (17 to 50); null when BestRemapPerSkill is true.
+	Perception   *int `json:"perception"`
+	Memory       *int `json:"memory"`
+	Willpower    *int `json:"willpower"`
+	Intelligence *int `json:"intelligence"`
+	Charisma     *int `json:"charisma"`
+	// BestRemapPerSkill is true when no attributes were given: every skill is trained at
+	// primary 27 / secondary 21 (its best remap, no implants), which is 37.5 SP per minute.
+	BestRemapPerSkill bool `json:"best_remap_per_skill"`
+}
+
+// ItemSkills is the skill plan of one item.
+type ItemSkills struct {
+	// Name is the SDE's spelling of the item name.
+	Name string `json:"name"`
+	// TypeID is the item's type id.
+	TypeID int `json:"type_id"`
+	// Direct lists the skills the item itself requires (a build plan: the blueprint's skills).
+	Direct []SkillLevel `json:"direct"`
+	// Chain lists the skills those need in turn, highest level first; direct skills are left out.
+	Chain []SkillLevel `json:"chain"`
+	// Totals sums Direct and Chain; null without training_time.
+	Totals *SkillTotals `json:"totals"`
+}
+
+// SkillLevel is one skill at the level a plan needs.
+type SkillLevel struct {
+	// SkillID is the skill's type id.
+	SkillID int `json:"skill_id"`
+	// Name is the skill's name.
+	Name string `json:"name"`
+	// Level is the level needed, 1 to 5.
+	Level int `json:"level"`
+	// Rank is the skill's training time multiplier; 0 when the SDE has none.
+	Rank float64 `json:"rank"`
+	// SP is the skill points from zero to Level; null without training_time.
+	SP *int `json:"sp"`
+	// TrainingSeconds is the time from zero to Level; null without training_time.
+	TrainingSeconds *int `json:"training_seconds"`
+}
+
+// SkillTotals sums a set of skills.
+type SkillTotals struct {
+	// Skills is how many distinct skills the set holds.
+	Skills int `json:"skills"`
+	// SP is the skill points to train all of them from zero.
+	SP int `json:"sp"`
+	// TrainingSeconds is the time to train all of them from zero, rounded once.
+	TrainingSeconds int `json:"training_seconds"`
+}

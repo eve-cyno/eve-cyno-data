@@ -1585,11 +1585,11 @@ paths:
     post:
       tags:
         - tools
-      summary: List the skills required to fly a ship or build an item.
+      summary: List the skills required to fly a ship or build an item, for one item (item_name) or up to 20 at once (items).
       description: |-
-        List the skills required to fly a ship or build an item. Use for 'what skills to fly X' or 'what skills to build Y' questions.
+        List the skills required to fly a ship or build an item, for one item (item_name) or up to 20 at once (items). Use for 'what skills to fly X' or 'what skills to build Y' questions. With training_time it adds the skill points and the training time from zero SP for an Omega clone; without attributes each skill is at its best remap (27/21). Several items also get the union of their skills, each at its highest level.
 
-        Sources: EVE Static Data Export (via Fuzzwork).
+        Sources: EVE Static Data Export (via Fuzzwork). `result.data` is a `SkillPlan` object when the call succeeds.
 
         Access tier: **public**. No key needed.
 
@@ -1598,12 +1598,47 @@ paths:
       parameters:
         - $ref: '#/components/parameters/RequestID'
       requestBody:
-        required: true
+        required: false
         content:
           application/json:
             schema:
               type: object
               properties:
+                items:
+                  type: array
+                  description: Up to 20 item names for a plan with one line each, e.g. ['Paladin', 'Rifter']; item_name given beside it is added to the list
+                  items:
+                    type: string
+                  maxItems: 20
+                attributes:
+                  type: object
+                  description: 'The character''s five attributes, all or none, e.g. {''perception'': 20, ''memory'': 20, ''willpower'': 20, ''intelligence'': 20, ''charisma'': 19}; each skill then trains by its own two attributes. Only used with training_time.'
+                  properties:
+                    charisma:
+                      type: integer
+                      description: Charisma, 17 to 50
+                      minimum: 17
+                      maximum: 50
+                    intelligence:
+                      type: integer
+                      description: Intelligence, 17 to 50
+                      minimum: 17
+                      maximum: 50
+                    memory:
+                      type: integer
+                      description: Memory, 17 to 50
+                      minimum: 17
+                      maximum: 50
+                    perception:
+                      type: integer
+                      description: Perception, 17 to 50
+                      minimum: 17
+                      maximum: 50
+                    willpower:
+                      type: integer
+                      description: Willpower, 17 to 50
+                      minimum: 17
+                      maximum: 50
                 item_name:
                   type: string
                   description: Ship or blueprint name, e.g. 'Avatar', 'Nyx', 'Revelation', 'Damage Control II'
@@ -1613,15 +1648,16 @@ paths:
                   enum:
                     - fly
                     - build
-              required:
-                - item_name
+                training_time:
+                  type: boolean
+                  description: 'true: add SP and the training time from zero SP for an Omega clone, e.g. for ''how long to train into a Paladin''. Without attributes each skill is trained at its best remap (primary 27 / secondary 21, no implants, 37.5 SP/min).'
       responses:
         "200":
           description: The tool's answer.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ToolResponse'
+                $ref: '#/components/schemas/SkillPlanToolResponse'
           headers:
             X-Request-ID:
               $ref: '#/components/headers/RequestID'
@@ -3520,6 +3556,36 @@ components:
         - version
         - result
         - attribution
+    ItemSkills:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Name is the SDE's spelling of the item name.
+        type_id:
+          type: integer
+          description: TypeID is the item's type id.
+        direct:
+          type: array
+          description: 'Direct lists the skills the item itself requires (a build plan: the blueprint''s skills).'
+          items:
+            $ref: '#/components/schemas/SkillLevel'
+        chain:
+          type: array
+          description: Chain lists the skills those need in turn, highest level first; direct skills are left out.
+          items:
+            $ref: '#/components/schemas/SkillLevel'
+        totals:
+          description: Totals sums Direct and Chain; null without training_time.
+          oneOf:
+            - $ref: '#/components/schemas/SkillTotals'
+            - type: "null"
+      required:
+        - name
+        - type_id
+        - direct
+        - chain
+        - totals
     JumpDistance:
       type: object
       properties:
@@ -4364,6 +4430,119 @@ components:
         - version
         - result
         - attribution
+    SkillLevel:
+      type: object
+      properties:
+        skill_id:
+          type: integer
+          description: SkillID is the skill's type id.
+        name:
+          type: string
+          description: Name is the skill's name.
+        level:
+          type: integer
+          description: Level is the level needed, 1 to 5.
+        rank:
+          type: number
+          description: Rank is the skill's training time multiplier; 0 when the SDE has none.
+        sp:
+          type:
+            - integer
+            - "null"
+          description: SP is the skill points from zero to Level; null without training_time.
+        training_seconds:
+          type:
+            - integer
+            - "null"
+          description: TrainingSeconds is the time from zero to Level; null without training_time.
+      required:
+        - skill_id
+        - name
+        - level
+        - rank
+        - sp
+        - training_seconds
+    SkillPlan:
+      type: object
+      properties:
+        purpose:
+          type: string
+          description: Purpose is "fly" (the skills to use the item) or "build" (the blueprint's manufacturing skills).
+        attributes:
+          description: Attributes holds the training attributes behind the times; null without training_time.
+          oneOf:
+            - $ref: '#/components/schemas/TrainingAttributes'
+            - type: "null"
+        items:
+          type: array
+          description: Items has one row per distinct resolved item, in request order.
+          items:
+            $ref: '#/components/schemas/ItemSkills'
+        combined:
+          description: Combined is the union of the skills of all items (each at its highest level); null for one item or without training_time.
+          oneOf:
+            - $ref: '#/components/schemas/SkillTotals'
+            - type: "null"
+        unresolved:
+          type: array
+          description: Unresolved lists the requested names that match no item.
+          items:
+            type: string
+      required:
+        - purpose
+        - attributes
+        - items
+        - combined
+        - unresolved
+    SkillPlanToolResponse:
+      type: object
+      properties:
+        tool:
+          type: string
+          description: The tool that ran.
+        version:
+          type: string
+          description: The build version of the service.
+        result:
+          type: object
+          properties:
+            text:
+              type: string
+              description: The answer as the chat assistant reads it.
+            data:
+              description: The typed answer, or null when the tool has none or the call ended in a text-only answer (an unknown id, a parse failure); `text` then says why.
+              oneOf:
+                - $ref: '#/components/schemas/SkillPlan'
+                - type: "null"
+          required:
+            - text
+            - data
+        attribution:
+          type: array
+          description: The upstreams behind the answer; attribution is a condition of several of their licences.
+          items:
+            $ref: '#/components/schemas/Source'
+      required:
+        - tool
+        - version
+        - result
+        - attribution
+    SkillTotals:
+      type: object
+      properties:
+        skills:
+          type: integer
+          description: Skills is how many distinct skills the set holds.
+        sp:
+          type: integer
+          description: SP is the skill points to train all of them from zero.
+        training_seconds:
+          type: integer
+          description: TrainingSeconds is the time to train all of them from zero, rounded once.
+      required:
+        - skills
+        - sp
+        - training_seconds
     SlotUsage:
       type: object
       properties:
@@ -5069,6 +5248,40 @@ components:
         - version
         - result
         - attribution
+    TrainingAttributes:
+      type: object
+      properties:
+        perception:
+          type:
+            - integer
+            - "null"
+          description: Perception, Memory, Willpower, Intelligence and Charisma are the character's attributes (17 to 50); null when BestRemapPerSkill is true.
+        memory:
+          type:
+            - integer
+            - "null"
+        willpower:
+          type:
+            - integer
+            - "null"
+        intelligence:
+          type:
+            - integer
+            - "null"
+        charisma:
+          type:
+            - integer
+            - "null"
+        best_remap_per_skill:
+          type: boolean
+          description: 'BestRemapPerSkill is true when no attributes were given: every skill is trained at primary 27 / secondary 21 (its best remap, no implants), which is 37.5 SP per minute.'
+      required:
+        - perception
+        - memory
+        - willpower
+        - intelligence
+        - charisma
+        - best_remap_per_skill
     TypeInfo:
       type: object
       properties:

@@ -26,7 +26,12 @@ const (
 	maxProductionRuns    = 10_000        // get_production_chain: runs
 	// maxItemFacts is conditional (names with details), so the schema has no maxItems for it:
 	// the tool text and a test pin it instead.
-	maxItemFacts = 50 // search_item_by_name: names with details
+	maxItemFacts  = 50 // search_item_by_name: names with details
+	maxSkillItems = 20 // get_required_skills: items
+	// The training attributes of a character (EVE University, "Skills and learning": the remap
+	// floor is 17); the upper bound is a sanity limit, not a game value.
+	minAttribute = 17 // get_required_skills: attributes
+	maxAttribute = 50 // get_required_skills: attributes
 )
 
 // listCapError is the answer for a list longer than its cap.

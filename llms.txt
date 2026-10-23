@@ -41,7 +41,7 @@ EVE Online and its game data are the property of Fenris Creations and are used u
 - [get_systems_in_region](/llms-full.txt#get_systems_in_region): List solar systems in an EVE region filtered by security band.
 - [get_npc_stations](/llms-full.txt#get_npc_stations): List NPC stations in a solar system, including their owning corporation and operation type.
 - [get_reprocessing_yield](/llms-full.txt#get_reprocessing_yield): Compute the materials produced by reprocessing an EVE item (ore, ice, salvage, modules).
-- [get_required_skills](/llms-full.txt#get_required_skills): List the skills required to fly a ship or build an item.
+- [get_required_skills](/llms-full.txt#get_required_skills): List the skills required to fly a ship or build an item, for one item (item_name) or up to 20 at once (items).
 - [get_average_prices](/llms-full.txt#get_average_prices): EVE's average price for up to 200 items in one call, by name (names) or type ID (type_ids), from ESI /markets/prices (refreshed daily, one shared copy).
 - [get_market_history](/llms-full.txt#get_market_history): Daily market history of one item in one region from ESI (/markets/{region_id}/history), summarised: average, low, high and volume per day or per week over the…
 - [get_sovereignty](/llms-full.txt#get_sovereignty): Get who holds sovereignty (alliance and corporation, or NPC faction) over EVE solar systems.

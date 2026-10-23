@@ -403,14 +403,17 @@ Compute the materials produced by reprocessing an EVE item (ore, ice, salvage, m
 
 ### get_required_skills
 
-List the skills required to fly a ship or build an item. Use for 'what skills to fly X' or 'what skills to build Y' questions.
+List the skills required to fly a ship or build an item, for one item (item_name) or up to 20 at once (items). Use for 'what skills to fly X' or 'what skills to build Y' questions. With training_time it adds the skill points and the training time from zero SP for an Omega clone; without attributes each skill is at its best remap (27/21). Several items also get the union of their skills, each at its highest level.
 
 - Call: `POST /v1/tool/get_required_skills` or MCP tool `get_required_skills`
 - Access: public. No key needed.
 - Arguments:
-  - `item_name` (string, required): Ship or blueprint name, e.g. 'Avatar', 'Nyx', 'Revelation', 'Damage Control II'
+  - `attributes` (object): The character's five attributes, all or none, e.g. {'perception': 20, 'memory': 20, 'willpower': 20, 'intelligence': 20, 'charisma': 19}; each skill then trains by its own two attributes. Only used with training_time.
+  - `item_name` (string): Ship or blueprint name, e.g. 'Avatar', 'Nyx', 'Revelation', 'Damage Control II'
+  - `items` (array of string): Up to 20 item names for a plan with one line each, e.g. ['Paladin', 'Rifter']; item_name given beside it is added to the list
   - `purpose` (string): 'fly' for ship/module skills (default), 'build' for blueprint manufacturing skills. One of: fly, build.
-- Typed result: none; the answer is `result.text`
+  - `training_time` (boolean): true: add SP and the training time from zero SP for an Omega clone, e.g. for 'how long to train into a Paladin'. Without attributes each skill is trained at its best remap (primary 27 / secondary 21, no implants, 37.5 SP/min).
+- Typed result (`result.data`): SkillPlan with fields `purpose`, `attributes`, `items`, `combined`, `unresolved`
 - Sources: EVE Static Data Export (via Fuzzwork)
 
 ### get_average_prices

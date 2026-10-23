@@ -146,7 +146,14 @@ func dispatch(ctx context.Context, deps *Deps, name string, arguments map[string
 		if purpose == "" {
 			purpose = "fly"
 		}
-		return plain(getRequiredSkills(deps.SDE, item, purpose))
+		// items (a list), training_time and attributes are additive; null, "", [] and {} count as absent.
+		trainingTime, _ := arguments["training_time"].(bool)
+		attributes, _ := arguments["attributes"].(map[string]any)
+		text, plan := skillPlan(deps.SDE, skillPlanRequest{
+			ItemName: item, Items: stringSlice(arguments["items"]), Purpose: purpose,
+			TrainingTime: trainingTime, Attributes: attributes,
+		})
+		return typed(text, plan, nil)
 
 	case "get_production_chain":
 		// Python defaults me_level to 10 (fully-researched BPO) — the mineral

@@ -39,6 +39,12 @@ func TestSchemaCapsMatchTheCode(t *testing.T) {
 		{"plan_jump_route", "skills.jump_freighters"}:         maxSkillLevel,
 		{"get_reprocessing_yield", "quantity"}:                maxReprocessQuantity,
 		{"get_production_chain", "runs"}:                      maxProductionRuns,
+		{"get_required_skills", "items"}:                      maxSkillItems,
+		{"get_required_skills", "attributes.perception"}:      maxAttribute,
+		{"get_required_skills", "attributes.memory"}:          maxAttribute,
+		{"get_required_skills", "attributes.willpower"}:       maxAttribute,
+		{"get_required_skills", "attributes.intelligence"}:    maxAttribute,
+		{"get_required_skills", "attributes.charisma"}:        maxAttribute,
 	} // later tools add their rows here
 
 	props := map[string]map[string]any{}
