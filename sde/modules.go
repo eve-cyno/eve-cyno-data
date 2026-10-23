@@ -136,7 +136,7 @@ func (s *SDE) ModuleByID(typeID int) *ModuleHit {
 
 // SearchModules returns published modules whose name matches query (case-
 // insensitive substring) and that fit the given slot ("" = any of high/mid/
-// low/rig). Ordered by name, capped at limit (default 50, max 100).
+// low/rig). Ordered by name across the slots, capped at limit (default 50, max 100).
 func (s *SDE) SearchModules(query, slot string, limit int) []ModuleHit {
 	if s == nil || s.db == nil {
 		return nil
@@ -145,51 +145,50 @@ func (s *SDE) SearchModules(query, slot string, limit int) []ModuleHit {
 		limit = 50
 	}
 	like := "%" + strings.ToLower(strings.TrimSpace(query)) + "%"
-	const q = `
-SELECT t.typeID, t.typeName, t.groupID
-FROM invTypes t
-JOIN dgmTypeEffects e ON e.typeID = t.typeID AND e.effectID = ?
-WHERE t.published = 1 AND lower(t.typeName) LIKE ?
-ORDER BY t.typeName
-LIMIT ?`
-
-	effects := []int{}
+	// One query over the wanted slot effects, so the name order and the limit
+	// apply across the slots. A type with several slot effects takes the first
+	// of high, mid, low, rig (its rank in order), as GetModuleSlot does.
+	order := [...]int{12, 13, 11, 2663}
+	effects := order[:]
 	if eff, ok := slotEffectID[slot]; ok {
-		effects = append(effects, eff)
-	} else {
-		effects = []int{12, 13, 11, 2663}
+		effects = []int{eff}
 	}
-
-	seen := map[int]bool{}
-	out := []ModuleHit{}
+	args := make([]any, 0, len(effects)+2)
 	for _, eff := range effects {
-		rows, err := s.db.Query(q, eff, like, limit)
-		if err != nil {
+		args = append(args, eff)
+	}
+	args = append(args, like, limit)
+	q := `
+SELECT t.typeID, t.typeName, t.groupID,
+       MIN(CASE e.effectID WHEN 12 THEN 0 WHEN 13 THEN 1 WHEN 11 THEN 2 ELSE 3 END) AS slotRank
+FROM invTypes t
+JOIN dgmTypeEffects e ON e.typeID = t.typeID
+WHERE e.effectID IN (?` + strings.Repeat(", ?", len(effects)-1) + `)
+  AND t.published = 1 AND lower(t.typeName) LIKE ?
+GROUP BY t.typeID
+ORDER BY t.typeName, t.typeID
+LIMIT ?`
+	rows, err := s.db.Query(q, args...)
+	if err != nil {
+		return nil
+	}
+	defer rows.Close()
+	out := []ModuleHit{}
+	for rows.Next() {
+		var h ModuleHit
+		var rank int
+		if err := rows.Scan(&h.TypeID, &h.Name, &h.GroupID, &rank); err != nil {
 			continue
 		}
-		for rows.Next() {
-			var h ModuleHit
-			if err := rows.Scan(&h.TypeID, &h.Name, &h.GroupID); err != nil {
-				continue
-			}
-			if seen[h.TypeID] {
-				continue
-			}
-			seen[h.TypeID] = true
-			h.Slot = slotNameForEffect(eff)
-			d := s.GetDogma(h.TypeID)
-			h.CPU, h.PG = d[50], d[30]
-			if mt := s.GetItemMetaTier(h.TypeID); mt != nil {
-				h.MetaTier = *mt
-			}
-			h.CanLoadCharge = s.CanLoadCharge(h.TypeID)
-			h.CanOverheat = s.CanOverheat(h.TypeID)
-			out = append(out, h)
+		h.Slot = slotNameForEffect(order[rank])
+		d := s.GetDogma(h.TypeID)
+		h.CPU, h.PG = d[50], d[30]
+		if mt := s.GetItemMetaTier(h.TypeID); mt != nil {
+			h.MetaTier = *mt
 		}
-		rows.Close()
-	}
-	if len(out) > limit {
-		out = out[:limit]
+		h.CanLoadCharge = s.CanLoadCharge(h.TypeID)
+		h.CanOverheat = s.CanOverheat(h.TypeID)
+		out = append(out, h)
 	}
 	return out
 }
