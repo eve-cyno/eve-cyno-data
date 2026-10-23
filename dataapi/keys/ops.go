@@ -267,10 +267,11 @@ func (s *Store) dropCounters(gone []idHash) {
 	s.usageMu.Unlock()
 }
 
-// Blocked lists the blocked owners, most recently blocked first.
+// Blocked lists the blocked owners, most recently blocked first (by blocked_at, then rowid:
+// a block moved by an account merge or delete gets a new rowid but keeps its blocked_at).
 func (s *Store) Blocked(ctx context.Context) ([]BlockedOwner, error) {
 	rows, err := s.db.QueryContext(ctx,
-		`SELECT owner, owner_name, blocked_at FROM blocked_owners ORDER BY rowid DESC`)
+		`SELECT owner, owner_name, blocked_at FROM blocked_owners ORDER BY blocked_at DESC, rowid DESC`)
 	if err != nil {
 		return nil, fmt.Errorf("keys: list blocked: %w", err)
 	}
