@@ -1118,6 +1118,8 @@ paths:
                 runs:
                   type: integer
                   description: Number of runs (default 1)
+                  minimum: 1
+                  maximum: 10000
                 station_rig_level:
                   type: integer
                   description: Structure rig material-savings level 0-5 (default 0). M-Set Manufacturing Material Efficiency rig at level 5 = 10% material savings. Use only when the user explicitly mentions a structure or its rigs.

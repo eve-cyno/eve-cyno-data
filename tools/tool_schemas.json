@@ -359,6 +359,8 @@
           },
           "runs": {
             "type": "integer",
+            "minimum": 1,
+            "maximum": 10000,
             "description": "Number of runs (default 1)"
           },
           "me_level": {

@@ -153,9 +153,12 @@ func dispatch(ctx context.Context, deps *Deps, name string, arguments map[string
 		// totals graders assume ME10. Also reads the optional structure-rig /
 		// cost-index / industry-skills params the schema exposes.
 		item, _ := arguments["item_name"].(string)
-		runs := intArg(arguments, "runs", 1)
-		if runs == 0 {
-			runs = 1 // mirror Python `int(... or 1)`
+		runs := 1 // absent runs = one run
+		if raw, ok := arguments["runs"]; ok && raw != nil && !blankString(raw) {
+			runs = cappedIntArg(arguments, "runs", 1)
+			if runs < 1 || runs > maxProductionRuns {
+				return plain(rangeError("runs", 1, maxProductionRuns, runs))
+			}
 		}
 		me := intArg(arguments, "me_level", 10)
 		stationRig := intArg(arguments, "station_rig_level", 0)

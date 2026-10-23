@@ -23,6 +23,7 @@ const (
 	maxSkillLevel        = 5             // skill levels, 0 to maxSkillLevel
 	maxRouteJumps        = 100           // plan_jump_route: jumps listed in one answer
 	maxReprocessQuantity = 1_000_000_000 // get_reprocessing_yield: quantity
+	maxProductionRuns    = 10_000        // get_production_chain: runs
 )
 
 // listCapError is the answer for a list longer than its cap.
