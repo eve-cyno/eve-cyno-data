@@ -115,6 +115,57 @@ func TestProductionChain_MultiUnitComponentsUseRunsNeeded(t *testing.T) {
 	require.NotContains(t, out, "4,014", "R.A.M. expanded as 10 runs (1,000 units) gives Pyerite 4,014")
 }
 
+// TestProductionChain_SharedComponentRunsOnceForAllBranches pins the leaves of
+// chains that reach one multi-unit part through two branches: Polarized Rocket
+// Launcher needs R.A.M.- Weapon Tech directly and through Rocket Launcher II, and
+// Covert Ops Cloaking Device II needs R.A.M.- Electronics the same way. One run
+// (100 units) covers both branches; rounding up per branch ran it twice. The
+// numbers are from SDE build 3607705 at ME 10 on every blueprint.
+func TestProductionChain_SharedComponentRunsOnceForAllBranches(t *testing.T) {
+	s := openCorpusSDE(t)
+	for item, leaves := range map[string][]string{
+		"Polarized Rocket Launcher":     {"Tritanium +1,002", "Pyerite +651", "Mexallon +200", "Isogen +74"},
+		"Covert Ops Cloaking Device II": {"Tritanium +15,129", "Pyerite +6,118", "Mexallon +901", "Isogen +488"},
+	} {
+		out := getProductionChain(s, item, 1, 10, 0, 0.0, 0)
+		for _, leaf := range leaves {
+			require.Regexp(t, `(?m)^`+leaf+`$`, out, item)
+		}
+	}
+}
+
+// TestPlanProduction_OneJobPerBlueprint pins the job list a chain plans: one job
+// per blueprint, the root first, a shared part sized for every branch together.
+func TestPlanProduction_OneJobPerBlueprint(t *testing.T) {
+	s := openCorpusSDE(t)
+	runsOf := func(jobs []productionJob, blueprintID int) int {
+		for _, j := range jobs {
+			if j.BlueprintID == blueprintID {
+				return j.Runs
+			}
+		}
+		return 0
+	}
+
+	jobs, _ := planProduction(s, 2049, 10, 10) // Damage Control II Blueprint
+	require.Len(t, jobs, 7)
+	require.Equal(t, productionJob{BlueprintID: 2049, Runs: 10}, jobs[0])
+	require.Equal(t, 1, runsOf(jobs, 11873)) // R.A.M.- Armor/Hull Tech Blueprint
+
+	// 100 Polarized Rocket Launchers need more than 100 R.A.M.- Weapon Tech over
+	// both branches: one job of 2 runs, not one job per branch.
+	jobs, _ = planProduction(s, *s.GetBlueprintForProduct(34290), 100, 10)
+	require.Len(t, jobs, 5)
+	require.Equal(t, 2, runsOf(jobs, 11891)) // R.A.M.- Weapon Tech Blueprint
+
+	// A starbase structure whose blueprint needs the structure itself ends after
+	// one job, with nothing to list.
+	jobs, leaves := planProduction(s, *s.GetBlueprintForProduct(14343), 1, 10) // Silo
+	require.Len(t, jobs, 1)
+	require.Empty(t, leaves)
+	require.Equal(t, "No material breakdown found for Silo.", getProductionChain(s, "Silo", 1, 10, 0, 0.0, 0))
+}
+
 func TestProductionChainPESkillReducesLeafMaterials(t *testing.T) {
 	s := openCorpusSDE(t)
 

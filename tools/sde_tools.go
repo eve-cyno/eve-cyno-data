@@ -377,8 +377,6 @@ var _leafMaterialGroups = map[int]bool{
 	711:  true, // Harvestable Cloud
 }
 
-const _productionChainMaxDepth = 6
-
 // The taxes of a manufacturing job, as fractions of its estimated item value
 // (EVE University, Manufacturing: Total job cost).
 const (
@@ -386,6 +384,84 @@ const (
 	npcFacilityTax = 0.0025 // facility tax of an NPC station
 	alphaCloneTax  = 0.0025 // Alpha clone tax, Alpha clones only
 )
+
+// productionJob is one manufacturing job of a production chain.
+type productionJob struct {
+	BlueprintID int
+	Runs        int
+}
+
+// planProduction plans the manufacturing jobs that build runs runs of blueprintID
+// and returns them (the blueprintID job first, every job before the jobs of its
+// sub-components) with the leaf materials they consume.
+//
+// A sub-component is built by one job for the whole chain: its runs are the units
+// every job above it needs together, divided by the units one run makes and rounded
+// up. Rounding per branch would run a part needed in two places twice (Polarized
+// Rocket Launcher needs R.A.M.- Weapon Tech directly and through Rocket Launcher II,
+// and one run makes 100). There are two passes: the first orders the blueprints of
+// the chain so that each comes before its sub-components (the reversed post-order
+// of a depth-first walk that visits each blueprint once), the second sizes each job
+// from what the jobs above it need and adds its materials.
+//
+// A blueprint that needs its own product (some starbase structures do) or a part
+// from higher up the chain is not expanded into it again, since the chain would
+// never end: that material is left out.
+func planProduction(s *sde.SDE, blueprintID, runs, meLevel int) ([]productionJob, map[int]int) {
+	// subBlueprint is the blueprint that builds matID inside the chain; false when
+	// matID is a leaf (a leaf group, or no blueprint builds it).
+	subBlueprint := func(matID int) (int, bool) {
+		grp := s.GetGroupID(matID)
+		if grp == nil || _leafMaterialGroups[*grp] {
+			return 0, false
+		}
+		bp := s.GetBlueprintForProduct(matID)
+		if bp == nil {
+			return 0, false
+		}
+		return *bp, true
+	}
+
+	// Pass 1: the blueprints of the chain, each before its sub-components.
+	seen := map[int]bool{}
+	var postOrder []int
+	var walk func(bp int)
+	walk = func(bp int) {
+		seen[bp] = true
+		for _, mat := range s.GetBlueprintMaterials(bp, 1, meLevel) {
+			if sub, ok := subBlueprint(mat[0]); ok && !seen[sub] {
+				walk(sub)
+			}
+		}
+		postOrder = append(postOrder, bp)
+	}
+	walk(blueprintID)
+
+	// Pass 2: one job per blueprint, sized from the units the jobs above it need.
+	// What a job needs of itself or of a job above it (a loop) is added after that
+	// job was sized, so it is never read: that material is left out.
+	needed := map[int]int{}
+	leaves := map[int]int{}
+	jobs := make([]productionJob, 0, len(postOrder))
+	for i := len(postOrder) - 1; i >= 0; i-- {
+		bp := postOrder[i]
+		jobRuns := runs
+		if bp != blueprintID {
+			perRun := s.BlueprintOutputPerRun(bp)
+			jobRuns = (needed[bp] + perRun - 1) / perRun
+		}
+		jobs = append(jobs, productionJob{BlueprintID: bp, Runs: jobRuns})
+		for _, mat := range s.GetBlueprintMaterials(bp, jobRuns, meLevel) {
+			matID, qty := mat[0], mat[1]
+			if sub, ok := subBlueprint(matID); ok {
+				needed[sub] += qty
+			} else {
+				leaves[matID] += qty
+			}
+		}
+	}
+	return jobs, leaves
+}
 
 // getProductionChain mirrors Python _get_production_chain.
 // stationRigLevel (0-5) and peSkill (0-5, from industry_skills.production_efficiency)
@@ -415,32 +491,7 @@ func getProductionChain(s *sde.SDE, itemName string, runs, meLevel, stationRigLe
 	peSavings := float64(clampInt(peSkill, 0, 5)) * 0.005         // 0% to 2.5% (legacy)
 	extraMultiplier := (1.0 - rigSavings) * (1.0 - peSavings)
 
-	accumulated := map[int]int{}
-	// expand adds the leaf materials of one manufacturing job of jobRuns runs. A
-	// sub-component is built by its own job, whose runs are the units needed divided
-	// by the units one run makes, rounded up (one R.A.M. run makes 100 units).
-	var expand func(blueprintID, jobRuns, depth int)
-	expand = func(blueprintID, jobRuns, depth int) {
-		if depth >= _productionChainMaxDepth {
-			return
-		}
-		for _, mat := range s.GetBlueprintMaterials(blueprintID, jobRuns, meLevel) {
-			matID, qty := mat[0], mat[1]
-			grp := s.GetGroupID(matID)
-			if grp == nil || _leafMaterialGroups[*grp] {
-				accumulated[matID] += qty
-				continue
-			}
-			subBP := s.GetBlueprintForProduct(matID)
-			if subBP == nil {
-				accumulated[matID] += qty
-				continue
-			}
-			perRun := s.BlueprintOutputPerRun(*subBP)
-			expand(*subBP, (qty+perRun-1)/perRun, depth+1)
-		}
-	}
-	expand(*bpID, runs, 0)
+	_, accumulated := planProduction(s, *bpID, runs, meLevel)
 
 	if len(accumulated) == 0 {
 		return fmt.Sprintf("No material breakdown found for %s.", itemName)
