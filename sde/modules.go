@@ -1,6 +1,9 @@
 package sde
 
-import "strings"
+import (
+	"log/slog"
+	"strings"
+)
 
 // ModuleHit is one module returned by SearchModules.
 type ModuleHit struct {
@@ -37,42 +40,19 @@ func slotNameForEffect(eff int) string {
 // SearchCharges returns published charges (ammo) whose name matches query.
 // categoryID 8 = Charge. Used by the ammo picker. Slot is reported as "charge".
 func (s *SDE) SearchCharges(query string, limit int) []ModuleHit {
-	if s == nil || s.db == nil {
-		return nil
-	}
-	if limit <= 0 || limit > 100 {
-		limit = 50
-	}
-	like := "%" + strings.ToLower(strings.TrimSpace(query)) + "%"
-	const q = `
-SELECT t.typeID, t.typeName, t.groupID
-FROM invTypes t
-JOIN invGroups g ON g.groupID = t.groupID
-WHERE g.categoryID = 8 AND t.published = 1 AND lower(t.typeName) LIKE ?
-ORDER BY t.typeName
-LIMIT ?`
-	rows, err := s.db.Query(q, like, limit)
-	if err != nil {
-		return nil
-	}
-	defer rows.Close()
-	out := []ModuleHit{}
-	for rows.Next() {
-		var h ModuleHit
-		if err := rows.Scan(&h.TypeID, &h.Name, &h.GroupID); err == nil {
-			h.Slot = "charge"
-			if mt := s.GetItemMetaTier(h.TypeID); mt != nil {
-				h.MetaTier = *mt
-			}
-			out = append(out, h)
-		}
-	}
-	return out
+	return s.searchCategory(8, "charge", query, limit)
 }
 
 // SearchDrones returns published drones whose name matches query. categoryID 18
 // = Drone. Slot is reported as "drone". Used by the drone-bay add picker.
 func (s *SDE) SearchDrones(query string, limit int) []ModuleHit {
+	return s.searchCategory(18, "drone", query, limit)
+}
+
+// searchCategory returns the published types of categoryID whose name matches
+// query (case-insensitive substring), ordered by name and capped at limit (default
+// 50, max 100), with Slot set to slot. A failed query is an empty list.
+func (s *SDE) searchCategory(categoryID int, slot, query string, limit int) []ModuleHit {
 	if s == nil || s.db == nil {
 		return nil
 	}
@@ -84,24 +64,29 @@ func (s *SDE) SearchDrones(query string, limit int) []ModuleHit {
 SELECT t.typeID, t.typeName, t.groupID
 FROM invTypes t
 JOIN invGroups g ON g.groupID = t.groupID
-WHERE g.categoryID = 18 AND t.published = 1 AND lower(t.typeName) LIKE ?
+WHERE g.categoryID = ? AND t.published = 1 AND lower(t.typeName) LIKE ?
 ORDER BY t.typeName
 LIMIT ?`
-	rows, err := s.db.Query(q, like, limit)
+	rows, err := s.db.Query(q, categoryID, like, limit)
 	if err != nil {
-		return nil
+		slog.Warn("sde: item search failed", "kind", slot, "error", err)
+		return []ModuleHit{}
 	}
 	defer rows.Close()
 	out := []ModuleHit{}
 	for rows.Next() {
 		var h ModuleHit
 		if err := rows.Scan(&h.TypeID, &h.Name, &h.GroupID); err == nil {
-			h.Slot = "drone"
+			h.Slot = slot
 			if mt := s.GetItemMetaTier(h.TypeID); mt != nil {
 				h.MetaTier = *mt
 			}
 			out = append(out, h)
 		}
+	}
+	if err := rows.Err(); err != nil {
+		slog.Warn("sde: item search failed", "kind", slot, "error", err)
+		return []ModuleHit{}
 	}
 	return out
 }
@@ -170,7 +155,8 @@ ORDER BY t.typeName, t.typeID
 LIMIT ?`
 	rows, err := s.db.Query(q, args...)
 	if err != nil {
-		return nil
+		slog.Warn("sde: module search failed", "slot", slot, "error", err)
+		return []ModuleHit{}
 	}
 	defer rows.Close()
 	out := []ModuleHit{}
@@ -189,6 +175,10 @@ LIMIT ?`
 		h.CanLoadCharge = s.CanLoadCharge(h.TypeID)
 		h.CanOverheat = s.CanOverheat(h.TypeID)
 		out = append(out, h)
+	}
+	if err := rows.Err(); err != nil {
+		slog.Warn("sde: module search failed", "slot", slot, "error", err)
+		return []ModuleHit{}
 	}
 	return out
 }

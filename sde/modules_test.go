@@ -1,6 +1,8 @@
 package sde
 
 import (
+	"encoding/json"
+	"path/filepath"
 	"sort"
 	"testing"
 
@@ -65,4 +67,26 @@ func TestSearchModules_AnySlotIsSortedByName(t *testing.T) {
 	first := s.SearchModules("Armor", "", 10)
 	require.Len(t, first, 10)
 	require.Equal(t, hits[:10], first, "a smaller limit keeps the first names")
+}
+
+// TestSearch_QueryErrorIsAnEmptyList pins that a failed search answers an empty
+// list, which /v1/items/search encodes as [], never null. The file here has no
+// dgmTypeEffects or invGroups table, so every query fails.
+func TestSearch_QueryErrorIsAnEmptyList(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "sde.sqlite")
+	writeRequiredSDE(t, path, nil)
+	s, err := OpenWithReload(path, 0)
+	require.NoError(t, err)
+	defer s.Close()
+
+	for name, hits := range map[string][]ModuleHit{
+		"modules": s.SearchModules("Armor", "", 10),
+		"slot":    s.SearchModules("Armor", "low", 10),
+		"charges": s.SearchCharges("Antimatter", 10),
+		"drones":  s.SearchDrones("Hobgoblin", 10),
+	} {
+		b, err := json.Marshal(hits)
+		require.NoError(t, err)
+		require.Equal(t, "[]", string(b), name)
+	}
 }
