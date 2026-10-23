@@ -138,14 +138,17 @@ func (s *SDE) SearchModules(query, slot string, limit int) []ModuleHit {
 	if eff, ok := slotEffectID[slot]; ok {
 		effects = []int{eff}
 	}
-	args := make([]any, 0, len(effects)+2)
+	args := make([]any, 0, 2*len(order)+len(effects)+2)
+	rank := "CASE e.effectID" + strings.Repeat(" WHEN ? THEN ?", len(order)) + " END"
+	for i, eff := range order {
+		args = append(args, eff, i)
+	}
 	for _, eff := range effects {
 		args = append(args, eff)
 	}
 	args = append(args, like, limit)
 	q := `
-SELECT t.typeID, t.typeName, t.groupID,
-       MIN(CASE e.effectID WHEN 12 THEN 0 WHEN 13 THEN 1 WHEN 11 THEN 2 ELSE 3 END) AS slotRank
+SELECT t.typeID, t.typeName, t.groupID, MIN(` + rank + `) AS slotRank
 FROM invTypes t
 JOIN dgmTypeEffects e ON e.typeID = t.typeID
 WHERE e.effectID IN (?` + strings.Repeat(", ?", len(effects)-1) + `)
