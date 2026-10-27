@@ -14,7 +14,7 @@ A custom GPT Action calls your API from OpenAI's servers, so it needs a **public
 4. The document's `servers` entry is the relative `/v1`. The editor needs an absolute URL: change it to
    `https://<your-host>/v1`.
 5. **Authentication**:
-   - **None** for the public tools (27 of them: SDE lookups, route and jump planning, system search, fit validation and stats, community fits, the live ESI and EvE-Scout tools, `get_average_prices` and `appraise_items`, which gives an estimate from ESI average prices).
+   - **None** for the public tools (28 of them: SDE lookups, route and jump planning, system search, fit validation and stats, community fits, the live ESI and EvE-Scout tools, LP store offers, `get_average_prices` and `appraise_items`, which gives an estimate from ESI average prices).
    - **API Key -> Bearer** with your key to also use the keyed tools (`analyze_battle` and free-text fit search).
      The key is stored by ChatGPT in the Action's settings, never in the schema. The server accepts it as
      `Authorization: Bearer <key>` (keys are listed in the file named by `DATAAPI_API_KEYS_FILE`).

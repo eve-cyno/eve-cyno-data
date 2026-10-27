@@ -9,9 +9,11 @@ answer names its sources. It offers:
 
 - **SDE lookups** over a local SQLite build of Fenris Creations' Static Data Export: items, ships, skills, stations, routes, reprocessing,
   production chains, solar-system search and details (security, neighbours, celestials, stations, ice belts), jump distances and
-  jump-drive route planning (hops, light-years, fuel, gate jumps) for any jump-capable hull or an Ansiblex chain.
+  jump-drive route planning (hops, light-years, fuel, gate jumps) for any jump-capable hull or an Ansiblex chain, NPC stations and
+  mission agents by distance and services, skill plans with training time, planetary production chains, abyssal NPC facts.
 - **Fit validation and statistics** from the Gofa dogma engine: slots, CPU / powergrid, DPS, tank, capacitor, navigation.
-- **ESI pass-throughs**: market prices and history, daily average prices, sovereignty, system activity, killmail battles; plus live
+- **ESI pass-throughs**: market prices and history, daily average prices, sovereignty, system activity, killmail battles, LP store
+  offers with ISK per LP, industry cost indices; plus live
   Thera and Turnur wormhole connections from EvE-Scout.
 - **Community fits**: search over a vector index of fits published by community sites, with the source and licence on every hit.
 
@@ -26,7 +28,7 @@ Everything is one tool registry (`catalog`) published three ways, so the descrip
 A hosted instance runs at `https://data.eve-cyno.dev` (anyone can try the public tools without a key, on trial limits: a few requests a minute and 200 a day per client; a free API
 key is for real use, with higher limits, the keyed tool and free-text fit search; `appraise_items` needs no key (an estimate from ESI average prices) and takes your own `X-Janice-Key` for a Janice appraisal). Its portal at
 [`https://data.eve-cyno.dev/`](https://data.eve-cyno.dev/) (JSON index with `Accept: application/json`) links the developer docs under
-[`/docs/`](https://data.eve-cyno.dev/docs/): getting started, the Claude Code plugin, MCP, REST, one page per tool (27 public,
+[`/docs/`](https://data.eve-cyno.dev/docs/): getting started, the Claude Code plugin, MCP, REST, one page per tool (28 public,
 1 keyed), access tiers and limits, attribution. The pages are generated from the tool registry and the route table (templates in
 [`dataapi/portal/`](dataapi/portal/)); the example responses are recorded from the live service. The
 [terms of use](https://data.eve-cyno.dev/terms) (source in [`dataapi/terms.md`](dataapi/terms.md)) apply to it.
@@ -53,7 +55,7 @@ The server listens on `:8092`. Check it: `GET /v1/health` answers `{"status":"ok
 
 **SDE-only mode.** `DATAAPI_SDE_ONLY=true` builds the server without a fit-corpus client: Qdrant is never contacted.
 Everything that reads the SDE works: `/v1/items/search`, `/v1/fits/detail`, `/v1/fit/stats`, `/v1/fit/suggest` (ranked from the
-SDE alone), the 17 public tools that run on the SDE alone (`plan_jump_route` among them: it needs network only for `avoid_incursions` and `live_info`), the live ESI and EvE-Scout tools, `get_average_prices` and `appraise_items` (they also work, with network) and the OpenAPI and `llms.txt` routes and the MCP endpoint. `GET /v1/fits/search` answers
+SDE alone), the 17 public tools that run on the SDE alone (`plan_jump_route` and `get_production_chain` among them: they need network only for `avoid_incursions` and `live_info`, and for `system`), the live ESI and EvE-Scout tools, `get_average_prices` and `appraise_items` (they also work, with network) and the OpenAPI and `llms.txt` routes and the MCP endpoint. `GET /v1/fits/search` answers
 `503 unavailable`, `/v1/health` reports `"corpus": false`, and `get_fits` / `list_fits` answer that the corpus is not
 configured. Without the variable the server expects Qdrant: if it is configured but down, the process still starts, fit search
 answers `502 upstream_error` per request, and `/v1/health` probes Qdrant (`GET /collections/<name>`, 1 second timeout, the verdict
@@ -94,14 +96,15 @@ Every tool has one tier, enforced identically on REST and MCP:
 
 | Tier | Tools | Who may run it |
 |---|---|---|
-| public (27) | `get_jumps_between`, `get_jump_distances` (jump counts from one system to up to 200 others), `plan_jump_route` (jump-drive routes: hops, light-years, gate jumps, fuel), `find_systems` (search systems by security, location, celestials, stations, ice belts, distance and jump range), `get_system_info` (up to 50 systems at once), `get_systems_in_region`, `get_npc_stations`, `get_reprocessing_yield`, `get_required_skills`, `get_production_chain`, `find_canonical_module`, `search_item_by_name`, `get_ship_stats`, `get_hull_facts`, `get_ship_bonuses`, `compute_fit_stats`, `validate_fitting`; community fits: `get_fits`, `list_fits` (a payload-filtered corpus scroll, no embedding call); live ESI data: `get_market_price`, `get_market_history` (price and volume by day or week, up to 90 days), `get_type_info`, `get_sovereignty`, `get_system_activity`; live EvE-Scout data: `get_thera_connections` (Thera and Turnur wormhole connections, optionally nearest to a system); prices and appraisal: `get_average_prices` (ESI's daily average prices of up to 200 items; one shared snapshot, not a live call), `appraise_items` (an estimate from ESI average prices; your own Janice key in `X-Janice-Key`, optional, makes it a Janice appraisal, used for that request only, never logged or stored) | anyone (on a service that issues keys, without one the limits below are trial limits; the live upstream tools have a lower per-caller limit) |
+| public (28) | `get_jumps_between`, `get_jump_distances` (jump counts from one system to up to 200 others), `plan_jump_route` (jump-drive routes: hops, light-years, gate jumps, fuel), `find_systems` (search systems by security, location, celestials, stations, ice belts, distance and jump range), `get_system_info` (up to 50 systems at once), `get_systems_in_region`, `get_npc_stations` (a system's stations, or a search by `near`, `region`, `services` and `agent`, nearest first, with `limit`), `get_reprocessing_yield`, `get_required_skills` (one item or up to 20 in `items`; `training_time` adds skill points and training time for an Omega clone, `attributes` your own attribute values), `get_production_chain` (`include_cost` adds the ISK value of the materials, `system` the live job fee from that system's cost index, `facility_tax_pct` the structure tax; planetary products answer with their schematic chain), `find_canonical_module` (module names of a family, or a search by `slot`, `kind`, `meta` and `limit`), `search_item_by_name` (`details` adds group, meta level, market group, volume, Alpha use and abyssal NPC or filament facts for up to 50 names), `get_ship_stats`, `get_hull_facts`, `get_ship_bonuses`, `compute_fit_stats`, `validate_fitting`; community fits: `get_fits` (`fit_id` fetches one fit, `include_eft` false lists only the meta lines and ids), `list_fits` (a payload-filtered corpus scroll, no embedding call); live ESI data: `get_market_price`, `get_market_history` (price and volume by day or week, up to 90 days), `get_type_info`, `get_sovereignty`, `get_system_activity`, `get_lp_offers` (an NPC corporation's LP store, offers ranked by ISK per LP at ESI average prices); live EvE-Scout data: `get_thera_connections` (Thera and Turnur wormhole connections, optionally nearest to a system); prices and appraisal: `get_average_prices` (ESI's daily average prices of up to 200 items; one shared snapshot, not a live call), `appraise_items` (an estimate from ESI average prices; your own Janice key in `X-Janice-Key`, optional, makes it a Janice appraisal, used for that request only, never logged or stored) | anyone (on a service that issues keys, without one the limits below are trial limits; the live upstream tools have a lower per-caller limit) |
 | keyed (1) | `analyze_battle` | a valid API key |
 | disabled (1) | `convert_isk_to_real` | nobody on a public surface |
 
 Arguments and result types of every tool are in [`llms-full.txt`](llms-full.txt).
 
-**Live upstream tools.** Six tools read public (unauthenticated) EVE ESI routes: `get_market_price`, `get_market_history`,
-`get_type_info`, `get_sovereignty`, `get_system_activity` and `plan_jump_route`, which goes live only when called with
+**Live upstream tools.** Eight tools read public (unauthenticated) EVE ESI routes: `get_market_price`, `get_market_history`,
+`get_type_info`, `get_sovereignty`, `get_system_activity`, `get_lp_offers` (`/loyalty/stores/{corporation_id}/offers`),
+`get_production_chain`, which goes live only when called with `system` (ESI `/industry/systems`), and `plan_jump_route`, which goes live only when called with
 `avoid_incursions` (ESI `/incursions`) or `live_info` (ESI `/sovereignty/systems`, `/universe/names`, `/universe/system_kills`, `/universe/system_jumps`); without
 them it reads the SDE alone and spends nothing. `get_thera_connections` reads the EvE-Scout API (EvE-Scout / Signal Cartel,
 <https://www.eve-scout.com/>). They answer from a shared in-memory cache that follows the upstream's `Expires`/`ETag`
@@ -204,7 +207,7 @@ The numbers:
 | `POST /v1/mcp` (an MCP session is a few requests plus one per tool call) | 20 | 120 |
 | `POST /v1/tool/{name}` | 10 | 60 |
 | `GET /v1/fits/search` | 30 | 240 |
-| the live upstream tools (`get_market_price`, `get_market_history`, `get_type_info`, `get_sovereignty`, `get_system_activity`, `get_thera_connections`, and `plan_jump_route` only with `avoid_incursions` or `live_info`), one shared budget, REST and MCP together, on top of the rows above | 5 (`DATAAPI_UPSTREAM_TOOL_LIMIT`) | 10 |
+| the live upstream tools (`get_market_price`, `get_market_history`, `get_type_info`, `get_sovereignty`, `get_system_activity`, `get_thera_connections`, `get_lp_offers`, `plan_jump_route` only with `avoid_incursions` or `live_info`, and `get_production_chain` only with `system`), one shared budget, REST and MCP together, on top of the rows above | 5 (`DATAAPI_UPSTREAM_TOOL_LIMIT`) | 10 |
 | `GET /v1/items/search` | 120 | `DATAAPI_KEYED_LIMIT_FACTOR` times (default 2): 240 |
 | `POST /v1/fits/detail`, `/v1/fit/stats`, `/v1/fit/suggest` | 60 | 120 |
 | `GET /`, `/docs/*`, `/terms*`, `/v1/openapi.*`, `/llms*.txt` (the static files under `/assets/` are not limited) | 60 | 120 |
@@ -230,7 +233,7 @@ Ready-to-copy files are in [`examples/`](examples/).
 
 ### Claude Desktop and Claude Code, local stdio
 
-The stdio server needs no keys; it reads the SDE from `EVE_CORE_SDE_PATH` and registers the 27 public tools (the live ESI and EvE-Scout ones, `get_average_prices` and `appraise_items` need network; `appraise_items` runs without a Janice key there)
+The stdio server needs no keys; it reads the SDE from `EVE_CORE_SDE_PATH` and registers the 28 public tools (the live ESI and EvE-Scout ones, including `get_lp_offers`, `get_average_prices` and `appraise_items` need network; `appraise_items` runs without a Janice key there)
 (`-all` or `MCP_EXPOSE_ALL=true` registers every tool, using the keys in your own environment: `JANICE_API_KEY` for Janice appraisals, `QDRANT_*`). `-sde-only` or
 `MCP_SDE_ONLY=true` builds no Qdrant client at all, so Qdrant is never contacted and `get_fits` / `list_fits` answer that the
 corpus is not configured; it is never inferred from a missing `QDRANT_URL`.
@@ -305,6 +308,14 @@ curl -s -X POST $BASE/v1/tool/find_systems -H 'Content-Type: application/json' \
 # plan a jump-drive route (SDE only unless avoid_incursions or live_info is set)
 curl -s -X POST $BASE/v1/tool/plan_jump_route -H 'Content-Type: application/json' \
   -d '{"origin":"Amamake","destination":"1DQ1-A","ship":"Rhea","skills":{"jump_drive_calibration":4}}'
+
+# the nearest level 4 security agent to Dodixie: stations with such an agent, nearest first
+curl -s -X POST $BASE/v1/tool/get_npc_stations -H 'Content-Type: application/json' \
+  -d '{"near":{"origin":"Dodixie","max_jumps":5},"agent":{"level":4,"division":"security"},"limit":5}'
+
+# the best LP store offers of a corporation by ISK per LP (live ESI, counts against the live-tool limit)
+curl -s -X POST $BASE/v1/tool/get_lp_offers -H 'Content-Type: application/json' \
+  -d '{"corporation":"Caldari Navy","limit":5}'
 
 # free-text fit search, and any tool with a higher budget, need an API key
 curl -s "$BASE/v1/fits/search?q=cheap+armor+gila" -H "Authorization: Bearer $EVE_CYNO_API_KEY"
