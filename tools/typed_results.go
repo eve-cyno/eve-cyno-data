@@ -1099,7 +1099,7 @@ type PlanetaryStep struct {
 	CycleSeconds int `json:"cycle_seconds"`
 	// Cycles is the number of cycles the chain needs of this step.
 	Cycles int `json:"cycles"`
-	// Inputs are what one run of the step consumes, with the units for all its cycles.
+	// Inputs are what one cycle of the step consumes.
 	Inputs []ChainMaterial `json:"inputs"`
 }
 

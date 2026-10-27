@@ -1122,7 +1122,7 @@ paths:
         - tools
       summary: Compute the full material breakdown to manufacture an EVE Online item, recursively expanding sub-components down to…
       description: |-
-        Compute the full material breakdown to manufacture an EVE Online item, recursively expanding sub-components down to base minerals and PI commodities. Use this for 'how many minerals to build X' or 'production chain for X' questions. Optional advanced params let the user model a specific structure rig + system cost index (e.g., 'in 1DQ1-A with Minmatar manufacturing rig 4 and 5% cost index'). With system it reads that system's live manufacturing cost index from ESI and prices the job fee in ISK; with include_cost it adds the ISK value of the materials at ESI average prices and a total. Without either it is SDE-only.
+        Compute the full material breakdown to manufacture an EVE Online item, recursively expanding sub-components down to base minerals and PI commodities. Use this for 'how many minerals to build X' or 'production chain for X' questions. Optional advanced params let the user model a specific structure rig + system cost index (e.g., 'in 1DQ1-A with Minmatar manufacturing rig 4 and 5% cost index'). With system it reads that system's live manufacturing cost index from ESI and prices the job fee in ISK; with include_cost it adds the ISK value of the materials at ESI average prices and a total. Planetary commodities (P1-P4) answer with their schematic chain down to P0 raw resources: runs counts cycles of the final schematic, ME, rigs and cost indices do not apply (system is accepted but reads nothing), and include_cost values the raw resources. Without system or include_cost it is SDE-only.
 
         Sources: EVE Static Data Export (via Fuzzwork); ESI (EVE Swagger Interface). `result.data` is a `ProductionChain` object when the call succeeds.
 
@@ -4555,7 +4555,7 @@ components:
           description: Cycles is the number of cycles the chain needs of this step.
         inputs:
           type: array
-          description: Inputs are what one run of the step consumes, with the units for all its cycles.
+          description: Inputs are what one cycle of the step consumes.
           items:
             $ref: '#/components/schemas/ChainMaterial'
       required:

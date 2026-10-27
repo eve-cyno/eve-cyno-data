@@ -144,6 +144,8 @@ func minimalFuzzwork(t *testing.T) *fakeFuzzwork {
 		"agtAgentTypes":                 "agentTypeID,agentType\n2,BasicAgent\n",
 		"crpNPCDivisions":               "divisionID,divisionName,description,leaderType\n22,Distribution,,Distribution Manager\n",
 		"invNames":                      "itemID,itemName\n3008416,Test Agent\n",
+		"planetSchematics":              "schematicID,schematicName,cycleTime\n97,Robotics,3600\n",
+		"planetSchematicsTypeMap":       "schematicID,typeID,quantity,isInput\n97,3689,10,1\n97,9848,3,0\n",
 		// Extra generic table (not in curatedSet).
 		"extraTable": "colA,colB,colC\nalpha,beta,gamma\ndelta,,zeta\n",
 	}
@@ -402,6 +404,8 @@ func TestBuildSQLite_NullHandling(t *testing.T) {
 			"agtAgentTypes":                 "agentTypeID,agentType\n",
 			"crpNPCDivisions":               "divisionID,divisionName,description,leaderType\n",
 			"invNames":                      "itemID,itemName\n",
+			"planetSchematics":              "schematicID,schematicName,cycleTime\n",
+			"planetSchematicsTypeMap":       "schematicID,typeID,quantity,isInput\n",
 		},
 	}
 

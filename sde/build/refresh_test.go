@@ -73,6 +73,8 @@ func allCuratedEmpty() map[string]string {
 		"agtAgentTypes":                 "agentTypeID,agentType\n",
 		"crpNPCDivisions":               "divisionID,divisionName,description,leaderType\n",
 		"invNames":                      "itemID,itemName\n",
+		"planetSchematics":              "schematicID,schematicName,cycleTime\n",
+		"planetSchematicsTypeMap":       "schematicID,typeID,quantity,isInput\n",
 	}
 }
 

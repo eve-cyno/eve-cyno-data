@@ -23,7 +23,7 @@ import (
 //
 // Keep it in step with the CREATE TABLE statements in
 // sde/build/builder.go and with the queries in effects.go, dogma.go, typebasics.go,
-// industry.go, systems.go, jumps.go, typefacts.go and stationsearch.go.
+// industry.go, systems.go, jumps.go, typefacts.go, stationsearch.go and planetary.go.
 var RequiredColumns = map[string][]string{
 	"invTypes": {"typeID", "groupID", "typeName", "description", "published", "mass", "volume", "capacity", "portionSize", "marketGroupID", "metaLevel", "techLevel", "basePrice", "packagedVolume"},
 	// The item facts (TypeFacts): group, category, meta group and market group path.
@@ -54,6 +54,9 @@ var RequiredColumns = map[string][]string{
 	"crpNPCDivisions":    {"divisionID", "divisionName"},
 	"crpNPCCorporations": {"corporationID", "corporationName", "factionID"},
 	"invNames":           {"itemID", "itemName"},
+	// The planetary production chains (SchematicFor).
+	"planetSchematics":        {"schematicID", "schematicName", "cycleTime"},
+	"planetSchematicsTypeMap": {"schematicID", "typeID", "quantity", "isInput"},
 }
 
 // MissingRequiredColumns returns every "table.column" from RequiredColumns that db

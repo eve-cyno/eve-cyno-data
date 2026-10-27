@@ -537,6 +537,9 @@ func getProductionChain(ctx context.Context, c *Client, s *sde.SDE, req producti
 	}
 	bpID := s.GetBlueprintForProduct(targetID)
 	if bpID == nil {
+		if text, chain, ok, err := planetaryChain(ctx, c, s, req, itemName, targetID, systemName); ok || err != nil {
+			return text, chain, err
+		}
 		return fmt.Sprintf("No blueprint found that produces '%s' (typeID=%d).", itemName, targetID), nil, nil
 	}
 
