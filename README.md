@@ -55,7 +55,7 @@ The server listens on `:8092`. Check it: `GET /v1/health` answers `{"status":"ok
 
 **SDE-only mode.** `DATAAPI_SDE_ONLY=true` builds the server without a fit-corpus client: Qdrant is never contacted.
 Everything that reads the SDE works: `/v1/items/search`, `/v1/fits/detail`, `/v1/fit/stats`, `/v1/fit/suggest` (ranked from the
-SDE alone), the 17 public tools that run on the SDE alone (`plan_jump_route` and `get_production_chain` among them: they need network only for `avoid_incursions` and `live_info`, and for `system`), the live ESI and EvE-Scout tools, `get_average_prices` and `appraise_items` (they also work, with network) and the OpenAPI and `llms.txt` routes and the MCP endpoint. `GET /v1/fits/search` answers
+SDE alone), the 17 public tools that run on the SDE alone (`plan_jump_route` and `get_production_chain` among them: the first needs network only for `avoid_incursions` and `live_info`, the second only for `system` and `include_cost`), the live ESI and EvE-Scout tools, `get_average_prices` and `appraise_items` (they also work, with network) and the OpenAPI and `llms.txt` routes and the MCP endpoint. `GET /v1/fits/search` answers
 `503 unavailable`, `/v1/health` reports `"corpus": false`, and `get_fits` / `list_fits` answer that the corpus is not
 configured. Without the variable the server expects Qdrant: if it is configured but down, the process still starts, fit search
 answers `502 upstream_error` per request, and `/v1/health` probes Qdrant (`GET /collections/<name>`, 1 second timeout, the verdict
@@ -106,7 +106,7 @@ Arguments and result types of every tool are in [`llms-full.txt`](llms-full.txt)
 `get_type_info`, `get_sovereignty`, `get_system_activity`, `get_lp_offers` (`/loyalty/stores/{corporation_id}/offers`),
 `get_production_chain`, which goes live only when called with `system` (ESI `/industry/systems`), and `plan_jump_route`, which goes live only when called with
 `avoid_incursions` (ESI `/incursions`) or `live_info` (ESI `/sovereignty/systems`, `/universe/names`, `/universe/system_kills`, `/universe/system_jumps`); without
-them it reads the SDE alone and spends nothing. `get_thera_connections` reads the EvE-Scout API (EvE-Scout / Signal Cartel,
+those arguments neither of them reads ESI or spends live budget. (`get_production_chain` with `include_cost` reads the shared daily average-price copy, which spends no live budget.) `get_thera_connections` reads the EvE-Scout API (EvE-Scout / Signal Cartel,
 <https://www.eve-scout.com/>). They answer from a shared in-memory cache that follows the upstream's `Expires`/`ETag`
 (concurrent callers share one upstream request) and share one budget of `DATAAPI_UPSTREAM_TOOL_LIMIT` calls per minute per
 caller without an API key (default 5; a caller with a key gets twice as many; REST and MCP together; 0 disables), counted
@@ -233,7 +233,7 @@ Ready-to-copy files are in [`examples/`](examples/).
 
 ### Claude Desktop and Claude Code, local stdio
 
-The stdio server needs no keys; it reads the SDE from `EVE_CORE_SDE_PATH` and registers the 28 public tools (the live ESI and EvE-Scout ones, including `get_lp_offers`, `get_average_prices` and `appraise_items` need network; `appraise_items` runs without a Janice key there)
+The stdio server needs no keys; it reads the SDE from `EVE_CORE_SDE_PATH` and registers the 28 public tools (the live ESI and EvE-Scout ones (`get_lp_offers` among them), `get_average_prices` and `appraise_items` need network; `appraise_items` runs without a Janice key there)
 (`-all` or `MCP_EXPOSE_ALL=true` registers every tool, using the keys in your own environment: `JANICE_API_KEY` for Janice appraisals, `QDRANT_*`). `-sde-only` or
 `MCP_SDE_ONLY=true` builds no Qdrant client at all, so Qdrant is never contacted and `get_fits` / `list_fits` answer that the
 corpus is not configured; it is never inferred from a missing `QDRANT_URL`.
