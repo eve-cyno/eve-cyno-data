@@ -71,3 +71,17 @@ func TestPlanetaryChain_IncludeCostValuesTheRawResources(t *testing.T) {
 	require.NotEmpty(t, chain.Cost.Unpriced, "materials without an average price are named, not valued at 0")
 	require.Nil(t, chain.Cost.Total)
 }
+
+func TestPlanetaryChain_LargeCycleCountsStayWellFormed(t *testing.T) {
+	s := testSDE(t)
+	// 250 runs: 1,000 cycles of each P1 schematic; 2,500 runs: 10,000.
+	text, _, err := getProductionChain(context.Background(), nil, s, productionRequest{Item: "Robotics", Runs: 250, ME: 10})
+	require.NoError(t, err)
+	require.Regexp(t, `(?m)^P1  Reactive Metals +20 per 30m +1,000 cycles from 3,000 Base Metals$`, text)
+	require.Regexp(t, `(?m)^P3  Robotics +3 per 1h +250 cycles from 10 Mechanical Parts, 10 Consumer Electronics$`, text)
+	require.NotRegexp(t, `cycles?from`, text)
+	text, _, err = getProductionChain(context.Background(), nil, s, productionRequest{Item: "Robotics", Runs: 2500, ME: 10})
+	require.NoError(t, err)
+	require.Regexp(t, `(?m)^P1  Reactive Metals +20 per 30m +10,000 cycles from 3,000 Base Metals$`, text)
+	require.Regexp(t, `(?m)^P3  Robotics +3 per 1h +2,500 cycles from `, text)
+}

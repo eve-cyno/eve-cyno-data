@@ -132,10 +132,12 @@ func planetaryChain(ctx context.Context, c *Client, s *sde.SDE, req productionRe
 		for i, m := range st.Inputs {
 			parts[i] = fmt.Sprintf("%s %s", commaSep(m.Quantity, 0), m.Name)
 		}
-		lines = append(lines, fmt.Sprintf("%-4s%-*s%-14s%-10sfrom %s",
+		// Each column is padded to its width plus one separator space, so a long value
+		// (1,000 cycles) never runs into the next column.
+		lines = append(lines, fmt.Sprintf("%-4s%-*s%-13s %-9s from %s",
 			st.Tier, nameW, st.Name,
 			fmt.Sprintf("%d per %s", st.OutputPerCycle, cycleLabel(st.CycleSeconds)),
-			fmt.Sprintf("%d cycle%s", st.Cycles, pluralS(st.Cycles)),
+			fmt.Sprintf("%s cycle%s", commaSep(st.Cycles, 0), pluralS(st.Cycles)),
 			strings.Join(parts, ", ")))
 	}
 	lines = append(lines, "", "Raw resources (P0):",
