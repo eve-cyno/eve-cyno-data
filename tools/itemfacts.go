@@ -69,7 +69,7 @@ func fillAbyssFacts(it *ItemFacts) {
 		a := &AbyssNPCFacts{
 			Family: n.Family, HP: roundInt(n.TotalHP), EHP: roundInt(n.EHP), DPS: roundInt(n.Damage.DPS),
 			DamageTypes: []string{}, OptimalM: n.Damage.OptimalM, Effects: []string{},
-			KillPriority: p.Band, KillPriorityNote: "EVE-Cyno heuristic",
+			KillPriority: p.Band, KillPriorityNote: "EVE-Cyno heuristic", weapon: n.Damage.Kind,
 		}
 		for _, dt := range []struct {
 			name  string
@@ -112,7 +112,15 @@ func roundInt(v float64) int {
 func abyssParts(it ItemFacts) []string {
 	var parts []string
 	if n := it.AbyssNPC; n != nil {
-		s := "abyssal NPC (" + n.Family + "): " + fmtThousands(n.HP) + " HP, " + fmtThousands(n.EHP) + " EHP, " + fmtThousands(n.DPS) + " DPS"
+		s := "abyssal NPC (" + n.Family + "): " + fmtThousands(n.HP) + " HP, " + fmtThousands(n.EHP) + " EHP, "
+		switch n.weapon {
+		case abyss.DamageTurret, abyss.DamageMissile:
+			s += fmtThousands(n.DPS) + " DPS"
+		case abyss.DamageDisintegrator:
+			s += fmtThousands(n.DPS) + " DPS base" // unramped; the damage ramps up while firing
+		default:
+			s += "no weapon damage" // includes chain lightning, whose damage the dataset does not record
+		}
 		if len(n.DamageTypes) > 0 {
 			s += " " + strings.Join(n.DamageTypes, "/")
 		}
@@ -136,7 +144,7 @@ func abyssParts(it ItemFacts) []string {
 
 // itemFactsLine is the details text of one item: "<query>: type_id=<id>" followed by the
 // facts that exist, joined by " · ": group and category, meta group and level, market
-// group path, volume, Alpha usability.
+// group path, volume, Alpha usability, and for an abyssal NPC or filament its abyss parts.
 func itemFactsLine(it ItemFacts) string {
 	if !it.known {
 		return it.Query + ": type_id=" + strconv.Itoa(it.TypeID)

@@ -106,7 +106,9 @@ type AbyssNPCFacts struct {
 	HP int `json:"hp"`
 	// EHP is the damage-neutral effective hit points, rounded to whole points.
 	EHP int `json:"ehp"`
-	// DPS is the unramped base damage per second, rounded to whole points.
+	// DPS is the weapon damage per second, rounded to whole points; for a disintegrator it is the
+	// unramped base (the damage ramps up while firing). 0 when the NPC has no recorded weapon damage
+	// (chain-lightning damage is not in the dataset).
 	DPS int `json:"dps"`
 	// DamageTypes lists the damage types with a non-zero share, in em, thermal, kinetic, explosive order; [] when none.
 	DamageTypes []string `json:"damage_types"`
@@ -118,6 +120,8 @@ type AbyssNPCFacts struct {
 	KillPriority string `json:"kill_priority"`
 	// KillPriorityNote says that the band is an EVE-Cyno heuristic, not a game value.
 	KillPriorityNote string `json:"kill_priority_note"`
+	// weapon is the dataset's damage kind; it picks the DPS wording of the details text.
+	weapon string
 }
 
 // AbyssFilamentFacts is the tier and weather of one Abyssal Filament. The SDE gives no weather numbers, so none is given here.

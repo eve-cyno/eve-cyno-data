@@ -243,3 +243,30 @@ func TestItemFacts_AbyssTypedFieldsAndOddInput(t *testing.T) {
 	require.NotPanics(t, func() { fillItemFacts(nil, nil, nil) })
 	require.Equal(t, "x: type_id=-1", itemFactsLine(rows[0]))
 }
+
+func TestItemFacts_AbyssNoWeaponAndBaseDPS(t *testing.T) {
+	text, list, _ := searchItemByName(context.Background(), nil, testSDE(t), nil, []string{"Skybreaker Disparu Troop", "Lucid Preserver", "Anchoring Damavik"}, true, true)
+	lines := strings.Split(text, "\n")
+	// chain lightning has no recorded damage: the text says so instead of "0 DPS"
+	require.True(t, strings.HasSuffix(strings.SplitN(lines[0], " · ", 3)[2], "abyssal NPC (Disparu Troop): 2,450 HP, 4,781 EHP, no weapon damage; local shield boost, chain lightning; "+list.Items[0].AbyssNPC.KillPriority+" (EVE-Cyno heuristic)"), lines[0])
+	require.Contains(t, lines[1], "abyssal NPC (Lucid): 2,300 HP, 2,600 EHP, no weapon damage; remote armor repair, local armor repair; ")
+	require.NotContains(t, text, "0 DPS")
+	// a disintegrator's DPS is the unramped base
+	require.Contains(t, lines[2], "24 DPS base thermal/explosive, optimal 10 km; ")
+	require.Equal(t, 0, list.Items[0].AbyssNPC.DPS)
+}
+
+func TestItemFacts_AbyssTierZeroAndNoOptimalAndNilSDE(t *testing.T) {
+	_, list, _ := searchItemByName(context.Background(), nil, testSDE(t), nil, []string{"Tranquil Dark Filament"}, true, true)
+	require.Equal(t, 0, list.Items[0].AbyssFilament.Tier)
+	require.Equal(t, "Tranquil", list.Items[0].AbyssFilament.TierName)
+	require.Contains(t, itemFactsLine(list.Items[0]), " · abyssal filament: tier 0 Tranquil, weather Dark (")
+	// no optimal range and no damage types: no dangling segments
+	line := itemFactsLine(ItemFacts{Query: "x", TypeID: 1, known: true, CategoryID: entityCategoryID,
+		AbyssNPC: &AbyssNPCFacts{Family: "F", HP: 1, EHP: 2, DamageTypes: []string{}, Effects: []string{}, KillPriority: "kill last", KillPriorityNote: "EVE-Cyno heuristic"}})
+	require.Equal(t, "x: type_id=1 · abyssal NPC (F): 1 HP, 2 EHP, no weapon damage; kill last (EVE-Cyno heuristic)", line)
+	// a nil SDE with real rows must not panic and must leave them alone
+	rows := []ItemFacts{{Query: "x", TypeID: 48252}}
+	require.NotPanics(t, func() { fillItemFacts(nil, nil, rows) })
+	require.Nil(t, rows[0].AbyssNPC)
+}

@@ -193,7 +193,7 @@
   "tools.AbyssFilamentFacts.TierName": "TierName is the tier's name (\"Calm\").",
   "tools.AbyssFilamentFacts.Weather": "Weather is the short weather name (\"Dark\").",
   "tools.AbyssFilamentFacts.WeatherEnvironment": "WeatherEnvironment is the SDE's name of the weather environment (\"Dark Matter Field\"); \"\" when the dataset has none.",
-  "tools.AbyssNPCFacts.DPS": "DPS is the unramped base damage per second, rounded to whole points.",
+  "tools.AbyssNPCFacts.DPS": "DPS is the weapon damage per second, rounded to whole points; for a disintegrator it is the unramped base (the damage ramps up while firing). 0 when the NPC has no recorded weapon damage (chain-lightning damage is not in the dataset).",
   "tools.AbyssNPCFacts.DamageTypes": "DamageTypes lists the damage types with a non-zero share, in em, thermal, kinetic, explosive order; [] when none.",
   "tools.AbyssNPCFacts.EHP": "EHP is the damage-neutral effective hit points, rounded to whole points.",
   "tools.AbyssNPCFacts.Effects": "Effects names the electronic-warfare and repair behaviors (\"target painter\"), in dataset order; [] when none.",
