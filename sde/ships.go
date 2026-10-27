@@ -239,6 +239,20 @@ func (s *SDE) GetItemMetaTier(typeID int) *string {
 	return &t1
 }
 
+// sizeNameClause is the SQL clause (with its arguments, after the family pattern) that keeps
+// type names of one size class: a name prefix or infix, or the plate size in millimetres
+// for Steel Plates (Large 1600mm, Medium 800mm, Small 200mm).
+func sizeNameClause(family, size string) (string, []any) {
+	sz := capitalize(strings.TrimSpace(size))
+	if strings.HasSuffix(strings.ToLower(strings.TrimSpace(family)), "steel plates") {
+		mmMap := map[string]string{"Small": "200mm", "Medium": "800mm", "Large": "1600mm"}
+		if mm, ok := mmMap[sz]; ok {
+			return " AND (typeName LIKE ? OR typeName LIKE ?)", []any{"%" + mm + "%", "%" + mm + "%"}
+		}
+	}
+	return " AND (typeName LIKE ? OR typeName LIKE ?)", []any{sz + " %", "% " + sz + " %"}
+}
+
 // FindCanonicalModule returns canonical published SDE typeNames matching a module family.
 func (s *SDE) FindCanonicalModule(family string, size *string, limit int) []map[string]any {
 	if limit <= 0 {
@@ -252,17 +266,9 @@ func (s *SDE) FindCanonicalModule(family string, size *string, limit int) []map[
 	params := []any{"%" + family + "%"}
 	sizeClause := ""
 	if size != nil {
-		sz := capitalize(strings.TrimSpace(*size))
-		sizeClause = " AND (typeName LIKE ? OR typeName LIKE ?)"
-		params = append(params, sz+" %", "% "+sz+" %")
-		// Steel Plates: Large=1600mm, Medium=800mm, Small=200mm
-		if strings.HasSuffix(strings.ToLower(family), "steel plates") {
-			mmMap := map[string]string{"Small": "200mm", "Medium": "800mm", "Large": "1600mm"}
-			if mm, ok := mmMap[sz]; ok {
-				sizeClause = " AND (typeName LIKE ? OR typeName LIKE ?)"
-				params = []any{"%" + family + "%", "%" + mm + "%", "%" + mm + "%"}
-			}
-		}
+		var sizeArgs []any
+		sizeClause, sizeArgs = sizeNameClause(family, *size)
+		params = append(params, sizeArgs...)
 	}
 	params = append(params, limit*2)
 

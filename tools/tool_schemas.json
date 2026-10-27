@@ -114,7 +114,7 @@
     "type": "function",
     "function": {
       "name": "find_canonical_module",
-      "description": "Look up canonical SDE typeNames for a module family (e.g. 'Steel Plates', 'Entropic Radiation Sink', 'Shield Extender', 'Heat Sink', 'Magnetic Field Stabilizer', 'Ballistic Control System', 'Stasis Webifier', 'Microwarpdrive', 'Remote Armor Repairer'). Call this when you are about to write a module that isn't in the `compatible_weapons` or `bonused_modules` of get_hull_facts and you are not 100% sure of the canonical name. Optional `size` narrows to a class prefix — 'Small' for frigates / destroyers, 'Medium' for cruisers / battlecruisers, 'Large' for battleships and capitals. Returns a short list of real published items (no SKINs / Blueprints / Specializations).",
+      "description": "Look up canonical SDE typeNames for a module family (e.g. 'Steel Plates', 'Entropic Radiation Sink', 'Shield Extender', 'Heat Sink', 'Magnetic Field Stabilizer', 'Ballistic Control System', 'Stasis Webifier', 'Microwarpdrive', 'Remote Armor Repairer'). Call this when you are about to write a module that isn't in the `compatible_weapons` or `bonused_modules` of get_hull_facts and you are not 100% sure of the canonical name. Optional `size` narrows to a class prefix — 'Small' for frigates / destroyers, 'Medium' for cruisers / battlecruisers, 'Large' for battleships and capitals. Returns a short list of real published items (no SKINs / Blueprints / Specializations). Search mode (when slot, kind, meta or limit is set): list modules, charges or drones by slot, kind and meta group, e.g. family 'Shield' + slot 'mid', in name order with CPU and powergrid, up to 30 per call with the total. Example: {\"family\":\"Shield Extender\",\"slot\":\"mid\",\"meta\":\"Tech II\"}.",
       "parameters": {
         "type": "object",
         "properties": {
@@ -125,6 +125,35 @@
           "size": {
             "type": "string",
             "description": "Optional size class — 'Small', 'Medium', or 'Large'"
+          },
+          "slot": {
+            "type": "string",
+            "enum": [
+              "high",
+              "mid",
+              "low",
+              "rig"
+            ],
+            "description": "Search mode: only modules that fit this slot, e.g. 'mid'"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "module",
+              "charge",
+              "drone"
+            ],
+            "description": "Search mode: what to list (default module). Charges and drones have no slot."
+          },
+          "meta": {
+            "type": "string",
+            "description": "Search mode: meta group name, e.g. 'Tech II', 'Faction', 'Deadspace', 'Officer', 'Abyssal'"
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 30,
+            "description": "Search mode: items to list (1-30, default 10)"
           }
         },
         "required": [

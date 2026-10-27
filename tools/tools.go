@@ -187,13 +187,20 @@ func dispatch(ctx context.Context, deps *Deps, name string, arguments map[string
 		return plain(getHullFacts(ctx, deps.SDE, deps.Retriever, ship, deps.Public))
 
 	case "find_canonical_module":
+		// slot, kind, meta and limit select the search form; null, "", [] and {} count as
+		// absent, so a call without them keeps the family text.
+		if moduleSearchRequested(arguments) {
+			text, list := searchModules(deps.SDE, arguments)
+			return typed(text, list, nil)
+		}
 		family, _ := arguments["family"].(string)
 		size, _ := arguments["size"].(string)
 		var sizePtr *string
 		if size != "" {
 			sizePtr = &size
 		}
-		return plain(findCanonicalModule(deps.SDE, family, sizePtr))
+		text, list := findCanonicalModule(deps.SDE, family, sizePtr)
+		return typed(text, list, nil)
 
 	case "validate_fitting":
 		// Schema param is "eft_text"; the guards call it internally with "eft_block".

@@ -301,7 +301,7 @@ func summaryTable() map[string]string {
 		"search_item_by_name":    "Resolve item names to type IDs; with details, group, meta level, market group, volume and Alpha use of up to 50 items.",
 		"get_ship_stats":         "Slot layout, hardpoints and resource limits of a ship.",
 		"get_ship_bonuses":       "Hull bonuses of a ship: per skill level, role bonuses and ship class.",
-		"find_canonical_module":  "Find the canonical module names of a module family.",
+		"find_canonical_module":  "Canonical module names of a family, or a module search by slot, kind and meta group.",
 		"get_hull_facts":         "A hull's fitting envelope: slots, hardpoints, drone bay, bonuses and weapon restrictions.",
 		"validate_fitting":       "Check an EFT fit against its slots, CPU and powergrid.",
 		"compute_fit_stats":      "DPS, EHP, speed, align time and capacitor of an EFT fit, from the Gofa engine.",
@@ -417,6 +417,8 @@ func dataType(name string) reflect.Type {
 		return reflect.TypeFor[tools.SkillPlan]()
 	case "get_npc_stations":
 		return reflect.TypeFor[tools.StationList]()
+	case "find_canonical_module":
+		return reflect.TypeFor[tools.ModuleList]()
 	case "get_fits":
 		return reflect.TypeFor[tools.CommunityFits]()
 	case "list_fits":

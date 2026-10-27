@@ -852,9 +852,9 @@ func communityFitExample(ctx context.Context, retriever *rag.QdrantRetriever, sh
 }
 
 // findCanonicalModule mirrors Python _find_canonical_module.
-func findCanonicalModule(s *sde.SDE, family string, size *string) string {
+func findCanonicalModule(s *sde.SDE, family string, size *string) (string, *ModuleList) {
 	if !s.Available() {
-		return fmt.Sprintf("SDE unavailable; cannot resolve canonical name for %q.", family)
+		return fmt.Sprintf("SDE unavailable; cannot resolve canonical name for %q.", family), nil
 	}
 	var normSize *string
 	if size != nil {
@@ -869,7 +869,7 @@ func findCanonicalModule(s *sde.SDE, family string, size *string) string {
 		if normSize != nil {
 			suffix = fmt.Sprintf(" (size %s)", *normSize)
 		}
-		return fmt.Sprintf("No published SDE items match family %q%s.", family, suffix)
+		return fmt.Sprintf("No published SDE items match family %q%s.", family, suffix), modulesOf(s, nil)
 	}
 	header := fmt.Sprintf("## Canonical %s variants", family)
 	if normSize != nil {
@@ -882,7 +882,7 @@ func findCanonicalModule(s *sde.SDE, family string, size *string) string {
 	}
 	lines = append(lines, "")
 	lines = append(lines, "Source: data/sde/sde.sqlite (Fuzzwork latest dump)")
-	return strings.Join(lines, "\n")
+	return strings.Join(lines, "\n"), modulesOf(s, matches)
 }
 
 // pythonFloat formats a float64 the same way Python's str()/f"{v}" does:

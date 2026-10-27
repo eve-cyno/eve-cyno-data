@@ -598,9 +598,9 @@ paths:
         - tools
       summary: Look up canonical SDE typeNames for a module family (e.g. 'Steel Plates', 'Entropic Radiation Sink', 'Shield Extender'…
       description: |-
-        Look up canonical SDE typeNames for a module family (e.g. 'Steel Plates', 'Entropic Radiation Sink', 'Shield Extender', 'Heat Sink', 'Magnetic Field Stabilizer', 'Ballistic Control System', 'Stasis Webifier', 'Microwarpdrive', 'Remote Armor Repairer'). Call this when you are about to write a module that isn't in the `compatible_weapons` or `bonused_modules` of get_hull_facts and you are not 100% sure of the canonical name. Optional `size` narrows to a class prefix — 'Small' for frigates / destroyers, 'Medium' for cruisers / battlecruisers, 'Large' for battleships and capitals. Returns a short list of real published items (no SKINs / Blueprints / Specializations).
+        Look up canonical SDE typeNames for a module family (e.g. 'Steel Plates', 'Entropic Radiation Sink', 'Shield Extender', 'Heat Sink', 'Magnetic Field Stabilizer', 'Ballistic Control System', 'Stasis Webifier', 'Microwarpdrive', 'Remote Armor Repairer'). Call this when you are about to write a module that isn't in the `compatible_weapons` or `bonused_modules` of get_hull_facts and you are not 100% sure of the canonical name. Optional `size` narrows to a class prefix — 'Small' for frigates / destroyers, 'Medium' for cruisers / battlecruisers, 'Large' for battleships and capitals. Returns a short list of real published items (no SKINs / Blueprints / Specializations). Search mode (when slot, kind, meta or limit is set): list modules, charges or drones by slot, kind and meta group, e.g. family 'Shield' + slot 'mid', in name order with CPU and powergrid, up to 30 per call with the total. Example: {"family":"Shield Extender","slot":"mid","meta":"Tech II"}.
 
-        Sources: EVE Static Data Export (via Fuzzwork).
+        Sources: EVE Static Data Export (via Fuzzwork). `result.data` is a `ModuleList` object when the call succeeds.
 
         Access tier: **public**. No key needed.
 
@@ -618,9 +618,32 @@ paths:
                 family:
                   type: string
                   description: Module family substring, e.g. 'Steel Plates', 'Entropic Radiation Sink', 'Tracking Enhancer'
+                kind:
+                  type: string
+                  description: 'Search mode: what to list (default module). Charges and drones have no slot.'
+                  enum:
+                    - module
+                    - charge
+                    - drone
+                limit:
+                  type: integer
+                  description: 'Search mode: items to list (1-30, default 10)'
+                  minimum: 1
+                  maximum: 30
+                meta:
+                  type: string
+                  description: 'Search mode: meta group name, e.g. ''Tech II'', ''Faction'', ''Deadspace'', ''Officer'', ''Abyssal'''
                 size:
                   type: string
                   description: Optional size class — 'Small', 'Medium', or 'Large'
+                slot:
+                  type: string
+                  description: 'Search mode: only modules that fit this slot, e.g. ''mid'''
+                  enum:
+                    - high
+                    - mid
+                    - low
+                    - rig
               required:
                 - family
       responses:
@@ -629,7 +652,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ToolResponse'
+                $ref: '#/components/schemas/ModuleListToolResponse'
           headers:
             X-Request-ID:
               $ref: '#/components/headers/RequestID'
@@ -4270,6 +4293,97 @@ components:
         - pg
         - canLoadCharge
         - canOverheat
+    ModuleList:
+      type: object
+      properties:
+        total:
+          type: integer
+          description: Total is the number of items that match, before the limit.
+        shown:
+          type: integer
+          description: Shown is the number of rows in Modules.
+        modules:
+          type: array
+          description: Modules is the page of matches.
+          items:
+            $ref: '#/components/schemas/ModuleRow'
+      required:
+        - total
+        - shown
+        - modules
+    ModuleListToolResponse:
+      type: object
+      properties:
+        tool:
+          type: string
+          description: The tool that ran.
+        version:
+          type: string
+          description: The build version of the service.
+        result:
+          type: object
+          properties:
+            text:
+              type: string
+              description: The answer as the chat assistant reads it.
+            data:
+              description: The typed answer, or null when the tool has none or the call ended in a text-only answer (an unknown id, a parse failure); `text` then says why.
+              oneOf:
+                - $ref: '#/components/schemas/ModuleList'
+                - type: "null"
+          required:
+            - text
+            - data
+        attribution:
+          type: array
+          description: The upstreams behind the answer; attribution is a condition of several of their licences.
+          items:
+            $ref: '#/components/schemas/Source'
+      required:
+        - tool
+        - version
+        - result
+        - attribution
+    ModuleRow:
+      type: object
+      properties:
+        type_id:
+          type: integer
+          description: TypeID is the item's type ID.
+        name:
+          type: string
+          description: Name is the canonical item name as the SDE spells it.
+        kind:
+          type: string
+          description: Kind is module, charge or drone; other for a family match that is none of them.
+        slot:
+          type:
+            - string
+            - "null"
+          description: Slot is the slot the module fits (high, mid, low or rig); null for charges, drones and non-slot items.
+        meta_group:
+          type:
+            - string
+            - "null"
+          description: MetaGroup is the meta group name (Tech I, Tech II, Faction, Deadspace, ...); null when the SDE has none.
+        cpu_tf:
+          type:
+            - number
+            - "null"
+          description: CPUTf is the CPU use in teraflops; null unless the item is a slot module.
+        pg_mw:
+          type:
+            - number
+            - "null"
+          description: PGMW is the powergrid use in megawatts; null unless the item is a slot module.
+      required:
+        - type_id
+        - name
+        - kind
+        - slot
+        - meta_group
+        - cpu_tf
+        - pg_mw
     NavStats:
       type: object
       properties:

@@ -196,14 +196,18 @@ Get hull bonuses for an EVE Online ship — per-skill-level bonuses + role bonus
 
 ### find_canonical_module
 
-Look up canonical SDE typeNames for a module family (e.g. 'Steel Plates', 'Entropic Radiation Sink', 'Shield Extender', 'Heat Sink', 'Magnetic Field Stabilizer', 'Ballistic Control System', 'Stasis Webifier', 'Microwarpdrive', 'Remote Armor Repairer'). Call this when you are about to write a module that isn't in the `compatible_weapons` or `bonused_modules` of get_hull_facts and you are not 100% sure of the canonical name. Optional `size` narrows to a class prefix — 'Small' for frigates / destroyers, 'Medium' for cruisers / battlecruisers, 'Large' for battleships and capitals. Returns a short list of real published items (no SKINs / Blueprints / Specializations).
+Look up canonical SDE typeNames for a module family (e.g. 'Steel Plates', 'Entropic Radiation Sink', 'Shield Extender', 'Heat Sink', 'Magnetic Field Stabilizer', 'Ballistic Control System', 'Stasis Webifier', 'Microwarpdrive', 'Remote Armor Repairer'). Call this when you are about to write a module that isn't in the `compatible_weapons` or `bonused_modules` of get_hull_facts and you are not 100% sure of the canonical name. Optional `size` narrows to a class prefix — 'Small' for frigates / destroyers, 'Medium' for cruisers / battlecruisers, 'Large' for battleships and capitals. Returns a short list of real published items (no SKINs / Blueprints / Specializations). Search mode (when slot, kind, meta or limit is set): list modules, charges or drones by slot, kind and meta group, e.g. family 'Shield' + slot 'mid', in name order with CPU and powergrid, up to 30 per call with the total. Example: {"family":"Shield Extender","slot":"mid","meta":"Tech II"}.
 
 - Call: `POST /v1/tool/find_canonical_module` or MCP tool `find_canonical_module`
 - Access: public. No key needed.
 - Arguments:
   - `family` (string, required): Module family substring, e.g. 'Steel Plates', 'Entropic Radiation Sink', 'Tracking Enhancer'
+  - `kind` (string): Search mode: what to list (default module). Charges and drones have no slot. One of: module, charge, drone.
+  - `limit` (integer): Search mode: items to list (1-30, default 10)
+  - `meta` (string): Search mode: meta group name, e.g. 'Tech II', 'Faction', 'Deadspace', 'Officer', 'Abyssal'
   - `size` (string): Optional size class — 'Small', 'Medium', or 'Large'
-- Typed result: none; the answer is `result.text`
+  - `slot` (string): Search mode: only modules that fit this slot, e.g. 'mid'. One of: high, mid, low, rig.
+- Typed result (`result.data`): ModuleList with fields `total`, `shown`, `modules`
 - Sources: EVE Static Data Export (via Fuzzwork)
 
 ### get_hull_facts

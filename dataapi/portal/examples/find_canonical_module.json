@@ -2,17 +2,59 @@
   "tool": "find_canonical_module",
   "request": {
     "family": "Shield Extender",
-    "size": "Medium"
+    "slot": "mid",
+    "meta": "Tech II"
   },
-  "prompt": "What are the exact names of the medium shield extenders?",
-  "recorded": "2026-10-09",
+  "prompt": "Which Tech II mid-slot shield extenders exist?",
+  "recorded": "2026-10-27",
   "trimmed": false,
   "response": {
     "tool": "find_canonical_module",
-    "version": "sha-aa76146",
+    "version": "sha-cc63868",
     "result": {
-      "text": "## Canonical Shield Extender variants (Medium)\n- Medium Shield Extender I\n- Medium Shield Extender II\n- Thukker Medium Shield Extender\n- Medium Abyssal Shield Extender\n- Medium 'Canyon' Shield Extender\n- Caldari Navy Medium Shield Extender\n- Republic Fleet Medium Shield Extender\n- Medium Azeotropic Restrained Shield Extender\n\nSource: data/sde/sde.sqlite (Fuzzwork latest dump)",
-      "data": null
+      "text": "## Modules matching \"Shield Extender\" (mid, Tech II): 4 shown\n- Capital Shield Extender II · mid · Tech II · CPU 132 tf · PG 82,500 MW\n- Large Shield Extender II · mid · Tech II · CPU 45 tf · PG 160 MW\n- Medium Shield Extender II · mid · Tech II · CPU 35 tf · PG 30 MW\n- Small Shield Extender II · mid · Tech II · CPU 23 tf · PG 3 MW\n\nSource: data/sde/sde.sqlite (Fuzzwork latest dump)",
+      "data": {
+        "total": 4,
+        "shown": 4,
+        "modules": [
+          {
+            "type_id": 40357,
+            "name": "Capital Shield Extender II",
+            "kind": "module",
+            "slot": "mid",
+            "meta_group": "Tech II",
+            "cpu_tf": 132,
+            "pg_mw": 82500
+          },
+          {
+            "type_id": 3841,
+            "name": "Large Shield Extender II",
+            "kind": "module",
+            "slot": "mid",
+            "meta_group": "Tech II",
+            "cpu_tf": 45,
+            "pg_mw": 160
+          },
+          {
+            "type_id": 3831,
+            "name": "Medium Shield Extender II",
+            "kind": "module",
+            "slot": "mid",
+            "meta_group": "Tech II",
+            "cpu_tf": 35,
+            "pg_mw": 30
+          },
+          {
+            "type_id": 380,
+            "name": "Small Shield Extender II",
+            "kind": "module",
+            "slot": "mid",
+            "meta_group": "Tech II",
+            "cpu_tf": 23,
+            "pg_mw": 3
+          }
+        ]
+      }
     },
     "attribution": [
       {

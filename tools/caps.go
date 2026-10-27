@@ -36,6 +36,9 @@ const (
 	maxAgentLevel       = 5
 	maxStationLimit     = 50
 	defaultStationLimit = 20
+	// find_canonical_module: limit.
+	maxModuleLimit     = 30
+	defaultModuleLimit = 10
 )
 
 // listCapError is the answer for a list longer than its cap.

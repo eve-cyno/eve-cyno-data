@@ -49,6 +49,7 @@ func TestSchemaCapsMatchTheCode(t *testing.T) {
 		{"get_npc_stations", "services"}:                      maxFilterValues,
 		{"get_npc_stations", "near.max_jumps"}:                maxNearJumps,
 		{"get_npc_stations", "agent.level"}:                   maxAgentLevel,
+		{"find_canonical_module", "limit"}:                    maxModuleLimit,
 	} // later tools add their rows here
 
 	props := map[string]map[string]any{}
@@ -88,6 +89,7 @@ func TestCapDefaultsAreWithinTheirMaximums(t *testing.T) {
 	require.LessOrEqual(t, defaultFindLimit, maxFindLimit)
 	require.LessOrEqual(t, defaultTheraLimit, maxTheraLimit)
 	require.LessOrEqual(t, defaultStationLimit, maxStationLimit)
+	require.LessOrEqual(t, defaultModuleLimit, maxModuleLimit)
 }
 
 func TestIntSlice(t *testing.T) {

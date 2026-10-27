@@ -1008,3 +1008,31 @@ type AgentRow struct {
 	// Locator is true when the agent offers the locator service.
 	Locator bool `json:"locator"`
 }
+
+// ModuleList is the result of find_canonical_module: the published items that match, in the order of the text lines.
+type ModuleList struct {
+	// Total is the number of items that match, before the limit.
+	Total int `json:"total"`
+	// Shown is the number of rows in Modules.
+	Shown int `json:"shown"`
+	// Modules is the page of matches.
+	Modules []ModuleRow `json:"modules"`
+}
+
+// ModuleRow is one item of a find_canonical_module answer.
+type ModuleRow struct {
+	// TypeID is the item's type ID.
+	TypeID int `json:"type_id"`
+	// Name is the canonical item name as the SDE spells it.
+	Name string `json:"name"`
+	// Kind is module, charge or drone; other for a family match that is none of them.
+	Kind string `json:"kind"`
+	// Slot is the slot the module fits (high, mid, low or rig); null for charges, drones and non-slot items.
+	Slot *string `json:"slot"`
+	// MetaGroup is the meta group name (Tech I, Tech II, Faction, Deadspace, ...); null when the SDE has none.
+	MetaGroup *string `json:"meta_group"`
+	// CPUTf is the CPU use in teraflops; null unless the item is a slot module.
+	CPU *float64 `json:"cpu_tf"`
+	// PGMW is the powergrid use in megawatts; null unless the item is a slot module.
+	PG *float64 `json:"pg_mw"`
+}
