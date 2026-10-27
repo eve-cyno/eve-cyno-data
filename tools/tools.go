@@ -116,6 +116,9 @@ func dispatch(ctx context.Context, deps *Deps, name string, arguments map[string
 		secMax := floatArg(arguments, "sec_max", 1.0)
 		return plain(getSystemsInRegion(deps.SDE, region, secMin, secMax))
 
+	case "get_lp_offers":
+		return typed(getLPOffers(ctx, deps.Client, deps.SDE, arguments))
+
 	case "get_npc_stations":
 		// near, region, services, agent and limit select the search form; null, "", [] and {}
 		// count as absent, so a call without them keeps the single-system text.

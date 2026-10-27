@@ -120,6 +120,9 @@ var toolAttribution = map[string][]Source{
 	// ESI only with system (cost index) or include_cost (the daily price list).
 	"get_production_chain": {sourceSDE, sourceESI},
 
+	// ESI offers and prices, SDE names.
+	"get_lp_offers": {sourceESI, sourceSDE},
+
 	// ESI.
 	"get_market_price": {sourceESI},
 

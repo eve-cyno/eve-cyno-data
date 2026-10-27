@@ -40,6 +40,9 @@ const (
 	// find_canonical_module: limit.
 	maxModuleLimit     = 30
 	defaultModuleLimit = 10
+	// get_lp_offers: limit.
+	maxLPLimit     = 50
+	defaultLPLimit = 20
 )
 
 // listCapError is the answer for a list longer than its cap.

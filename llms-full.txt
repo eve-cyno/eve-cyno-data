@@ -14,7 +14,7 @@ Machine-readable description: [/v1/openapi.yaml](/v1/openapi.yaml) (OpenAPI 3.1;
 - An API key raises the per-minute budgets: every operation states its limit without a key and with one, counted in the key's own window. The live-data tools keep a lower limit than the route.
 - A new API key has a daily cap of 10000 requests per UTC day by default (a cap can be changed per key, 0 meaning none). Over its cap a key gets `429` `daily_quota_exceeded` with `Retry-After` set to the seconds until 00:00 UTC.
 - Request bodies are capped: 256 KiB on the fit routes, 64 KiB on the tool and MCP endpoints (`413`).
-- Tool tiers: each tool is *public* (no key), *keyed* (an API key) or *disabled*. Public: `get_market_price`, `get_type_info`, `search_item_by_name`, `get_ship_stats`, `get_ship_bonuses`, `find_canonical_module`, `get_hull_facts`, `get_fits`, `list_fits`, `validate_fitting`, `compute_fit_stats`, `appraise_items`, `get_production_chain`, `get_jumps_between`, `get_jump_distances`, `plan_jump_route`, `get_systems_in_region`, `get_npc_stations`, `get_reprocessing_yield`, `get_required_skills`, `get_average_prices`, `get_market_history`, `get_sovereignty`, `get_system_activity`, `find_systems`, `get_system_info`, `get_thera_connections`. Keyed (send the key as `Authorization: Bearer <key>` or `X-API-Key`; `401 api_key_required` without one, `401 invalid_api_key` for a key that is not valid, on every tool): `analyze_battle`. Optional: your own Janice key in the `X-Janice-Key` request header (used for that request only, never logged or stored) turns `appraise_items` into a Janice appraisal; without it the answer is an estimate from ESI average prices. Disabled tools are not offered on this service (`403 tool_disabled` over REST, absent from the MCP tool list).
+- Tool tiers: each tool is *public* (no key), *keyed* (an API key) or *disabled*. Public: `get_market_price`, `get_type_info`, `search_item_by_name`, `get_ship_stats`, `get_ship_bonuses`, `find_canonical_module`, `get_hull_facts`, `get_fits`, `list_fits`, `validate_fitting`, `compute_fit_stats`, `appraise_items`, `get_production_chain`, `get_jumps_between`, `get_jump_distances`, `plan_jump_route`, `get_systems_in_region`, `get_lp_offers`, `get_npc_stations`, `get_reprocessing_yield`, `get_required_skills`, `get_average_prices`, `get_market_history`, `get_sovereignty`, `get_system_activity`, `find_systems`, `get_system_info`, `get_thera_connections`. Keyed (send the key as `Authorization: Bearer <key>` or `X-API-Key`; `401 api_key_required` without one, `401 invalid_api_key` for a key that is not valid, on every tool): `analyze_battle`. Optional: your own Janice key in the `X-Janice-Key` request header (used for that request only, never logged or stored) turns `appraise_items` into a Janice appraisal; without it the answer is an estimate from ESI average prices. Disabled tools are not offered on this service (`403 tool_disabled` over REST, absent from the MCP tool list).
 
 ## Endpoints
 
@@ -386,6 +386,21 @@ List solar systems in an EVE region filtered by security band. Use for 'which lo
   - `sec_min` (number): Minimum security (default -1.0)
 - Typed result: none; the answer is `result.text`
 - Sources: EVE Static Data Export (via Fuzzwork)
+
+### get_lp_offers
+
+List the loyalty point (LP) store of an NPC corporation and rank its offers by the ISK each loyalty point is worth. ISK per LP = (average price of the items given - the ISK cost - the average price of the required items) / the LP cost. The prices are ESI's daily average prices, not live market orders, so treat the figures as a guide; an offer with an item that has no average price (a blueprint copy has none) shows no ISK per LP and says why. A corporation without a store says so. Example: {"corporation":"Caldari Navy","limit":5}. Another: Sisters of EVE offers matching 'probe', cheapest in LP first: {"corporation":"Sisters of EVE","item":"probe","sort":"lp_cost"}.
+
+- Call: `POST /v1/tool/get_lp_offers` or MCP tool `get_lp_offers`
+- Access: public. No key needed.
+- Live ESI data: Reads live public data from EVE's ESI through a shared cache that follows ESI's `Expires`. All live-upstream calls share one fair-use limit of 5 calls per minute per caller without an API key and 10 with one (REST and MCP together, counted across every live tool), on top of the route limit. When the shared ESI budget is nearly spent the call is refused with `503 upstream_busy` (MCP: an error result starting `upstream_busy`) and `Retry-After`; retry later.
+- Arguments:
+  - `corporation` (string, required): NPC corporation name, e.g. 'Caldari Navy', 'Sisters of EVE', 'Federation Navy'
+  - `item` (string): Keep offers whose item name contains this text, e.g. 'shield'
+  - `limit` (integer): Offers to list (1-50, default 20)
+  - `sort` (string): Order of the offers: isk_per_lp (default, best first, offers without a value last), lp_cost (cheapest first) or name. One of: isk_per_lp, lp_cost, name.
+- Typed result (`result.data`): LPOffers with fields `corporation`, `corporation_id`, `prices_as_of`, `total`, `shown`, `offers`
+- Sources: ESI (EVE Swagger Interface); EVE Static Data Export (via Fuzzwork)
 
 ### get_npc_stations
 

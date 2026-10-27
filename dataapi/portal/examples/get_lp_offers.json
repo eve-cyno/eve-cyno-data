@@ -1,0 +1,167 @@
+{
+  "tool": "get_lp_offers",
+  "request": {
+    "corporation": "Caldari Navy",
+    "limit": 5
+  },
+  "prompt": "Best ISK per LP in the Caldari Navy store?",
+  "recorded": "2026-10-27",
+  "trimmed": false,
+  "response": {
+    "tool": "get_lp_offers",
+    "version": "sha-3d521f5",
+    "result": {
+      "text": "Caldari Navy LP store: 5 of 310 offers, by ISK per LP (ESI average prices of 2026-10-27, not live orders):\nCaldari Navy Light Missile Launcher x1: 1,665.03 ISK/LP — 18,000 LP + 7,200,000.00 ISK + 89 Federation Navy Sergeant Insignia I + 112 Federation Navy Sergeant Insignia II + 135 Federation Navy Sergeant Insignia III + 1 Light Missile Launcher I\nCaldari Navy Rapid Light Missile Launcher x1: 1,394.73 ISK/LP — 24,000 LP + 9,600,000.00 ISK + 63 Federation Navy Fleet Captain Insignia I + 1 Rapid Light Missile Launcher I + 106 Federation Navy Fleet Major Insignia I\nCaldari Navy Heavy Missile Launcher x1: 1,279.04 ISK/LP — 24,000 LP + 9,600,000.00 ISK + 63 Federation Navy Fleet Captain Insignia I + 1 Heavy Missile Launcher I + 106 Federation Navy Fleet Major Insignia I\nCaldari Navy Heavy Assault Missile Launcher x1: 1,262.32 ISK/LP — 24,000 LP + 9,600,000.00 ISK + 63 Federation Navy Fleet Captain Insignia I + 1 Heavy Assault Missile Launcher I + 106 Federation Navy Fleet Major Insignia I\nZainou 'Deadeye' Target Navigation Prediction TN-901 x1: 1,172.07 ISK/LP — 375 LP + 375,000.00 ISK\n(305 more; narrow with item or raise limit)",
+      "data": {
+        "corporation": "Caldari Navy",
+        "corporation_id": 1000035,
+        "prices_as_of": "2026-10-27",
+        "total": 310,
+        "shown": 5,
+        "offers": [
+          {
+            "offer_id": 3556,
+            "type_id": 16068,
+            "name": "Caldari Navy Light Missile Launcher",
+            "quantity": 1,
+            "lp_cost": 18000,
+            "isk_cost": 7200000,
+            "ak_cost": 0,
+            "required_items": [
+              {
+                "type_id": 15590,
+                "name": "Federation Navy Sergeant Insignia I",
+                "quantity": 89
+              },
+              {
+                "type_id": 15994,
+                "name": "Federation Navy Sergeant Insignia II",
+                "quantity": 112
+              },
+              {
+                "type_id": 16002,
+                "name": "Federation Navy Sergeant Insignia III",
+                "quantity": 135
+              },
+              {
+                "type_id": 499,
+                "name": "Light Missile Launcher I",
+                "quantity": 1
+              }
+            ],
+            "value_isk": 29970540.05,
+            "isk_per_lp": 1665.03
+          },
+          {
+            "offer_id": 3529,
+            "type_id": 16061,
+            "name": "Caldari Navy Rapid Light Missile Launcher",
+            "quantity": 1,
+            "lp_cost": 24000,
+            "isk_cost": 9600000,
+            "ak_cost": 0,
+            "required_items": [
+              {
+                "type_id": 15592,
+                "name": "Federation Navy Fleet Captain Insignia I",
+                "quantity": 63
+              },
+              {
+                "type_id": 1875,
+                "name": "Rapid Light Missile Launcher I",
+                "quantity": 1
+              },
+              {
+                "type_id": 15593,
+                "name": "Federation Navy Fleet Major Insignia I",
+                "quantity": 106
+              }
+            ],
+            "value_isk": 33473526.39,
+            "isk_per_lp": 1394.73
+          },
+          {
+            "offer_id": 3541,
+            "type_id": 16064,
+            "name": "Caldari Navy Heavy Missile Launcher",
+            "quantity": 1,
+            "lp_cost": 24000,
+            "isk_cost": 9600000,
+            "ak_cost": 0,
+            "required_items": [
+              {
+                "type_id": 15592,
+                "name": "Federation Navy Fleet Captain Insignia I",
+                "quantity": 63
+              },
+              {
+                "type_id": 501,
+                "name": "Heavy Missile Launcher I",
+                "quantity": 1
+              },
+              {
+                "type_id": 15593,
+                "name": "Federation Navy Fleet Major Insignia I",
+                "quantity": 106
+              }
+            ],
+            "value_isk": 30696928.7,
+            "isk_per_lp": 1279.04
+          },
+          {
+            "offer_id": 4616,
+            "type_id": 28377,
+            "name": "Caldari Navy Heavy Assault Missile Launcher",
+            "quantity": 1,
+            "lp_cost": 24000,
+            "isk_cost": 9600000,
+            "ak_cost": 0,
+            "required_items": [
+              {
+                "type_id": 15592,
+                "name": "Federation Navy Fleet Captain Insignia I",
+                "quantity": 63
+              },
+              {
+                "type_id": 20138,
+                "name": "Heavy Assault Missile Launcher I",
+                "quantity": 1
+              },
+              {
+                "type_id": 15593,
+                "name": "Federation Navy Fleet Major Insignia I",
+                "quantity": 106
+              }
+            ],
+            "value_isk": 30295684.17,
+            "isk_per_lp": 1262.32
+          },
+          {
+            "offer_id": 4195,
+            "type_id": 27095,
+            "name": "Zainou 'Deadeye' Target Navigation Prediction TN-901",
+            "quantity": 1,
+            "lp_cost": 375,
+            "isk_cost": 375000,
+            "ak_cost": 0,
+            "required_items": [],
+            "value_isk": 439525.61,
+            "isk_per_lp": 1172.07
+          }
+        ]
+      }
+    },
+    "attribution": [
+      {
+        "name": "ESI (EVE Swagger Interface)",
+        "url": "https://esi.evetech.net/",
+        "license": "EVE Developer License Agreement (Fenris Creations); non-commercial use"
+      },
+      {
+        "name": "EVE Static Data Export (via Fuzzwork)",
+        "url": "https://www.fuzzwork.co.uk/dump/",
+        "license": "Fenris Creations game data under the EVE Developer License Agreement; converted by Fuzzwork Enterprises"
+      }
+    ]
+  }
+}

@@ -234,6 +234,7 @@ func tierTable() map[string]Tier {
 		"get_market_history":     TierPublic,
 		"get_systems_in_region":  TierPublic,
 		"get_npc_stations":       TierPublic,
+		"get_lp_offers":          TierPublic,
 		"find_systems":           TierPublic,
 		"get_system_info":        TierPublic,
 		"get_thera_connections":  TierPublic,
@@ -292,6 +293,7 @@ var upstreamTools = map[string]string{
 	"get_market_history":    UpstreamESI,
 	"get_thera_connections": UpstreamEveScout,
 	"plan_jump_route":       UpstreamESI,
+	"get_lp_offers":         UpstreamESI,
 	// get_production_chain reads ESI only with system (the cost index); include_cost reads the
 	// shared daily price copy.
 	"get_production_chain": UpstreamESI,
@@ -329,6 +331,7 @@ func summaryTable() map[string]string {
 		"get_market_history":     "Price and volume history of an item in a region, by day or week (up to 90 days).",
 		"get_average_prices":     "Daily average prices of up to 200 items in one call (ESI /markets/prices).",
 		"get_systems_in_region":  "Solar systems of a region, filtered by security band.",
+		"get_lp_offers":          "LP store offers of an NPC corporation with ISK per LP from ESI average prices.",
 		"get_npc_stations":       "NPC stations in a system or near one, by services and mission agents, with owner and refinery.",
 		"find_systems":           "Search solar systems by security, location, celestials, stations, ice belts and distance.",
 		"get_system_info":        "Security, location, neighbours, celestials, stations and ice belt of up to 50 systems.",
@@ -408,6 +411,8 @@ func dataType(name string) reflect.Type {
 		return reflect.TypeFor[tools.AveragePrices]()
 	case "get_production_chain":
 		return reflect.TypeFor[tools.ProductionChain]()
+	case "get_lp_offers":
+		return reflect.TypeFor[tools.LPOffers]()
 	case "get_market_history":
 		return reflect.TypeFor[tools.MarketHistory]()
 	case "get_jumps_between":

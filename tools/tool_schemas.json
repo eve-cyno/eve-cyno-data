@@ -657,6 +657,44 @@
   {
     "type": "function",
     "function": {
+      "name": "get_lp_offers",
+      "description": "List the loyalty point (LP) store of an NPC corporation and rank its offers by the ISK each loyalty point is worth. ISK per LP = (average price of the items given - the ISK cost - the average price of the required items) / the LP cost. The prices are ESI's daily average prices, not live market orders, so treat the figures as a guide; an offer with an item that has no average price (a blueprint copy has none) shows no ISK per LP and says why. A corporation without a store says so. Example: {\"corporation\":\"Caldari Navy\",\"limit\":5}. Another: Sisters of EVE offers matching 'probe', cheapest in LP first: {\"corporation\":\"Sisters of EVE\",\"item\":\"probe\",\"sort\":\"lp_cost\"}.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "corporation": {
+            "type": "string",
+            "description": "NPC corporation name, e.g. 'Caldari Navy', 'Sisters of EVE', 'Federation Navy'"
+          },
+          "item": {
+            "type": "string",
+            "description": "Keep offers whose item name contains this text, e.g. 'shield'"
+          },
+          "sort": {
+            "type": "string",
+            "enum": [
+              "isk_per_lp",
+              "lp_cost",
+              "name"
+            ],
+            "description": "Order of the offers: isk_per_lp (default, best first, offers without a value last), lp_cost (cheapest first) or name"
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 50,
+            "description": "Offers to list (1-50, default 20)"
+          }
+        },
+        "required": [
+          "corporation"
+        ]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
       "name": "get_npc_stations",
       "description": "List NPC stations, and find mission agents (for example the nearest level 4 security agent). With only system_name it lists that system's stations with owner and operation: use it for 'stations in X' or 'where can I dock'. With near, region, services, agent or limit it searches stations, nearest first (by gate jumps from near.origin), with owner, services, the refinery yield (Reprocessing Plant stations) and the matching agents, up to 50 per call with the total. Every agent in this build sits at a station, so 'nearest level 4 security agent to Dodixie' is the nearest station with such an agent. Example: {\"near\":{\"origin\":\"Dodixie\",\"max_jumps\":5},\"agent\":{\"level\":4,\"division\":\"security\"},\"limit\":3}. Another: stations within 1 jump of Dodixie with repair facilities: {\"near\":{\"origin\":\"Dodixie\",\"max_jumps\":1},\"services\":[\"Repair Facilities\"]}.",
       "parameters": {

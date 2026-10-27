@@ -46,7 +46,7 @@ func TestTiers_Policy(t *testing.T) {
 	want := map[catalog.Tier][]string{
 		catalog.TierPublic: {
 			"get_jumps_between", "get_jump_distances", "plan_jump_route", "get_average_prices", "get_market_history", "get_systems_in_region", "get_npc_stations", "find_systems", "get_system_info", "get_thera_connections", "get_reprocessing_yield",
-			"get_required_skills", "get_production_chain", "find_canonical_module", "search_item_by_name",
+			"get_required_skills", "get_production_chain", "find_canonical_module", "search_item_by_name", "get_lp_offers",
 			"get_ship_stats", "get_hull_facts", "get_ship_bonuses", "compute_fit_stats", "validate_fitting",
 			// the public ESI pass-throughs
 			"get_market_price", "get_type_info", "get_sovereignty", "get_system_activity",
@@ -88,12 +88,14 @@ func TestUpstreamTools(t *testing.T) {
 	require.Equal(t, map[string]string{
 		"get_market_price": "ESI", "get_type_info": "ESI", "get_sovereignty": "ESI", "get_system_activity": "ESI",
 		"get_market_history": "ESI", "get_thera_connections": "EvE-Scout", "plan_jump_route": "ESI",
-		"get_production_chain": "ESI",
+		"get_production_chain": "ESI", "get_lp_offers": "ESI",
 	}, got)
 	jump, _ := catalog.Lookup("plan_jump_route")
 	require.Equal(t, []string{"avoid_incursions", "live_info"}, jump.UpstreamArgs)
 	chain, _ := catalog.Lookup("get_production_chain")
 	require.Equal(t, []string{"system"}, chain.UpstreamArgs)
+	lp, _ := catalog.Lookup("get_lp_offers")
+	require.Empty(t, lp.UpstreamArgs, "live on every call")
 	thera, _ := catalog.Lookup("get_thera_connections")
 	require.True(t, thera.Upstream)
 	require.False(t, thera.LiveESI())
@@ -262,6 +264,7 @@ func TestTool_SpendsUpstream(t *testing.T) {
 	price, _ := catalog.Lookup("get_market_price")
 	find, _ := catalog.Lookup("find_systems")
 	chain, _ := catalog.Lookup("get_production_chain")
+	lp, _ := catalog.Lookup("get_lp_offers")
 	for _, c := range []struct {
 		tool catalog.Tool
 		args map[string]any
@@ -278,6 +281,7 @@ func TestTool_SpendsUpstream(t *testing.T) {
 		{chain, map[string]any{"system": "  "}, false},
 		{chain, map[string]any{"system": "Jita"}, true},
 		{chain, map[string]any{"include_cost": true}, false},
+		{lp, map[string]any{}, true},
 	} {
 		require.Equal(t, c.want, c.tool.SpendsUpstream(c.args), "%s %v", c.tool.Name, c.args)
 	}

@@ -1141,3 +1141,56 @@ type ChainCost struct {
 	// without include_cost, and when ESI has none.
 	ProductAveragePrice *float64 `json:"product_average_price"`
 }
+
+// LPOffers is the result of get_lp_offers: the loyalty point store of an NPC corporation.
+type LPOffers struct {
+	// Corporation is the corporation's name as the SDE spells it.
+	Corporation string `json:"corporation"`
+	// CorporationID is the NPC corporation's id.
+	CorporationID int `json:"corporation_id"`
+	// PricesAsOf is the date (YYYY-MM-DD, UTC) of the ESI average price list the values use;
+	// null when the list was unavailable (every value is then null).
+	PricesAsOf *string `json:"prices_as_of"`
+	// Total is the number of offers that match, before the limit.
+	Total int `json:"total"`
+	// Shown is the number of rows in Offers.
+	Shown int `json:"shown"`
+	// Offers is the page, in the order of the text lines.
+	Offers []LPOffer `json:"offers"`
+}
+
+// LPOffer is one offer of a loyalty point store.
+type LPOffer struct {
+	// OfferID is ESI's offer id.
+	OfferID int `json:"offer_id"`
+	// TypeID is the item type the offer sells.
+	TypeID int `json:"type_id"`
+	// Name is the item's name.
+	Name string `json:"name"`
+	// Quantity is the number of items the offer gives.
+	Quantity int `json:"quantity"`
+	// LPCost is the loyalty points the offer costs.
+	LPCost int `json:"lp_cost"`
+	// ISKCost is the ISK the offer costs on top of the points.
+	ISKCost float64 `json:"isk_cost"`
+	// AKCost is the Analysis Kredits the offer costs; 0 when none.
+	AKCost int `json:"ak_cost"`
+	// RequiredItems are the items the offer takes on top of points and ISK.
+	RequiredItems []LPItem `json:"required_items"`
+	// ValueISK is the average price of the items given, minus the ISK cost and the average
+	// price of the required items, in ISK; null when any item has no average price, the
+	// points cost is 0, or the price list is unavailable.
+	ValueISK *float64 `json:"value_isk"`
+	// ISKPerLP is ValueISK divided by LPCost; null when ValueISK is.
+	ISKPerLP *float64 `json:"isk_per_lp"`
+}
+
+// LPItem is an item an LP store offer requires.
+type LPItem struct {
+	// TypeID is the item type.
+	TypeID int `json:"type_id"`
+	// Name is the item's name.
+	Name string `json:"name"`
+	// Quantity is how many of it the offer takes.
+	Quantity int `json:"quantity"`
+}
