@@ -139,7 +139,8 @@ func publicDescriptions() map[string]string {
 			"Filter by ship_name (exact), activity (pvp / pve / hauler / exploration / mining / logistics), " +
 			"context (wh, abyss, abyss-electrical / firestorm / exotic / gamma / dark, abyss-t1..t6, ratting, solo), " +
 			"cost_class (cheap < 50M / mid 50-500M / blingy > 500M ISK), alpha_clone (true for Alpha-skill-friendly), " +
-			"combat_role (solo / fleet — zKillboard only), source (workbench / abysstracker / gustavmannfred / caldarijoans: restrict to one source), limit (default 5, at most 10). If nothing matches, the answer says 'NO FITS FOUND'; " +
+			"combat_role (solo / fleet — zKillboard only), source (workbench / abysstracker / gustavmannfred / caldarijoans: restrict to one source), limit (default 5, at most 10), fit_id (fetch one fit by the id that list_fits and get_fits print; the other filters are ignored), " +
+			"include_eft (false leaves the EFT blocks out and lists the ids only). If nothing matches, the answer says 'NO FITS FOUND'; " +
 			"dropping the most restrictive filter may find some.",
 	}
 }

@@ -2,7 +2,11 @@ package tools
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"net"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
@@ -185,4 +189,94 @@ func TestFmtTagList(t *testing.T) {
 	require.Equal(t, "abyss", fmtTagList([]string{"abyss"}))
 	require.Equal(t, "abyss,filament", fmtTagList([]string{"abyss", "filament"}))
 	require.Equal(t, "abyss,filament,t3", fmtTagList([]string{"abyss", "filament", "t3"}))
+}
+
+const (
+	gilaFitID1 = "6f1d3b2a-0c4e-5a7b-9d8e-1f2a3b4c5d6e"
+	gilaFitID2 = "0b9c8d7e-6f5a-5b4c-8d3e-2f1a0b9c8d7e"
+)
+
+// twoGilaFitsScroll is a scroll answer with two workbench Gila fits that carry point ids.
+const twoGilaFitsScroll = `{"result":{"points":[` +
+	`{"id":"` + gilaFitID1 + `","payload":{"source":"workbench","ship_name":"Gila","fit_name":"Gila One","score":0.4,"fit_tags":["pve"],"source_url":"https://example.invalid/fit/1","text":"[Gila, Gila One]\nRapid Light Missile Launcher II"}},` +
+	`{"id":"` + gilaFitID2 + `","payload":{"source":"workbench","ship_name":"Gila","fit_name":"Gila Two","score":0.3,"fit_tags":["pve"],"source_url":"https://example.invalid/fit/2","text":"[Gila, Gila Two]\nDamage Control II"}}]}}`
+
+// fakeCorpusDeps serves every scroll with scrollBody and every count with the number of
+// its points, behind a retriever; the deps are Public.
+func fakeCorpusDeps(t *testing.T, scrollBody string) *Deps {
+	t.Helper()
+	var parsed struct {
+		Result struct {
+			Points []json.RawMessage `json:"points"`
+		} `json:"result"`
+	}
+	require.NoError(t, json.Unmarshal([]byte(scrollBody), &parsed))
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if strings.HasSuffix(r.URL.Path, "/points/count") {
+			fmt.Fprintf(w, `{"result":{"count":%d}}`, len(parsed.Result.Points))
+			return
+		}
+		fmt.Fprint(w, scrollBody)
+	}))
+	t.Cleanup(srv.Close)
+	return &Deps{Retriever: rag.NewQdrantRetriever(srv.URL, corpus.DefaultCollection, nil, 5), Public: true}
+}
+
+func TestGetFits_FitIDErrors(t *testing.T) {
+	d := fakeCorpusDeps(t, `{"result":{"points":[]}}`)
+	text, data, _ := getFits(context.Background(), d, map[string]any{"fit_id": "wiki-chunk-7"})
+	require.Equal(t, "fit_id: not a fit id (a UUID from list_fits or get_fits).", text)
+	require.Nil(t, data)
+	text, data, _ = getFits(context.Background(), d, map[string]any{"fit_id": gilaFitID1})
+	require.Equal(t, "No community fit with id "+gilaFitID1+".", text)
+	require.Nil(t, data)
+}
+
+func TestGetFits_IncludeEFTFalseListsIDsOnly(t *testing.T) {
+	d := fakeCorpusDeps(t, twoGilaFitsScroll)
+	text, data, _ := getFits(context.Background(), d, map[string]any{"ship_name": "Gila", "include_eft": false})
+	require.NotContains(t, text, "[Gila,")
+	require.Contains(t, text, "| id=")
+	require.True(t, strings.HasSuffix(text, "EFT blocks left out: fetch one fit with get_fits fit_id."))
+	require.NotEmpty(t, data.Fits[0].FitID)
+	require.Empty(t, data.Fits[0].EFT)
+}
+
+func TestGetFits_FitIDReturnsOneFitLikeAOneHitSearch(t *testing.T) {
+	one := `{"result":{"points":[` + strings.SplitN(strings.TrimPrefix(twoGilaFitsScroll, `{"result":{"points":[`), "},{\"id", 2)[0] + `}]}}`
+	d := fakeCorpusDeps(t, one)
+	byID, data, err := getFits(context.Background(), d, map[string]any{"fit_id": strings.ToUpper(gilaFitID1), "ship_name": "Tengu"})
+	require.NoError(t, err)
+	viaSearch, _, err := getFits(context.Background(), d, map[string]any{"ship_name": "Gila"})
+	require.NoError(t, err)
+	require.Equal(t, viaSearch, byID, "fit_id ignores the other filters and answers like a one-hit search")
+	require.Contains(t, byID, "FOUND 1 community fit(s):")
+	require.Contains(t, byID, "| id="+gilaFitID1+" ---")
+	require.Contains(t, byID, "[Gila, Gila One]")
+	require.Equal(t, gilaFitID1, data.Fits[0].FitID)
+}
+
+func TestGetFits_ChatTextHasNoIDAndPublicHasOne(t *testing.T) {
+	d := fakeCorpusDeps(t, twoGilaFitsScroll)
+	d.Public = false
+	text, data, _ := getFits(context.Background(), d, map[string]any{"ship_name": "Gila"})
+	require.NotContains(t, text, "id=", "the chat text is unchanged")
+	require.Equal(t, gilaFitID1, data.Fits[0].FitID, "the typed result always carries the id")
+	d.Public = true
+	text, _, _ = getFits(context.Background(), d, map[string]any{"ship_name": "Gila"})
+	require.Contains(t, text, " | id="+gilaFitID1+" ---")
+	require.Contains(t, text, "[Gila, Gila One]", "the EFT stays by default")
+}
+
+func TestListFits_PublicRowsEndWithTheID(t *testing.T) {
+	d := fakeCorpusDeps(t, twoGilaFitsScroll)
+	text, data, _ := listFits(context.Background(), d, map[string]any{})
+	require.Contains(t, text, "| https://example.invalid/fit/1 | id="+gilaFitID1+"\n")
+	require.True(t, strings.HasSuffix(text, "| id="+gilaFitID2))
+	require.Equal(t, gilaFitID1, data.Fits[0].FitID)
+	d.Public = false
+	text, data, _ = listFits(context.Background(), d, map[string]any{})
+	require.NotContains(t, text, "id=")
+	require.Equal(t, gilaFitID1, data.Fits[0].FitID)
 }

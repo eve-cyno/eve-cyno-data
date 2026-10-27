@@ -6,17 +6,18 @@
     "limit": 5
   },
   "prompt": "List the Workbench fits for the Gila.",
-  "recorded": "2026-10-13",
+  "recorded": "2026-10-27",
   "response": {
     "tool": "list_fits",
-    "version": "0.10.0",
+    "version": "sha-a282490",
     "result": {
-      "text": "3 fit(s) match (showing first 3):\n1. Gila — Example PvE fit | tags: mid,pve | https://eve-cyno.dev/docs/examples/example-1\n2. Gila — Example ratting fit | tags: mid,pve,ratting | https://eve-cyno.dev/docs/examples/example-2\n3. Gila — Example blingy fit | tags: blingy,pve | https://eve-cyno.dev/docs/examples/example-3",
+      "text": "3 fit(s) match:\n1. Gila — Example PvE fit | tags: mid,pve | https://eve-cyno.dev/docs/examples/example-1 | id=dc09c35c-c02e-57f3-9a17-cf8e4bc5e6b8\n2. Gila — Example ratting fit | tags: mid,pve,ratting | https://eve-cyno.dev/docs/examples/example-2 | id=bfb77df5-5b49-5589-bc6a-b072964af908\n3. Gila — Example blingy fit | tags: blingy,pve | https://eve-cyno.dev/docs/examples/example-3 | id=d5aeebcf-9fc2-596f-b2f1-d99cb069f28f",
       "data": {
         "total": 3,
         "shown": 3,
         "fits": [
           {
+            "fit_id": "dc09c35c-c02e-57f3-9a17-cf8e4bc5e6b8",
             "ship_name": "Gila",
             "fit_name": "Example PvE fit",
             "tags": [
@@ -31,6 +32,7 @@
             }
           },
           {
+            "fit_id": "bfb77df5-5b49-5589-bc6a-b072964af908",
             "ship_name": "Gila",
             "fit_name": "Example ratting fit",
             "tags": [
@@ -46,6 +48,7 @@
             }
           },
           {
+            "fit_id": "d5aeebcf-9fc2-596f-b2f1-d99cb069f28f",
             "ship_name": "Gila",
             "fit_name": "Example blingy fit",
             "tags": [

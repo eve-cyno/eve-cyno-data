@@ -64,6 +64,8 @@ func fitSourceMatch() map[string]any {
 
 // FitHit is one scrolled community-fit point (payload only — no vector).
 type FitHit struct {
+	// ID is the Qdrant point id (a UUID string); "" when the backend sent none.
+	ID          string
 	Source      string
 	ShipName    string
 	FitTags     []string
@@ -249,6 +251,7 @@ func (r *QdrantRetriever) scrollFits(ctx context.Context, must []map[string]any,
 	var result struct {
 		Result struct {
 			Points []struct {
+				ID      any            `json:"id"`
 				Payload map[string]any `json:"payload"`
 			} `json:"points"`
 		} `json:"result"`
@@ -258,9 +261,33 @@ func (r *QdrantRetriever) scrollFits(ctx context.Context, must []map[string]any,
 	}
 	hits := make([]FitHit, 0, len(result.Result.Points))
 	for _, p := range result.Result.Points {
-		hits = append(hits, payloadToFitHit(p.Payload))
+		hits = append(hits, pointToFitHit(p.ID, p.Payload))
 	}
 	return hits, nil
+}
+
+// pointToFitHit is payloadToFitHit plus the point id.
+func pointToFitHit(id any, pl map[string]any) FitHit {
+	h := payloadToFitHit(pl)
+	if id != nil {
+		h.ID = fmt.Sprint(id)
+	}
+	return h
+}
+
+// FitByID returns the community fit with point id id: a point of a fit source
+// (corpus.FitSources) that is not quarantined, fetched by one scroll with a has_id
+// condition. ok is false when no such point exists.
+func (r *QdrantRetriever) FitByID(ctx context.Context, id string) (hit FitHit, ok bool, err error) {
+	must := []map[string]any{{"has_id": []any{id}}, fitSourceMatch()}
+	hits, err := r.scrollFits(ctx, must, 1)
+	if err != nil {
+		return FitHit{}, false, err
+	}
+	if len(hits) == 0 {
+		return FitHit{}, false, nil
+	}
+	return hits[0], true, nil
 }
 
 // payloadToFitHit converts a raw Qdrant payload map to a FitHit.
@@ -479,6 +506,7 @@ func (r *QdrantRetriever) ScrollListFits(ctx context.Context, q ListFitQuery) (L
 	var result struct {
 		Result struct {
 			Points []struct {
+				ID      any            `json:"id"`
 				Payload map[string]any `json:"payload"`
 			} `json:"points"`
 		} `json:"result"`
@@ -488,7 +516,7 @@ func (r *QdrantRetriever) ScrollListFits(ctx context.Context, q ListFitQuery) (L
 	}
 	hits := make([]FitHit, 0, len(result.Result.Points))
 	for _, p := range result.Result.Points {
-		hits = append(hits, payloadToFitHit(p.Payload))
+		hits = append(hits, pointToFitHit(p.ID, p.Payload))
 	}
 	return ListFitScrollResult{Total: total, Points: hits, Clamped: clamped}, nil
 }

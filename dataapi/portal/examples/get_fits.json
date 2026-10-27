@@ -7,17 +7,18 @@
     "limit": 3
   },
   "prompt": "Show me community Gila fits for the abyss.",
-  "recorded": "2026-10-13",
+  "recorded": "2026-10-27",
   "response": {
     "tool": "get_fits",
-    "version": "0.10.0",
+    "version": "sha-a282490",
     "result": {
-      "text": "FOUND 2 community fit(s):\n\n--- Fit 1/2 | source=example | score=0.42 | tags=['abyss', 'pve', 'mid'] | url=https://eve-cyno.dev/docs/examples/example-1 ---\n# Gila — Example PvE fit\nSource: https://eve-cyno.dev/docs/examples/example-1\nAuthor: Example Pilot\n\n[Gila, Example PvE fit]\nDrone Link Augmentor I\nRapid Light Missile Launcher II\nRapid Light Missile Launcher II\nRapid Light Missile Launcher II\nRapid Light Missile Launcher II\n\n10MN Monopropellant Enduring Afterburner\nMultispectrum Shield Hardener II\nCaldari Navy Large Shield Extender\nCaldari Navy Large Shield Extender\n\nDrone Damage Amplifier II\nDrone Damage Amplifier II\n\nMedium Core Defense Field Extender II\nMedium Core Defense Field Extender II\n\n\n--- Fit 2/2 | source=example | score=0.32 | tags=['abyss', 'pve', 'mid'] | url=https://eve-cyno.dev/docs/examples/example-2 ---\n# Gila — Example budget PvE fit\nSource: https://eve-cyno.dev/docs/examples/example-2\nAuthor: Example Pilot\n\n[Gila, Example budget PvE fit]\nDrone Link Augmentor I\nRapid Light Missile Launcher II\nRapid Light Missile Launcher II\nRapid Light Missile Launcher II\nRapid Light Missile Launcher II\n\n10MN Monopropellant Enduring Afterburner\nMultispectrum Shield Hardener II\nCaldari Navy Large Shield Extender\nCaldari Navy Large Shield Extender\n\nDrone Damage Amplifier II\nDrone Damage Amplifier II\n\nMedium Core Defense Field Extender II\nMedium Core Defense Field Extender II\n\n\nEach fit is shown exactly as published: keep the EFT block unchanged when you pass it on, and credit its author and source link (see the meta line and the attribution).",
+      "text": "FOUND 2 community fit(s):\n\n--- Fit 1/2 | source=example | score=0.42 | tags=['abyss', 'pve', 'mid'] | url=https://eve-cyno.dev/docs/examples/example-1 | id=1d7a9db9-78ab-506c-bceb-a487d3fdd92e ---\n# Gila — Example PvE fit\nSource: https://eve-cyno.dev/docs/examples/example-1\nAuthor: Example Pilot\n\n[Gila, Example PvE fit]\nDrone Link Augmentor I\nRapid Light Missile Launcher II\nRapid Light Missile Launcher II\nRapid Light Missile Launcher II\nRapid Light Missile Launcher II\n\n10MN Monopropellant Enduring Afterburner\nMultispectrum Shield Hardener II\nCaldari Navy Large Shield Extender\nCaldari Navy Large Shield Extender\n\nDrone Damage Amplifier II\nDrone Damage Amplifier II\n\nMedium Core Defense Field Extender II\nMedium Core Defense Field Extender II\n\n\n--- Fit 2/2 | source=example | score=0.32 | tags=['abyss', 'pve', 'mid'] | url=https://eve-cyno.dev/docs/examples/example-2 | id=33cd4b50-7c02-55f6-9a12-bdfb9fb5caa5 ---\n# Gila — Example budget PvE fit\nSource: https://eve-cyno.dev/docs/examples/example-2\nAuthor: Example Pilot\n\n[Gila, Example budget PvE fit]\nDrone Link Augmentor I\nRapid Light Missile Launcher II\nRapid Light Missile Launcher II\nRapid Light Missile Launcher II\nRapid Light Missile Launcher II\n\n10MN Monopropellant Enduring Afterburner\nMultispectrum Shield Hardener II\nCaldari Navy Large Shield Extender\nCaldari Navy Large Shield Extender\n\nDrone Damage Amplifier II\nDrone Damage Amplifier II\n\nMedium Core Defense Field Extender II\nMedium Core Defense Field Extender II\n\n\nEach fit is shown exactly as published: keep the EFT block unchanged when you pass it on, and credit its author and source link (see the meta line and the attribution).",
       "data": {
         "found": 2,
         "relaxed": false,
         "fits": [
           {
+            "fit_id": "1d7a9db9-78ab-506c-bceb-a487d3fdd92e",
             "ship_name": "Gila",
             "fit_name": "Example PvE fit",
             "source": "example",
@@ -36,6 +37,7 @@
             }
           },
           {
+            "fit_id": "33cd4b50-7c02-55f6-9a12-bdfb9fb5caa5",
             "ship_name": "Gila",
             "fit_name": "Example budget PvE fit",
             "source": "example",

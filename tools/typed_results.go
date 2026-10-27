@@ -419,6 +419,9 @@ type CommunityFits struct {
 
 // CommunityFit is one fit of a CommunityFits.
 type CommunityFit struct {
+	// FitID is the fit's id (a UUID): pass it to get_fits as fit_id to fetch this fit alone.
+	// Empty when the backend sent none.
+	FitID     string   `json:"fit_id"`
 	ShipName  string   `json:"ship_name"`
 	FitName   string   `json:"fit_name"`
 	Source    string   `json:"source"`
@@ -426,6 +429,7 @@ type CommunityFit struct {
 	Tags      []string `json:"tags"`
 	Score     float64  `json:"score"`
 	// EFT is the fit text as stored (the markdown header some sources prepend included).
+	// It is empty when the call set include_eft to false.
 	EFT         string          `json:"eft"`
 	Attribution rag.Attribution `json:"attribution"`
 }
@@ -440,6 +444,9 @@ type FitListing struct {
 
 // FitListRow is one row of a FitListing.
 type FitListRow struct {
+	// FitID is the fit's id (a UUID): pass it to get_fits as fit_id to fetch this fit alone.
+	// Empty when the backend sent none.
+	FitID       string          `json:"fit_id"`
 	ShipName    string          `json:"ship_name"`
 	FitName     string          `json:"fit_name"`
 	Tags        []string        `json:"tags"`

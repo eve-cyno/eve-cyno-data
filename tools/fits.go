@@ -3,6 +3,7 @@ package tools
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"sort"
 	"strings"
 
@@ -99,10 +100,97 @@ func fitsFooter(public bool) string {
 	return _verbatimRule
 }
 
+// fitIDPattern is the shape of a community-fit id: the UUID the corpus uses as point id.
+var fitIDPattern = regexp.MustCompile(`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`)
+
+// eftLeftOutLine is the last line of a get_fits answer without EFT blocks.
+const eftLeftOutLine = "EFT blocks left out: fetch one fit with get_fits fit_id."
+
+// includeEFTArg reads include_eft: true unless the caller sent an explicit false.
+func includeEFTArg(args map[string]any) bool {
+	v, ok := args["include_eft"].(bool)
+	return !ok || v
+}
+
+// renderFits writes the fit blocks of a get_fits answer (header excluded) and the typed
+// rows. The id rides every meta line in the public text and whenever the EFT is left out.
+func renderFits(hits []rag.FitHit, deps *Deps, includeEFT bool) (lines []string, rows []CommunityFit) {
+	showID := deps.Public || !includeEFT
+	rows = make([]CommunityFit, 0, len(hits))
+	for i, h := range hits {
+		url := h.Attribution.SourceURL // the stored link, or the first killmail's
+		if url == "" {
+			url = "n/a"
+		}
+		idPart := ""
+		if showID && h.ID != "" {
+			idPart = " | id=" + h.ID
+		}
+		lines = append(lines, fmt.Sprintf(
+			"--- Fit %d/%d | source=%s | score=%.2f | tags=%s | url=%s%s ---",
+			i+1, len(hits),
+			h.Source,
+			h.Score,
+			pyListRepr(h.FitTags),
+			url,
+			idPart,
+		))
+		row := CommunityFit{
+			FitID: h.ID, ShipName: h.ShipName, FitName: h.FitName, Source: h.Source, SourceURL: h.Attribution.SourceURL,
+			Tags: nonNilStrings(h.FitTags), Score: h.Score, Attribution: h.Attribution,
+		}
+		if includeEFT {
+			row.EFT = h.Text
+			text := h.Text
+			if text == "" {
+				text = "(empty)"
+			}
+			lines = append(lines, text, "")
+		}
+		rows = append(rows, row)
+	}
+	return lines, rows
+}
+
+// getFitByID answers get_fits with fit_id: one fit, shaped like a one-hit get_fits.
+func getFitByID(ctx context.Context, deps *Deps, id string, includeEFT bool) (string, *CommunityFits, error) {
+	if !fitIDPattern.MatchString(id) {
+		return "fit_id: not a fit id (a UUID from list_fits or get_fits).", nil, nil
+	}
+	hit, ok, err := deps.Retriever.FitByID(ctx, strings.ToLower(id))
+	if err != nil {
+		return fmt.Sprintf("[get_fits error: %v]", err), nil, nil
+	}
+	if !ok {
+		return fmt.Sprintf("No community fit with id %s.", id), nil, nil
+	}
+	return fitsAnswer(nil, []rag.FitHit{hit}, false, deps, includeEFT)
+}
+
+// fitsAnswer joins the note, header, fit blocks and footer of a get_fits answer with hits.
+func fitsAnswer(head []string, hits []rag.FitHit, relaxed bool, deps *Deps, includeEFT bool) (string, *CommunityFits, error) {
+	out := head
+	// Without EFT the "copy each EFT block" header would be false: use the plain one.
+	out = append(out, foundHeader(len(hits), deps.Public || !includeEFT))
+	lines, rows := renderFits(hits, deps, includeEFT)
+	out = append(out, lines...)
+	if includeEFT {
+		out = append(out, fitsFooter(deps.Public))
+	} else {
+		out = append(out, eftLeftOutLine)
+	}
+	return strings.Join(out, "\n"), &CommunityFits{Found: len(hits), Relaxed: relaxed, Fits: rows}, nil
+}
+
 // getFits implements the get_fits tool — byte-parity with Python _get_fits.
 func getFits(ctx context.Context, deps *Deps, args map[string]any) (string, *CommunityFits, error) {
 	if deps.Retriever == nil {
 		return "[get_fits error: the community-fit corpus is not configured on this server]", nil, nil
+	}
+
+	includeEFT := includeEFTArg(args)
+	if id := strings.TrimSpace(strArg(args, "fit_id")); id != "" {
+		return getFitByID(ctx, deps, id, includeEFT)
 	}
 
 	q := rag.FitQuery{
@@ -190,7 +278,7 @@ func getFits(ctx context.Context, deps *Deps, args map[string]any) (string, *Com
 		hits = hits[:bounded]
 	}
 
-	var out []string
+	var head []string
 
 	// --- relaxation NOTE header ---
 	if res.Relaxed {
@@ -199,40 +287,10 @@ func getFits(ctx context.Context, deps *Deps, args map[string]any) (string, *Com
 			parts = append(parts, fmt.Sprintf("%s=%s", f.Key, pyRepr(f.Value)))
 		}
 		relaxedStr := strings.Join(parts, ", ")
-		out = append(out, relaxedNote(relaxedStr, pyRepr(q.ShipName), deps.Public))
+		head = append(head, relaxedNote(relaxedStr, pyRepr(q.ShipName), deps.Public))
 	}
 
-	out = append(out, foundHeader(len(hits), deps.Public))
-
-	data := &CommunityFits{Found: len(hits), Relaxed: res.Relaxed, Fits: make([]CommunityFit, 0, len(hits))}
-	for i, h := range hits {
-		url := h.Attribution.SourceURL // the stored link, or the first killmail's
-		if url == "" {
-			url = "n/a"
-		}
-		meta := fmt.Sprintf(
-			"--- Fit %d/%d | source=%s | score=%.2f | tags=%s | url=%s ---",
-			i+1, len(hits),
-			h.Source,
-			h.Score,
-			pyListRepr(h.FitTags),
-			url,
-		)
-		out = append(out, meta)
-		data.Fits = append(data.Fits, CommunityFit{
-			ShipName: h.ShipName, FitName: h.FitName, Source: h.Source, SourceURL: h.Attribution.SourceURL,
-			Tags: nonNilStrings(h.FitTags), Score: h.Score, EFT: h.Text, Attribution: h.Attribution,
-		})
-		text := h.Text
-		if text == "" {
-			text = "(empty)"
-		}
-		out = append(out, text)
-		out = append(out, "")
-	}
-
-	out = append(out, fitsFooter(deps.Public))
-	return strings.Join(out, "\n"), data, nil
+	return fitsAnswer(head, hits, res.Relaxed, deps, includeEFT)
 }
 
 // fmtTagList formats a fit_tags value the same way Python _fmt_list does:
@@ -307,9 +365,13 @@ func listFits(ctx context.Context, deps *Deps, args map[string]any) (string, *Fi
 		tags := fmtTagList(h.FitTags)
 		url := h.Attribution.SourceURL // the stored link, or the first killmail's
 		data.Fits = append(data.Fits, FitListRow{
-			ShipName: h.ShipName, FitName: name, Tags: nonNilStrings(h.FitTags), SourceURL: url, Attribution: h.Attribution,
+			FitID: h.ID, ShipName: h.ShipName, FitName: name, Tags: nonNilStrings(h.FitTags), SourceURL: url, Attribution: h.Attribution,
 		})
-		rows = append(rows, fmt.Sprintf("%d. %s — %s | tags: %s | %s", i+1, ship, name, tags, url))
+		row := fmt.Sprintf("%d. %s — %s | tags: %s | %s", i+1, ship, name, tags, url)
+		if deps.Public && h.ID != "" {
+			row += " | id=" + h.ID
+		}
+		rows = append(rows, row)
 	}
 
 	// header: "{total} fit(s) match[ (showing first {n})]:\n"

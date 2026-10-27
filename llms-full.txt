@@ -223,7 +223,7 @@ Authoritative SDE snapshot of a hull's fitting envelope — slot/hardpoint count
 
 ### get_fits
 
-Retrieve community ship fits from the indexed fit database, with author and source link for each. Returns the raw EFT text (header + modules + drones + ammo) and the source URL for each match. Filter by ship_name (exact), activity (pvp / pve / hauler / exploration / mining / logistics), context (wh, abyss, abyss-electrical / firestorm / exotic / gamma / dark, abyss-t1..t6, ratting, solo), cost_class (cheap < 50M / mid 50-500M / blingy > 500M ISK), alpha_clone (true for Alpha-skill-friendly), combat_role (solo / fleet — zKillboard only), source (workbench / abysstracker / gustavmannfred / caldarijoans: restrict to one source), limit (default 5, at most 10). If nothing matches, the answer says 'NO FITS FOUND'; dropping the most restrictive filter may find some.
+Retrieve community ship fits from the indexed fit database, with author and source link for each. Returns the raw EFT text (header + modules + drones + ammo) and the source URL for each match. Filter by ship_name (exact), activity (pvp / pve / hauler / exploration / mining / logistics), context (wh, abyss, abyss-electrical / firestorm / exotic / gamma / dark, abyss-t1..t6, ratting, solo), cost_class (cheap < 50M / mid 50-500M / blingy > 500M ISK), alpha_clone (true for Alpha-skill-friendly), combat_role (solo / fleet — zKillboard only), source (workbench / abysstracker / gustavmannfred / caldarijoans: restrict to one source), limit (default 5, at most 10), fit_id (fetch one fit by the id that list_fits and get_fits print; the other filters are ignored), include_eft (false leaves the EFT blocks out and lists the ids only). If nothing matches, the answer says 'NO FITS FOUND'; dropping the most restrictive filter may find some.
 
 - Call: `POST /v1/tool/get_fits` or MCP tool `get_fits`
 - Access: public. No key needed.
@@ -233,6 +233,8 @@ Retrieve community ship fits from the indexed fit database, with author and sour
   - `combat_role` (string): Workbench-derived role tag for PvP fits. One of: solo, fleet.
   - `context` (string): Subcontext tag. Examples: 'wh' (wormhole), 'abyss' (any abyss), 'abyss-electrical', 'abyss-firestorm', 'abyss-exotic', 'abyss-gamma', 'abyss-dark', 'abyss-t1', 'abyss-t2', 'abyss-t3', 'abyss-t4', 'abyss-t5', 'abyss-t6', 'ratting', 'solo'.
   - `cost_class` (string): cheap (< 50M ISK), mid (50-500M), blingy (> 500M). One of: cheap, mid, blingy.
+  - `fit_id` (string): Fetch one fit by its id (a UUID from the id= field of get_fits or list_fits). The other filters are ignored. Example: '6f1d3b2a-0c4e-5a7b-9d8e-1f2a3b4c5d6e'.
+  - `include_eft` (boolean): Default true. false leaves the EFT blocks out and lists only the meta line and id of each fit, to browse cheaply before fetching one with fit_id.
   - `limit` (integer): Max number of fits to return (default 5, hard max 10).
   - `ship_name` (string): Exact EVE ship name. Examples: 'Tengu', 'Gila', 'Hurricane Fleet Issue', 'Vexor Navy Issue'. Leave empty to search across all ships matching the other filters.
   - `source` (string): Restrict to one source. Leave empty to search all sources. Use 'gustavmannfred' for Gustav's abyss fits (gustavmannfred.streamlit.app), 'caldarijoans' for CaldariJoans' abyss fits (caldarijoans.streamlit.app). Pass this when the user explicitly asks for a specific author's fit. One of: workbench, abysstracker, gustavmannfred, caldarijoans.

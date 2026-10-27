@@ -4,6 +4,7 @@ package rag
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -177,4 +178,41 @@ func TestSearchFits_excludesQuarantinedByDefault(t *testing.T) {
 		require.True(t, ok)
 		requireQuarantineMustNot(t, filter)
 	})
+}
+
+func TestFitByID_OnlyFitSourcesAndNotQuarantined(t *testing.T) {
+	var body []byte
+	srv := captureBody(t, &body, `{"result":{"points":[{"id":"6f1d3b2a-0c4e-5a7b-9d8e-1f2a3b4c5d6e","payload":{"source":"workbench","ship_name":"Gila","text":"[Gila, x]"}}]}}`)
+	defer srv.Close()
+	hit, ok, err := NewQdrantRetriever(srv.URL, "c", fakeEmbed{}, 5).FitByID(context.Background(), "6f1d3b2a-0c4e-5a7b-9d8e-1f2a3b4c5d6e")
+	require.NoError(t, err)
+	require.True(t, ok)
+	require.Equal(t, "6f1d3b2a-0c4e-5a7b-9d8e-1f2a3b4c5d6e", hit.ID)
+	var req map[string]any
+	require.NoError(t, json.Unmarshal(body, &req))
+	filter := req["filter"].(map[string]any)
+	requireQuarantineMustNot(t, filter)
+	must := fmt.Sprint(filter["must"])
+	require.Contains(t, must, "has_id")
+	require.Contains(t, must, "workbench") // the fit-source match is part of the filter
+	require.EqualValues(t, 1, req["limit"])
+}
+
+func TestFitByID_NoPointIsNotFound(t *testing.T) {
+	var body []byte
+	srv := captureBody(t, &body, `{"result":{"points":[]}}`)
+	defer srv.Close()
+	_, ok, err := NewQdrantRetriever(srv.URL, "c", fakeEmbed{}, 5).FitByID(context.Background(), "6f1d3b2a-0c4e-5a7b-9d8e-1f2a3b4c5d6e")
+	require.NoError(t, err)
+	require.False(t, ok)
+}
+
+func TestScrollFits_HitsCarryThePointID(t *testing.T) {
+	var body []byte
+	srv := captureBody(t, &body, `{"result":{"points":[{"id":"6f1d3b2a-0c4e-5a7b-9d8e-1f2a3b4c5d6e","payload":{"source":"workbench","ship_name":"Gila"}},{"payload":{"source":"workbench"}}]}}`)
+	defer srv.Close()
+	hits, err := NewQdrantRetriever(srv.URL, "c", fakeEmbed{}, 5).scrollFits(context.Background(), nil, 2)
+	require.NoError(t, err)
+	require.Equal(t, "6f1d3b2a-0c4e-5a7b-9d8e-1f2a3b4c5d6e", hits[0].ID)
+	require.Equal(t, "", hits[1].ID, "no id from the backend stays empty")
 }
