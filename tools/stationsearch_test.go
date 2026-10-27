@@ -81,3 +81,15 @@ func TestNPCStations_NoMatchAndWording(t *testing.T) {
 	require.True(t, strings.HasPrefix(text, "NPC stations by jumps from Dodixie with an agent (1 of "), text)
 	require.NotEmpty(t, list.Stations[0].Agents)
 }
+
+// With no system_name and no search parameter the answer is one line, not "Unknown system: .".
+func TestNPCStations_NoArgumentsIsAskedFor(t *testing.T) {
+	for _, args := range []map[string]any{
+		{}, {"system_name": ""}, {"system_name": "  ", "agent": nil, "near": nil, "services": []any{}},
+	} {
+		res, err := ExecuteToolResult(context.Background(), testDeps(t), "get_npc_stations", args)
+		require.NoError(t, err)
+		require.Equal(t, "Give system_name, or near, region, services or agent.", res.Text)
+		require.Nil(t, res.Data)
+	}
+}

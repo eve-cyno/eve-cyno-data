@@ -1171,7 +1171,9 @@ paths:
                   description: 'Solar system where the job runs, e.g. ''Jita''. Reads its current manufacturing cost index from ESI and prices the job fee in ISK (live: counts against the live limit). Give this or system_cost_index, not both.'
                 system_cost_index:
                   type: number
-                  description: 'System manufacturing cost index 0.0-0.20 (default 0.0). Adds a job fee note: job cost = estimated item value × (cost index + facility tax + 4% SCC surcharge), where the estimated item value is the ME 0 inputs at ESI adjusted prices and an NPC station charges 0.25% facility tax; a player structure sets its own facility tax and its bonuses lower the cost index part, and each sub-component job pays its own fee. Set to the user''s quoted system index when they ask for a fee estimate, or give system to read it.'
+                  description: 'System manufacturing cost index as a fraction, 0.0-1.0 (real indices stay below about 0.20; default 0.0). Adds a job fee note: job cost = estimated item value × (cost index + facility tax + 4% SCC surcharge), where the estimated item value is the ME 0 inputs at ESI adjusted prices and an NPC station charges 0.25% facility tax; a player structure sets its own facility tax and its bonuses lower the cost index part, and each sub-component job pays its own fee. Set to the user''s quoted system index when they ask for a fee estimate, or give system to read it.'
+                  minimum: 0
+                  maximum: 1
               required:
                 - item_name
       responses:

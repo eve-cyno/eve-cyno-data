@@ -39,6 +39,7 @@ func TestSchemaCapsMatchTheCode(t *testing.T) {
 		{"plan_jump_route", "skills.jump_freighters"}:         maxSkillLevel,
 		{"get_reprocessing_yield", "quantity"}:                maxReprocessQuantity,
 		{"get_production_chain", "runs"}:                      maxProductionRuns,
+		{"get_production_chain", "system_cost_index"}:         maxCostIndex,
 		{"get_production_chain", "facility_tax_pct"}:          maxFacilityTaxPct,
 		{"get_required_skills", "items"}:                      maxSkillItems,
 		{"get_required_skills", "attributes.perception"}:      maxAttribute,

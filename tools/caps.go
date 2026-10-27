@@ -24,6 +24,7 @@ const (
 	maxRouteJumps        = 100           // plan_jump_route: jumps listed in one answer
 	maxReprocessQuantity = 1_000_000_000 // get_reprocessing_yield: quantity
 	maxProductionRuns    = 10_000        // get_production_chain: runs
+	maxCostIndex         = 1             // get_production_chain: system_cost_index (a fraction; real indices stay well below it)
 	maxFacilityTaxPct    = 10            // get_production_chain: facility_tax_pct (EVE University: industry taxes are capped at 10%)
 	// maxItemFacts is conditional (names with details), so the schema has no maxItems for it:
 	// the tool text and a test pin it instead.

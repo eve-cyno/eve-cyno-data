@@ -286,3 +286,32 @@ func TestProductionCost_IndexBackoffIsAnError(t *testing.T) {
 	require.True(t, busy)
 	require.Nil(t, chain)
 }
+
+// The cost index is a fraction: a huge or non-finite value is a range line, never a +Inf fee
+// that the JSON encoder cannot write.
+func TestProductionChain_CostIndexIsBounded(t *testing.T) {
+	c, _ := newFakeESIClient(t, industryHandler(industryPricesBody, industrySystemsBody, http.StatusOK))
+	deps := &Deps{SDE: testSDE(t), Client: c}
+	for raw, want := range map[any]string{
+		1e308:       "system_cost_index: 0 to 1 (got 1e+308).",
+		1.0000001:   "system_cost_index: 0 to 1 (got 1.0000001).",
+		-0.5:        "system_cost_index: 0 to 1 (got -0.5).",
+		math.Inf(1): "system_cost_index: 0 to 1 (got +Inf).",
+		math.NaN():  "system_cost_index: 0 to 1 (got NaN).",
+	} {
+		res, err := ExecuteToolResult(context.Background(), deps, "get_production_chain", map[string]any{
+			"item_name": "Rifter", "include_cost": true, "system_cost_index": raw,
+		})
+		require.NoError(t, err)
+		require.Equal(t, want, res.Text)
+		require.Nil(t, res.Data)
+	}
+	res, err := ExecuteToolResult(context.Background(), deps, "get_production_chain", map[string]any{
+		"item_name": "Rifter", "include_cost": true, "system_cost_index": 0.05,
+	})
+	require.NoError(t, err)
+	require.Contains(t, res.Text, "manufacturing cost index 0.0500")
+	chain, ok := res.Data.(*ProductionChain)
+	require.True(t, ok)
+	require.False(t, math.IsInf(*chain.Cost.JobFee, 0))
+}

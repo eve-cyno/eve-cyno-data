@@ -509,6 +509,9 @@ func getProductionChain(ctx context.Context, c *Client, s *sde.SDE, req producti
 	if systemCostIndex > 0 && systemName != "" {
 		return "system_cost_index and system: give one, not both.", nil, nil
 	}
+	if !(systemCostIndex >= 0 && systemCostIndex <= maxCostIndex) { // also NaN and Inf
+		return fmt.Sprintf("system_cost_index: 0 to %d (got %g).", maxCostIndex, systemCostIndex), nil, nil
+	}
 	if tax := req.facilityTax(); !(tax >= 0 && tax <= maxFacilityTaxPct) { // also NaN
 		return fmt.Sprintf("facility_tax_pct: 0 to %d (got %g).", maxFacilityTaxPct, tax), nil, nil
 	}

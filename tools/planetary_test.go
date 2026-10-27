@@ -40,7 +40,7 @@ func TestPlanetaryChain_StepsAreOrderedAndExact(t *testing.T) {
 	var order []string
 	for _, st := range chain.Steps {
 		order = append(order, st.Tier+" "+st.Name)
-		require.Equal(t, 97 == st.SchematicID, st.Tier == "P3")
+		require.Equal(t, st.SchematicID == 97, st.Tier == "P3")
 	}
 	require.Equal(t, []string{"P3 Robotics", "P2 Consumer Electronics", "P2 Mechanical Parts",
 		"P1 Chiral Structures", "P1 Precious Metals", "P1 Reactive Metals", "P1 Toxic Metals"}, order)

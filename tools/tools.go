@@ -127,6 +127,9 @@ func dispatch(ctx context.Context, deps *Deps, name string, arguments map[string
 			return typed(text, list, nil)
 		}
 		system, _ := arguments["system_name"].(string)
+		if strings.TrimSpace(system) == "" {
+			return plain("Give system_name, or near, region, services or agent.")
+		}
 		return typed(getNPCStations(deps.SDE, system), stationsOf(deps.SDE, system), nil)
 
 	case "get_reprocessing_yield":
