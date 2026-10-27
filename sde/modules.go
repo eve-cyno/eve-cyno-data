@@ -168,10 +168,11 @@ func (s *SDE) SearchItems(f ItemSearch) []ModuleHit {
 	return s.searchItems(f, 0)
 }
 
-// metaGroupJoin and metaGroupWhere filter on the meta group name; a type with no invMetaTypes
+// invMetaTypes keeps its ids as TEXT: the type id is joined in its text form so
+// idx_invmetatypes_type is used. metaGroupJoin and metaGroupWhere filter on the meta group name; a type with no invMetaTypes
 // row counts as Tech I, matching GetItemMetaTier.
 const metaGroupJoin = `
-LEFT JOIN invMetaTypes mt ON CAST(mt.typeID AS INTEGER) = t.typeID
+LEFT JOIN invMetaTypes mt ON mt.typeID = CAST(t.typeID AS TEXT)
 LEFT JOIN invMetaGroups mg ON CAST(mg.metaGroupID AS INTEGER) = CAST(mt.metaGroupID AS INTEGER)`
 
 const metaGroupWhere = " AND lower(COALESCE(mg.metaGroupName, 'Tech I')) = ?"

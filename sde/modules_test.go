@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"path/filepath"
 	"sort"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -126,4 +127,37 @@ func TestMetaGroupNames(t *testing.T) {
 	require.True(t, sort.StringsAreSorted(names))
 	require.Contains(t, names, "Tech II")
 	require.Contains(t, names, "Abyssal")
+}
+
+// TestSearchItems_MetaJoinUsesTheIndex pins that the meta group filter looks up
+// invMetaTypes by its index instead of scanning it for every type.
+func TestSearchItems_MetaJoinUsesTheIndex(t *testing.T) {
+	s := testSDE(t)
+	rows, err := s.db.Query("EXPLAIN QUERY PLAN SELECT t.typeID FROM invTypes t"+metaGroupJoin+" WHERE t.typeName LIKE ?"+metaGroupWhere, "%er%", "tech i")
+	require.NoError(t, err)
+	defer rows.Close()
+	var plan []string
+	for rows.Next() {
+		var id, parent, unused int
+		var detail string
+		require.NoError(t, rows.Scan(&id, &parent, &unused, &detail))
+		plan = append(plan, detail)
+	}
+	joined := strings.Join(plan, "\n")
+	require.Contains(t, joined, "idx_invmetatypes_type", joined)
+	require.NotContains(t, joined, "SCAN mt", joined)
+
+	// Same hits as the unfiltered list narrowed by tier.
+	all := s.SearchItems(ItemSearch{Query: "Shield Extender", Slot: "mid"})
+	var want []int
+	for _, h := range all {
+		if h.MetaTier == "Tech II" {
+			want = append(want, h.TypeID)
+		}
+	}
+	var got []int
+	for _, h := range s.SearchItems(ItemSearch{Query: "Shield Extender", Slot: "mid", MetaGroup: "Tech II"}) {
+		got = append(got, h.TypeID)
+	}
+	require.Equal(t, want, got)
 }
