@@ -12,6 +12,7 @@ func TestDispatch_EmptyDepsNeverPanics(t *testing.T) {
 		require.NotPanics(t, func() {
 			_, _ = ExecuteTool(testCtx(t), &Deps{}, name, map[string]any{
 				"type_id": 34.0, "item_name": "Tritanium", "amount": 1.0, "ship_name": "Rifter", "names": []any{"Tritanium"},
+				"corporation": "Caldari Navy",
 			})
 		}, name)
 	}
@@ -24,7 +25,7 @@ func TestDispatch_NilClientWithSDENeverPanics(t *testing.T) {
 	deps := &Deps{SDE: testDeps(t).SDE}
 	base := map[string]any{
 		"type_id": 34.0, "item_name": "Tritanium", "amount": 1.0, "ship_name": "Rifter", "names": []any{"Tritanium"},
-		"system_name": "Jita", "systems": []any{"Jita", "Amarr"}, "system": "Jita",
+		"system_name": "Jita", "systems": []any{"Jita", "Amarr"}, "system": "Jita", "corporation": "Caldari Navy",
 	}
 	variants := []map[string]any{
 		base,

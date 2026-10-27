@@ -6,6 +6,8 @@ import (
 	"strings"
 	"testing"
 
+	"eve-cyno.dev/go/data/esi"
+
 	"github.com/stretchr/testify/require"
 )
 
@@ -76,8 +78,10 @@ func TestLPOffers_StoreStatuses(t *testing.T) {
 		require.Nil(t, data)
 	}
 	c, _ := newFakeESIClient(t, lpHandler(`{"error":"boom"}`, http.StatusInternalServerError, lpPricesBody))
-	text, data, _ := getLPOffers(context.Background(), c, s, map[string]any{"corporation": "Caldari Navy"})
-	require.NotEmpty(t, text)
+	text, data, err := getLPOffers(context.Background(), c, s, map[string]any{"corporation": "Caldari Navy"})
+	require.NoError(t, err)
+	require.Contains(t, text, "ESI request failed")
+	require.NotContains(t, text, "has no loyalty point store")
 	require.Nil(t, data)
 	text, _, _ = getLPOffers(context.Background(), c, s, map[string]any{"corporation": "Caldari Navyy"})
 	require.Equal(t, "Unknown corporation: Caldari Navyy.", text)
@@ -87,9 +91,64 @@ func TestLPOffers_StoreStatuses(t *testing.T) {
 
 func TestLPOffers_ItemFilterAndSort(t *testing.T) {
 	c, _ := newFakeESIClient(t, lpHandler(lpOffersBody, http.StatusOK, lpPricesBody))
-	text, data, _ := getLPOffers(context.Background(), c, testSDE(t), map[string]any{"corporation": "Caldari Navy", "item": "shield", "sort": "lp_cost"})
+	s := testSDE(t)
+	text, data, _ := getLPOffers(context.Background(), c, s, map[string]any{"corporation": "Caldari Navy", "item": "shield", "sort": "lp_cost"})
 	require.Equal(t, 1, data.Total)
 	require.Contains(t, text, ": 1 of 1 offers matching \"shield\", by LP cost")
+
+	// "caldari navy" matches all three offers; the order is the sort's.
+	names := func(sortBy string) []string {
+		t.Helper()
+		_, d, err := getLPOffers(context.Background(), c, s, map[string]any{"corporation": "Caldari Navy", "item": "caldari navy", "sort": sortBy})
+		require.NoError(t, err)
+		require.Equal(t, 3, d.Total)
+		var out []string
+		for _, o := range d.Offers {
+			out = append(out, o.Name)
+		}
+		return out
+	}
+	require.Equal(t, []string{"Caldari Navy Large Shield Extender", "Caldari Navy Ballistic Control System", "Caldari Navy Hookbill Blueprint"}, names("isk_per_lp"))
+	require.Equal(t, []string{"Caldari Navy Hookbill Blueprint", "Caldari Navy Large Shield Extender", "Caldari Navy Ballistic Control System"}, names("lp_cost"))
+	require.Equal(t, []string{"Caldari Navy Ballistic Control System", "Caldari Navy Hookbill Blueprint", "Caldari Navy Large Shield Extender"}, names("name"))
+}
+
+// Equal values and equal LP costs fall back to the name.
+func TestLPOffers_TiesSortByName(t *testing.T) {
+	body := `[{"offer_id":2,"type_id":31930,"quantity":1,"lp_cost":1000,"isk_cost":0,"required_items":[]},` +
+		`{"offer_id":1,"type_id":15681,"quantity":1,"lp_cost":1000,"isk_cost":0,"required_items":[]}]`
+	prices := `[{"type_id":15681,"average_price":5000000},{"type_id":31930,"average_price":5000000}]`
+	c, _ := newFakeESIClient(t, lpHandler(body, http.StatusOK, prices))
+	for _, sortBy := range []string{"isk_per_lp", "lp_cost"} {
+		_, d, err := getLPOffers(context.Background(), c, testSDE(t), map[string]any{"corporation": "Caldari Navy", "sort": sortBy})
+		require.NoError(t, err)
+		require.Equal(t, "Caldari Navy Ballistic Control System", d.Offers[0].Name, sortBy)
+		require.Equal(t, "Caldari Navy Large Shield Extender", d.Offers[1].Name, sortBy)
+	}
+}
+
+// A sort that is not a string is no sort: the default order, never a panic.
+func TestLPOffers_NonStringSortIsIgnored(t *testing.T) {
+	c, _ := newFakeESIClient(t, lpHandler(lpOffersBody, http.StatusOK, lpPricesBody))
+	for _, v := range []any{1.0, true, []any{"name"}} {
+		var text string
+		require.NotPanics(t, func() {
+			text, _, _ = getLPOffers(context.Background(), c, testSDE(t), map[string]any{"corporation": "Caldari Navy", "sort": v})
+		}, "%v", v)
+		require.Contains(t, text, "by ISK per LP", "%v", v)
+	}
+}
+
+// Without an SDE the corporation cannot be resolved; that is said, not "Unknown corporation".
+func TestLPOffers_NoSDE(t *testing.T) {
+	c, _ := newFakeESIClient(t, lpHandler(lpOffersBody, http.StatusOK, lpPricesBody))
+	for _, deps := range []*Deps{{}, {Client: c}} {
+		var text string
+		require.NotPanics(t, func() {
+			text, _, _ = dispatch(context.Background(), deps, "get_lp_offers", map[string]any{"corporation": "Caldari Navy"})
+		})
+		require.Equal(t, `SDE unavailable; cannot resolve corporation "Caldari Navy".`, text)
+	}
 }
 
 func TestLPOffers_PricesDownLeavesValuesNull(t *testing.T) {
@@ -131,11 +190,28 @@ func TestLPOffers_LimitAndZeroLPCost(t *testing.T) {
 	require.Contains(t, text, "no ISK/LP (no LP cost)")
 }
 
-func TestLPOffers_BackoffAndCancelAreErrors(t *testing.T) {
+func TestLPOffers_CancelledContextIsAnError(t *testing.T) {
 	c, _ := newFakeESIClient(t, lpHandler(lpOffersBody, http.StatusOK, lpPricesBody))
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	_, data, err := getLPOffers(ctx, c, testSDE(t), map[string]any{"corporation": "Caldari Navy"})
 	require.Error(t, err)
+	require.Nil(t, data)
+}
+
+func TestLPOffers_BackoffIsAnError(t *testing.T) {
+	c, f := newFakeESIClient(t, func(w http.ResponseWriter, r *http.Request, rec esiRec) {
+		writeJSON(w, 429, `{}`, map[string]string{"Retry-After": "600", "X-Ratelimit-Group": "g", "X-Ratelimit-Limit": "600/15m"})
+	})
+	e, err := esi.New(esi.Config{BaseURL: f.srv.URL, HTTPClient: f.srv.Client(), MaxWait: -1})
+	require.NoError(t, err)
+	c.ESI = e
+	s := testSDE(t)
+	args := map[string]any{"corporation": "Caldari Navy"}
+	_, _, _ = getLPOffers(context.Background(), c, s, args) // the 429 itself arms the back-off
+	_, data, err := getLPOffers(context.Background(), c, s, args)
+	require.ErrorIs(t, err, esi.ErrBackedOff)
+	_, busy := UpstreamBusy(err)
+	require.True(t, busy)
 	require.Nil(t, data)
 }

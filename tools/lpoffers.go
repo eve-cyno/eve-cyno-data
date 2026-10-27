@@ -35,11 +35,10 @@ func getLPOffers(ctx context.Context, c *Client, s *sde.SDE, args map[string]any
 		return "corporation: give an NPC corporation name, e.g. 'Caldari Navy' or 'Sisters of EVE'.", nil, nil
 	}
 	sortBy := "isk_per_lp"
-	if present(args, "sort") {
-		raw, _ := args["sort"].(string)
-		canon, bad := canonicalList([]string{strings.TrimSpace(raw)}, lpSorts())
-		if bad != "" {
-			return vocabError("sort", strings.TrimSpace(raw), lpSorts()), nil, nil
+	if raw := scalarName(args, "sort"); raw != "" {
+		canon, bad := canonicalList([]string{raw}, lpSorts())
+		if bad != "" || len(canon) == 0 {
+			return vocabError("sort", raw, lpSorts()), nil, nil
 		}
 		sortBy = canon[0]
 	}
@@ -51,6 +50,9 @@ func getLPOffers(ctx context.Context, c *Client, s *sde.SDE, args map[string]any
 		}
 	}
 	item := scalarName(args, "item")
+	if !s.Available() {
+		return fmt.Sprintf("SDE unavailable; cannot resolve corporation %q.", name), nil, nil
+	}
 	id := s.ResolveNPCCorporationName(name)
 	if id == nil {
 		return fmt.Sprintf("Unknown corporation: %s.", name), nil, nil
