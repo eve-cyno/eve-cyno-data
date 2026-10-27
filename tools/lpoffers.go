@@ -67,7 +67,7 @@ func getLPOffers(ctx context.Context, c *Client, s *sde.SDE, args map[string]any
 		err = resp.Err()
 	}
 	if err != nil {
-		text, ferr := esiFailure(ctx, "get_lp_offers", *id, err)
+		text, ferr := esiFailureFor(ctx, "get_lp_offers", "corporation_id", *id, err)
 		return text, nil, ferr
 	}
 	noStore := fmt.Sprintf("%s has no loyalty point store.", corp)

@@ -125,7 +125,12 @@ func abyssParts(it ItemFacts) []string {
 			s += " " + strings.Join(n.DamageTypes, "/")
 		}
 		if n.OptimalM > 0 {
-			s += ", optimal " + fmtM3(n.OptimalM/1000) + " km"
+			// For a missile NPC the dataset's optimal is the missile flight range.
+			reach := "optimal"
+			if n.weapon == abyss.DamageMissile {
+				reach = "range"
+			}
+			s += ", " + reach + " " + fmtM3(n.OptimalM/1000) + " km"
 		}
 		if len(n.Effects) > 0 {
 			s += "; " + strings.Join(n.Effects, ", ")

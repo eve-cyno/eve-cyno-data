@@ -161,3 +161,52 @@ func TestSearchItems_MetaJoinUsesTheIndex(t *testing.T) {
 	}
 	require.Equal(t, want, got)
 }
+
+// TestSearchItems_LikeWildcardsAreLiteral pins that %, _ and a backslash in the
+// query match only names that contain them.
+func TestSearchItems_LikeWildcardsAreLiteral(t *testing.T) {
+	s := testSDE(t)
+	for _, q := range []string{"%%", "__", "%", `\`, `a\`} {
+		require.Empty(t, s.SearchItems(ItemSearch{Query: q}), q)
+		require.Empty(t, s.SearchItems(ItemSearch{Query: q, Kind: "drone"}), q)
+		require.Empty(t, s.SearchModules(q, "", 10), q)
+	}
+	require.NotEmpty(t, s.SearchItems(ItemSearch{Query: "Shield Extender"}))
+}
+
+// TestSearchItemsPage_EnrichesOnlyThePage pins that the total counts every
+// match while only the first limit hits carry dogma and meta facts.
+func TestSearchItemsPage_EnrichesOnlyThePage(t *testing.T) {
+	s := testSDE(t)
+	f := ItemSearch{Query: "Shield Extender", Slot: "mid"}
+	all := s.SearchItems(f)
+	require.Greater(t, len(all), 3)
+	page, total := s.SearchItemsPage(f, 3)
+	require.Equal(t, len(all), total)
+	require.Equal(t, all[:3], page)
+	page, total = s.SearchItemsPage(f, 0)
+	require.Empty(t, page)
+	require.Equal(t, len(all), total)
+	page, total = s.SearchItemsPage(f, 1000)
+	require.Equal(t, all, page)
+	require.Equal(t, len(all), total)
+}
+
+// TestGetItemMetaTier_UsesTheIndex pins that the meta tier lookup finds its
+// invMetaTypes row by the index instead of scanning the table.
+func TestGetItemMetaTier_UsesTheIndex(t *testing.T) {
+	s := testSDE(t)
+	rows, err := s.db.Query("EXPLAIN QUERY PLAN SELECT mg.metaGroupName FROM invMetaTypes mt JOIN invMetaGroups mg ON CAST(mg.metaGroupID AS INTEGER) = CAST(mt.metaGroupID AS INTEGER) WHERE "+metaTierWhere, 587)
+	require.NoError(t, err)
+	defer rows.Close()
+	var plan []string
+	for rows.Next() {
+		var id, parent, unused int
+		var detail string
+		require.NoError(t, rows.Scan(&id, &parent, &unused, &detail))
+		plan = append(plan, detail)
+	}
+	joined := strings.Join(plan, "\n")
+	require.Contains(t, joined, "idx_invmetatypes_type", joined)
+	require.NotContains(t, joined, "SCAN mt", joined)
+}

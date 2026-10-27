@@ -270,3 +270,9 @@ func TestItemFacts_AbyssTierZeroAndNoOptimalAndNilSDE(t *testing.T) {
 	require.NotPanics(t, func() { fillItemFacts(nil, nil, rows) })
 	require.Nil(t, rows[0].AbyssNPC)
 }
+
+// A missile NPC's OptimalM is its missile flight range, so the line says "range".
+func TestItemFacts_MissileNPCSaysRange(t *testing.T) {
+	text, _, _ := searchItemByName(context.Background(), nil, testSDE(t), nil, []string{"Arrester Marshal Disparu Troop"}, true, true)
+	require.Equal(t, "Arrester Marshal Disparu Troop: type_id=56177 · Abyssal Spaceship Entities (Entity) · abyssal NPC (Disparu Troop): 20,200 HP, 28,857 EHP, 428 DPS explosive, range 75.47 km; web, local armor repair; kill next (EVE-Cyno heuristic)", text)
+}

@@ -214,6 +214,9 @@ func (s *SDE) ShipTraitTexts() map[string][]string {
 	return out
 }
 
+// metaTierWhere looks the type up by its TEXT id so idx_invmetatypes_type is used.
+const metaTierWhere = "mt.typeID = CAST(? AS TEXT)"
+
 // GetItemMetaTier returns the meta-group label for an item.
 func (s *SDE) GetItemMetaTier(typeID int) *string {
 	if !s.HasTable("invMetaTypes") || !s.HasTable("invMetaGroups") {
@@ -225,7 +228,7 @@ func (s *SDE) GetItemMetaTier(typeID int) *string {
 		FROM invMetaTypes mt
 		JOIN invMetaGroups mg
 			ON CAST(mg.metaGroupID AS INTEGER) = CAST(mt.metaGroupID AS INTEGER)
-		WHERE CAST(mt.typeID AS INTEGER) = ?`, typeID).Scan(&name)
+		WHERE `+metaTierWhere, typeID).Scan(&name)
 	if err == nil && name != "" {
 		return &name
 	}

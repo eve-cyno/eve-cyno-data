@@ -63,3 +63,12 @@ func TestFindCanonicalModule_ChargesDronesAndTypedRows(t *testing.T) {
 	require.NotNil(t, l.Modules[0].Slot)
 	require.NotNil(t, l.Modules[0].CPU)
 }
+
+func TestFindCanonicalModule_WildcardFamilyMatchesNothing(t *testing.T) {
+	s := testSDE(t)
+	for _, fam := range []string{"%%", "__"} {
+		text, list := searchModules(s, map[string]any{"family": fam})
+		require.Equal(t, fmt.Sprintf("No published modules match %q.", fam), text)
+		require.Equal(t, 0, list.Total)
+	}
+}

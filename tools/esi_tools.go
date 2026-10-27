@@ -191,7 +191,12 @@ func UpstreamBusy(err error) (retryAfter time.Duration, busy bool) {
 
 // esiError formats a consistent error message for ESI failures.
 func esiError(tool string, typeID int, err error) string {
-	return fmt.Sprintf("%s: ESI request failed for type_id=%d: %v", tool, typeID, err)
+	return esiErrorFor(tool, "type_id", typeID, err)
+}
+
+// esiErrorFor is esiError for a request keyed by something other than a type id.
+func esiErrorFor(tool, idName string, id int, err error) string {
+	return fmt.Sprintf("%s: ESI request failed for %s=%d: %v", tool, idName, id, err)
 }
 
 // esiStatus extracts the HTTP status of a typed ESI error (StatusError or RateLimitError).
@@ -212,10 +217,15 @@ func esiStatus(err error) (int, bool) {
 // surfaces as an error, as a failed Throttle wait did; every other failure is the usual
 // one-line message.
 func esiFailure(ctx context.Context, tool string, typeID int, err error) (string, error) {
+	return esiFailureFor(ctx, tool, "type_id", typeID, err)
+}
+
+// esiFailureFor is esiFailure with the name of the id the request was made for.
+func esiFailureFor(ctx context.Context, tool, idName string, id int, err error) (string, error) {
 	if errors.Is(err, esi.ErrBackedOff) || ctx.Err() != nil {
 		return "", err
 	}
-	return esiError(tool, typeID, err), nil
+	return esiErrorFor(tool, idName, id, err), nil
 }
 
 // acceptEnglish asks ESI for English text (the old ?language=en).

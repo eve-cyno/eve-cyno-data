@@ -59,12 +59,12 @@ func (s *SDE) searchCategory(categoryID int, slot, query string, limit int) []Mo
 	if limit <= 0 || limit > 100 {
 		limit = 50
 	}
-	like := "%" + strings.ToLower(strings.TrimSpace(query)) + "%"
+	like := likeContains(query)
 	const q = `
 SELECT t.typeID, t.typeName, t.groupID
 FROM invTypes t
 JOIN invGroups g ON g.groupID = t.groupID
-WHERE g.categoryID = ? AND t.published = 1 AND lower(t.typeName) LIKE ?
+WHERE g.categoryID = ? AND t.published = 1 AND lower(t.typeName) LIKE ? ESCAPE '\'
 ORDER BY t.typeName
 LIMIT ?`
 	rows, err := s.db.Query(q, categoryID, like, limit)
@@ -168,6 +168,40 @@ func (s *SDE) SearchItems(f ItemSearch) []ModuleHit {
 	return s.searchItems(f, 0)
 }
 
+// SearchItemsPage returns the first limit matches fully enriched (as
+// SearchItems) and the total number of matches. Only the returned rows pay for
+// the per-row dogma and meta lookups.
+func (s *SDE) SearchItemsPage(f ItemSearch, limit int) ([]ModuleHit, int) {
+	hits, kind := s.searchItemsBare(f, 0)
+	total := len(hits)
+	hits = hits[:min(max(limit, 0), total)]
+	for i := range hits {
+		s.enrichHit(&hits[i], kind)
+	}
+	return hits, total
+}
+
+// likeContains is the LIKE pattern for a case-insensitive substring match with
+// %, _ and the backslash taken literally (use with ESCAPE '\').
+func likeContains(query string) string {
+	q := strings.ToLower(strings.TrimSpace(query))
+	q = strings.NewReplacer("\\", "\\\\", "%", "\\%", "_", "\\_").Replace(q)
+	return "%" + q + "%"
+}
+
+// enrichHit fills the dogma and meta facts of a bare hit.
+func (s *SDE) enrichHit(h *ModuleHit, kind string) {
+	if kind != "charge" && kind != "drone" {
+		d := s.GetDogma(h.TypeID)
+		h.CPU, h.PG = d[50], d[30]
+		h.CanLoadCharge = s.CanLoadCharge(h.TypeID)
+		h.CanOverheat = s.CanOverheat(h.TypeID)
+	}
+	if mt := s.GetItemMetaTier(h.TypeID); mt != nil {
+		h.MetaTier = *mt
+	}
+}
+
 // invMetaTypes keeps its ids as TEXT: the type id is joined in its text form so
 // idx_invmetatypes_type is used. metaGroupJoin and metaGroupWhere filter on the meta group name; a type with no invMetaTypes
 // row counts as Tech I, matching GetItemMetaTier.
@@ -179,8 +213,18 @@ const metaGroupWhere = " AND lower(COALESCE(mg.metaGroupName, 'Tech I')) = ?"
 
 // searchItems runs the search; limit <= 0 means no limit.
 func (s *SDE) searchItems(f ItemSearch, limit int) []ModuleHit {
+	hits, kind := s.searchItemsBare(f, limit)
+	for i := range hits {
+		s.enrichHit(&hits[i], kind)
+	}
+	return hits
+}
+
+// searchItemsBare runs the search and returns the matches with id, name, group
+// and slot only, plus the normalised kind.
+func (s *SDE) searchItemsBare(f ItemSearch, limit int) ([]ModuleHit, string) {
 	if s == nil || s.db == nil {
-		return nil
+		return nil, ""
 	}
 	kind := strings.ToLower(strings.TrimSpace(f.Kind))
 	if kind == "" {
@@ -188,9 +232,9 @@ func (s *SDE) searchItems(f ItemSearch, limit int) []ModuleHit {
 	}
 	meta := strings.ToLower(strings.TrimSpace(f.MetaGroup))
 	if meta != "" && (!s.HasTable("invMetaTypes") || !s.HasTable("invMetaGroups")) {
-		return []ModuleHit{}
+		return []ModuleHit{}, kind
 	}
-	like := "%" + strings.ToLower(strings.TrimSpace(f.Query)) + "%"
+	like := likeContains(f.Query)
 	sizeSQL, sizeArgs := "", []any(nil)
 	if strings.TrimSpace(f.Size) != "" {
 		sizeSQL, sizeArgs = sizeNameClause(f.Query, f.Size)
@@ -216,7 +260,7 @@ JOIN invGroups g ON g.groupID = t.groupID`
 		if meta != "" {
 			q += metaGroupJoin
 		}
-		q += ` WHERE g.categoryID = ? AND t.published = 1 AND lower(t.typeName) LIKE ?`
+		q += ` WHERE g.categoryID = ? AND t.published = 1 AND lower(t.typeName) LIKE ? ESCAPE '\'`
 		args = append(args, cat, like)
 	default:
 		// One query over the wanted slot effects, so the name order and the limit
@@ -237,7 +281,7 @@ JOIN dgmTypeEffects e ON e.typeID = t.typeID`
 			q += metaGroupJoin
 		}
 		q += ` WHERE e.effectID IN (?` + strings.Repeat(", ?", len(effects)-1) + `)
-  AND t.published = 1 AND lower(t.typeName) LIKE ?`
+  AND t.published = 1 AND lower(t.typeName) LIKE ? ESCAPE '\'`
 		for _, eff := range effects {
 			args = append(args, eff)
 		}
@@ -258,7 +302,7 @@ JOIN dgmTypeEffects e ON e.typeID = t.typeID`
 	rows, err := s.db.Query(q, args...)
 	if err != nil {
 		slog.Warn("sde: item search failed", "kind", kind, "slot", f.Slot, "error", err)
-		return []ModuleHit{}
+		return []ModuleHit{}, kind
 	}
 	defer rows.Close()
 	out := []ModuleHit{}
@@ -273,19 +317,12 @@ JOIN dgmTypeEffects e ON e.typeID = t.typeID`
 			h.Slot = kind
 		default:
 			h.Slot = slotNameForEffect(order[rank])
-			d := s.GetDogma(h.TypeID)
-			h.CPU, h.PG = d[50], d[30]
-			h.CanLoadCharge = s.CanLoadCharge(h.TypeID)
-			h.CanOverheat = s.CanOverheat(h.TypeID)
-		}
-		if mt := s.GetItemMetaTier(h.TypeID); mt != nil {
-			h.MetaTier = *mt
 		}
 		out = append(out, h)
 	}
 	if err := rows.Err(); err != nil {
 		slog.Warn("sde: item search failed", "kind", kind, "slot", f.Slot, "error", err)
-		return []ModuleHit{}
+		return []ModuleHit{}, kind
 	}
-	return out
+	return out, kind
 }

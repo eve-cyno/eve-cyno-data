@@ -112,7 +112,8 @@ type AbyssNPCFacts struct {
 	DPS int `json:"dps"`
 	// DamageTypes lists the damage types with a non-zero share, in em, thermal, kinetic, explosive order; [] when none.
 	DamageTypes []string `json:"damage_types"`
-	// OptimalM is the weapon's optimal range in meters; 0 when the NPC has no weapon range.
+	// OptimalM is the weapon's optimal range in meters (for a missile NPC, the missile flight
+	// range, which the text calls "range"); 0 when the NPC has no weapon range.
 	OptimalM float64 `json:"optimal_m"`
 	// Effects names the electronic-warfare and repair behaviors ("target painter"), in dataset order; [] when none.
 	Effects []string `json:"effects"`
@@ -1077,13 +1078,16 @@ type ModuleRow struct {
 	Name string `json:"name"`
 	// Kind is module, charge or drone; other for a family match that is none of them.
 	Kind string `json:"kind"`
-	// Slot is the slot the module fits (high, mid, low or rig); null for charges, drones and non-slot items.
+	// Slot is the slot the module fits (high, mid, low, rig, or subsystem for a strategic cruiser
+	// subsystem); null for charges, drones and non-slot items.
 	Slot *string `json:"slot"`
-	// MetaGroup is the meta group name (Tech I, Tech II, Faction, Deadspace, ...); null when the SDE has none.
+	// MetaGroup is the meta group name (Tech I, Tech II, Faction, Deadspace, ...); a type with no
+	// meta row counts as Tech I. Null only when the SDE has no meta tables, and, in the default
+	// family answer, for an item that is not a slot module.
 	MetaGroup *string `json:"meta_group"`
-	// CPUTf is the CPU use in teraflops; null unless the item is a slot module.
+	// CPU is the CPU use in teraflops (tf); null unless the item is a slot module.
 	CPU *float64 `json:"cpu_tf"`
-	// PGMW is the powergrid use in megawatts; null unless the item is a slot module.
+	// PG is the powergrid use in megawatts (MW); null unless the item is a slot module.
 	PG *float64 `json:"pg_mw"`
 }
 
@@ -1096,7 +1100,8 @@ type ProductionChain struct {
 	// Kind is "blueprint" (built from a manufacturing blueprint) or "planetary" (made from a
 	// planetary schematic).
 	Kind string `json:"kind"`
-	// Runs is the number of manufacturing runs asked for.
+	// Runs is the number of runs asked for: manufacturing runs of the blueprint, or cycles of
+	// the final schematic for a planetary chain.
 	Runs int `json:"runs"`
 	// MELevel is the material efficiency level of every blueprint in the chain (0-10); null
 	// for a planetary chain, which has none.
@@ -1119,8 +1124,8 @@ type ChainMaterial struct {
 	Name string `json:"name"`
 	// Quantity is the number of units the chain consumes.
 	Quantity int `json:"quantity"`
-	// AveragePrice is ESI's average price of one unit in ISK; null without include_cost, and
-	// when ESI has no average price for the material.
+	// AveragePrice is ESI's average price of one unit in ISK; null without include_cost, when
+	// ESI has no average price for the material, and always in the inputs of a planetary step.
 	AveragePrice *float64 `json:"average_price"`
 	// Value is Quantity times AveragePrice in ISK; null when AveragePrice is.
 	Value *float64 `json:"value"`
@@ -1164,7 +1169,8 @@ type ChainCost struct {
 	// CostIndexAsOf is the date (YYYY-MM-DD, UTC) of ESI's cost index list; null for an
 	// explicit system_cost_index or when none was read.
 	CostIndexAsOf *string `json:"cost_index_as_of"`
-	// FacilityTaxPct is the facility tax in percent used for the fee (0.25 in an NPC station).
+	// FacilityTaxPct is the facility tax in percent used for the fee (0.25 in an NPC station);
+	// 0 for a planetary chain.
 	FacilityTaxPct float64 `json:"facility_tax_pct"`
 	// Jobs is the number of manufacturing jobs the chain expands (each pays its own fee).
 	Jobs int `json:"jobs"`
@@ -1172,7 +1178,7 @@ type ChainCost struct {
 	// in ISK; null when no input has an adjusted price.
 	EstimatedItemValue *float64 `json:"estimated_item_value"`
 	// JobFee is EstimatedItemValue times (cost index + facility tax + 4% SCC surcharge), in
-	// ISK; null when no cost index is known.
+	// ISK; null when no cost index is known and when no input has an adjusted price.
 	JobFee *float64 `json:"job_fee"`
 	// UnpricedInputs names the job inputs that have no adjusted price and so are left out of
 	// EstimatedItemValue.
@@ -1181,7 +1187,7 @@ type ChainCost struct {
 	// has no average price.
 	Total *float64 `json:"total"`
 	// ProductAveragePrice is ESI's average price of one unit of the product, in ISK; null
-	// without include_cost, and when ESI has none.
+	// without include_cost, when ESI has none, and always for a planetary chain.
 	ProductAveragePrice *float64 `json:"product_average_price"`
 }
 

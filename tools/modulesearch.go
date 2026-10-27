@@ -85,9 +85,9 @@ func searchModules(s *sde.SDE, args map[string]any) (string, *ModuleList) {
 	}
 	noun := moduleKinds()[f.Kind]
 
-	hits := s.SearchItems(f)
-	list := &ModuleList{Total: len(hits), Modules: []ModuleRow{}}
-	for _, h := range hits[:min(limit, len(hits))] {
+	hits, total := s.SearchItemsPage(f, limit)
+	list := &ModuleList{Total: total, Modules: []ModuleRow{}}
+	for _, h := range hits {
 		list.Modules = append(list.Modules, moduleRow(h, f.Kind))
 	}
 	list.Shown = len(list.Modules)

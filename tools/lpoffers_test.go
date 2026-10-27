@@ -215,3 +215,11 @@ func TestLPOffers_BackoffIsAnError(t *testing.T) {
 	require.True(t, busy)
 	require.Nil(t, data)
 }
+
+// The failure line names the corporation id, not a type id.
+func TestLPOffers_FailureNamesTheCorporation(t *testing.T) {
+	c, _ := newFakeESIClient(t, lpHandler(`{"error":"boom"}`, http.StatusInternalServerError, lpPricesBody))
+	text, _, err := getLPOffers(context.Background(), c, testSDE(t), map[string]any{"corporation": "Caldari Navy"})
+	require.NoError(t, err)
+	require.Equal(t, `get_lp_offers: ESI request failed for corporation_id=1000035: esi: GET /loyalty/stores/1000035/offers: HTTP 500: {"error":"boom"}`, text)
+}
