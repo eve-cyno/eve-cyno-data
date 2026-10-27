@@ -2,10 +2,12 @@ package tools
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
 
+	"eve-cyno.dev/go/data/esi"
 	"eve-cyno.dev/go/data/sde"
 )
 
@@ -111,7 +113,7 @@ func productionCost(ctx context.Context, c *Client, s *sde.SDE, in productionCos
 		idx, asOf, ok, err := industryCostIndex(ctx, c, in.SystemID)
 		switch {
 		case err != nil:
-			if ctx.Err() != nil {
+			if errors.Is(err, esi.ErrBackedOff) || ctx.Err() != nil {
 				return nil, nil, err
 			}
 			lines = append(lines, fmt.Sprintf("Job fee: the cost index of %s is unavailable right now (ESI).", in.SystemName))

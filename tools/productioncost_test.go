@@ -3,11 +3,13 @@ package tools
 import (
 	"context"
 	"fmt"
+	"math"
 	"net/http"
 	"sort"
 	"strings"
 	"testing"
 
+	"eve-cyno.dev/go/data/esi"
 	"github.com/stretchr/testify/require"
 )
 
@@ -198,6 +200,8 @@ func TestProductionCost_ArgumentErrors(t *testing.T) {
 		"system_cost_index and system: give one, not both.": {Item: "Rifter", CostIndex: 0.05, System: "Jita"},
 		"Unknown system: Nope99.":                           {Item: "Rifter", System: "Nope99"},
 		"facility_tax_pct: 0 to 10 (got 11).":               {Item: "Rifter", IncludeCost: true, FacilityTaxPct: 11},
+		"facility_tax_pct: 0 to 10 (got NaN).":              {Item: "Rifter", IncludeCost: true, FacilityTaxPct: math.NaN()},
+		"facility_tax_pct: 0 to 10 (got +Inf).":             {Item: "Rifter", IncludeCost: true, FacilityTaxPct: math.Inf(1)},
 	} {
 		text, chain, _ := getProductionChain(context.Background(), nil, s, req)
 		require.Equal(t, want, text)
@@ -248,4 +252,37 @@ func TestProductionChain_DispatchPassesTheCostOptions(t *testing.T) {
 	over, err := ExecuteTool(context.Background(), deps, "get_production_chain", map[string]any{"item_name": "Rifter", "facility_tax_pct": 11.0})
 	require.NoError(t, err)
 	require.Equal(t, "facility_tax_pct: 0 to 10 (got 11).", over)
+}
+
+// "NaN" and "Inf" parse as numbers; they get the range line, not a 500 from the JSON encoder.
+func TestProductionChain_NaNFacilityTaxIsARangeError(t *testing.T) {
+	deps := &Deps{SDE: testSDE(t)}
+	for raw, want := range map[string]string{"NaN": "got NaN", "Inf": "got +Inf"} {
+		res, err := ExecuteToolResult(context.Background(), deps, "get_production_chain", map[string]any{"item_name": "Rifter", "facility_tax_pct": raw})
+		require.NoError(t, err)
+		require.Contains(t, res.Text, want)
+		require.Nil(t, res.Data)
+	}
+}
+
+// A back-off of ESI is an error (upstream_busy); a plain 503 still answers with the text line.
+func TestProductionCost_IndexBackoffIsAnError(t *testing.T) {
+	c, f := newFakeESIClient(t, func(w http.ResponseWriter, r *http.Request, rec esiRec) {
+		if rec.Path == "/markets/prices" {
+			writeJSON(w, http.StatusOK, industryPricesBody, nil)
+			return
+		}
+		writeJSON(w, 429, `{}`, map[string]string{"Retry-After": "600", "X-Ratelimit-Group": "g", "X-Ratelimit-Limit": "600/15m"})
+	})
+	e, err := esi.New(esi.Config{BaseURL: f.srv.URL, HTTPClient: f.srv.Client(), MaxWait: -1})
+	require.NoError(t, err)
+	c.ESI = e
+	s := testSDE(t)
+	req := productionRequest{Item: "Rifter", Runs: 1, ME: 10, System: "Jita", IncludeCost: true}
+	_, _, _ = getProductionChain(context.Background(), c, s, req) // the 429 itself arms the back-off
+	_, chain, err := getProductionChain(context.Background(), c, s, req)
+	require.ErrorIs(t, err, esi.ErrBackedOff)
+	_, busy := UpstreamBusy(err)
+	require.True(t, busy)
+	require.Nil(t, chain)
 }
