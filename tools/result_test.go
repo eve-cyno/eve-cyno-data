@@ -85,7 +85,7 @@ func TestAttribution_NamesTheRightUpstreams(t *testing.T) {
 		"get_hull_facts":        {"EVE Static Data Export (via Fuzzwork)", "EVE Workbench"},
 		"get_sovereignty":       {"ESI (EVE Swagger Interface)", "EVE Static Data Export (via Fuzzwork)"},
 		"search_item_by_name":   {"EVE Static Data Export (via Fuzzwork)"},
-		"get_production_chain":  {"EVE Static Data Export (via Fuzzwork)"},
+		"get_production_chain":  {"EVE Static Data Export (via Fuzzwork)", "ESI (EVE Swagger Interface)"},
 		"get_system_activity":   {"ESI (EVE Swagger Interface)", "EVE Static Data Export (via Fuzzwork)"},
 		"find_canonical_module": {"EVE Static Data Export (via Fuzzwork)"},
 		"find_systems":          {"EVE Static Data Export (via Fuzzwork)", "EVE University Wiki (ice belt systems)"},
@@ -146,6 +146,10 @@ func stubbedUpstreams(t *testing.T) *Client {
 		switch {
 		case r.URL.Path == "/sovereignty/systems":
 			body = `{"solar_systems":[{"solar_system_id":30000142,"claim":{"alliance":{"alliance_id":99000001,"corporation_id":98000001}}}]}`
+		case r.URL.Path == "/industry/systems":
+			body = `[{"solar_system_id":30000142,"cost_indices":[{"activity":"manufacturing","cost_index":0.0512}]}]`
+		case strings.HasPrefix(r.URL.Path, "/loyalty/stores/"):
+			body = `[]`
 		case r.URL.Path == "/incursions":
 			body = `[]`
 		case r.URL.Path == "/universe/system_kills":
@@ -223,6 +227,7 @@ func TestExecuteToolResult_TextMatchesExecuteTool(t *testing.T) {
 		{"get_required_skills", map[string]any{"items": []any{"Paladin", "Rifter", "Zzzzqq"}, "training_time": true, "attributes": map[string]any{"perception": 20.0, "memory": 20.0, "willpower": 20.0, "intelligence": 20.0, "charisma": 19.0}}, sdeDeps},
 		{"get_required_skills", map[string]any{"item_name": "Zzzzqq"}, sdeDeps},
 		{"get_production_chain", map[string]any{"item_name": "Rifter", "runs": 1, "me_level": 10}, sdeDeps},
+		{"get_production_chain", map[string]any{"item_name": "Rifter", "system": "Jita", "include_cost": true}, stubDeps},
 		{"get_hull_facts", map[string]any{"ship_name": "Leshak"}, sdeDeps},
 		{"get_ship_bonuses", map[string]any{"ship_name": "Rifter"}, sdeDeps},
 		{"find_canonical_module", map[string]any{"family": "Steel Plates", "size": "Large"}, sdeDeps},

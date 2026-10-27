@@ -1122,13 +1122,15 @@ paths:
         - tools
       summary: Compute the full material breakdown to manufacture an EVE Online item, recursively expanding sub-components down to…
       description: |-
-        Compute the full material breakdown to manufacture an EVE Online item, recursively expanding sub-components down to base minerals and PI commodities. Use this for 'how many minerals to build X' or 'production chain for X' questions. Optional advanced params let the user model a specific structure rig + system cost index (e.g., 'in 1DQ1-A with Minmatar manufacturing rig 4 and 5% cost index').
+        Compute the full material breakdown to manufacture an EVE Online item, recursively expanding sub-components down to base minerals and PI commodities. Use this for 'how many minerals to build X' or 'production chain for X' questions. Optional advanced params let the user model a specific structure rig + system cost index (e.g., 'in 1DQ1-A with Minmatar manufacturing rig 4 and 5% cost index'). With system it reads that system's live manufacturing cost index from ESI and prices the job fee in ISK; with include_cost it adds the ISK value of the materials at ESI average prices and a total. Without either it is SDE-only.
 
-        Sources: EVE Static Data Export (via Fuzzwork).
+        Sources: EVE Static Data Export (via Fuzzwork); ESI (EVE Swagger Interface). `result.data` is a `ProductionChain` object when the call succeeds.
 
         Access tier: **public**. No key needed.
 
         Rate limit: 10 requests per minute per client IP without an API key, 60 per minute per API key with one.
+
+        Calls with `system` read live public data from EVE's ESI through a shared cache that follows ESI's `Expires`; only those calls count against the fair-use limit below. All live-upstream calls share one fair-use limit of 5 calls per minute per caller without an API key and 10 with one (REST and MCP together, counted across every live tool), on top of the route limit. When the shared ESI budget is nearly spent the call is refused with `503 upstream_busy` (MCP: an error result starting `upstream_busy`) and `Retry-After`; retry later.
       operationId: get_production_chain
       parameters:
         - $ref: '#/components/parameters/RequestID'
@@ -1139,6 +1141,14 @@ paths:
             schema:
               type: object
               properties:
+                facility_tax_pct:
+                  type: number
+                  description: Facility tax of the structure in percent, 0 to 10 (default 0.25, an NPC station). Used for the job fee.
+                  minimum: 0
+                  maximum: 10
+                include_cost:
+                  type: boolean
+                  description: true adds the ISK value of the materials at ESI daily average prices and, with system or system_cost_index, the job fee and a total. Default false.
                 industry_skills:
                   type: object
                   description: 'Optional industry skills dict. Currently honoured: ''production_efficiency'' (0-5) for legacy ME-savings adjustment. Modern EVE folded most industry skills into ME research; this is the remaining axis worth modelling explicitly.'
@@ -1156,9 +1166,12 @@ paths:
                 station_rig_level:
                   type: integer
                   description: Structure rig material-savings level 0-5 (default 0). M-Set Manufacturing Material Efficiency rig at level 5 = 10% material savings. Use only when the user explicitly mentions a structure or its rigs.
+                system:
+                  type: string
+                  description: 'Solar system where the job runs, e.g. ''Jita''. Reads its current manufacturing cost index from ESI and prices the job fee in ISK (live: counts against the live limit). Give this or system_cost_index, not both.'
                 system_cost_index:
                   type: number
-                  description: 'System manufacturing cost index 0.0-0.20 (default 0.0). Adds a job fee note: job cost = estimated item value × (cost index + facility tax + 4% SCC surcharge), where the estimated item value is the ME 0 inputs at ESI adjusted prices and an NPC station charges 0.25% facility tax; a player structure sets its own facility tax and its bonuses lower the cost index part, and each sub-component job pays its own fee. Set to the user''s quoted system index when they ask for a fee estimate.'
+                  description: 'System manufacturing cost index 0.0-0.20 (default 0.0). Adds a job fee note: job cost = estimated item value × (cost index + facility tax + 4% SCC surcharge), where the estimated item value is the ME 0 inputs at ESI adjusted prices and an NPC station charges 0.25% facility tax; a player structure sets its own facility tax and its bonuses lower the cost index part, and each sub-component job pays its own fee. Set to the user''s quoted system index when they ask for a fee estimate, or give system to read it.'
               required:
                 - item_name
       responses:
@@ -1167,7 +1180,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ToolResponse'
+                $ref: '#/components/schemas/ProductionChainToolResponse'
           headers:
             X-Request-ID:
               $ref: '#/components/headers/RequestID'
@@ -2671,6 +2684,110 @@ components:
         - Stable
         - StablePct
         - SecondsToEmpty
+    ChainCost:
+      type: object
+      properties:
+        prices_as_of:
+          type: string
+          description: PricesAsOf is the date (YYYY-MM-DD, UTC) of the ESI price list.
+        materials_value:
+          type:
+            - number
+            - "null"
+          description: MaterialsValue is the value of the leaf materials at ESI average prices, in ISK; null without include_cost. Materials without an average price are left out (see Unpriced).
+        unpriced:
+          type: array
+          description: Unpriced names the materials that have no average price; empty without include_cost.
+          items:
+            type: string
+        system:
+          type:
+            - string
+            - "null"
+          description: System is the solar system whose cost index was read; null when none was asked for.
+        cost_index:
+          type:
+            - number
+            - "null"
+          description: CostIndex is the manufacturing cost index used (the system's, or system_cost_index); null when none is known.
+        cost_index_as_of:
+          type:
+            - string
+            - "null"
+          description: CostIndexAsOf is the date (YYYY-MM-DD, UTC) of ESI's cost index list; null for an explicit system_cost_index or when none was read.
+        facility_tax_pct:
+          type: number
+          description: FacilityTaxPct is the facility tax in percent used for the fee (0.25 in an NPC station).
+        jobs:
+          type: integer
+          description: Jobs is the number of manufacturing jobs the chain expands (each pays its own fee).
+        estimated_item_value:
+          type:
+            - number
+            - "null"
+          description: EstimatedItemValue is the sum over every job of its ME 0 inputs at ESI adjusted prices, in ISK; null when no input has an adjusted price.
+        job_fee:
+          type:
+            - number
+            - "null"
+          description: JobFee is EstimatedItemValue times (cost index + facility tax + 4% SCC surcharge), in ISK; null when no cost index is known.
+        unpriced_inputs:
+          type: array
+          description: UnpricedInputs names the job inputs that have no adjusted price and so are left out of EstimatedItemValue.
+          items:
+            type: string
+        total:
+          type:
+            - number
+            - "null"
+          description: Total is MaterialsValue plus JobFee in ISK; null when either is unknown or a material has no average price.
+        product_average_price:
+          type:
+            - number
+            - "null"
+          description: ProductAveragePrice is ESI's average price of one unit of the product, in ISK; null without include_cost, and when ESI has none.
+      required:
+        - prices_as_of
+        - materials_value
+        - unpriced
+        - system
+        - cost_index
+        - cost_index_as_of
+        - facility_tax_pct
+        - jobs
+        - estimated_item_value
+        - job_fee
+        - unpriced_inputs
+        - total
+        - product_average_price
+    ChainMaterial:
+      type: object
+      properties:
+        type_id:
+          type: integer
+          description: TypeID is the material's type ID.
+        name:
+          type: string
+          description: Name is the material name as the SDE spells it.
+        quantity:
+          type: integer
+          description: Quantity is the number of units the chain consumes.
+        average_price:
+          type:
+            - number
+            - "null"
+          description: AveragePrice is ESI's average price of one unit in ISK; null without include_cost, and when ESI has no average price for the material.
+        value:
+          type:
+            - number
+            - "null"
+          description: Value is Quantity times AveragePrice in ISK; null when AveragePrice is.
+      required:
+        - type_id
+        - name
+        - quantity
+        - average_price
+        - value
     ClassCounts:
       type: object
       properties:
@@ -4412,6 +4529,121 @@ components:
         - MaxVelocity
         - AlignTimeSec
         - SignatureRadius
+    PlanetaryStep:
+      type: object
+      properties:
+        tier:
+          type: string
+          description: 'Tier is the product tier: "P1" to "P4".'
+        type_id:
+          type: integer
+          description: TypeID is the type ID of the product.
+        name:
+          type: string
+          description: Name is the product name.
+        schematic_id:
+          type: integer
+          description: SchematicID is the planetary schematic that makes the product.
+        output_per_cycle:
+          type: integer
+          description: OutputPerCycle is the units one cycle makes.
+        cycle_seconds:
+          type: integer
+          description: CycleSeconds is the length of one cycle in seconds.
+        cycles:
+          type: integer
+          description: Cycles is the number of cycles the chain needs of this step.
+        inputs:
+          type: array
+          description: Inputs are what one run of the step consumes, with the units for all its cycles.
+          items:
+            $ref: '#/components/schemas/ChainMaterial'
+      required:
+        - tier
+        - type_id
+        - name
+        - schematic_id
+        - output_per_cycle
+        - cycle_seconds
+        - cycles
+        - inputs
+    ProductionChain:
+      type: object
+      properties:
+        item:
+          type: string
+          description: Item is the item name as the SDE spells it.
+        type_id:
+          type: integer
+          description: TypeID is the item's type ID.
+        kind:
+          type: string
+          description: Kind is "blueprint" (built from a manufacturing blueprint) or "planetary" (made from a planetary schematic).
+        runs:
+          type: integer
+          description: Runs is the number of manufacturing runs asked for.
+        me_level:
+          type:
+            - integer
+            - "null"
+          description: MELevel is the material efficiency level of every blueprint in the chain (0-10); null for a planetary chain, which has none.
+        materials:
+          type: array
+          description: Materials are the leaf materials the whole chain consumes, most units first. The text lists the first 30.
+          items:
+            $ref: '#/components/schemas/ChainMaterial'
+        steps:
+          type: array
+          description: Steps are the production steps of a planetary chain, empty for a blueprint chain.
+          items:
+            $ref: '#/components/schemas/PlanetaryStep'
+        cost:
+          description: Cost is the build cost in ISK; null unless include_cost or system is set, and when the ESI price list could not be read.
+          oneOf:
+            - $ref: '#/components/schemas/ChainCost'
+            - type: "null"
+      required:
+        - item
+        - type_id
+        - kind
+        - runs
+        - me_level
+        - materials
+        - steps
+        - cost
+    ProductionChainToolResponse:
+      type: object
+      properties:
+        tool:
+          type: string
+          description: The tool that ran.
+        version:
+          type: string
+          description: The build version of the service.
+        result:
+          type: object
+          properties:
+            text:
+              type: string
+              description: The answer as the chat assistant reads it.
+            data:
+              description: The typed answer, or null when the tool has none or the call ended in a text-only answer (an unknown id, a parse failure); `text` then says why.
+              oneOf:
+                - $ref: '#/components/schemas/ProductionChain'
+                - type: "null"
+          required:
+            - text
+            - data
+        attribution:
+          type: array
+          description: The upstreams behind the answer; attribution is a condition of several of their licences.
+          items:
+            $ref: '#/components/schemas/Source'
+      required:
+        - tool
+        - version
+        - result
+        - attribution
     RangeStats:
       type: object
       properties:

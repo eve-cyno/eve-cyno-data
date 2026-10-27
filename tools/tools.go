@@ -180,7 +180,20 @@ func dispatch(ctx context.Context, deps *Deps, name string, arguments map[string
 		if skillsArg, ok := arguments["industry_skills"].(map[string]any); ok {
 			peSkill = intArg(skillsArg, "production_efficiency", 0)
 		}
-		return plain(getProductionChain(deps.SDE, item, runs, me, stationRig, costIndex, peSkill))
+		// system, include_cost and facility_tax_pct are additive; null, "" and false count as
+		// absent, so a call without them keeps the SDE-only text.
+		system, _ := arguments["system"].(string)
+		includeCost, _ := arguments["include_cost"].(bool)
+		req := productionRequest{
+			Item: item, Runs: runs, ME: me, StationRig: stationRig, PESkill: peSkill, CostIndex: costIndex,
+			System: system, IncludeCost: includeCost,
+		}
+		if raw, ok := arguments["facility_tax_pct"]; ok && raw != nil && !blankString(raw) {
+			if f, isNum := numberArg(raw); isNum {
+				req.FacilityTaxPct, req.FacilityTaxSet = f, true
+			}
+		}
+		return typed(getProductionChain(ctx, deps.Client, deps.SDE, req))
 
 	case "get_hull_facts":
 		ship, _ := arguments["ship_name"].(string)

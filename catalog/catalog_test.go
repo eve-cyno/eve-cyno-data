@@ -88,9 +88,12 @@ func TestUpstreamTools(t *testing.T) {
 	require.Equal(t, map[string]string{
 		"get_market_price": "ESI", "get_type_info": "ESI", "get_sovereignty": "ESI", "get_system_activity": "ESI",
 		"get_market_history": "ESI", "get_thera_connections": "EvE-Scout", "plan_jump_route": "ESI",
+		"get_production_chain": "ESI",
 	}, got)
 	jump, _ := catalog.Lookup("plan_jump_route")
 	require.Equal(t, []string{"avoid_incursions", "live_info"}, jump.UpstreamArgs)
+	chain, _ := catalog.Lookup("get_production_chain")
+	require.Equal(t, []string{"system"}, chain.UpstreamArgs)
 	thera, _ := catalog.Lookup("get_thera_connections")
 	require.True(t, thera.Upstream)
 	require.False(t, thera.LiveESI())
@@ -203,7 +206,7 @@ func TestEveryOfferedToolHasASummary(t *testing.T) {
 func TestParamOrder_FollowsTheSchemaFile(t *testing.T) {
 	tl, ok := catalog.Lookup("get_production_chain")
 	require.True(t, ok)
-	require.Equal(t, []string{"item_name", "runs", "me_level", "station_rig_level", "system_cost_index", "industry_skills"}, tl.ParamOrder)
+	require.Equal(t, []string{"item_name", "runs", "me_level", "station_rig_level", "system_cost_index", "system", "include_cost", "facility_tax_pct", "industry_skills"}, tl.ParamOrder)
 	for _, tl := range catalog.Tools() {
 		props, _ := tl.Parameters["properties"].(map[string]any)
 		require.Len(t, tl.ParamOrder, len(props), "%s: ParamOrder lists every argument", tl.Name)
@@ -239,24 +242,26 @@ func TestAcceptsJaniceKey(t *testing.T) {
 	require.False(t, tl.Upstream, "one shared daily ESI snapshot, not a per-call ESI read")
 }
 
-// Every UpstreamArgs entry is a boolean property of the tool's schema, so a renamed option cannot
-// silently stop spending the live budget.
-func TestUpstreamArgs_AreBooleanSchemaProperties(t *testing.T) {
+// Every UpstreamArgs entry is a boolean or string property of the tool's schema, so a renamed
+// option cannot silently stop spending the live budget.
+func TestUpstreamArgs_AreBooleanOrStringSchemaProperties(t *testing.T) {
 	for _, tl := range catalog.Tools() {
 		props, _ := tl.Parameters["properties"].(map[string]any)
 		for _, a := range tl.UpstreamArgs {
 			p, ok := props[a].(map[string]any)
 			require.True(t, ok, "%s: %s is a schema property", tl.Name, a)
-			require.Equal(t, "boolean", p["type"], "%s.%s", tl.Name, a)
+			require.Contains(t, []any{"boolean", "string"}, p["type"], "%s.%s", tl.Name, a)
 		}
 	}
 }
 
-// A tool with UpstreamArgs spends the live budget only when one of them is true.
+// A tool with UpstreamArgs spends the live budget only when one of them is set: a true boolean or
+// a non-blank string.
 func TestTool_SpendsUpstream(t *testing.T) {
 	jump, _ := catalog.Lookup("plan_jump_route")
 	price, _ := catalog.Lookup("get_market_price")
 	find, _ := catalog.Lookup("find_systems")
+	chain, _ := catalog.Lookup("get_production_chain")
 	for _, c := range []struct {
 		tool catalog.Tool
 		args map[string]any
@@ -269,6 +274,10 @@ func TestTool_SpendsUpstream(t *testing.T) {
 		{jump, map[string]any{"live_info": true}, true},
 		{price, map[string]any{}, true},
 		{find, map[string]any{}, false},
+		{chain, map[string]any{}, false},
+		{chain, map[string]any{"system": "  "}, false},
+		{chain, map[string]any{"system": "Jita"}, true},
+		{chain, map[string]any{"include_cost": true}, false},
 	} {
 		require.Equal(t, c.want, c.tool.SpendsUpstream(c.args), "%s %v", c.tool.Name, c.args)
 	}

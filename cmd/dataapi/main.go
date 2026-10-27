@@ -49,7 +49,8 @@
 //	                          read live data (get_market_price, get_type_info,
 //	                          get_sovereignty, get_system_activity, get_market_history from
 //	                          ESI, plan_jump_route from ESI only when avoid_incursions or
-//	                          live_info is set, get_thera_connections from EvE-Scout),
+//	                          live_info is set, get_production_chain from ESI only when
+//	                          system is set, get_thera_connections from EvE-Scout),
 //	                          REST and MCP together
 //	                          (default 5; a caller with a key gets twice as many; 0 = no extra
 //	                          limit)

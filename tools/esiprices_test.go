@@ -125,7 +125,7 @@ func TestESIPriceBook_ReadsAveragePricesOnly(t *testing.T) {
 	snap, err := c.prices.snapshot(context.Background(), c.esiClient())
 	require.NoError(t, err)
 	require.Equal(t, map[int]float64{34: 4, 35: 10, 587: 300000, 44992: 4700000}, snap.Average,
-		"adjusted_price is never used; a zero or missing average means no price")
+		"adjusted_price is never an average; a zero or missing average means no price")
 	require.Equal(t, time.Date(2026, 10, 14, 11, 23, 9, 0, time.UTC), snap.AsOf.UTC())
 
 	reqs := f.requests()
@@ -135,6 +135,22 @@ func TestESIPriceBook_ReadsAveragePricesOnly(t *testing.T) {
 	require.Empty(t, reqs[0].Query)
 	require.Equal(t, esi.DefaultCompatibilityDate, reqs[0].Header.Get("X-Compatibility-Date"))
 	require.True(t, strings.HasPrefix(reqs[0].Header.Get("User-Agent"), "EVE-Cyno/"), reqs[0].Header.Get("User-Agent"))
+}
+
+// mustSnapshot reads one price copy through a fake ESI that serves body.
+func mustSnapshot(t *testing.T, body string) *priceSnapshot {
+	t.Helper()
+	c, _, ps := newPricesClient(t)
+	ps.set(http.StatusOK, body)
+	snap, err := c.prices.snapshot(context.Background(), c.esiClient())
+	require.NoError(t, err)
+	return snap
+}
+
+func TestPriceSnapshot_KeepsAdjustedPrices(t *testing.T) {
+	snap := mustSnapshot(t, testPricesBody)
+	require.Equal(t, map[int]float64{34: 3.1, 35: 9.5, 587: 350000, 16: 12.5}, snap.Adjusted)
+	require.NotContains(t, snap.Average, 16)
 }
 
 func TestESIPriceBook_ConcurrentCallersShareOneFetch(t *testing.T) {

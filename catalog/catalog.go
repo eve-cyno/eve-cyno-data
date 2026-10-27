@@ -55,8 +55,9 @@ type Tool struct {
 	// UpstreamName names the live upstream behind an Upstream tool: UpstreamESI or
 	// UpstreamEveScout; empty for any other tool.
 	UpstreamName string
-	// UpstreamArgs lists the boolean arguments that make a call of an Upstream tool live; a call
-	// with none of them true answers from the SDE and spends no upstream budget. Empty = every call.
+	// UpstreamArgs lists the arguments that make a call of an Upstream tool live: a boolean that is
+	// true, or a string that is not blank. A call with none of them set answers from the SDE and
+	// spends no upstream budget. Empty = every call.
 	UpstreamArgs []string
 	// AcceptsJaniceKey is true for a tool that takes the caller's own Janice API key in
 	// HeaderJaniceKey (REST and MCP over HTTP): with one it answers through Janice, without
@@ -72,7 +73,7 @@ type Tool struct {
 
 // SpendsUpstream reports whether a call with args reads a live upstream, and so counts against the
 // per-caller live budget: the tool is an Upstream tool and either names no UpstreamArgs or one of
-// them is true in args.
+// them is set in args: a boolean parameter that is true, or a string parameter that is not blank.
 func (t Tool) SpendsUpstream(args map[string]any) bool {
 	if !t.Upstream {
 		return false
@@ -80,9 +81,18 @@ func (t Tool) SpendsUpstream(args map[string]any) bool {
 	if len(t.UpstreamArgs) == 0 {
 		return true
 	}
+	props, _ := t.Parameters["properties"].(map[string]any)
 	for _, a := range t.UpstreamArgs {
-		if v, _ := args[a].(bool); v {
-			return true
+		prop, _ := props[a].(map[string]any)
+		switch v := args[a].(type) {
+		case bool:
+			if v && prop["type"] == "boolean" {
+				return true
+			}
+		case string:
+			if prop["type"] == "string" && strings.TrimSpace(v) != "" {
+				return true
+			}
 		}
 	}
 	return false
@@ -282,12 +292,18 @@ var upstreamTools = map[string]string{
 	"get_market_history":    UpstreamESI,
 	"get_thera_connections": UpstreamEveScout,
 	"plan_jump_route":       UpstreamESI,
+	// get_production_chain reads ESI only with system (the cost index); include_cost reads the
+	// shared daily price copy.
+	"get_production_chain": UpstreamESI,
 }
 
-// upstreamArgs are the boolean arguments that make a call of a tool live (Tool.UpstreamArgs); a
+// upstreamArgs are the arguments (a true boolean or a non-blank string) that make a call of a tool live (Tool.UpstreamArgs); a
 // tool in upstreamTools without an entry is live on every call.
 func upstreamArgs() map[string][]string {
-	return map[string][]string{"plan_jump_route": {"avoid_incursions", "live_info"}}
+	return map[string][]string{
+		"plan_jump_route":      {"avoid_incursions", "live_info"},
+		"get_production_chain": {"system"},
+	}
 }
 
 // janiceKeyTools are the tools that take the caller's own Janice key (Tool.AcceptsJaniceKey).
@@ -306,7 +322,7 @@ func summaryTable() map[string]string {
 		"get_hull_facts":         "A hull's fitting envelope: slots, hardpoints, drone bay, bonuses and weapon restrictions.",
 		"validate_fitting":       "Check an EFT fit against its slots, CPU and powergrid.",
 		"compute_fit_stats":      "DPS, EHP, speed, align time and capacitor of an EFT fit, from the Gofa engine.",
-		"get_production_chain":   "Full material breakdown to manufacture an item, down to base materials.",
+		"get_production_chain":   "Material breakdown to build an item down to base materials; with system or include_cost, the ISK cost.",
 		"get_jumps_between":      "Jump count and route between two solar systems.",
 		"get_jump_distances":     "Jump counts from one solar system to up to 200 others in one call.",
 		"plan_jump_route":        "Jump-drive routes for any jump-capable hull or an Ansiblex chain: hops, light-years, gate jumps and fuel.",
@@ -390,6 +406,8 @@ func dataType(name string) reflect.Type {
 		return reflect.TypeFor[tools.MarketPrice]()
 	case "get_average_prices":
 		return reflect.TypeFor[tools.AveragePrices]()
+	case "get_production_chain":
+		return reflect.TypeFor[tools.ProductionChain]()
 	case "get_market_history":
 		return reflect.TypeFor[tools.MarketHistory]()
 	case "get_jumps_between":

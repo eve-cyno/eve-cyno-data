@@ -469,17 +469,66 @@ func planProduction(s *sde.SDE, blueprintID, runs, meLevel int) ([]productionJob
 	return jobs, leaves
 }
 
+// productionRequest is one get_production_chain call.
+type productionRequest struct {
+	Item string
+	Runs int
+	// ME is the material efficiency level (0-10) of every blueprint in the chain.
+	ME int
+	// StationRig (0-5) and PESkill (0-5) lower the leaf quantities.
+	StationRig, PESkill int
+	// CostIndex is the explicit system_cost_index; 0 means none.
+	CostIndex float64
+	// System is a system name: its manufacturing cost index is read from ESI.
+	System string
+	// IncludeCost adds the ISK value of the materials, the job fee and a total.
+	IncludeCost bool
+	// FacilityTaxPct is the facility tax in percent; 0 means the NPC station default (0.25)
+	// unless FacilityTaxSet says 0 was asked for.
+	FacilityTaxPct float64
+	FacilityTaxSet bool
+}
+
+// facilityTax is the facility tax in percent the request asks for.
+func (r productionRequest) facilityTax() float64 {
+	if r.FacilityTaxSet || r.FacilityTaxPct != 0 {
+		return r.FacilityTaxPct
+	}
+	return npcFacilityTax * 100
+}
+
 // getProductionChain mirrors Python _get_production_chain.
-// stationRigLevel (0-5) and peSkill (0-5, from industry_skills.production_efficiency)
-// apply an extra material multiplier to leaf quantities; systemCostIndex drives the
-// optional Manufacturing fees section. me_level defaults to 10 at the dispatch.
-func getProductionChain(s *sde.SDE, itemName string, runs, meLevel, stationRigLevel int, systemCostIndex float64, peSkill int) string {
+// StationRig (0-5) and PESkill (0-5, from industry_skills.production_efficiency)
+// apply an extra material multiplier to leaf quantities; CostIndex drives the
+// optional Manufacturing fees section. ME defaults to 10 at the dispatch. With System or
+// IncludeCost the answer also prices the chain in ISK from ESI (see productionCost).
+// The *ProductionChain is built with the text; it is nil for every text-only answer.
+func getProductionChain(ctx context.Context, c *Client, s *sde.SDE, req productionRequest) (string, *ProductionChain, error) {
+	itemName, runs, meLevel, stationRigLevel, systemCostIndex, peSkill := req.Item, req.Runs, req.ME, req.StationRig, req.CostIndex, req.PESkill
+	systemName := strings.TrimSpace(req.System)
+	if systemCostIndex > 0 && systemName != "" {
+		return "system_cost_index and system: give one, not both.", nil, nil
+	}
+	if tax := req.facilityTax(); tax < 0 || tax > maxFacilityTaxPct {
+		return fmt.Sprintf("facility_tax_pct: 0 to %d (got %g).", maxFacilityTaxPct, tax), nil, nil
+	}
 	if !s.Available() {
-		return "SDE not loaded — production chain unavailable."
+		return "SDE not loaded — production chain unavailable.", nil, nil
+	}
+	systemID := 0
+	if systemName != "" {
+		id := s.ResolveSystemName(systemName)
+		if id == nil {
+			return fmt.Sprintf("Unknown system: %s.", systemName), nil, nil
+		}
+		systemID = *id
+		if canon := s.GetSystemName(systemID); canon != nil {
+			systemName = *canon
+		}
 	}
 	matched := s.ResolveNameLoose(itemName, 5)
 	if matched == nil {
-		return fmt.Sprintf("Unknown item: %s. Try search_item_by_name first.", itemName)
+		return fmt.Sprintf("Unknown item: %s. Try search_item_by_name first.", itemName), nil, nil
 	}
 	resolvedName := (*matched)[0].(string)
 	targetID := (*matched)[1].(int)
@@ -488,7 +537,7 @@ func getProductionChain(s *sde.SDE, itemName string, runs, meLevel, stationRigLe
 	}
 	bpID := s.GetBlueprintForProduct(targetID)
 	if bpID == nil {
-		return fmt.Sprintf("No blueprint found that produces '%s' (typeID=%d).", itemName, targetID)
+		return fmt.Sprintf("No blueprint found that produces '%s' (typeID=%d).", itemName, targetID), nil, nil
 	}
 
 	// Apply station rig + skill bonuses to the effective material multiplier.
@@ -500,7 +549,7 @@ func getProductionChain(s *sde.SDE, itemName string, runs, meLevel, stationRigLe
 	jobs, accumulated := planProduction(s, *bpID, runs, meLevel)
 
 	if len(accumulated) == 0 {
-		return fmt.Sprintf("No material breakdown found for %s.", itemName)
+		return fmt.Sprintf("No material breakdown found for %s.", itemName), nil, nil
 	}
 
 	// Apply rig + skill multiplier to leaf accumulated quantities (rounded UP
@@ -534,6 +583,16 @@ func getProductionChain(s *sde.SDE, itemName string, runs, meLevel, stationRigLe
 		sorted = append(sorted, matEntry{id, qty})
 	}
 	sort.Slice(sorted, func(i, j int) bool { return sorted[i].qty > sorted[j].qty })
+	materialName := func(id int) string {
+		if name := typeNames[id]; name != "" {
+			return name
+		}
+		return fmt.Sprintf("typeID=%d", id)
+	}
+	chainMaterials := make([]ChainMaterial, len(sorted))
+	for i, m := range sorted {
+		chainMaterials[i] = ChainMaterial{TypeID: m.id, Name: materialName(m.id), Quantity: m.qty}
+	}
 
 	// Header summary — mirror Python's optional extras label.
 	var extras []string
@@ -559,11 +618,7 @@ func getProductionChain(s *sde.SDE, itemName string, runs, meLevel, stationRigLe
 		strings.Repeat("-", 56),
 	}
 	for _, m := range sorted[:min(30, len(sorted))] {
-		name := typeNames[m.id]
-		if name == "" {
-			name = fmt.Sprintf("typeID=%d", m.id)
-		}
-		lines = append(lines, fmt.Sprintf("%-40s %s", name, commaSep(m.qty, 15)))
+		lines = append(lines, fmt.Sprintf("%-40s %s", materialName(m.id), commaSep(m.qty, 15)))
 	}
 	if len(sorted) > 30 {
 		lines = append(lines, fmt.Sprintf("... (%d more material types)", len(sorted)-30))
@@ -571,11 +626,32 @@ func getProductionChain(s *sde.SDE, itemName string, runs, meLevel, stationRigLe
 	lines = append(lines, "")
 	lines = append(lines, fmt.Sprintf("Total unique material types: %d", len(sorted)))
 
-	// Manufacturing fee section — only when a cost index is given. The tool knows
-	// no prices, so it states the job cost formula and the share of the estimated
-	// item value it comes to in an NPC station. Every job of the chain pays its own
-	// fee; a structure's bonuses multiply the cost index part (EVE University).
-	if systemCostIndex > 0.0 {
+	chain := &ProductionChain{
+		Item: itemName, TypeID: targetID, Kind: "blueprint", Runs: runs, MELevel: &meLevel,
+		Materials: chainMaterials, Steps: []PlanetaryStep{},
+	}
+
+	// Build cost: the ISK value of the materials, the job fee and a total, from ESI. It
+	// needs include_cost or a system; the explicit cost index alone keeps the note below.
+	priced := req.IncludeCost || systemID != 0
+	if priced {
+		costLines, cost, err := productionCost(ctx, c, s, productionCostInput{
+			Req: req, SystemID: systemID, SystemName: systemName, ItemName: itemName, TargetID: targetID,
+			RootBlueprint: *bpID, Jobs: jobs, Materials: chainMaterials,
+		})
+		if err != nil {
+			return "", nil, err
+		}
+		lines = append(lines, "")
+		lines = append(lines, costLines...)
+		chain.Cost = cost
+	}
+
+	// Manufacturing fee section — only when a cost index is given and the fee is not priced
+	// above. It states the job cost formula and the share of the estimated item value it
+	// comes to in an NPC station. Every job of the chain pays its own fee; a structure's
+	// bonuses multiply the cost index part (EVE University).
+	if systemCostIndex > 0.0 && !priced {
 		lines = append(lines, "")
 		lines = append(lines, "Manufacturing fees:")
 		lines = append(lines, fmt.Sprintf("  Job cost = estimated item value × (system cost index + facility tax + %.0f%% SCC surcharge); "+
@@ -597,7 +673,7 @@ func getProductionChain(s *sde.SDE, itemName string, runs, meLevel, stationRigLe
 	lines = append(lines, fmt.Sprintf(
 		"Note: ME %d fully-researched BPO; sub-component BPOs assumed at same ME. Rig %d (~%.0f%% material savings).",
 		meLevel, stationRigLevel, rigSavings*100))
-	return strings.Join(lines, "\n")
+	return strings.Join(lines, "\n"), chain, nil
 }
 
 // clampInt mirrors Python max(lo, min(hi, n)).

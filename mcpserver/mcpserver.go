@@ -131,7 +131,7 @@ type serverConfig struct {
 	janiceFromHeader bool
 	// allow, when set, is asked before each call that reads a live upstream (an Upstream tool
 	// whose catalog.Tool.SpendsUpstream is true for the call's arguments; for plan_jump_route
-	// that means a live option is set) whether the caller is within its budget for it; a
+	// or get_production_chain that means a live option is set) whether the caller is within its budget for it; a
 	// refusal carries the wait.
 	allow func(tool string) (ok bool, retryAfter time.Duration)
 	// called, when set, is told of every tools/call.
@@ -373,8 +373,8 @@ type HTTPOptions struct {
 	// this handler runs and refuses an invalid key with 401).
 	Keyed func(*http.Request) bool
 	// Upstream, when set, is asked before every call that reads a live upstream (a call for
-	// which catalog.Tool.SpendsUpstream is true; for plan_jump_route that means a live option
-	// is set) whether the request's caller is within its budget for it
+	// which catalog.Tool.SpendsUpstream is true; for plan_jump_route or get_production_chain that means a live
+	// option is set) whether the request's caller is within its budget for it
 	// (dataapi.UpstreamLimiter.Allow; the same limiter as the REST endpoint, so one budget
 	// covers both). A refusal is an isError result starting "rate_limited". Nil: no limit.
 	Upstream func(r *http.Request, tool string) (ok bool, retryAfter time.Duration)

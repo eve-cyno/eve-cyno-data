@@ -39,6 +39,7 @@ func TestSchemaCapsMatchTheCode(t *testing.T) {
 		{"plan_jump_route", "skills.jump_freighters"}:         maxSkillLevel,
 		{"get_reprocessing_yield", "quantity"}:                maxReprocessQuantity,
 		{"get_production_chain", "runs"}:                      maxProductionRuns,
+		{"get_production_chain", "facility_tax_pct"}:          maxFacilityTaxPct,
 		{"get_required_skills", "items"}:                      maxSkillItems,
 		{"get_required_skills", "attributes.perception"}:      maxAttribute,
 		{"get_required_skills", "attributes.memory"}:          maxAttribute,
@@ -71,7 +72,7 @@ func TestSchemaCapsMatchTheCode(t *testing.T) {
 		prop, ok := holder[field].(map[string]any)
 		require.True(t, ok, "%s.%s is in the schema", pair[0], pair[1])
 		key := "maxItems"
-		if prop["type"] == "integer" {
+		if prop["type"] == "integer" || prop["type"] == "number" {
 			key = "maximum"
 		}
 		got, ok := prop[key].(float64)

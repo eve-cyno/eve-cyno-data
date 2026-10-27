@@ -27,6 +27,14 @@ func openCorpusSDE(t *testing.T) *sde.SDE {
 	return s
 }
 
+// chainText is the text of a production chain without ESI (no system, no include_cost).
+func chainText(s *sde.SDE, item string, runs, me, rig int, costIndex float64, pe int) string {
+	text, _, _ := getProductionChain(context.Background(), nil, s, productionRequest{
+		Item: item, Runs: runs, ME: me, StationRig: rig, CostIndex: costIndex, PESkill: pe,
+	})
+	return text
+}
+
 // --- FIX 7: pure-helper math (no SDE needed) ---
 
 func TestClampInt(t *testing.T) {
@@ -45,8 +53,8 @@ func TestProductionChainME10DefaultLowersMinerals(t *testing.T) {
 
 	// ME0 yields strictly more (or equal) minerals than ME10 for any item that
 	// has a material discount applied. Rifter is a stable, always-present BPO.
-	me0 := getProductionChain(s, "Rifter", 1, 0, 0, 0.0, 0)
-	me10 := getProductionChain(s, "Rifter", 1, 10, 0, 0.0, 0)
+	me0 := chainText(s, "Rifter", 1, 0, 0, 0.0, 0)
+	me10 := chainText(s, "Rifter", 1, 10, 0, 0.0, 0)
 
 	require.Contains(t, me0, "ME 0):")
 	require.Contains(t, me10, "ME 10):")
@@ -69,7 +77,7 @@ func TestProductionChainDispatchDefaultsME10(t *testing.T) {
 func TestProductionChainStationRigInHeaderAndNote(t *testing.T) {
 	s := openCorpusSDE(t)
 
-	out := getProductionChain(s, "Rifter", 1, 10, 5, 0.0, 0)
+	out := chainText(s, "Rifter", 1, 10, 5, 0.0, 0)
 	// station_rig_level 5 → "station rig 5" extras label + "Rig 5 (~10% material savings)".
 	require.Contains(t, out, "station rig 5")
 	require.Contains(t, out, "Rig 5 (~10% material savings)")
@@ -82,7 +90,7 @@ func TestProductionChainStationRigInHeaderAndNote(t *testing.T) {
 func TestProductionChain_FeeNoteUsesTheJobCostFormula(t *testing.T) {
 	s := openCorpusSDE(t)
 
-	out := getProductionChain(s, "Rifter", 1, 10, 0, 0.0512, 0)
+	out := chainText(s, "Rifter", 1, 10, 0, 0.0512, 0)
 	require.Contains(t, out, "(1 run, ME 10 — cost index 0.0512):")
 	require.Contains(t, out, "\n\nManufacturing fees:\n"+
 		"  Job cost = estimated item value × (system cost index + facility tax + 4% SCC surcharge); the estimated item value is the ME 0 inputs at ESI adjusted prices, not their market cost.\n"+
@@ -93,7 +101,11 @@ func TestProductionChain_FeeNoteUsesTheJobCostFormula(t *testing.T) {
 	require.NotContains(t, out, "1.04")
 	require.NotContains(t, out, "input ISK value")
 
-	dc := getProductionChain(s, "Damage Control II", 10, 10, 0, 0.0512, 0)
+	// Index 0.05 in an NPC station: 5% + 0.25% + 4% = 9.25%.
+	require.Contains(t, chainText(s, "Rifter", 1, 10, 0, 0.05, 0),
+		"  At cost index 0.0500 in an NPC station (facility tax 0.25%), the job costs 9.25% of the estimated item value.")
+
+	dc := chainText(s, "Damage Control II", 10, 10, 0, 0.0512, 0)
 	require.Contains(t, dc, "  Multiply the estimated item value by that percentage to estimate the job cost.\n"+
 		"  Each sub-component job (6 in this chain) pays its own fee, on its own estimated item value.\n")
 
@@ -104,7 +116,7 @@ func TestProductionChain_FeeNoteUsesTheJobCostFormula(t *testing.T) {
 	require.NotContains(t, schemas, "ISK-value-of-inputs × 1.04")
 
 	// Default (cost index 0) must NOT print the fee section.
-	plain := getProductionChain(s, "Rifter", 1, 10, 0, 0.0, 0)
+	plain := chainText(s, "Rifter", 1, 10, 0, 0.0, 0)
 	require.NotContains(t, plain, "Manufacturing fees:")
 }
 
@@ -113,7 +125,7 @@ func TestProductionChain_FeeNoteUsesTheJobCostFormula(t *testing.T) {
 // blueprint makes 100 per run, so 10 Damage Control II need one R.A.M. run, not 10.
 // The numbers are from SDE build 3607705 at ME 10 on every blueprint.
 func TestProductionChain_MultiUnitComponentsUseRunsNeeded(t *testing.T) {
-	out := getProductionChain(openCorpusSDE(t), "Damage Control II", 10, 10, 0, 0.0, 0)
+	out := chainText(openCorpusSDE(t), "Damage Control II", 10, 10, 0, 0.0, 0)
 	for _, leaf := range []string{
 		"Tritanium +10,059", "Mexallon +677", "Pyerite +418", "Isogen +74",
 		"Nocxium +33", "Crystalline Carbonide +441", "Fernite Carbide +396", "Morphite +10",
@@ -135,7 +147,7 @@ func TestProductionChain_SharedComponentRunsOnceForAllBranches(t *testing.T) {
 		"Polarized Rocket Launcher":     {"Tritanium +1,002", "Pyerite +651", "Mexallon +200", "Isogen +74"},
 		"Covert Ops Cloaking Device II": {"Tritanium +15,129", "Pyerite +6,118", "Mexallon +901", "Isogen +488"},
 	} {
-		out := getProductionChain(s, item, 1, 10, 0, 0.0, 0)
+		out := chainText(s, item, 1, 10, 0, 0.0, 0)
 		for _, leaf := range leaves {
 			require.Regexp(t, `(?m)^`+leaf+`$`, out, item)
 		}
@@ -178,7 +190,7 @@ func TestPlanProduction_OneJobPerBlueprint(t *testing.T) {
 // never understates what the user must supply.
 func TestProductionChain_LoopMaterialIsALeaf(t *testing.T) {
 	s := openCorpusSDE(t)
-	out := getProductionChain(s, "Silo", 3, 10, 0, 0.0, 0)
+	out := chainText(s, "Silo", 3, 10, 0, 0.0, 0)
 	require.Regexp(t, `(?m)^Silo +3$`, out)
 	require.Contains(t, out, "Total unique material types: 1")
 	require.NotContains(t, out, "No material breakdown found")
@@ -187,8 +199,8 @@ func TestProductionChain_LoopMaterialIsALeaf(t *testing.T) {
 func TestProductionChainPESkillReducesLeafMaterials(t *testing.T) {
 	s := openCorpusSDE(t)
 
-	base := getProductionChain(s, "Rifter", 1, 10, 0, 0.0, 0)
-	withPE := getProductionChain(s, "Rifter", 1, 10, 0, 0.0, 5)
+	base := chainText(s, "Rifter", 1, 10, 0, 0.0, 0)
+	withPE := chainText(s, "Rifter", 1, 10, 0, 0.0, 5)
 	require.Contains(t, withPE, "PE skill 5")
 	require.NotEqual(t, base, withPE, "PE skill 5 must apply a material multiplier")
 }

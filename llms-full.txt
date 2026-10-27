@@ -305,19 +305,23 @@ Appraise a list of EVE Online items and return the total ISK value. Without a Ja
 
 ### get_production_chain
 
-Compute the full material breakdown to manufacture an EVE Online item, recursively expanding sub-components down to base minerals and PI commodities. Use this for 'how many minerals to build X' or 'production chain for X' questions. Optional advanced params let the user model a specific structure rig + system cost index (e.g., 'in 1DQ1-A with Minmatar manufacturing rig 4 and 5% cost index').
+Compute the full material breakdown to manufacture an EVE Online item, recursively expanding sub-components down to base minerals and PI commodities. Use this for 'how many minerals to build X' or 'production chain for X' questions. Optional advanced params let the user model a specific structure rig + system cost index (e.g., 'in 1DQ1-A with Minmatar manufacturing rig 4 and 5% cost index'). With system it reads that system's live manufacturing cost index from ESI and prices the job fee in ISK; with include_cost it adds the ISK value of the materials at ESI average prices and a total. Without either it is SDE-only.
 
 - Call: `POST /v1/tool/get_production_chain` or MCP tool `get_production_chain`
 - Access: public. No key needed.
+- Live ESI data: Calls with `system` read live public data from EVE's ESI through a shared cache that follows ESI's `Expires`; only those calls count against the fair-use limit below. All live-upstream calls share one fair-use limit of 5 calls per minute per caller without an API key and 10 with one (REST and MCP together, counted across every live tool), on top of the route limit. When the shared ESI budget is nearly spent the call is refused with `503 upstream_busy` (MCP: an error result starting `upstream_busy`) and `Retry-After`; retry later.
 - Arguments:
   - `item_name` (string, required): Item or ship name to build, e.g. 'Revelation', 'Avatar', 'Rifter'
+  - `facility_tax_pct` (number): Facility tax of the structure in percent, 0 to 10 (default 0.25, an NPC station). Used for the job fee.
+  - `include_cost` (boolean): true adds the ISK value of the materials at ESI daily average prices and, with system or system_cost_index, the job fee and a total. Default false.
   - `industry_skills` (object): Optional industry skills dict. Currently honoured: 'production_efficiency' (0-5) for legacy ME-savings adjustment. Modern EVE folded most industry skills into ME research; this is the remaining axis worth modelling explicitly.
   - `me_level` (integer): Material Efficiency level 0-10 (default 10 — fully researched BPO)
   - `runs` (integer): Number of runs (default 1)
   - `station_rig_level` (integer): Structure rig material-savings level 0-5 (default 0). M-Set Manufacturing Material Efficiency rig at level 5 = 10% material savings. Use only when the user explicitly mentions a structure or its rigs.
-  - `system_cost_index` (number): System manufacturing cost index 0.0-0.20 (default 0.0). Adds a job fee note: job cost = estimated item value × (cost index + facility tax + 4% SCC surcharge), where the estimated item value is the ME 0 inputs at ESI adjusted prices and an NPC station charges 0.25% facility tax; a player structure sets its own facility tax and its bonuses lower the cost index part, and each sub-component job pays its own fee. Set to the user's quoted system index when they ask for a fee estimate.
-- Typed result: none; the answer is `result.text`
-- Sources: EVE Static Data Export (via Fuzzwork)
+  - `system` (string): Solar system where the job runs, e.g. 'Jita'. Reads its current manufacturing cost index from ESI and prices the job fee in ISK (live: counts against the live limit). Give this or system_cost_index, not both.
+  - `system_cost_index` (number): System manufacturing cost index 0.0-0.20 (default 0.0). Adds a job fee note: job cost = estimated item value × (cost index + facility tax + 4% SCC surcharge), where the estimated item value is the ME 0 inputs at ESI adjusted prices and an NPC station charges 0.25% facility tax; a player structure sets its own facility tax and its bonuses lower the cost index part, and each sub-component job pays its own fee. Set to the user's quoted system index when they ask for a fee estimate, or give system to read it.
+- Typed result (`result.data`): ProductionChain with fields `item`, `type_id`, `kind`, `runs`, `me_level`, `materials`, `steps`, `cost`
+- Sources: EVE Static Data Export (via Fuzzwork); ESI (EVE Swagger Interface)
 
 ### get_jumps_between
 

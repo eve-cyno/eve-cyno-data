@@ -391,7 +391,7 @@
     "type": "function",
     "function": {
       "name": "get_production_chain",
-      "description": "Compute the full material breakdown to manufacture an EVE Online item, recursively expanding sub-components down to base minerals and PI commodities. Use this for 'how many minerals to build X' or 'production chain for X' questions. Optional advanced params let the user model a specific structure rig + system cost index (e.g., 'in 1DQ1-A with Minmatar manufacturing rig 4 and 5% cost index').",
+      "description": "Compute the full material breakdown to manufacture an EVE Online item, recursively expanding sub-components down to base minerals and PI commodities. Use this for 'how many minerals to build X' or 'production chain for X' questions. Optional advanced params let the user model a specific structure rig + system cost index (e.g., 'in 1DQ1-A with Minmatar manufacturing rig 4 and 5% cost index'). With system it reads that system's live manufacturing cost index from ESI and prices the job fee in ISK; with include_cost it adds the ISK value of the materials at ESI average prices and a total. Without either it is SDE-only.",
       "parameters": {
         "type": "object",
         "properties": {
@@ -415,7 +415,21 @@
           },
           "system_cost_index": {
             "type": "number",
-            "description": "System manufacturing cost index 0.0-0.20 (default 0.0). Adds a job fee note: job cost = estimated item value × (cost index + facility tax + 4% SCC surcharge), where the estimated item value is the ME 0 inputs at ESI adjusted prices and an NPC station charges 0.25% facility tax; a player structure sets its own facility tax and its bonuses lower the cost index part, and each sub-component job pays its own fee. Set to the user's quoted system index when they ask for a fee estimate."
+            "description": "System manufacturing cost index 0.0-0.20 (default 0.0). Adds a job fee note: job cost = estimated item value × (cost index + facility tax + 4% SCC surcharge), where the estimated item value is the ME 0 inputs at ESI adjusted prices and an NPC station charges 0.25% facility tax; a player structure sets its own facility tax and its bonuses lower the cost index part, and each sub-component job pays its own fee. Set to the user's quoted system index when they ask for a fee estimate, or give system to read it."
+          },
+          "system": {
+            "type": "string",
+            "description": "Solar system where the job runs, e.g. 'Jita'. Reads its current manufacturing cost index from ESI and prices the job fee in ISK (live: counts against the live limit). Give this or system_cost_index, not both."
+          },
+          "include_cost": {
+            "type": "boolean",
+            "description": "true adds the ISK value of the materials at ESI daily average prices and, with system or system_cost_index, the job fee and a total. Default false."
+          },
+          "facility_tax_pct": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 10,
+            "description": "Facility tax of the structure in percent, 0 to 10 (default 0.25, an NPC station). Used for the job fee."
           },
           "industry_skills": {
             "type": "object",

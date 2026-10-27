@@ -1043,3 +1043,101 @@ type ModuleRow struct {
 	// PGMW is the powergrid use in megawatts; null unless the item is a slot module.
 	PG *float64 `json:"pg_mw"`
 }
+
+// ProductionChain is the result of get_production_chain: what it takes to build one item.
+type ProductionChain struct {
+	// Item is the item name as the SDE spells it.
+	Item string `json:"item"`
+	// TypeID is the item's type ID.
+	TypeID int `json:"type_id"`
+	// Kind is "blueprint" (built from a manufacturing blueprint) or "planetary" (made from a
+	// planetary schematic).
+	Kind string `json:"kind"`
+	// Runs is the number of manufacturing runs asked for.
+	Runs int `json:"runs"`
+	// MELevel is the material efficiency level of every blueprint in the chain (0-10); null
+	// for a planetary chain, which has none.
+	MELevel *int `json:"me_level"`
+	// Materials are the leaf materials the whole chain consumes, most units first. The text
+	// lists the first 30.
+	Materials []ChainMaterial `json:"materials"`
+	// Steps are the production steps of a planetary chain, empty for a blueprint chain.
+	Steps []PlanetaryStep `json:"steps"`
+	// Cost is the build cost in ISK; null unless include_cost or system is set, and when the
+	// ESI price list could not be read.
+	Cost *ChainCost `json:"cost"`
+}
+
+// ChainMaterial is one leaf material of a ProductionChain.
+type ChainMaterial struct {
+	// TypeID is the material's type ID.
+	TypeID int `json:"type_id"`
+	// Name is the material name as the SDE spells it.
+	Name string `json:"name"`
+	// Quantity is the number of units the chain consumes.
+	Quantity int `json:"quantity"`
+	// AveragePrice is ESI's average price of one unit in ISK; null without include_cost, and
+	// when ESI has no average price for the material.
+	AveragePrice *float64 `json:"average_price"`
+	// Value is Quantity times AveragePrice in ISK; null when AveragePrice is.
+	Value *float64 `json:"value"`
+}
+
+// PlanetaryStep is one production step of a planetary chain.
+type PlanetaryStep struct {
+	// Tier is the product tier: "P1" to "P4".
+	Tier string `json:"tier"`
+	// TypeID is the type ID of the product.
+	TypeID int `json:"type_id"`
+	// Name is the product name.
+	Name string `json:"name"`
+	// SchematicID is the planetary schematic that makes the product.
+	SchematicID int `json:"schematic_id"`
+	// OutputPerCycle is the units one cycle makes.
+	OutputPerCycle int `json:"output_per_cycle"`
+	// CycleSeconds is the length of one cycle in seconds.
+	CycleSeconds int `json:"cycle_seconds"`
+	// Cycles is the number of cycles the chain needs of this step.
+	Cycles int `json:"cycles"`
+	// Inputs are what one run of the step consumes, with the units for all its cycles.
+	Inputs []ChainMaterial `json:"inputs"`
+}
+
+// ChainCost is the build cost of a ProductionChain in ISK, from ESI's price list and cost
+// index. It is an estimate: invention, reactions, copying and structure bonuses are not in it.
+type ChainCost struct {
+	// PricesAsOf is the date (YYYY-MM-DD, UTC) of the ESI price list.
+	PricesAsOf string `json:"prices_as_of"`
+	// MaterialsValue is the value of the leaf materials at ESI average prices, in ISK; null
+	// without include_cost. Materials without an average price are left out (see Unpriced).
+	MaterialsValue *float64 `json:"materials_value"`
+	// Unpriced names the materials that have no average price; empty without include_cost.
+	Unpriced []string `json:"unpriced"`
+	// System is the solar system whose cost index was read; null when none was asked for.
+	System *string `json:"system"`
+	// CostIndex is the manufacturing cost index used (the system's, or system_cost_index);
+	// null when none is known.
+	CostIndex *float64 `json:"cost_index"`
+	// CostIndexAsOf is the date (YYYY-MM-DD, UTC) of ESI's cost index list; null for an
+	// explicit system_cost_index or when none was read.
+	CostIndexAsOf *string `json:"cost_index_as_of"`
+	// FacilityTaxPct is the facility tax in percent used for the fee (0.25 in an NPC station).
+	FacilityTaxPct float64 `json:"facility_tax_pct"`
+	// Jobs is the number of manufacturing jobs the chain expands (each pays its own fee).
+	Jobs int `json:"jobs"`
+	// EstimatedItemValue is the sum over every job of its ME 0 inputs at ESI adjusted prices,
+	// in ISK; null when no input has an adjusted price.
+	EstimatedItemValue *float64 `json:"estimated_item_value"`
+	// JobFee is EstimatedItemValue times (cost index + facility tax + 4% SCC surcharge), in
+	// ISK; null when no cost index is known.
+	JobFee *float64 `json:"job_fee"`
+	// UnpricedInputs names the job inputs that have no adjusted price and so are left out of
+	// EstimatedItemValue.
+	UnpricedInputs []string `json:"unpriced_inputs"`
+	// Total is MaterialsValue plus JobFee in ISK; null when either is unknown or a material
+	// has no average price.
+	Total *float64 `json:"total"`
+	// ProductAveragePrice is ESI's average price of one unit of the product, in ISK; null
+	// without include_cost, and when ESI has none.
+	ProductAveragePrice *float64 `json:"product_average_price"`
+}

@@ -40,7 +40,7 @@ func TestSnapshotSpecIsThePinnedVersion(t *testing.T) {
 	}
 }
 
-// usedRoutes is every ESI route tools calls (get_market_price, get_market_history, get_average_prices, get_type_info,
+// usedRoutes is every ESI route tools calls (get_market_price, get_market_history, get_average_prices, get_production_chain, get_type_info,
 // get_sovereignty, get_system_activity, plan_jump_route, convert_isk_to_real, validate_fitting, analyze_battle)
 // plus the five routes of the ingest intel pollers, which follow the same pin. Keep it in sync
 // with tools and ingest/intel (contract.sh reads the intel routes from pollers.go and
@@ -49,6 +49,7 @@ var usedRoutes = []string{
 	"/markets/{region_id}/orders",
 	"/markets/{region_id}/history",
 	"/markets/prices",
+	"/industry/systems",
 	"/universe/types/{type_id}",
 	"/universe/groups/{group_id}",
 	"/universe/ids",

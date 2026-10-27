@@ -4,20 +4,63 @@
     "item_name": "Rifter"
   },
   "prompt": "What does it take to build a Rifter?",
-  "recorded": "2026-10-09",
+  "recorded": "2026-10-27",
   "trimmed": false,
   "response": {
     "tool": "get_production_chain",
-    "version": "sha-aa76146",
+    "version": "sha-a38f21b",
     "result": {
       "text": "Production chain for **Rifter** (1 run, ME 10):\n\nMaterial                                        Quantity\n--------------------------------------------------------\nTritanium                                         28,800\nPyerite                                            5,400\nMexallon                                           2,250\nIsogen                                               450\n\nTotal unique material types: 4\n\nNote: ME 10 fully-researched BPO; sub-component BPOs assumed at same ME. Rig 0 (~0% material savings).",
-      "data": null
+      "data": {
+        "item": "Rifter",
+        "type_id": 587,
+        "kind": "blueprint",
+        "runs": 1,
+        "me_level": 10,
+        "materials": [
+          {
+            "type_id": 34,
+            "name": "Tritanium",
+            "quantity": 28800,
+            "average_price": null,
+            "value": null
+          },
+          {
+            "type_id": 35,
+            "name": "Pyerite",
+            "quantity": 5400,
+            "average_price": null,
+            "value": null
+          },
+          {
+            "type_id": 36,
+            "name": "Mexallon",
+            "quantity": 2250,
+            "average_price": null,
+            "value": null
+          },
+          {
+            "type_id": 37,
+            "name": "Isogen",
+            "quantity": 450,
+            "average_price": null,
+            "value": null
+          }
+        ],
+        "steps": [],
+        "cost": null
+      }
     },
     "attribution": [
       {
         "name": "EVE Static Data Export (via Fuzzwork)",
         "url": "https://www.fuzzwork.co.uk/dump/",
         "license": "Fenris Creations game data under the EVE Developer License Agreement; converted by Fuzzwork Enterprises"
+      },
+      {
+        "name": "ESI (EVE Swagger Interface)",
+        "url": "https://esi.evetech.net/",
+        "license": "EVE Developer License Agreement (Fenris Creations); non-commercial use"
       }
     ]
   }

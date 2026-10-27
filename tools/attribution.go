@@ -101,7 +101,6 @@ var toolAttribution = map[string][]Source{
 	"get_system_info":        {sourceSDE, sourceEVEUniversityIce},
 	"get_reprocessing_yield": {sourceSDE},
 	"get_required_skills":    {sourceSDE},
-	"get_production_chain":   {sourceSDE},
 	"find_canonical_module":  {sourceSDE},
 	"search_item_by_name":    {sourceSDE},
 	"get_ship_stats":         {sourceSDE},
@@ -118,6 +117,8 @@ var toolAttribution = map[string][]Source{
 	"get_sovereignty":     {sourceSDE, sourceESI},
 	"get_system_activity": {sourceSDE, sourceESI},
 	"plan_jump_route":     {sourceSDE, sourceESI}, // ESI only when avoid_incursions or live_info is set
+	// ESI only with system (cost index) or include_cost (the daily price list).
+	"get_production_chain": {sourceSDE, sourceESI},
 
 	// ESI.
 	"get_market_price": {sourceESI},

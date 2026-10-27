@@ -19,7 +19,9 @@ import (
 // description; ESI caches the answer for an hour). The keyless appraisal uses
 // average_price, the average of what the item traded for. adjusted_price is an industry
 // cost input and is 0 for a large share of the list (PLEX included), so it is not a market
-// value and is not a fallback either: a type without an average price has no estimate.
+// value and is not a fallback either: a type without an average price has no estimate. The
+// adjusted price is kept apart (priceSnapshot.Adjusted) for the estimated item value of a
+// manufacturing job.
 
 const (
 	esiPricesPath = "/markets/prices"
@@ -48,6 +50,10 @@ type priceSnapshot struct {
 	// Average is average_price by type id. A type ESI lists without an average price, or
 	// with 0, is absent: it has no estimate.
 	Average map[int]float64
+	// Adjusted is adjusted_price by type id (> 0 only): ESI's industry input price, the one
+	// the estimated item value of a job uses. A type with only an adjusted price is in
+	// Adjusted and not in Average.
+	Adjusted map[int]float64
 	// AsOf is ESI's Last-Modified for the copy (the fetch time when ESI sends none).
 	AsOf time.Time
 	// fetched is when this process got the copy; the TTL runs from here.
@@ -174,16 +180,20 @@ func fetchESIPrices(ctx context.Context, e *esi.Client, now time.Time) (*priceSn
 		return nil, fmt.Errorf("GET %s: %w", esiPricesPath, err)
 	}
 	var rows []struct {
-		TypeID       int      `json:"type_id"`
-		AveragePrice *float64 `json:"average_price"`
+		TypeID        int      `json:"type_id"`
+		AveragePrice  *float64 `json:"average_price"`
+		AdjustedPrice *float64 `json:"adjusted_price"`
 	}
 	if err := resp.DecodeJSON(&rows); err != nil {
 		return nil, fmt.Errorf("GET %s: decode: %w", esiPricesPath, err)
 	}
-	snap := &priceSnapshot{Average: make(map[int]float64, len(rows)), AsOf: resp.LastModified, fetched: now}
+	snap := &priceSnapshot{Average: make(map[int]float64, len(rows)), Adjusted: make(map[int]float64, len(rows)), AsOf: resp.LastModified, fetched: now}
 	for _, r := range rows {
 		if r.AveragePrice != nil && *r.AveragePrice > 0 {
 			snap.Average[r.TypeID] = *r.AveragePrice
+		}
+		if r.AdjustedPrice != nil && *r.AdjustedPrice > 0 {
+			snap.Adjusted[r.TypeID] = *r.AdjustedPrice
 		}
 	}
 	if len(snap.Average) == 0 {

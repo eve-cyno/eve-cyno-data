@@ -210,8 +210,8 @@ func TestPortal_RendersTheCatalogAndLimits(t *testing.T) {
 	home := do(api, http.MethodGet, "/", "").Body.String()
 	require.Contains(t, home, `<span data-slot="tools_offered">28</span>`)
 	require.Contains(t, home, `<span data-slot="tools_public">27</span>`)
-	require.Contains(t, home, `<span data-slot="tools_upstream">7</span>`, "every live tool: six ESI, one EvE-Scout")
-	require.Contains(t, home, `<b data-slot="tools_upstream">7</b> tools · 9 calls/min per caller, shared`)
+	require.Contains(t, home, `<span data-slot="tools_upstream">8</span>`, "every live tool: seven ESI, one EvE-Scout")
+	require.Contains(t, home, `<b data-slot="tools_upstream">8</b> tools · 9 calls/min per caller, shared`)
 	require.Contains(t, home, `<span data-slot="limit_mcp">77</span>`)
 	require.Contains(t, home, "ESI and EvE-Scout, 9 calls/min shared")
 	require.NotContains(t, home, "community_fits", "the community-fit count is not known to the service: the slot is hidden")
@@ -227,7 +227,7 @@ func TestPortal_RendersTheCatalogAndLimits(t *testing.T) {
 			require.NotContains(t, index, link, tl.Name)
 		}
 	}
-	require.Contains(t, index, `data-filter="live">Live <span class="n">7</span>`, "every live tool: six ESI, one EvE-Scout")
+	require.Contains(t, index, `data-filter="live">Live <span class="n">8</span>`, "every live tool: seven ESI, one EvE-Scout")
 
 	access := do(api, http.MethodGet, "/docs/access", "").Body.String()
 	require.Contains(t, access, "77 per minute")
@@ -286,6 +286,12 @@ func TestPortal_LiveCopyByKind(t *testing.T) {
 	require.NotContains(t, optional, "Live ESI data")
 	require.NotContains(t, optional, "live ESI values change", "the example sets no live option: the answer is from the SDE")
 
+	chain := page("get_production_chain")
+	require.Contains(t, chain, `<span class="badge badge-live">live with options</span>`)
+	require.Contains(t, chain, `<p class="callout-title">SDE-only by default</p><p>Answers from the SDE unless a call sets <code>system</code>: those read live public data from EVE's ESI`)
+	require.Contains(t, chain, "Only such calls count against "+limit)
+	require.NotContains(t, chain, "live ESI values change", "the example sets no system: the answer is from the SDE")
+
 	plain := page("compute_fit_stats")
 	require.NotContains(t, plain, "badge-live")
 	require.NotContains(t, plain, "live limit")
@@ -309,8 +315,9 @@ func TestPortal_LiveCopyByKind(t *testing.T) {
 		"<code>get_market_price</code>, <code>get_type_info</code>, ",
 		" read live public data from EVE's ESI",
 		"<li><code>plan_jump_route</code> answers from the SDE and reads live ESI only when a call sets <code>avoid_incursions</code> or <code>live_info</code>; only those calls count against the limit.</li>",
+		"<li><code>get_production_chain</code> answers from the SDE and reads live ESI only when a call sets <code>system</code>; only those calls count against the limit.</li>",
 		"<li><code>get_thera_connections</code> reads live Thera and Turnur connections from EvE-Scout (Signal Cartel)",
-		"the ESI tools are refused with <code>503 upstream_busy</code> and <code>Retry-After</code> (<code>plan_jump_route</code> only on calls with its live options); <code>get_thera_connections</code> never answers it.",
+		"the ESI tools are refused with <code>503 upstream_busy</code> and <code>Retry-After</code> (<code>get_production_chain</code> and <code>plan_jump_route</code> only on calls with their live options); <code>get_thera_connections</code> never answers it.",
 		"<dt>Live tools</dt><dd>5 calls per minute per caller without a key, 10 with one, counted across every live tool",
 	} {
 		require.Contains(t, access, want)
@@ -321,7 +328,7 @@ func TestPortal_LiveCopyByKind(t *testing.T) {
 	// The landing page counts and labels the same live tools, and credits EvE-Scout.
 	home := do(api, http.MethodGet, "/", "").Body.String()
 	for _, want := range []string{
-		`<dt><i aria-hidden="true"></i>Live tools</dt><dd><span data-slot="tools_upstream">7</span>`,
+		`<dt><i aria-hidden="true"></i>Live tools</dt><dd><span data-slot="tools_upstream">8</span>`,
 		`<h3>Live ESI and EvE-Scout</h3><p>Market prices and history, type info, sovereignty, system activity and jump-route checks from ESI, through a shared cache that follows ESI's <code>Expires</code>; Thera and Turnur connections from EvE-Scout (Signal Cartel).</p>`,
 		`href="/docs/tools/get_market_price">get_market_price</a><span class="tool-badges"><span class="badge badge-live">live ESI</span></span>`,
 		`<li class="tool-row" data-tier="public" data-upstream="true"><a class="tool-name" href="/docs/tools/get_thera_connections">get_thera_connections</a><span class="tool-badges"><span class="badge badge-live">live EvE-Scout</span></span>`,
@@ -580,7 +587,7 @@ func TestPortal_TrialAccessCopyOnAKeyedService(t *testing.T) {
 		"Try it without a key or an account (trial limits, 200 requests a day)",
 		"requests/min per caller (120 with a key)",
 		"ESI and EvE-Scout, 5 calls/min shared (10 with a key)",
-		"community fits and 7 live tools (ESI and EvE-Scout)",
+		"community fits and 8 live tools (ESI and EvE-Scout)",
 		"live tools, REST &#43; MCP · 10 with a key", // html/template writes "+" as &#43;
 		"POST /v1/mcp · 120 with a key",
 		"POST /v1/tool/{name} · 60 with a key",
