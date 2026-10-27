@@ -233,7 +233,7 @@ Retrieve community ship fits from the indexed fit database, with author and sour
   - `combat_role` (string): Workbench-derived role tag for PvP fits. One of: solo, fleet.
   - `context` (string): Subcontext tag. Examples: 'wh' (wormhole), 'abyss' (any abyss), 'abyss-electrical', 'abyss-firestorm', 'abyss-exotic', 'abyss-gamma', 'abyss-dark', 'abyss-t1', 'abyss-t2', 'abyss-t3', 'abyss-t4', 'abyss-t5', 'abyss-t6', 'ratting', 'solo'.
   - `cost_class` (string): cheap (< 50M ISK), mid (50-500M), blingy (> 500M). One of: cheap, mid, blingy.
-  - `fit_id` (string): Fetch one fit by its id (a UUID from the id= field of get_fits or list_fits). The other filters are ignored. Example: '6f1d3b2a-0c4e-5a7b-9d8e-1f2a3b4c5d6e'.
+  - `fit_id` (string): Fetch one fit by its id: the UUID printed as id= on a fit's meta line (always in the public API text; in chat text only when include_eft is false) or the fit_id field of the result data. The other filters are ignored. Example: '6f1d3b2a-0c4e-5a7b-9d8e-1f2a3b4c5d6e'.
   - `include_eft` (boolean): Default true. false leaves the EFT blocks out and lists only the meta line and id of each fit, to browse cheaply before fetching one with fit_id.
   - `limit` (integer): Max number of fits to return (default 5, hard max 10).
   - `ship_name` (string): Exact EVE ship name. Examples: 'Tengu', 'Gila', 'Hurricane Fleet Issue', 'Vexor Navy Issue'. Leave empty to search across all ships matching the other filters.

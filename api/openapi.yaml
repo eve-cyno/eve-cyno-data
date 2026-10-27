@@ -776,7 +776,7 @@ paths:
                     - blingy
                 fit_id:
                   type: string
-                  description: 'Fetch one fit by its id (a UUID from the id= field of get_fits or list_fits). The other filters are ignored. Example: ''6f1d3b2a-0c4e-5a7b-9d8e-1f2a3b4c5d6e''.'
+                  description: 'Fetch one fit by its id: the UUID printed as id= on a fit''s meta line (always in the public API text; in chat text only when include_eft is false) or the fit_id field of the result data. The other filters are ignored. Example: ''6f1d3b2a-0c4e-5a7b-9d8e-1f2a3b4c5d6e''.'
                   pattern: ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$
                 include_eft:
                   type: boolean
