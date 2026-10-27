@@ -204,3 +204,42 @@ func TestItemFacts_FiftyRealNames(t *testing.T) {
 		require.NotEmpty(t, it.MarketGroupPath, it.Name)
 	}
 }
+
+func TestItemFacts_AbyssNPCAndFilament(t *testing.T) {
+	_, list, _ := searchItemByName(context.Background(), nil, testSDE(t), nil, []string{"Lucid Deepwatcher", "Calm Dark Filament"}, true, true)
+	text, _, _ := searchItemByName(context.Background(), nil, testSDE(t), nil, []string{"Lucid Deepwatcher", "Calm Dark Filament"}, true, true)
+	lines := strings.Split(text, "\n")
+	require.Equal(t, "Lucid Deepwatcher: type_id=48252 · Abyssal Spaceship Entities (Entity) · abyssal NPC (Lucid): 47,000 HP, 98,333 EHP, 160 DPS em/thermal, optimal 50 km; target painter, remote armor repair, local armor repair; kill next (EVE-Cyno heuristic)", lines[0])
+	require.True(t, strings.HasSuffix(lines[1], " · abyssal filament: tier 1 Calm, weather Dark (Dark Matter Field)"), lines[1])
+	require.Equal(t, "kill next", list.Items[0].AbyssNPC.KillPriority)
+	require.Equal(t, 1, list.Items[1].AbyssFilament.Tier)
+	require.Nil(t, list.Items[0].AbyssFilament)
+}
+
+func TestItemFacts_AbyssTypedFieldsAndOddInput(t *testing.T) {
+	s := testSDE(t)
+	_, list, _ := searchItemByName(context.Background(), nil, s, nil, []string{"Lucid Deepwatcher", "Calm Dark Filament", "Rifter"}, true, true)
+	n := list.Items[0].AbyssNPC
+	require.Equal(t, "Lucid", n.Family)
+	require.Equal(t, 47000, n.HP)
+	require.Equal(t, 98333, n.EHP)
+	require.Equal(t, 160, n.DPS)
+	require.Equal(t, []string{"em", "thermal"}, n.DamageTypes)
+	require.Equal(t, []string{"target painter", "remote armor repair", "local armor repair"}, n.Effects)
+	require.Equal(t, "EVE-Cyno heuristic", n.KillPriorityNote)
+	f := list.Items[1].AbyssFilament
+	require.Equal(t, "Calm", f.TierName)
+	require.Equal(t, "Dark", f.Weather)
+	require.Equal(t, "Dark Matter Field", f.WeatherEnvironment)
+	require.Nil(t, list.Items[2].AbyssNPC)
+	require.Nil(t, list.Items[2].AbyssFilament)
+	b, _ := json.Marshal(list.Items[2])
+	require.Contains(t, string(b), `"abyss_npc":null`)
+	require.Contains(t, string(b), `"abyss_filament":null`)
+	// a type the SDE does not know, and an unknown row, must not panic or gain abyss parts
+	rows := []ItemFacts{{Query: "x", TypeID: -1}}
+	require.NotPanics(t, func() { fillItemFacts(s, nil, rows) })
+	require.Nil(t, rows[0].AbyssNPC)
+	require.NotPanics(t, func() { fillItemFacts(nil, nil, nil) })
+	require.Equal(t, "x: type_id=-1", itemFactsLine(rows[0]))
+}

@@ -1,9 +1,12 @@
 package tools
 
 import (
+	"math"
 	"strconv"
 	"strings"
+	"sync"
 
+	"eve-cyno.dev/go/data/abyss"
 	"eve-cyno.dev/go/data/fit"
 	"eve-cyno.dev/go/data/sde"
 )
@@ -11,9 +14,15 @@ import (
 // entityCategoryID is the SDE category of NPCs ("Entity"): no market volume or Alpha use.
 const entityCategoryID = 11
 
+// abyssData is the embedded abyss dataset, parsed once. A decode error leaves the abyss parts out.
+var abyssData = sync.OnceValues(abyss.Load)
+
 // fillItemFacts completes the rows of items (Query and TypeID set) from the SDE's type facts
 // in one query. legality, when not nil, adds the Alpha usability.
 func fillItemFacts(s *sde.SDE, legality *fit.Legality, items []ItemFacts) {
+	if s == nil || len(items) == 0 {
+		return
+	}
 	ids := make([]int, len(items))
 	for i, it := range items {
 		ids[i] = it.TypeID
@@ -44,7 +53,85 @@ func fillItemFacts(s *sde.SDE, legality *fit.Legality, items []ItemFacts) {
 			alpha := legality.IsAlphaLegalType(it.TypeID)
 			it.AlphaUsable = &alpha
 		}
+		fillAbyssFacts(it)
 	}
+}
+
+// fillAbyssFacts adds the abyss NPC profile or filament tier when the item is one; it leaves the
+// row alone for every other type and when the dataset cannot be loaded.
+func fillAbyssFacts(it *ItemFacts) {
+	d, err := abyssData()
+	if err != nil || d == nil {
+		return
+	}
+	if n, ok := d.NPCByID(it.TypeID); ok {
+		p := abyss.KillPriority(n)
+		a := &AbyssNPCFacts{
+			Family: n.Family, HP: roundInt(n.TotalHP), EHP: roundInt(n.EHP), DPS: roundInt(n.Damage.DPS),
+			DamageTypes: []string{}, OptimalM: n.Damage.OptimalM, Effects: []string{},
+			KillPriority: p.Band, KillPriorityNote: "EVE-Cyno heuristic",
+		}
+		for _, dt := range []struct {
+			name  string
+			share float64
+		}{{"em", n.Damage.EM}, {"thermal", n.Damage.Thermal}, {"kinetic", n.Damage.Kinetic}, {"explosive", n.Damage.Explosive}} {
+			if dt.share > 0 {
+				a.DamageTypes = append(a.DamageTypes, dt.name)
+			}
+		}
+		for _, e := range n.Effects {
+			a.Effects = append(a.Effects, strings.ReplaceAll(e.Kind, "_", " "))
+		}
+		it.AbyssNPC = a
+		return
+	}
+	for _, t := range d.Tiers {
+		for _, f := range t.Filaments {
+			if f.TypeID != it.TypeID {
+				continue
+			}
+			a := &AbyssFilamentFacts{Tier: t.Index, TierName: t.Name, Weather: f.Weather}
+			if w, ok := d.WeatherByName(f.Weather); ok {
+				a.WeatherEnvironment = w.SDEName
+			}
+			it.AbyssFilament = a
+			return
+		}
+	}
+}
+
+// roundInt rounds to the nearest whole number; NaN and infinities give 0.
+func roundInt(v float64) int {
+	if math.IsNaN(v) || math.IsInf(v, 0) {
+		return 0
+	}
+	return int(math.Round(v))
+}
+
+// abyssParts is the details text of the abyss facts of an item, appended after its other parts.
+func abyssParts(it ItemFacts) []string {
+	var parts []string
+	if n := it.AbyssNPC; n != nil {
+		s := "abyssal NPC (" + n.Family + "): " + fmtThousands(n.HP) + " HP, " + fmtThousands(n.EHP) + " EHP, " + fmtThousands(n.DPS) + " DPS"
+		if len(n.DamageTypes) > 0 {
+			s += " " + strings.Join(n.DamageTypes, "/")
+		}
+		if n.OptimalM > 0 {
+			s += ", optimal " + fmtM3(n.OptimalM/1000) + " km"
+		}
+		if len(n.Effects) > 0 {
+			s += "; " + strings.Join(n.Effects, ", ")
+		}
+		parts = append(parts, s+"; "+n.KillPriority+" ("+n.KillPriorityNote+")")
+	}
+	if f := it.AbyssFilament; f != nil {
+		s := "abyssal filament: tier " + strconv.Itoa(f.Tier) + " " + f.TierName + ", weather " + f.Weather
+		if f.WeatherEnvironment != "" {
+			s += " (" + f.WeatherEnvironment + ")"
+		}
+		parts = append(parts, s)
+	}
+	return parts
 }
 
 // itemFactsLine is the details text of one item: "<query>: type_id=<id>" followed by the
@@ -86,6 +173,7 @@ func itemFactsLine(it ItemFacts) string {
 			}
 		}
 	}
+	parts = append(parts, abyssParts(it)...)
 	line := it.Query + ": type_id=" + strconv.Itoa(it.TypeID)
 	if len(parts) > 0 {
 		line += " · " + strings.Join(parts, " · ")

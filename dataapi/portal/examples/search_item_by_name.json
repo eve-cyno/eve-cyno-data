@@ -7,11 +7,11 @@
     ]
   },
   "prompt": "What are the type IDs of Gila and Tritanium?",
-  "recorded": "2026-10-23",
+  "recorded": "2026-10-27",
   "trimmed": false,
   "response": {
     "tool": "search_item_by_name",
-    "version": "sha-e3f5d71",
+    "version": "sha-fae8949",
     "result": {
       "text": "Gila: type_id=17715\nTritanium: type_id=34",
       "data": {
@@ -40,7 +40,9 @@
             "packaged_volume_m3": 10000,
             "capacity_m3": 440,
             "mass_kg": 9600000,
-            "alpha_usable": true
+            "alpha_usable": true,
+            "abyss_npc": null,
+            "abyss_filament": null
           },
           {
             "query": "Tritanium",
@@ -65,7 +67,9 @@
             "packaged_volume_m3": 0.01,
             "capacity_m3": 0,
             "mass_kg": 0,
-            "alpha_usable": true
+            "alpha_usable": true,
+            "abyss_npc": null,
+            "abyss_filament": null
           }
         ],
         "unresolved": []

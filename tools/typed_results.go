@@ -91,6 +91,45 @@ type ItemFacts struct {
 	// AlphaUsable says whether an Alpha clone can use the item (every skill it needs is within the
 	// Alpha caps); null when the Alpha list is unavailable and for NPC types.
 	AlphaUsable *bool `json:"alpha_usable"`
+	// AbyssNPC is the combat profile of an Abyssal Deadspace NPC; null for every other item.
+	AbyssNPC *AbyssNPCFacts `json:"abyss_npc"`
+	// AbyssFilament is the tier and weather of an Abyssal Filament; null for every other item.
+	AbyssFilament *AbyssFilamentFacts `json:"abyss_filament"`
+}
+
+// AbyssNPCFacts is the combat profile of one Abyssal Deadspace NPC, from the embedded SDE-derived
+// abyss dataset. The dataset has no spawn tables or per-tier scaling, so none is given here.
+type AbyssNPCFacts struct {
+	// Family is the hull or drone family ("Lucid").
+	Family string `json:"family"`
+	// HP is the total hit points over shield, armor and hull, rounded to whole points.
+	HP int `json:"hp"`
+	// EHP is the damage-neutral effective hit points, rounded to whole points.
+	EHP int `json:"ehp"`
+	// DPS is the unramped base damage per second, rounded to whole points.
+	DPS int `json:"dps"`
+	// DamageTypes lists the damage types with a non-zero share, in em, thermal, kinetic, explosive order; [] when none.
+	DamageTypes []string `json:"damage_types"`
+	// OptimalM is the weapon's optimal range in meters; 0 when the NPC has no weapon range.
+	OptimalM float64 `json:"optimal_m"`
+	// Effects names the electronic-warfare and repair behaviors ("target painter"), in dataset order; [] when none.
+	Effects []string `json:"effects"`
+	// KillPriority is the EVE-Cyno heuristic band: "kill first", "kill next" or "kill last".
+	KillPriority string `json:"kill_priority"`
+	// KillPriorityNote says that the band is an EVE-Cyno heuristic, not a game value.
+	KillPriorityNote string `json:"kill_priority_note"`
+}
+
+// AbyssFilamentFacts is the tier and weather of one Abyssal Filament. The SDE gives no weather numbers, so none is given here.
+type AbyssFilamentFacts struct {
+	// Tier is the difficulty tier index, 0 (Tranquil) to 6.
+	Tier int `json:"tier"`
+	// TierName is the tier's name ("Calm").
+	TierName string `json:"tier_name"`
+	// Weather is the short weather name ("Dark").
+	Weather string `json:"weather"`
+	// WeatherEnvironment is the SDE's name of the weather environment ("Dark Matter Field"); "" when the dataset has none.
+	WeatherEnvironment string `json:"weather_environment"`
 }
 
 // UnknownName is a requested name that matches no item.

@@ -168,7 +168,7 @@ Resolve one or more EVE Online item, ship, or module names to their type_id. Cal
 - Access: public. No key needed.
 - Arguments:
   - `names` (array of string, required): List of item/ship/module names to resolve, e.g. ['Stabber', 'PLEX', 'Gila']
-  - `details` (boolean): true: one line of facts per item (group, category, meta group and level, market group, volume, Alpha usability) for up to 50 names; use it to classify a list ('which of these are Tech II or faction')
+  - `details` (boolean): true: one line of facts per item (group, category, meta group and level, market group, volume, Alpha usability and, for Abyssal Deadspace NPCs and filaments, their combat profile or tier and weather) for up to 50 names; use it to classify a list ('which of these are Tech II or faction')
 - Typed result (`result.data`): ItemList with fields `items`, `unresolved`
 - Sources: EVE Static Data Export (via Fuzzwork)
 

@@ -456,7 +456,7 @@ paths:
               properties:
                 details:
                   type: boolean
-                  description: 'true: one line of facts per item (group, category, meta group and level, market group, volume, Alpha usability) for up to 50 names; use it to classify a list (''which of these are Tech II or faction'')'
+                  description: 'true: one line of facts per item (group, category, meta group and level, market group, volume, Alpha usability and, for Abyssal Deadspace NPCs and filaments, their combat profile or tier and weather) for up to 50 names; use it to classify a list (''which of these are Tech II or faction'')'
                 names:
                   type: array
                   description: List of item/ship/module names to resolve, e.g. ['Stabber', 'PLEX', 'Gila']
@@ -2533,6 +2533,70 @@ paths:
           $ref: '#/components/responses/RateLimited'
 components:
   schemas:
+    AbyssFilamentFacts:
+      type: object
+      properties:
+        tier:
+          type: integer
+          description: Tier is the difficulty tier index, 0 (Tranquil) to 6.
+        tier_name:
+          type: string
+          description: TierName is the tier's name ("Calm").
+        weather:
+          type: string
+          description: Weather is the short weather name ("Dark").
+        weather_environment:
+          type: string
+          description: WeatherEnvironment is the SDE's name of the weather environment ("Dark Matter Field"); "" when the dataset has none.
+      required:
+        - tier
+        - tier_name
+        - weather
+        - weather_environment
+    AbyssNPCFacts:
+      type: object
+      properties:
+        family:
+          type: string
+          description: Family is the hull or drone family ("Lucid").
+        hp:
+          type: integer
+          description: HP is the total hit points over shield, armor and hull, rounded to whole points.
+        ehp:
+          type: integer
+          description: EHP is the damage-neutral effective hit points, rounded to whole points.
+        dps:
+          type: integer
+          description: DPS is the unramped base damage per second, rounded to whole points.
+        damage_types:
+          type: array
+          description: DamageTypes lists the damage types with a non-zero share, in em, thermal, kinetic, explosive order; [] when none.
+          items:
+            type: string
+        optimal_m:
+          type: number
+          description: OptimalM is the weapon's optimal range in meters; 0 when the NPC has no weapon range.
+        effects:
+          type: array
+          description: Effects names the electronic-warfare and repair behaviors ("target painter"), in dataset order; [] when none.
+          items:
+            type: string
+        kill_priority:
+          type: string
+          description: 'KillPriority is the EVE-Cyno heuristic band: "kill first", "kill next" or "kill last".'
+        kill_priority_note:
+          type: string
+          description: KillPriorityNote says that the band is an EVE-Cyno heuristic, not a game value.
+      required:
+        - family
+        - hp
+        - ehp
+        - dps
+        - damage_types
+        - optimal_m
+        - effects
+        - kill_priority
+        - kill_priority_note
     ActivityList:
       type: object
       properties:
@@ -3810,6 +3874,16 @@ components:
             - boolean
             - "null"
           description: AlphaUsable says whether an Alpha clone can use the item (every skill it needs is within the Alpha caps); null when the Alpha list is unavailable and for NPC types.
+        abyss_npc:
+          description: AbyssNPC is the combat profile of an Abyssal Deadspace NPC; null for every other item.
+          oneOf:
+            - $ref: '#/components/schemas/AbyssNPCFacts'
+            - type: "null"
+        abyss_filament:
+          description: AbyssFilament is the tier and weather of an Abyssal Filament; null for every other item.
+          oneOf:
+            - $ref: '#/components/schemas/AbyssFilamentFacts'
+            - type: "null"
       required:
         - query
         - type_id
@@ -3830,6 +3904,8 @@ components:
         - capacity_m3
         - mass_kg
         - alpha_usable
+        - abyss_npc
+        - abyss_filament
     ItemList:
       type: object
       properties:
