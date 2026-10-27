@@ -61,14 +61,18 @@ func allCuratedEmpty() map[string]string {
 		"mapSolarSystemJumps":           "fromSolarSystemID,toSolarSystemID\n",
 		"mapRegions":                    "regionID,regionName,factionID\n",
 		"mapConstellations":             "constellationID,regionID,constellationName,factionID\n",
-		"staStations":                   "stationID,solarSystemID,regionID,corporationID,stationTypeID,stationName,operationID\n",
+		"staStations":                   "stationID,solarSystemID,regionID,corporationID,stationTypeID,stationName,operationID,reprocessingEfficiency\n",
 		"staOperationServices":          "operationID,serviceID\n",
 		"staServices":                   "serviceID,serviceName,description\n",
 		"industryActivityProbabilities": "typeID,activityID,productTypeID,probability\n",
 		"invMarketGroups":               "marketGroupID,parentGroupID,marketGroupName,hasTypes\n",
 		"invMetaTypes":                  "typeID,parentTypeID,metaGroupID\n",
 		"invMetaGroups":                 "metaGroupID,metaGroupName,description,iconID\n",
-		"crpNPCCorporations":            "corporationID,factionID,solarSystemID,description\n",
+		"crpNPCCorporations":            "corporationID,factionID,solarSystemID,description,corporationName\n",
+		"agtAgents":                     "agentID,divisionID,corporationID,locationID,level,quality,agentTypeID,isLocator\n",
+		"agtAgentTypes":                 "agentTypeID,agentType\n",
+		"crpNPCDivisions":               "divisionID,divisionName,description,leaderType\n",
+		"invNames":                      "itemID,itemName\n",
 	}
 }
 

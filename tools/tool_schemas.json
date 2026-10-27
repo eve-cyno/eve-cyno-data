@@ -606,18 +606,104 @@
     "type": "function",
     "function": {
       "name": "get_npc_stations",
-      "description": "List NPC stations in a solar system, including their owning corporation and operation type. Use for 'stations in X' or 'where can I dock' questions.",
+      "description": "List NPC stations, and find mission agents (for example the nearest level 4 security agent). With only system_name it lists that system's stations with owner and operation: use it for 'stations in X' or 'where can I dock'. With near, region, services, agent or limit it searches stations, nearest first (by gate jumps from near.origin), with owner, services, the refinery yield (Reprocessing Plant stations) and the matching agents, up to 50 per call with the total. Every agent in this build sits at a station, so 'nearest level 4 security agent to Dodixie' is the nearest station with such an agent. Example: {\"near\":{\"origin\":\"Dodixie\",\"max_jumps\":5},\"agent\":{\"level\":4,\"division\":\"security\"},\"limit\":3}. Another: stations within 1 jump of Dodixie with repair facilities: {\"near\":{\"origin\":\"Dodixie\",\"max_jumps\":1},\"services\":[\"Repair Facilities\"]}.",
       "parameters": {
         "type": "object",
         "properties": {
           "system_name": {
             "type": "string",
-            "description": "Solar system name, e.g. 'Hek', 'Jita'"
+            "description": "Solar system name, e.g. 'Hek', 'Jita'. Alone it lists that system's stations; with search parameters it limits the search to that system."
+          },
+          "near": {
+            "type": "object",
+            "description": "Rank stations by gate jumps from an origin system, nearest first, e.g. {\"origin\":\"Dodixie\",\"max_jumps\":5}. Without max_jumps every reachable system is ranked.",
+            "properties": {
+              "origin": {
+                "type": "string",
+                "description": "Solar system name the jumps are counted from, e.g. 'Dodixie'"
+              },
+              "max_jumps": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 30,
+                "description": "Keep stations at most this many jumps away (1-30)"
+              },
+              "prefer_high_sec": {
+                "type": "boolean",
+                "description": "Count jumps through highsec where a highsec-only route exists, else through any space"
+              }
+            },
+            "required": [
+              "origin"
+            ]
+          },
+          "region": {
+            "type": "string",
+            "description": "Region name, e.g. 'Sinq Laison'"
+          },
+          "services": {
+            "type": "array",
+            "maxItems": 12,
+            "items": {
+              "type": "string"
+            },
+            "description": "Station services a station must all offer, e.g. ['Repair Facilities', 'Reprocessing Plant']. Same names as find_systems station_services."
+          },
+          "agent": {
+            "type": "object",
+            "description": "Keep stations with at least one matching agent, and list those agents, e.g. {\"level\":4,\"division\":\"security\"} or {\"kind\":\"research\",\"faction\":\"Gallente Federation\"}.",
+            "properties": {
+              "level": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 5,
+                "description": "Agent level (1-5)"
+              },
+              "division": {
+                "type": "string",
+                "enum": [
+                  "security",
+                  "distribution",
+                  "mining",
+                  "research"
+                ],
+                "description": "Agent division: security, distribution, mining or research (R&D)"
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "mission",
+                  "research",
+                  "faction_warfare",
+                  "storyline",
+                  "epic_arc",
+                  "career",
+                  "concord",
+                  "any"
+                ],
+                "description": "Agent kind (default mission, the ordinary mission agent)"
+              },
+              "corporation": {
+                "type": "string",
+                "description": "NPC corporation name, e.g. 'Federation Navy'"
+              },
+              "faction": {
+                "type": "string",
+                "description": "Faction name, e.g. 'Gallente Federation'; keeps the agents of its corporations"
+              },
+              "locator": {
+                "type": "boolean",
+                "description": "true keeps only agents that offer the locator service"
+              }
+            }
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 50,
+            "description": "Stations to list (1-50, default 20)"
           }
-        },
-        "required": [
-          "system_name"
-        ]
+        }
       }
     }
   },

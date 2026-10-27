@@ -1474,11 +1474,11 @@ paths:
     post:
       tags:
         - tools
-      summary: List NPC stations in a solar system, including their owning corporation and operation type.
+      summary: List NPC stations, and find mission agents (for example the nearest level 4 security agent).
       description: |-
-        List NPC stations in a solar system, including their owning corporation and operation type. Use for 'stations in X' or 'where can I dock' questions.
+        List NPC stations, and find mission agents (for example the nearest level 4 security agent). With only system_name it lists that system's stations with owner and operation: use it for 'stations in X' or 'where can I dock'. With near, region, services, agent or limit it searches stations, nearest first (by gate jumps from near.origin), with owner, services, the refinery yield (Reprocessing Plant stations) and the matching agents, up to 50 per call with the total. Every agent in this build sits at a station, so 'nearest level 4 security agent to Dodixie' is the nearest station with such an agent. Example: {"near":{"origin":"Dodixie","max_jumps":5},"agent":{"level":4,"division":"security"},"limit":3}. Another: stations within 1 jump of Dodixie with repair facilities: {"near":{"origin":"Dodixie","max_jumps":1},"services":["Repair Facilities"]}.
 
-        Sources: EVE Static Data Export (via Fuzzwork).
+        Sources: EVE Static Data Export (via Fuzzwork). `result.data` is a `StationList` object when the call succeeds.
 
         Access tier: **public**. No key needed.
 
@@ -1487,24 +1487,91 @@ paths:
       parameters:
         - $ref: '#/components/parameters/RequestID'
       requestBody:
-        required: true
+        required: false
         content:
           application/json:
             schema:
               type: object
               properties:
+                agent:
+                  type: object
+                  description: Keep stations with at least one matching agent, and list those agents, e.g. {"level":4,"division":"security"} or {"kind":"research","faction":"Gallente Federation"}.
+                  properties:
+                    corporation:
+                      type: string
+                      description: NPC corporation name, e.g. 'Federation Navy'
+                    division:
+                      type: string
+                      description: 'Agent division: security, distribution, mining or research (R&D)'
+                      enum:
+                        - security
+                        - distribution
+                        - mining
+                        - research
+                    faction:
+                      type: string
+                      description: Faction name, e.g. 'Gallente Federation'; keeps the agents of its corporations
+                    kind:
+                      type: string
+                      description: Agent kind (default mission, the ordinary mission agent)
+                      enum:
+                        - mission
+                        - research
+                        - faction_warfare
+                        - storyline
+                        - epic_arc
+                        - career
+                        - concord
+                        - any
+                    level:
+                      type: integer
+                      description: Agent level (1-5)
+                      minimum: 1
+                      maximum: 5
+                    locator:
+                      type: boolean
+                      description: true keeps only agents that offer the locator service
+                limit:
+                  type: integer
+                  description: Stations to list (1-50, default 20)
+                  minimum: 1
+                  maximum: 50
+                near:
+                  type: object
+                  description: Rank stations by gate jumps from an origin system, nearest first, e.g. {"origin":"Dodixie","max_jumps":5}. Without max_jumps every reachable system is ranked.
+                  properties:
+                    max_jumps:
+                      type: integer
+                      description: Keep stations at most this many jumps away (1-30)
+                      minimum: 1
+                      maximum: 30
+                    origin:
+                      type: string
+                      description: Solar system name the jumps are counted from, e.g. 'Dodixie'
+                    prefer_high_sec:
+                      type: boolean
+                      description: Count jumps through highsec where a highsec-only route exists, else through any space
+                  required:
+                    - origin
+                region:
+                  type: string
+                  description: Region name, e.g. 'Sinq Laison'
+                services:
+                  type: array
+                  description: Station services a station must all offer, e.g. ['Repair Facilities', 'Reprocessing Plant']. Same names as find_systems station_services.
+                  items:
+                    type: string
+                  maxItems: 12
                 system_name:
                   type: string
-                  description: Solar system name, e.g. 'Hek', 'Jita'
-              required:
-                - system_name
+                  description: Solar system name, e.g. 'Hek', 'Jita'. Alone it lists that system's stations; with search parameters it limits the search to that system.
       responses:
         "200":
           description: The tool's answer.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ToolResponse'
+                $ref: '#/components/schemas/StationListToolResponse'
           headers:
             X-Request-ID:
               $ref: '#/components/headers/RequestID'
@@ -2403,6 +2470,38 @@ components:
         - version
         - result
         - attribution
+    AgentRow:
+      type: object
+      properties:
+        agent_id:
+          type: integer
+          description: AgentID is the agent's id.
+        name:
+          type: string
+          description: Name is the agent's name.
+        level:
+          type: integer
+          description: Level is the agent level, 1 to 5.
+        division:
+          type: string
+          description: Division is the NPC division, for example "Security", "Distribution", "Mining" or "R&D".
+        kind:
+          type: string
+          description: Kind is "mission", "research", "faction_warfare", "storyline", "epic_arc", "career", "concord" or the lowercase SDE agent type for any other.
+        corporation:
+          type: string
+          description: Corporation is the agent's corporation.
+        locator:
+          type: boolean
+          description: Locator is true when the agent offers the locator service.
+      required:
+        - agent_id
+        - name
+        - level
+        - division
+        - kind
+        - corporation
+        - locator
     Attribution:
       type: object
       properties:
@@ -4622,6 +4721,113 @@ components:
         - version
         - result
         - attribution
+    StationList:
+      type: object
+      properties:
+        total:
+          type: integer
+          description: Total is the number of stations that match, before the limit.
+        shown:
+          type: integer
+          description: Shown is the number of rows in Stations.
+        stations:
+          type: array
+          description: 'Stations is the page, in the order of the text lines: by jumps (with near), then system name, then station name.'
+          items:
+            $ref: '#/components/schemas/StationRow'
+      required:
+        - total
+        - shown
+        - stations
+    StationListToolResponse:
+      type: object
+      properties:
+        tool:
+          type: string
+          description: The tool that ran.
+        version:
+          type: string
+          description: The build version of the service.
+        result:
+          type: object
+          properties:
+            text:
+              type: string
+              description: The answer as the chat assistant reads it.
+            data:
+              description: The typed answer, or null when the tool has none or the call ended in a text-only answer (an unknown id, a parse failure); `text` then says why.
+              oneOf:
+                - $ref: '#/components/schemas/StationList'
+                - type: "null"
+          required:
+            - text
+            - data
+        attribution:
+          type: array
+          description: The upstreams behind the answer; attribution is a condition of several of their licences.
+          items:
+            $ref: '#/components/schemas/Source'
+      required:
+        - tool
+        - version
+        - result
+        - attribution
+    StationRow:
+      type: object
+      properties:
+        station_id:
+          type: integer
+          description: StationID is the station's id.
+        name:
+          type: string
+          description: Name is the station name as the SDE spells it.
+        system_id:
+          type: integer
+          description: SystemID is the solar system ID.
+        system:
+          type: string
+          description: System is the solar system name.
+        security:
+          type: number
+          description: Security is the system's security as the game shows it (one decimal).
+        region:
+          type: string
+          description: Region is the region name.
+        jumps:
+          type:
+            - integer
+            - "null"
+          description: Jumps is the gate-jump count from near.origin; null without near.
+        owner:
+          type: string
+          description: Owner is the owning NPC corporation.
+        services:
+          type: array
+          description: Services lists the station's services, sorted by name.
+          items:
+            type: string
+        reprocessing_efficiency:
+          type:
+            - number
+            - "null"
+          description: ReprocessingEfficiency is the station's base refining yield as a fraction (0.5 is 50%); null without a Reprocessing Plant.
+        agents:
+          type: array
+          description: Agents lists the agents that match the agent filter; empty without an agent filter.
+          items:
+            $ref: '#/components/schemas/AgentRow'
+      required:
+        - station_id
+        - name
+        - system_id
+        - system
+        - security
+        - region
+        - jumps
+        - owner
+        - services
+        - reprocessing_efficiency
+        - agents
     Suggestion:
       type: object
       properties:

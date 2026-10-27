@@ -312,7 +312,7 @@ func summaryTable() map[string]string {
 		"get_market_history":     "Price and volume history of an item in a region, by day or week (up to 90 days).",
 		"get_average_prices":     "Daily average prices of up to 200 items in one call (ESI /markets/prices).",
 		"get_systems_in_region":  "Solar systems of a region, filtered by security band.",
-		"get_npc_stations":       "NPC stations in a solar system, with owner and operation.",
+		"get_npc_stations":       "NPC stations in a system or near one, by services and mission agents, with owner and refinery.",
 		"find_systems":           "Search solar systems by security, location, celestials, stations, ice belts and distance.",
 		"get_system_info":        "Security, location, neighbours, celestials, stations and ice belt of up to 50 systems.",
 		"get_thera_connections":  "Live Thera and Turnur wormhole connections from EvE-Scout, optionally nearest to a system.",
@@ -415,6 +415,8 @@ func dataType(name string) reflect.Type {
 		return reflect.TypeFor[tools.FitStatCard]()
 	case "get_required_skills":
 		return reflect.TypeFor[tools.SkillPlan]()
+	case "get_npc_stations":
+		return reflect.TypeFor[tools.StationList]()
 	case "get_fits":
 		return reflect.TypeFor[tools.CommunityFits]()
 	case "list_fits":

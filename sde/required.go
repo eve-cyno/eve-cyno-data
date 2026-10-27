@@ -23,7 +23,7 @@ import (
 //
 // Keep it in step with the CREATE TABLE statements in
 // sde/build/builder.go and with the queries in effects.go, dogma.go, typebasics.go,
-// industry.go, systems.go, jumps.go and typefacts.go.
+// industry.go, systems.go, jumps.go, typefacts.go and stationsearch.go.
 var RequiredColumns = map[string][]string{
 	"invTypes": {"typeID", "groupID", "typeName", "description", "published", "mass", "volume", "capacity", "portionSize", "marketGroupID", "metaLevel", "techLevel", "basePrice", "packagedVolume"},
 	// The item facts (TypeFacts): group, category, meta group and market group path.
@@ -47,6 +47,13 @@ var RequiredColumns = map[string][]string{
 	// makes (BlueprintOutputPerRun; without quantity every sub-component job would
 	// silently take one run per unit needed).
 	"industryActivityProducts": {"blueprint_typeID", "activityID", "product_typeID", "quantity"},
+	// The station and agent search (FindStations).
+	"staStations":        {"stationID", "solarSystemID", "corporationID", "stationName", "operationID", "reprocessingEfficiency"},
+	"agtAgents":          {"agentID", "divisionID", "corporationID", "locationID", "level", "agentTypeID", "isLocator"},
+	"agtAgentTypes":      {"agentTypeID", "agentType"},
+	"crpNPCDivisions":    {"divisionID", "divisionName"},
+	"crpNPCCorporations": {"corporationID", "corporationName", "factionID"},
+	"invNames":           {"itemID", "itemName"},
 }
 
 // MissingRequiredColumns returns every "table.column" from RequiredColumns that db

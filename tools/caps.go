@@ -32,6 +32,10 @@ const (
 	// floor is 17); the upper bound is a sanity limit, not a game value.
 	minAttribute = 17 // get_required_skills: attributes
 	maxAttribute = 50 // get_required_skills: attributes
+	// get_npc_stations: agent.level and limit.
+	maxAgentLevel       = 5
+	maxStationLimit     = 50
+	defaultStationLimit = 20
 )
 
 // listCapError is the answer for a list longer than its cap.

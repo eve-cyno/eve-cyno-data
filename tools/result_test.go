@@ -209,6 +209,10 @@ func TestExecuteToolResult_TextMatchesExecuteTool(t *testing.T) {
 		{"get_jumps_between", map[string]any{"from_system": "Jita", "to_system": "Amarr", "detail": "summary", "avoid": []any{"Ahbazon"}}, sdeDeps},
 		{"get_systems_in_region", map[string]any{"region_name": "The Forge"}, sdeDeps},
 		{"get_npc_stations", map[string]any{"system_name": "Jita"}, sdeDeps},
+		{"get_npc_stations", map[string]any{"near": map[string]any{"origin": "Dodixie", "max_jumps": 2.0}, "agent": map[string]any{"level": 4.0, "division": "security"}, "limit": 3.0}, sdeDeps},
+		{"get_npc_stations", map[string]any{"region": "Sinq Laison", "services": []any{"Repair Facilities"}, "limit": 2.0}, sdeDeps},
+		{"get_npc_stations", map[string]any{"near": map[string]any{"origin": "Dodixie"}, "agent": map[string]any{"corporation": "Federation Navy", "locator": true}, "limit": 2.0}, sdeDeps},
+		{"get_npc_stations", map[string]any{"system_name": "Nowhere"}, sdeDeps},
 		{"find_systems", map[string]any{"region": "The Forge", "limit": 3.0}, sdeDeps},
 		{"find_systems", map[string]any{"region": "Nowhere"}, sdeDeps},
 		{"get_system_info", map[string]any{"systems": []any{"Jita", "Erkinen", "Nope99"}}, sdeDeps},
@@ -281,7 +285,6 @@ func TestExecuteToolResult_DataIsNilForTextOnlyTools(t *testing.T) {
 		tool string
 		args map[string]any
 	}{
-		{"get_npc_stations", map[string]any{"system_name": "Jita"}},
 		{"appraise_items", map[string]any{"items": "Tritanium 10"}},
 	} {
 		res, err := ExecuteToolResult(context.Background(), deps, c.tool, c.args)

@@ -45,6 +45,10 @@ func TestSchemaCapsMatchTheCode(t *testing.T) {
 		{"get_required_skills", "attributes.willpower"}:       maxAttribute,
 		{"get_required_skills", "attributes.intelligence"}:    maxAttribute,
 		{"get_required_skills", "attributes.charisma"}:        maxAttribute,
+		{"get_npc_stations", "limit"}:                         maxStationLimit,
+		{"get_npc_stations", "services"}:                      maxFilterValues,
+		{"get_npc_stations", "near.max_jumps"}:                maxNearJumps,
+		{"get_npc_stations", "agent.level"}:                   maxAgentLevel,
 	} // later tools add their rows here
 
 	props := map[string]map[string]any{}
@@ -83,6 +87,7 @@ func TestCapErrorLines(t *testing.T) {
 func TestCapDefaultsAreWithinTheirMaximums(t *testing.T) {
 	require.LessOrEqual(t, defaultFindLimit, maxFindLimit)
 	require.LessOrEqual(t, defaultTheraLimit, maxTheraLimit)
+	require.LessOrEqual(t, defaultStationLimit, maxStationLimit)
 }
 
 func TestIntSlice(t *testing.T) {

@@ -379,13 +379,18 @@ List solar systems in an EVE region filtered by security band. Use for 'which lo
 
 ### get_npc_stations
 
-List NPC stations in a solar system, including their owning corporation and operation type. Use for 'stations in X' or 'where can I dock' questions.
+List NPC stations, and find mission agents (for example the nearest level 4 security agent). With only system_name it lists that system's stations with owner and operation: use it for 'stations in X' or 'where can I dock'. With near, region, services, agent or limit it searches stations, nearest first (by gate jumps from near.origin), with owner, services, the refinery yield (Reprocessing Plant stations) and the matching agents, up to 50 per call with the total. Every agent in this build sits at a station, so 'nearest level 4 security agent to Dodixie' is the nearest station with such an agent. Example: {"near":{"origin":"Dodixie","max_jumps":5},"agent":{"level":4,"division":"security"},"limit":3}. Another: stations within 1 jump of Dodixie with repair facilities: {"near":{"origin":"Dodixie","max_jumps":1},"services":["Repair Facilities"]}.
 
 - Call: `POST /v1/tool/get_npc_stations` or MCP tool `get_npc_stations`
 - Access: public. No key needed.
 - Arguments:
-  - `system_name` (string, required): Solar system name, e.g. 'Hek', 'Jita'
-- Typed result: none; the answer is `result.text`
+  - `agent` (object): Keep stations with at least one matching agent, and list those agents, e.g. {"level":4,"division":"security"} or {"kind":"research","faction":"Gallente Federation"}.
+  - `limit` (integer): Stations to list (1-50, default 20)
+  - `near` (object): Rank stations by gate jumps from an origin system, nearest first, e.g. {"origin":"Dodixie","max_jumps":5}. Without max_jumps every reachable system is ranked.
+  - `region` (string): Region name, e.g. 'Sinq Laison'
+  - `services` (array of string): Station services a station must all offer, e.g. ['Repair Facilities', 'Reprocessing Plant']. Same names as find_systems station_services.
+  - `system_name` (string): Solar system name, e.g. 'Hek', 'Jita'. Alone it lists that system's stations; with search parameters it limits the search to that system.
+- Typed result (`result.data`): StationList with fields `total`, `shown`, `stations`
 - Sources: EVE Static Data Export (via Fuzzwork)
 
 ### get_reprocessing_yield

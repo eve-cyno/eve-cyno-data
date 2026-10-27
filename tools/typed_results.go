@@ -954,3 +954,57 @@ type SkillTotals struct {
 	// seconds is the unrounded total, for the text's minutes.
 	seconds float64
 }
+
+// StationList is the result of get_npc_stations: the NPC stations that match, nearest first.
+type StationList struct {
+	// Total is the number of stations that match, before the limit.
+	Total int `json:"total"`
+	// Shown is the number of rows in Stations.
+	Shown int `json:"shown"`
+	// Stations is the page, in the order of the text lines: by jumps (with near), then system name, then station name.
+	Stations []StationRow `json:"stations"`
+}
+
+// StationRow is one NPC station of a get_npc_stations answer.
+type StationRow struct {
+	// StationID is the station's id.
+	StationID int `json:"station_id"`
+	// Name is the station name as the SDE spells it.
+	Name string `json:"name"`
+	// SystemID is the solar system ID.
+	SystemID int `json:"system_id"`
+	// System is the solar system name.
+	System string `json:"system"`
+	// Security is the system's security as the game shows it (one decimal).
+	Security float64 `json:"security"`
+	// Region is the region name.
+	Region string `json:"region"`
+	// Jumps is the gate-jump count from near.origin; null without near.
+	Jumps *int `json:"jumps"`
+	// Owner is the owning NPC corporation.
+	Owner string `json:"owner"`
+	// Services lists the station's services, sorted by name.
+	Services []string `json:"services"`
+	// ReprocessingEfficiency is the station's base refining yield as a fraction (0.5 is 50%); null without a Reprocessing Plant.
+	ReprocessingEfficiency *float64 `json:"reprocessing_efficiency"`
+	// Agents lists the agents that match the agent filter; empty without an agent filter.
+	Agents []AgentRow `json:"agents"`
+}
+
+// AgentRow is one mission agent at a station.
+type AgentRow struct {
+	// AgentID is the agent's id.
+	AgentID int `json:"agent_id"`
+	// Name is the agent's name.
+	Name string `json:"name"`
+	// Level is the agent level, 1 to 5.
+	Level int `json:"level"`
+	// Division is the NPC division, for example "Security", "Distribution", "Mining" or "R&D".
+	Division string `json:"division"`
+	// Kind is "mission", "research", "faction_warfare", "storyline", "epic_arc", "career", "concord" or the lowercase SDE agent type for any other.
+	Kind string `json:"kind"`
+	// Corporation is the agent's corporation.
+	Corporation string `json:"corporation"`
+	// Locator is true when the agent offers the locator service.
+	Locator bool `json:"locator"`
+}

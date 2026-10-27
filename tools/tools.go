@@ -117,8 +117,14 @@ func dispatch(ctx context.Context, deps *Deps, name string, arguments map[string
 		return plain(getSystemsInRegion(deps.SDE, region, secMin, secMax))
 
 	case "get_npc_stations":
+		// near, region, services, agent and limit select the search form; null, "", [] and {}
+		// count as absent, so a call without them keeps the single-system text.
+		if stationSearchRequested(arguments) {
+			text, list := findNPCStations(deps.SDE, arguments)
+			return typed(text, list, nil)
+		}
 		system, _ := arguments["system_name"].(string)
-		return plain(getNPCStations(deps.SDE, system))
+		return typed(getNPCStations(deps.SDE, system), stationsOf(deps.SDE, system), nil)
 
 	case "get_reprocessing_yield":
 		// Schema param is "quantity" (NOT "runs"); reading "runs" dropped the
