@@ -301,7 +301,7 @@ func TestRecentKills_QueuedFetchHonoursThePause(t *testing.T) {
 	close(release)
 	wg.Wait()
 	require.EqualValues(t, 1, hits.Load())
-	_, _, retryAt := c.kills.held("2/1")
+	_, retryAt, _ := c.kills.held("2/1")
 	require.False(t, retryAt.IsZero())
 }
 
@@ -319,7 +319,7 @@ func TestRecentKills_SuccessLeavesThePause(t *testing.T) {
 	_, data, err := getRecentKills(context.Background(), c, deps.SDE, map[string]any{"system": "Jita"})
 	require.NoError(t, err)
 	require.NotNil(t, data)
-	_, _, retryAt := c.kills.held("x")
+	_, retryAt, _ := c.kills.held("x")
 	require.Equal(t, now.Add(killsRetry), retryAt)
 }
 

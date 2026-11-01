@@ -114,10 +114,10 @@ func (b *killsBook) store(key string, k *killsCopy) {
 }
 
 // held returns a key's copy and the back-off state.
-func (b *killsBook) held(key string) (*killsCopy, error, time.Time) {
+func (b *killsBook) held(key string) (*killsCopy, time.Time, error) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	return b.copies[key], b.lastErr, b.retryAt
+	return b.copies[key], b.retryAt, b.lastErr
 }
 
 // copyOf returns a copy no older than killsTTL, fetching one through c when needed. When a fetch
@@ -127,7 +127,7 @@ func (b *killsBook) held(key string) (*killsCopy, error, time.Time) {
 // fetch that was under way when the host said stop lifts nothing, and one still queued is not sent.
 func (b *killsBook) copyOf(ctx context.Context, c *Client, system, hours int) (*killsCopy, error) {
 	key := strconv.Itoa(system) + "/" + strconv.Itoa(hours)
-	cur, lastErr, retryAt := b.held(key)
+	cur, retryAt, lastErr := b.held(key)
 	now := b.clock()
 	if cur != nil && now.Sub(cur.fetched) < killsTTL {
 		return cur, nil
@@ -141,7 +141,7 @@ func (b *killsBook) copyOf(ctx context.Context, c *Client, system, hours int) (*
 	}
 	ch := b.flight.DoChan(key, func() (any, error) {
 		// Another flight may have finished between the check above and this one.
-		got, gotErr, gotRetry := b.held(key)
+		got, gotRetry, gotErr := b.held(key)
 		if n := b.clock(); got != nil && n.Sub(got.fetched) < killsTTL {
 			return got, nil
 		} else if n.Before(gotRetry) {
@@ -150,7 +150,7 @@ func (b *killsBook) copyOf(ctx context.Context, c *Client, system, hours int) (*
 		fctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), killsTimeout)
 		defer cancel()
 		ready := func() error {
-			if _, last, at := b.held(key); b.clock().Before(at) {
+			if _, at, last := b.held(key); b.clock().Before(at) {
 				return fmt.Errorf("zkill list: paused after: %v", last) // %v: no second pause from this one
 			}
 			return nil
