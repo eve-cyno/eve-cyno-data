@@ -110,6 +110,9 @@ func dispatch(ctx context.Context, deps *Deps, name string, arguments map[string
 	case "get_thera_connections":
 		return typed(getTheraConnections(ctx, deps.Client, deps.SDE, arguments))
 
+	case "get_recent_kills":
+		return typed(getRecentKills(ctx, deps.Client, deps.SDE, arguments))
+
 	case "get_systems_in_region":
 		region, _ := arguments["region_name"].(string)
 		secMin := floatArg(arguments, "sec_min", -1.0)

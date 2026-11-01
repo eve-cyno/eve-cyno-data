@@ -95,6 +95,7 @@ func TestLiveKind_CoversEveryUpstreamTool(t *testing.T) {
 	}
 	require.Equal(t, []string{"get_thera_connections"}, scout)
 	require.Equal(t, 1, kinds[liveEveScout])
+	require.Equal(t, 1, kinds[liveZKill])
 }
 
 func TestCodeList_JoinsWithTheConjunction(t *testing.T) {

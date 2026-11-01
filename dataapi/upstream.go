@@ -83,6 +83,8 @@ func upstreamSentence(s Surface, t catalog.Tool) string {
 		b.WriteString("Reads live public data from EVE's ESI through a shared cache that follows ESI's `Expires`.")
 	case liveEveScout:
 		b.WriteString("Reads live Thera and Turnur connections from EvE-Scout (Signal Cartel) through a shared cache that follows its cache headers (one to ten minutes, five when they set none). When EvE-Scout does not answer, it serves its last copy if that is at most an hour old, with the copy's time in `as_of`; otherwise `result.text` says the connections are unavailable.")
+	case liveZKill:
+		b.WriteString("Reads zKillboard's public list through a shared cache that keeps one copy of a system for two minutes. When zKillboard does not answer, it serves a copy up to 15 minutes old and states its time, or a plain text answer. It names no pilot, corporation or alliance.")
 	default:
 		return ""
 	}

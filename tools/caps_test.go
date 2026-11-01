@@ -30,6 +30,7 @@ func TestSchemaCapsMatchTheCode(t *testing.T) {
 		{"find_systems", "near.max_jumps"}:                    maxNearJumps,
 		{"get_thera_connections", "limit"}:                    maxTheraLimit,
 		{"get_thera_connections", "near.max_jumps"}:           maxNearJumps,
+		{"get_recent_kills", "hours"}:                         maxKillHours,
 		{"find_systems", "jump_range.jump_drive_calibration"}: maxSkillLevel,
 		{"plan_jump_route", "waypoints"}:                      maxWaypoints,
 		{"plan_jump_route", "avoid"}:                          maxAvoid,

@@ -148,7 +148,7 @@ func (a *API) tool(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if a.toolMode == ToolAPIPublic {
-		// Tools that read a live upstream (ESI, EvE-Scout) share one budget stricter than the route's. It is
+		// Tools that read a live upstream (ESI, EvE-Scout or zKillboard) share one budget stricter than the route's. It is
 		// charged after the gate and the argument check, so a refused call costs nothing.
 		// A tool whose live options are off (plan_jump_route or get_production_chain without them) answers from the SDE and costs nothing here.
 		if !known || t.SpendsUpstream(args) {

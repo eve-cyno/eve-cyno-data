@@ -14,7 +14,7 @@ Machine-readable description: [/v1/openapi.yaml](/v1/openapi.yaml) (OpenAPI 3.1;
 - An API key raises the per-minute budgets: every operation states its limit without a key and with one, counted in the key's own window. The live-data tools keep a lower limit than the route.
 - A new API key has a daily cap of 10000 requests per UTC day by default (a cap can be changed per key, 0 meaning none). Over its cap a key gets `429` `daily_quota_exceeded` with `Retry-After` set to the seconds until 00:00 UTC.
 - Request bodies are capped: 256 KiB on the fit routes, 64 KiB on the tool and MCP endpoints (`413`).
-- Tool tiers: each tool is *public* (no key), *keyed* (an API key) or *disabled*. Public: `get_market_price`, `get_type_info`, `search_item_by_name`, `get_ship_stats`, `get_ship_bonuses`, `find_canonical_module`, `get_hull_facts`, `get_fits`, `list_fits`, `validate_fitting`, `compute_fit_stats`, `appraise_items`, `get_production_chain`, `get_jumps_between`, `get_jump_distances`, `plan_jump_route`, `get_systems_in_region`, `get_lp_offers`, `get_npc_stations`, `get_reprocessing_yield`, `get_required_skills`, `get_average_prices`, `get_market_history`, `get_sovereignty`, `get_system_activity`, `find_systems`, `get_system_info`, `get_thera_connections`. Keyed (send the key as `Authorization: Bearer <key>` or `X-API-Key`; `401 api_key_required` without one, `401 invalid_api_key` for a key that is not valid, on every tool): `analyze_battle`. Optional: your own Janice key in the `X-Janice-Key` request header (used for that request only, never logged or stored) turns `appraise_items` into a Janice appraisal; without it the answer is an estimate from ESI average prices. Disabled tools are not offered on this service (`403 tool_disabled` over REST, absent from the MCP tool list).
+- Tool tiers: each tool is *public* (no key), *keyed* (an API key) or *disabled*. Public: `get_market_price`, `get_type_info`, `search_item_by_name`, `get_ship_stats`, `get_ship_bonuses`, `find_canonical_module`, `get_hull_facts`, `get_fits`, `list_fits`, `validate_fitting`, `compute_fit_stats`, `appraise_items`, `get_production_chain`, `get_jumps_between`, `get_jump_distances`, `plan_jump_route`, `get_recent_kills`, `get_systems_in_region`, `get_lp_offers`, `get_npc_stations`, `get_reprocessing_yield`, `get_required_skills`, `get_average_prices`, `get_market_history`, `get_sovereignty`, `get_system_activity`, `find_systems`, `get_system_info`, `get_thera_connections`. Keyed (send the key as `Authorization: Bearer <key>` or `X-API-Key`; `401 api_key_required` without one, `401 invalid_api_key` for a key that is not valid, on every tool): `analyze_battle`. Optional: your own Janice key in the `X-Janice-Key` request header (used for that request only, never logged or stored) turns `appraise_items` into a Janice appraisal; without it the answer is an estimate from ESI average prices. Disabled tools are not offered on this service (`403 tool_disabled` over REST, absent from the MCP tool list).
 
 ## Endpoints
 
@@ -373,6 +373,19 @@ Plan a jump-drive route like a capital pilot's jump planner, for a jump freighte
   - `waypoints` (array of string): Systems the route must stop at, in order (up to 5), e.g. ["Sahda"]
 - Typed result (`result.data`): JumpRoute with fields `origin`, `origin_id`, `destination`, `destination_id`, `waypoints`, `ship`, `ship_group`, `skills`, `range_ly`, `fuel_type`, `fuel_per_ly`, `jumps`, `total_ly`, `total_fuel`, `fuel_volume_m3`, `can_bridge`, `can_conduit`, `prefer_stations`, `avoid`, `avoid_regions`, `avoid_incursions`, `incursion_systems`, `live_info`, `live_unavailable`, `hops`
 - Sources: EVE Static Data Export (via Fuzzwork); ESI (EVE Swagger Interface)
+
+### get_recent_kills
+
+The newest kills in one solar system from zKillboard's public list: time, ship that died, value in ISK, number of attackers and a link, newest first, at most 10; the answer says how many the window held. It names no pilot, corporation or alliance. A shared copy lives two minutes; when zKillboard does not answer the answer is a copy up to 15 minutes old with its time, or a plain text line. Credit zKillboard when you show the list.
+
+- Call: `POST /v1/tool/get_recent_kills` or MCP tool `get_recent_kills`
+- Access: public. No key needed.
+- Live zKillboard data: Reads zKillboard's public list through a shared cache that keeps one copy of a system for two minutes. When zKillboard does not answer, it serves a copy up to 15 minutes old and states its time, or a plain text answer. It names no pilot, corporation or alliance. All live-upstream calls share one fair-use limit of 5 calls per minute per caller without an API key and 10 with one (REST and MCP together, counted across every live tool), on top of the route limit.
+- Arguments:
+  - `system` (string, required): Solar system name, e.g. 'Jita'
+  - `hours` (integer): How many hours back to look (1-6, default 1)
+- Typed result (`result.data`): RecentKills with fields `system`, `hours`, `as_of`, `count`, `kills`
+- Sources: zKillboard; ESI (EVE Swagger Interface); EVE Static Data Export (via Fuzzwork)
 
 ### get_systems_in_region
 

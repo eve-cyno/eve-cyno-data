@@ -9,7 +9,7 @@ import (
 
 // expectedToolCount is the number of tool definitions in tools/tool_schemas.json
 // (the source of truth; it was originally dumped from the deleted Python runtime).
-const expectedToolCount = 30
+const expectedToolCount = 31
 
 // executeToolSwitchNames is the set of tool names handled by ExecuteTool's
 // switch statement in tools.go. Kept in sync manually — any addition to the
@@ -46,6 +46,7 @@ var executeToolSwitchNames = map[string]bool{
 	"find_systems":           true,
 	"get_system_info":        true,
 	"get_thera_connections":  true,
+	"get_recent_kills":       true,
 	"convert_isk_to_real":    true,
 }
 

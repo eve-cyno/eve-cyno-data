@@ -49,11 +49,11 @@ type Tool struct {
 	// local user's own surfaces (the native loopback mount, the chat, cmd/mcp -all)
 	// ignore it and run everything.
 	Tier Tier
-	// Upstream is true when a call can read a live upstream (ESI, or EvE-Scout: a cache miss
-	// reaches it). Public surfaces give such tools one shared, stricter per-caller limit.
+	// Upstream is true when a call can read a live upstream (ESI, EvE-Scout or zKillboard: a cache
+	// miss reaches it). Public surfaces give such tools one shared, stricter per-caller limit.
 	Upstream bool
-	// UpstreamName names the live upstream behind an Upstream tool: UpstreamESI or
-	// UpstreamEveScout; empty for any other tool.
+	// UpstreamName names the live upstream behind an Upstream tool: UpstreamESI, UpstreamEveScout
+	// or UpstreamZKill; empty for any other tool.
 	UpstreamName string
 	// UpstreamArgs lists the arguments that make a call of an Upstream tool live: a boolean that is
 	// true, or a string that is not blank. A call with none of them set answers from the SDE and
@@ -238,6 +238,7 @@ func tierTable() map[string]Tier {
 		"find_systems":           TierPublic,
 		"get_system_info":        TierPublic,
 		"get_thera_connections":  TierPublic,
+		"get_recent_kills":       TierPublic,
 		"get_reprocessing_yield": TierPublic,
 		"get_required_skills":    TierPublic,
 		"get_production_chain":   TierPublic,
@@ -280,6 +281,7 @@ func tierTable() map[string]Tier {
 const (
 	UpstreamESI      = "ESI"
 	UpstreamEveScout = "EvE-Scout"
+	UpstreamZKill    = "zKillboard"
 )
 
 // upstreamTools are the tools whose cache misses reach a live upstream on a public surface
@@ -292,6 +294,7 @@ var upstreamTools = map[string]string{
 	"get_system_activity":   UpstreamESI,
 	"get_market_history":    UpstreamESI,
 	"get_thera_connections": UpstreamEveScout,
+	"get_recent_kills":      UpstreamZKill,
 	"plan_jump_route":       UpstreamESI,
 	"get_lp_offers":         UpstreamESI,
 	// get_production_chain reads ESI only with system (the cost index); include_cost reads the
@@ -336,6 +339,7 @@ func summaryTable() map[string]string {
 		"find_systems":           "Search solar systems by security, location, celestials, stations, ice belts and distance.",
 		"get_system_info":        "Security, location, neighbours, celestials, stations and ice belt of up to 50 systems.",
 		"get_thera_connections":  "Live Thera and Turnur wormhole connections from EvE-Scout, optionally nearest to a system.",
+		"get_recent_kills":       "The newest kills in one system from zKillboard: time, ship, value, attackers and a link, with no pilot names.",
 		"get_reprocessing_yield": "Materials produced by reprocessing an item.",
 		"get_required_skills":    "Skills to fly a ship or build an item, for up to 20 items at once, with SP and training time.",
 		"get_sovereignty":        "Alliance, corporation or faction holding sovereignty over up to 50 solar systems.",
@@ -425,6 +429,8 @@ func dataType(name string) reflect.Type {
 		return reflect.TypeFor[tools.SystemList]()
 	case "get_thera_connections":
 		return reflect.TypeFor[tools.TheraConnections]()
+	case "get_recent_kills":
+		return reflect.TypeFor[tools.RecentKills]()
 	case "get_system_info":
 		return reflect.TypeFor[tools.SystemInfoList]()
 	case "get_sovereignty":

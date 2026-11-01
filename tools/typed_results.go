@@ -759,6 +759,35 @@ type SystemInfo struct {
 	IceBelt *IceBelt `json:"ice_belt"`
 }
 
+// RecentKills is the result of get_recent_kills: the newest kills in one system, from
+// zKillboard. It carries no pilot, corporation or alliance.
+type RecentKills struct {
+	// System is the system's name.
+	System string `json:"system"`
+	// Hours is the window the list covers.
+	Hours int `json:"hours"`
+	// AsOf is the time of the copy the answer is built from (RFC 3339, UTC).
+	AsOf string `json:"as_of"`
+	// Count is the number of kills in the window, which can be more than Kills holds.
+	Count int `json:"count"`
+	// Kills are the newest kills, newest first, at most 10.
+	Kills []RecentKill `json:"kills"`
+}
+
+// RecentKill is one kill.
+type RecentKill struct {
+	// Time is the time of the kill (RFC 3339, UTC).
+	Time string `json:"time"`
+	// Ship is the name of the ship that died.
+	Ship string `json:"ship"`
+	// Value is zKillboard's total value in ISK.
+	Value float64 `json:"value"`
+	// Attackers is the number of attackers.
+	Attackers int `json:"attackers"`
+	// URL is the kill's zKillboard page.
+	URL string `json:"url"`
+}
+
 // TheraConnections is the result of get_thera_connections: live wormhole connections from
 // Thera and Turnur (EvE-Scout / Signal Cartel).
 type TheraConnections struct {

@@ -34,7 +34,7 @@ func credits() []credit {
 			[]creditLink{{"https://abysstracker.com/", "abysstracker.com"}}, "No published licence. Source link and author kept on every fit."},
 		{"community", community, "AB", "Abyss community apps", "Two player-built abyss calculators and fit pages we learned from and index, with their authors' approval.",
 			[]creditLink{{"https://gustavmannfred.streamlit.app/", "gustavmannfred"}, {"https://caldarijoans.streamlit.app/", "caldarijoans"}}, "No published licence. Used with the authors' approval, credited per fit."},
-		{"community", community, "ZK", "zKillboard", "Killmails behind system activity and battle summaries.",
+		{"community", community, "ZK", "zKillboard", "Killmails behind system activity, battle summaries and <code>get_recent_kills</code>.",
 			[]creditLink{{"https://zkillboard.com/", "zkillboard.com"}}, "Public API, used within its etiquette rules. No zKillboard code is used."},
 		{"community", community, "BR", "WarBeacon and br.evetools", "Battle report sites. A report is fetched only when you give its link.",
 			[]creditLink{{"https://warbeacon.net/", "warbeacon.net"}, {"https://br.evetools.org/", "br.evetools.org"}}, "No published terms. One report per request, no crawling."},

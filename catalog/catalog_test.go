@@ -46,7 +46,7 @@ func TestTiers_Policy(t *testing.T) {
 	want := map[catalog.Tier][]string{
 		catalog.TierPublic: {
 			"get_jumps_between", "get_jump_distances", "plan_jump_route", "get_average_prices", "get_market_history", "get_systems_in_region", "get_npc_stations", "find_systems", "get_system_info", "get_thera_connections", "get_reprocessing_yield",
-			"get_required_skills", "get_production_chain", "find_canonical_module", "search_item_by_name", "get_lp_offers",
+			"get_required_skills", "get_production_chain", "find_canonical_module", "search_item_by_name", "get_lp_offers", "get_recent_kills",
 			"get_ship_stats", "get_hull_facts", "get_ship_bonuses", "compute_fit_stats", "validate_fitting",
 			// the public ESI pass-throughs
 			"get_market_price", "get_type_info", "get_sovereignty", "get_system_activity",
@@ -87,7 +87,7 @@ func TestUpstreamTools(t *testing.T) {
 	}
 	require.Equal(t, map[string]string{
 		"get_market_price": "ESI", "get_type_info": "ESI", "get_sovereignty": "ESI", "get_system_activity": "ESI",
-		"get_market_history": "ESI", "get_thera_connections": "EvE-Scout", "plan_jump_route": "ESI",
+		"get_market_history": "ESI", "get_thera_connections": "EvE-Scout", "get_recent_kills": "zKillboard", "plan_jump_route": "ESI",
 		"get_production_chain": "ESI", "get_lp_offers": "ESI",
 	}, got)
 	jump, _ := catalog.Lookup("plan_jump_route")

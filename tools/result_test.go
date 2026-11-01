@@ -92,6 +92,7 @@ func TestAttribution_NamesTheRightUpstreams(t *testing.T) {
 		"find_systems":          {"EVE Static Data Export (via Fuzzwork)", "EVE University Wiki (ice belt systems)"},
 		"get_system_info":       {"EVE Static Data Export (via Fuzzwork)", "EVE University Wiki (ice belt systems)"},
 		"get_thera_connections": {"EvE-Scout / Signal Cartel", "EVE Static Data Export (via Fuzzwork)"},
+		"get_recent_kills":      {"zKillboard", "ESI (EVE Swagger Interface)", "EVE Static Data Export (via Fuzzwork)"},
 	}
 	for tool, want := range cases {
 		require.ElementsMatch(t, want, sourceNames(Attribution(tool)), tool)
@@ -259,6 +260,7 @@ func TestExecuteToolResult_TextMatchesExecuteTool(t *testing.T) {
 		{"get_market_price", map[string]any{"type_id": 34, "hub": "amarr"}, stubDeps},
 		{"get_market_history", map[string]any{"type_id": 34}, stubDeps},
 		{"get_thera_connections", map[string]any{"hub": "thera"}, stubDeps},
+		{"get_recent_kills", map[string]any{"system": "Nope"}, sdeDeps},
 		{"get_sovereignty", map[string]any{"system_name": "Jita"}, stubDeps},
 		{"get_system_activity", map[string]any{"system_name": "Jita"}, stubDeps},
 		{"get_sovereignty", map[string]any{"systems": []any{"Jita", "Nope"}}, stubDeps},

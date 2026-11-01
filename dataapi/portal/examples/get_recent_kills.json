@@ -1,0 +1,111 @@
+{
+  "tool": "get_recent_kills",
+  "request": {
+    "system": "Jita"
+  },
+  "prompt": "What died in Jita in the last hour?",
+  "recorded": "2026-11-01",
+  "trimmed": false,
+  "response": {
+    "tool": "get_recent_kills",
+    "version": "sha-52c75d0",
+    "result": {
+      "text": "Kills in Jita in the last hour (zKillboard, as of 12:40 UTC), 10 of 10:\n  12:29 UTC · Navitas · 336,779.66 ISK · 1 attacker · https://zkillboard.com/kill/139595739/\n  12:28 UTC · Impairor · 14,868.27 ISK · 1 attacker · https://zkillboard.com/kill/139595703/\n  12:14 UTC · Capsule · 10,000.00 ISK · 1 attacker · https://zkillboard.com/kill/139595325/\n  11:54 UTC · Tornado · 127,669,382.83 ISK · 2 attackers · https://zkillboard.com/kill/139594924/\n  11:54 UTC · Tayra · 993,836,839.27 ISK · 1 attacker · https://zkillboard.com/kill/139594920/\n  11:53 UTC · Velator · 6,820.46 ISK · 1 attacker · https://zkillboard.com/kill/139594903/\n  11:52 UTC · Incursus · 190,366.85 ISK · 1 attacker · https://zkillboard.com/kill/139594884/\n  11:48 UTC · Velator · 8,802.14 ISK · 2 attackers · https://zkillboard.com/kill/139594834/\n  11:43 UTC · Ibis · 2,932.00 ISK · 1 attacker · https://zkillboard.com/kill/139594701/\n  11:42 UTC · Velator · 6,820.46 ISK · 1 attacker · https://zkillboard.com/kill/139594675/",
+      "data": {
+        "system": "Jita",
+        "hours": 1,
+        "as_of": "2026-11-01T12:40:00Z",
+        "count": 10,
+        "kills": [
+          {
+            "time": "2026-11-01T12:29:16Z",
+            "ship": "Navitas",
+            "value": 336779.66,
+            "attackers": 1,
+            "url": "https://zkillboard.com/kill/139595739/"
+          },
+          {
+            "time": "2026-11-01T12:28:25Z",
+            "ship": "Impairor",
+            "value": 14868.27,
+            "attackers": 1,
+            "url": "https://zkillboard.com/kill/139595703/"
+          },
+          {
+            "time": "2026-11-01T12:14:40Z",
+            "ship": "Capsule",
+            "value": 10000,
+            "attackers": 1,
+            "url": "https://zkillboard.com/kill/139595325/"
+          },
+          {
+            "time": "2026-11-01T11:54:42Z",
+            "ship": "Tornado",
+            "value": 127669382.83,
+            "attackers": 2,
+            "url": "https://zkillboard.com/kill/139594924/"
+          },
+          {
+            "time": "2026-11-01T11:54:35Z",
+            "ship": "Tayra",
+            "value": 993836839.27,
+            "attackers": 1,
+            "url": "https://zkillboard.com/kill/139594920/"
+          },
+          {
+            "time": "2026-11-01T11:53:24Z",
+            "ship": "Velator",
+            "value": 6820.46,
+            "attackers": 1,
+            "url": "https://zkillboard.com/kill/139594903/"
+          },
+          {
+            "time": "2026-11-01T11:52:29Z",
+            "ship": "Incursus",
+            "value": 190366.85,
+            "attackers": 1,
+            "url": "https://zkillboard.com/kill/139594884/"
+          },
+          {
+            "time": "2026-11-01T11:48:39Z",
+            "ship": "Velator",
+            "value": 8802.14,
+            "attackers": 2,
+            "url": "https://zkillboard.com/kill/139594834/"
+          },
+          {
+            "time": "2026-11-01T11:43:31Z",
+            "ship": "Ibis",
+            "value": 2932,
+            "attackers": 1,
+            "url": "https://zkillboard.com/kill/139594701/"
+          },
+          {
+            "time": "2026-11-01T11:42:42Z",
+            "ship": "Velator",
+            "value": 6820.46,
+            "attackers": 1,
+            "url": "https://zkillboard.com/kill/139594675/"
+          }
+        ]
+      }
+    },
+    "attribution": [
+      {
+        "name": "zKillboard",
+        "url": "https://zkillboard.com/",
+        "license": "Public API under zKillboard's usage etiquette; killmails are Fenris Creations game data (EVE Developer License Agreement)"
+      },
+      {
+        "name": "ESI (EVE Swagger Interface)",
+        "url": "https://esi.evetech.net/",
+        "license": "EVE Developer License Agreement (Fenris Creations); non-commercial use"
+      },
+      {
+        "name": "EVE Static Data Export (via Fuzzwork)",
+        "url": "https://www.fuzzwork.co.uk/dump/",
+        "license": "Fenris Creations game data under the EVE Developer License Agreement; converted by Fuzzwork Enterprises"
+      }
+    ]
+  }
+}

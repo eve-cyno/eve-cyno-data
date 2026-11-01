@@ -133,6 +133,10 @@ var toolAttribution = map[string][]Source{
 	// Live Thera and Turnur connections from EvE-Scout; security, region and distances from the SDE.
 	"get_thera_connections": {sourceEveScout, sourceSDE},
 
+	// The list from zKillboard, ship and system names from the SDE; ESI only for a list entry
+	// that holds no killmail.
+	"get_recent_kills": {sourceZKillboard, sourceESI, sourceSDE},
+
 	// The community fit corpus.
 	"get_fits":  communityFits,
 	"list_fits": communityFits,

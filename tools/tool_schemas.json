@@ -632,6 +632,31 @@
   {
     "type": "function",
     "function": {
+      "name": "get_recent_kills",
+      "description": "The newest kills in one solar system from zKillboard's public list: time, ship that died, value in ISK, number of attackers and a link, newest first, at most 10; the answer says how many the window held. It names no pilot, corporation or alliance. A shared copy lives two minutes; when zKillboard does not answer the answer is a copy up to 15 minutes old with its time, or a plain text line. Credit zKillboard when you show the list.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "system": {
+            "type": "string",
+            "description": "Solar system name, e.g. 'Jita'"
+          },
+          "hours": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 6,
+            "description": "How many hours back to look (1-6, default 1)"
+          }
+        },
+        "required": [
+          "system"
+        ]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
       "name": "get_systems_in_region",
       "description": "List solar systems in an EVE region filtered by security band. Use for 'which lowsec systems in X' or 'highsec in Y' questions.",
       "parameters": {

@@ -14,7 +14,7 @@ info:
     - An API key raises the per-minute budgets: every operation states its limit without a key and with one, counted in the key's own window. The live-data tools keep a lower limit than the route.
     - A new API key has a daily cap of 10000 requests per UTC day by default (a cap can be changed per key, 0 meaning none). Over its cap a key gets `429` `daily_quota_exceeded` with `Retry-After` set to the seconds until 00:00 UTC.
     - Request bodies are capped (256 KiB on the fit routes, 64 KiB on tools and MCP); an oversize body is `413`.
-    - Tool tiers: each tool is *public* (no key), *keyed* (an API key) or *disabled*. Public: `get_market_price`, `get_type_info`, `search_item_by_name`, `get_ship_stats`, `get_ship_bonuses`, `find_canonical_module`, `get_hull_facts`, `get_fits`, `list_fits`, `validate_fitting`, `compute_fit_stats`, `appraise_items`, `get_production_chain`, `get_jumps_between`, `get_jump_distances`, `plan_jump_route`, `get_systems_in_region`, `get_lp_offers`, `get_npc_stations`, `get_reprocessing_yield`, `get_required_skills`, `get_average_prices`, `get_market_history`, `get_sovereignty`, `get_system_activity`, `find_systems`, `get_system_info`, `get_thera_connections`. Keyed (send the key as `Authorization: Bearer <key>` or `X-API-Key`; `401 api_key_required` without one, `401 invalid_api_key` for a key that is not valid, on every tool): `analyze_battle`. Optional: your own Janice key in the `X-Janice-Key` request header (used for that request only, never logged or stored) turns `appraise_items` into a Janice appraisal; without it the answer is an estimate from ESI average prices. Disabled tools are not offered on this service (`403 tool_disabled` over REST, absent from the MCP tool list).
+    - Tool tiers: each tool is *public* (no key), *keyed* (an API key) or *disabled*. Public: `get_market_price`, `get_type_info`, `search_item_by_name`, `get_ship_stats`, `get_ship_bonuses`, `find_canonical_module`, `get_hull_facts`, `get_fits`, `list_fits`, `validate_fitting`, `compute_fit_stats`, `appraise_items`, `get_production_chain`, `get_jumps_between`, `get_jump_distances`, `plan_jump_route`, `get_recent_kills`, `get_systems_in_region`, `get_lp_offers`, `get_npc_stations`, `get_reprocessing_yield`, `get_required_skills`, `get_average_prices`, `get_market_history`, `get_sovereignty`, `get_system_activity`, `find_systems`, `get_system_info`, `get_thera_connections`. Keyed (send the key as `Authorization: Bearer <key>` or `X-API-Key`; `401 api_key_required` without one, `401 invalid_api_key` for a key that is not valid, on every tool): `analyze_battle`. Optional: your own Janice key in the `X-Janice-Key` request header (used for that request only, never logged or stored) turns `appraise_items` into a Janice appraisal; without it the answer is an estimate from ESI average prices. Disabled tools are not offered on this service (`403 tool_disabled` over REST, absent from the MCP tool list).
 
     ## Attribution and licences
 
@@ -1440,6 +1440,65 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/JumpRouteToolResponse'
+          headers:
+            X-Request-ID:
+              $ref: '#/components/headers/RequestID'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "413":
+          $ref: '#/components/responses/PayloadTooLarge'
+        "429":
+          $ref: '#/components/responses/RateLimited'
+        "500":
+          $ref: '#/components/responses/InternalError'
+        "503":
+          $ref: '#/components/responses/Unavailable'
+        "504":
+          $ref: '#/components/responses/Timeout'
+  /tool/get_recent_kills:
+    post:
+      tags:
+        - tools
+      summary: 'The newest kills in one solar system from zKillboard''s public list: time, ship that died, value in ISK, number of…'
+      description: |-
+        The newest kills in one solar system from zKillboard's public list: time, ship that died, value in ISK, number of attackers and a link, newest first, at most 10; the answer says how many the window held. It names no pilot, corporation or alliance. A shared copy lives two minutes; when zKillboard does not answer the answer is a copy up to 15 minutes old with its time, or a plain text line. Credit zKillboard when you show the list.
+
+        Sources: zKillboard; ESI (EVE Swagger Interface); EVE Static Data Export (via Fuzzwork). `result.data` is a `RecentKills` object when the call succeeds.
+
+        Access tier: **public**. No key needed.
+
+        Rate limit: 10 requests per minute per client IP without an API key, 60 per minute per API key with one.
+
+        Reads zKillboard's public list through a shared cache that keeps one copy of a system for two minutes. When zKillboard does not answer, it serves a copy up to 15 minutes old and states its time, or a plain text answer. It names no pilot, corporation or alliance. All live-upstream calls share one fair-use limit of 5 calls per minute per caller without an API key and 10 with one (REST and MCP together, counted across every live tool), on top of the route limit.
+      operationId: get_recent_kills
+      parameters:
+        - $ref: '#/components/parameters/RequestID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                hours:
+                  type: integer
+                  description: How many hours back to look (1-6, default 1)
+                  minimum: 1
+                  maximum: 6
+                system:
+                  type: string
+                  description: Solar system name, e.g. 'Jita'
+              required:
+                - system
+      responses:
+        "200":
+          description: The tool's answer.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecentKillsToolResponse'
           headers:
             X-Request-ID:
               $ref: '#/components/headers/RequestID'
@@ -4935,6 +4994,89 @@ components:
         - Weapon
         - OptimalM
         - FalloffM
+    RecentKill:
+      type: object
+      properties:
+        time:
+          type: string
+          description: Time is the time of the kill (RFC 3339, UTC).
+        ship:
+          type: string
+          description: Ship is the name of the ship that died.
+        value:
+          type: number
+          description: Value is zKillboard's total value in ISK.
+        attackers:
+          type: integer
+          description: Attackers is the number of attackers.
+        url:
+          type: string
+          description: URL is the kill's zKillboard page.
+      required:
+        - time
+        - ship
+        - value
+        - attackers
+        - url
+    RecentKills:
+      type: object
+      properties:
+        system:
+          type: string
+          description: System is the system's name.
+        hours:
+          type: integer
+          description: Hours is the window the list covers.
+        as_of:
+          type: string
+          description: AsOf is the time of the copy the answer is built from (RFC 3339, UTC).
+        count:
+          type: integer
+          description: Count is the number of kills in the window, which can be more than Kills holds.
+        kills:
+          type: array
+          description: Kills are the newest kills, newest first, at most 10.
+          items:
+            $ref: '#/components/schemas/RecentKill'
+      required:
+        - system
+        - hours
+        - as_of
+        - count
+        - kills
+    RecentKillsToolResponse:
+      type: object
+      properties:
+        tool:
+          type: string
+          description: The tool that ran.
+        version:
+          type: string
+          description: The build version of the service.
+        result:
+          type: object
+          properties:
+            text:
+              type: string
+              description: The answer as the chat assistant reads it.
+            data:
+              description: The typed answer, or null when the tool has none or the call ended in a text-only answer (an unknown id, a parse failure); `text` then says why.
+              oneOf:
+                - $ref: '#/components/schemas/RecentKills'
+                - type: "null"
+          required:
+            - text
+            - data
+        attribution:
+          type: array
+          description: The upstreams behind the answer; attribution is a condition of several of their licences.
+          items:
+            $ref: '#/components/schemas/Source'
+      required:
+        - tool
+        - version
+        - result
+        - attribution
     ResistProfile:
       type: object
       properties:

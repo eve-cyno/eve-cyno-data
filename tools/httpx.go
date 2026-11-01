@@ -53,6 +53,8 @@ type Client struct {
 	prices esiPriceBook
 	// thera is the short-lived copy of EvE-Scout's signature list (zero value is ready).
 	thera theraBook
+	// kills keeps short-lived copies of zKillboard's per-system lists (zero value is ready).
+	kills killsBook
 	// names caches /universe/names answers (alliance and corporation names; zero value is ready).
 	names idNameCache
 

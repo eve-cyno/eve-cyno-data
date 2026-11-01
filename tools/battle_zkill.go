@@ -570,6 +570,11 @@ func enrichZKillKillmails(ctx context.Context, c *Client, systemID, timestamp st
 // ── zKill HTTP helper ──────────────────────────────────────────────────────
 
 func zkillGet(ctx context.Context, c *Client, url string) ([]byte, error) {
+	return zkillGetCapped(ctx, c, url, 0)
+}
+
+// zkillGetCapped is zkillGet with a bound on the answer once unpacked; 0 means no bound.
+func zkillGetCapped(ctx context.Context, c *Client, url string, limit int64) ([]byte, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
@@ -602,12 +607,18 @@ func zkillGet(ctx context.Context, c *Client, url string) ([]byte, error) {
 		defer gz.Close()
 		reader = gz
 	}
+	if limit > 0 {
+		reader = io.LimitReader(reader, limit+1)
+	}
 	body, err := io.ReadAll(reader)
 	if err != nil {
 		return nil, err
 	}
 	if resp.StatusCode != 200 {
 		return nil, fmt.Errorf("HTTP %d", resp.StatusCode)
+	}
+	if limit > 0 && int64(len(body)) > limit {
+		return nil, fmt.Errorf("answer over %d bytes", limit)
 	}
 	return body, nil
 }

@@ -74,7 +74,7 @@ func TestPortal_EveryOfferedToolHasAPage(t *testing.T) {
 		}
 		require.Contains(t, body, "/docs/tools"+"#tools-", tl.Name)
 	}
-	require.Equal(t, 29, offered, "the public service offers 29 tools")
+	require.Equal(t, 30, offered, "the public service offers 30 tools")
 
 	for _, name := range []string{"no_such_tool", "convert_isk_to_real", "GET_MARKET_PRICE", "get_market_price.json"} {
 		requireError(t, do(api, http.MethodGet, "/docs/tools/"+name, ""), http.StatusNotFound, "not_found")
@@ -208,12 +208,12 @@ func TestPortal_RendersTheCatalogAndLimits(t *testing.T) {
 	api := newAPI(t, cfg)
 
 	home := do(api, http.MethodGet, "/", "").Body.String()
-	require.Contains(t, home, `<span data-slot="tools_offered">29</span>`)
-	require.Contains(t, home, `<span data-slot="tools_public">28</span>`)
-	require.Contains(t, home, `<span data-slot="tools_upstream">9</span>`, "every live tool: eight ESI, one EvE-Scout")
-	require.Contains(t, home, `<b data-slot="tools_upstream">9</b> tools · 9 calls/min per caller, shared`)
+	require.Contains(t, home, `<span data-slot="tools_offered">30</span>`)
+	require.Contains(t, home, `<span data-slot="tools_public">29</span>`)
+	require.Contains(t, home, `<span data-slot="tools_upstream">10</span>`, "every live tool: eight ESI, one EvE-Scout, one zKillboard")
+	require.Contains(t, home, `<b data-slot="tools_upstream">10</b> tools · 9 calls/min per caller, shared`)
 	require.Contains(t, home, `<span data-slot="limit_mcp">77</span>`)
-	require.Contains(t, home, "ESI and EvE-Scout, 9 calls/min shared")
+	require.Contains(t, home, "ESI, EvE-Scout and zKillboard, 9 calls/min shared")
 	require.NotContains(t, home, "community_fits", "the community-fit count is not known to the service: the slot is hidden")
 	require.NotContains(t, home, "~8,150")
 
@@ -227,7 +227,7 @@ func TestPortal_RendersTheCatalogAndLimits(t *testing.T) {
 			require.NotContains(t, index, link, tl.Name)
 		}
 	}
-	require.Contains(t, index, `data-filter="live">Live <span class="n">9</span>`, "every live tool: eight ESI, one EvE-Scout")
+	require.Contains(t, index, `data-filter="live">Live <span class="n">10</span>`, "every live tool: eight ESI, one EvE-Scout, one zKillboard")
 
 	access := do(api, http.MethodGet, "/docs/access", "").Body.String()
 	require.Contains(t, access, "77 per minute")
@@ -328,14 +328,14 @@ func TestPortal_LiveCopyByKind(t *testing.T) {
 	// The landing page counts and labels the same live tools, and credits EvE-Scout.
 	home := do(api, http.MethodGet, "/", "").Body.String()
 	for _, want := range []string{
-		`<dt><i aria-hidden="true"></i>Live tools</dt><dd><span data-slot="tools_upstream">9</span>`,
-		`<h3>Live ESI and EvE-Scout</h3><p>Market prices and history, type info, sovereignty, system activity and jump-route checks from ESI, through a shared cache that follows ESI's <code>Expires</code>; Thera and Turnur connections from EvE-Scout (Signal Cartel).</p>`,
+		`<dt><i aria-hidden="true"></i>Live tools</dt><dd><span data-slot="tools_upstream">10</span>`,
+		`<h3>Live ESI, EvE-Scout and zKillboard</h3><p>Market prices and history, type info, sovereignty, system activity and jump-route checks from ESI, through a shared cache that follows ESI's <code>Expires</code>; Thera and Turnur connections from EvE-Scout (Signal Cartel); the newest kills in a system from zKillboard.</p>`,
 		`href="/docs/tools/get_market_price">get_market_price</a><span class="tool-badges"><span class="badge badge-live">live ESI</span></span>`,
 		`<li class="tool-row" data-tier="public" data-upstream="true"><a class="tool-name" href="/docs/tools/get_thera_connections">get_thera_connections</a><span class="tool-badges"><span class="badge badge-live">live EvE-Scout</span></span>`,
 		`<li class="tool-row" data-tier="public" data-upstream="true"><a class="tool-name" href="/docs/tools/plan_jump_route">plan_jump_route</a><span class="tool-badges"><span class="badge badge-live">live with options</span></span>`,
 		`<h3>EvE-Scout / Signal Cartel</h3><span class="cr-cat">Community</span>`,
 		"One shared cached copy: at most one request per cache lifetime, or one a minute while EvE-Scout does not answer.",
-		"live ESI and EvE-Scout reads and community fits",
+		"live ESI, EvE-Scout and zKillboard reads and community fits",
 	} {
 		require.Contains(t, home, want)
 	}
@@ -586,8 +586,8 @@ func TestPortal_TrialAccessCopyOnAKeyedService(t *testing.T) {
 	for _, want := range []string{
 		"Try it without a key or an account (trial limits, 200 requests a day)",
 		"requests/min per caller (120 with a key)",
-		"ESI and EvE-Scout, 5 calls/min shared (10 with a key)",
-		"community fits and 9 live tools (ESI and EvE-Scout)",
+		"ESI, EvE-Scout and zKillboard, 5 calls/min shared (10 with a key)",
+		"community fits and 10 live tools (ESI, EvE-Scout and zKillboard)",
 		"live tools, REST &#43; MCP · 10 with a key", // html/template writes "+" as &#43;
 		"POST /v1/mcp · 120 with a key",
 		"POST /v1/tool/{name} · 60 with a key",

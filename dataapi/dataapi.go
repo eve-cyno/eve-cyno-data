@@ -151,7 +151,7 @@ func DefaultLimits() Limits {
 		Tool:        Rate{Max: 10, KeyedMax: 60, Window: time.Minute},  // raw tools, internet-facing only
 		MCP:         Rate{Max: 20, KeyedMax: 120, Window: time.Minute}, // handshake (3 requests) + tool calls
 		Docs:        Rate{Max: 60, Window: time.Minute},                // static bytes, but anonymous
-		// Live upstream reads (ESI, EvE-Scout) share one per-caller budget across all live tools,
+		// Live upstream reads (ESI, EvE-Scout or zKillboard) share one per-caller budget across all live tools,
 		// and ESI's error budget is shared by the whole project, so each caller gets a fraction
 		// of the route limit.
 		UpstreamTool: Rate{Max: 5, KeyedMax: 10, Window: time.Minute},

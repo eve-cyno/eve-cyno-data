@@ -17,6 +17,9 @@ const (
 	maxNearJumps         = 30 // near.max_jumps
 	maxTheraLimit        = 50 // Thera connections: limit
 	defaultTheraLimit    = 20
+	maxKillHours         = 6 // get_recent_kills: hours
+	defaultKillHours     = 1
+	maxRecentKills       = 10            // get_recent_kills: kills in one answer
 	maxFilterValues      = 12            // values in one filter list
 	maxWaypoints         = 5             // plan_jump_route: waypoints
 	maxAvoidRegions      = 10            // plan_jump_route: avoid_regions

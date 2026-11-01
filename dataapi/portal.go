@@ -69,7 +69,7 @@ type portalAsset struct {
 // ---------------------------------------------------------------- view model
 
 type portalStats struct {
-	// Live counts every offered tool that reads a live upstream, ESI or EvE-Scout.
+	// Live counts every offered tool that reads a live upstream: ESI, EvE-Scout or zKillboard.
 	Offered, Public, Keyed, Disabled, Live, FitMax int
 }
 
@@ -85,9 +85,10 @@ type toolRowView struct {
 
 // The live kinds of a tool (liveKind): which live data its docs page describes.
 const (
-	liveESI      = "esi"       // every call can read live ESI
-	liveEveScout = "eve-scout" // every call can read live EvE-Scout
-	liveOptional = "optional"  // SDE-only unless a call sets one of Tool.UpstreamArgs, which read live ESI
+	liveESI      = "esi"        // every call can read live ESI
+	liveEveScout = "eve-scout"  // every call can read live EvE-Scout
+	liveZKill    = "zkillboard" // every call can read live zKillboard
+	liveOptional = "optional"   // SDE-only unless a call sets one of Tool.UpstreamArgs, which read live ESI
 )
 
 // liveKind is the live kind of t; "" for a tool without live data, and for an Upstream tool
@@ -102,6 +103,8 @@ func liveKind(t catalog.Tool) string {
 		return liveESI
 	case t.UpstreamName == catalog.UpstreamEveScout && len(t.UpstreamArgs) == 0:
 		return liveEveScout
+	case t.UpstreamName == catalog.UpstreamZKill && len(t.UpstreamArgs) == 0:
+		return liveZKill
 	}
 	return ""
 }
@@ -113,6 +116,8 @@ func liveLabel(kind string) string {
 		return "live ESI"
 	case liveEveScout:
 		return "live EvE-Scout"
+	case liveZKill:
+		return "live zKillboard"
 	case liveOptional:
 		return "live with options"
 	}
@@ -229,9 +234,9 @@ type pageData struct {
 	// LiveESITools and LiveScoutTools list the tools whose every call can read live ESI or
 	// EvE-Scout; LiveOptional the tools that read live ESI only with some arguments, and
 	// LiveOptionalTools names them.
-	LiveESITools, LiveScoutTools, LiveOptionalTools liveGroup
-	LiveOptional                                    []liveOption
-	FirstTool                                       string
+	LiveESITools, LiveScoutTools, LiveZKillTools, LiveOptionalTools liveGroup
+	LiveOptional                                                    []liveOption
+	FirstTool                                                       string
 
 	Example exampleView
 	T       *toolPage
@@ -402,7 +407,7 @@ func newPageData(in portalInput, assetVersion string) pageData {
 	offered := offeredTools()
 	pub, keyed := catalog.ToolsIn(catalog.TierPublic), catalog.ToolsIn(catalog.TierKeyed)
 	live := 0
-	var liveESITools, liveScoutTools, liveOptionalTools []catalog.Tool
+	var liveESITools, liveScoutTools, liveZKillTools, liveOptionalTools []catalog.Tool
 	var optional []liveOption
 	for _, t := range offered {
 		if t.Upstream {
@@ -413,6 +418,8 @@ func newPageData(in portalInput, assetVersion string) pageData {
 			liveESITools = append(liveESITools, t)
 		case liveEveScout:
 			liveScoutTools = append(liveScoutTools, t)
+		case liveZKill:
+			liveZKillTools = append(liveZKillTools, t)
 		case liveOptional:
 			liveOptionalTools = append(liveOptionalTools, t)
 			optional = append(optional, liveOption{Name: t.Name, Args: codeList(t.UpstreamArgs, "or")})
@@ -458,6 +465,7 @@ func newPageData(in portalInput, assetVersion string) pageData {
 		KeyedNames:        codeNames(keyed),
 		LiveESITools:      liveGroup{Names: codeNames(liveESITools), N: len(liveESITools)},
 		LiveScoutTools:    liveGroup{Names: codeNames(liveScoutTools), N: len(liveScoutTools)},
+		LiveZKillTools:    liveGroup{Names: codeNames(liveZKillTools), N: len(liveZKillTools)},
 		LiveOptionalTools: liveGroup{Names: codeNames(liveOptionalTools), N: len(liveOptionalTools)},
 		LiveOptional:      optional,
 	}
@@ -818,7 +826,7 @@ func buildPortal(in portalInput) (*portalSite, error) {
 	d.Example.TierSentence = "public: no key, no account."
 	landing := d
 	landing.Title = "EVE-CYNO DATA · EVE Online data for Claude Code, MCP and REST"
-	landing.Description = "Deterministic EVE Online data and calculations for Claude Code and any MCP client or HTTP stack: SDE lookups, the Gofa fit engine, live ESI and EvE-Scout reads and community fits. No LLM in the loop. Free, non-commercial."
+	landing.Description = "Deterministic EVE Online data and calculations for Claude Code and any MCP client or HTTP stack: SDE lookups, the Gofa fit engine, live ESI, EvE-Scout and zKillboard reads and community fits. No LLM in the loop. Free, non-commercial."
 	if site.pages["/"], err = render("", "portal", landing); err != nil {
 		return nil, err
 	}
