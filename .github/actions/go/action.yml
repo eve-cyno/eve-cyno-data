@@ -1,0 +1,20 @@
+name: Go from the Dockerfile
+description: >-
+  Set up the Go the image builds with. The FROM line in the Dockerfile is the only Go pin, so
+  Dependabot's docker bump moves CI and the image together.
+
+runs:
+  using: composite
+  steps:
+    - id: pin
+      shell: bash
+      run: |
+        version=$(sed -n 's/^FROM golang:\([0-9.]*\)-.*/\1/p' Dockerfile)
+        [ -n "$version" ] || { echo "no FROM golang:<version>- line in Dockerfile" >&2; exit 1; }
+        echo "version=$version" >> "$GITHUB_OUTPUT"
+
+    - uses: actions/setup-go@v7
+      with:
+        go-version: ${{ steps.pin.outputs.version }}
+        cache: true
+        cache-dependency-path: go.sum

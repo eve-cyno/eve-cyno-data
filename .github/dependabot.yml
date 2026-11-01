@@ -1,6 +1,8 @@
 # Dependabot: weekly updates for the Go module and the GitHub Actions, each ecosystem batched into
 # one grouped PR per week (minor + patch for Go; every update type for Actions, whose "majors" are
 # tag bumps reviewed together).
+# Go itself: the FROM line in the Dockerfile is the only pin. The docker group moves it, and CI reads
+# it through .github/actions/go, so the Dockerfile bump is the whole Go update.
 version: 2
 updates:
   - package-ecosystem: "gomod"
@@ -17,7 +19,7 @@ updates:
       - "go"
 
   - package-ecosystem: "github-actions"
-    directory: "/"
+    directories: ["/", "/.github/actions/*"]
     schedule:
       interval: "weekly"
       day: "monday"
