@@ -3,6 +3,8 @@
 # Jobs: sde (build + cache the real SDE), test (build, vet, race tests), lint, govulncheck,
 # gitleaks, licenses, generate (go generate drift), docker-build (no push). `ci-pass` is the
 # single check to require in the branch ruleset.
+#
+# Go comes from the FROM line in the Dockerfile through .github/actions/go: CI tests what ships.
 
 name: CI
 
@@ -48,12 +50,8 @@ jobs:
           path: data/sde/sde.sqlite
           key: ${{ steps.key.outputs.key }}
 
-      - uses: actions/setup-go@v7
+      - uses: ./.github/actions/go
         if: steps.cache.outputs.cache-hit != 'true'
-        with:
-          go-version: '1.27.2'
-          cache: true
-          cache-dependency-path: go.sum
 
       - name: build SDE (cache miss only)
         if: steps.cache.outputs.cache-hit != 'true'
@@ -84,11 +82,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: actions/setup-go@v7
-        with:
-          go-version: '1.27.2'
-          cache: true
-          cache-dependency-path: go.sum
+      - uses: ./.github/actions/go
 
       - run: go mod download
 
@@ -130,11 +124,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: actions/setup-go@v7
-        with:
-          go-version: '1.27.2'
-          cache: true
-          cache-dependency-path: go.sum
+      - uses: ./.github/actions/go
 
       - name: install golangci-lint (pinned)
         run: GOPROXY='https://proxy.golang.org|direct' GOBIN="$RUNNER_TEMP/bin" go install "github.com/golangci/golangci-lint/v2/cmd/golangci-lint@${GOLANGCI_LINT_VERSION}"
@@ -150,10 +140,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: actions/setup-go@v7
-        with:
-          go-version: '1.27.2'
-          cache-dependency-path: go.sum
+      - uses: ./.github/actions/go
 
       - run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
 
@@ -190,10 +177,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: actions/setup-go@v7
-        with:
-          go-version: '1.27.2'
-          cache-dependency-path: go.sum
+      - uses: ./.github/actions/go
 
       - name: go-licenses check
         run: |
@@ -211,11 +195,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: actions/setup-go@v7
-        with:
-          go-version: '1.27.2'
-          cache: true
-          cache-dependency-path: go.sum
+      - uses: ./.github/actions/go
 
       - name: go generate drift check
         run: |
