@@ -86,6 +86,16 @@ lifetime. Results name EvE-Scout / Signal Cartel as their source. Character name
 API answer are not read, kept or shown. The data is not endorsed by EvE-Scout.
 
 ------------------------------------------------------------------------------
+zKillboard (recent kills)
+------------------------------------------------------------------------------
+
+get_recent_kills lists the recent kills of one system read from zKillboard,
+https://zkillboard.com/ . Requests are gzip-compressed, carry a descriptive User-Agent and
+stay at no more than one a second; answers are cached. Results name zKillboard as their
+source and link to each killmail. Pilot, corporation and alliance names are not read, kept
+or shown. The data is not endorsed by zKillboard.
+
+------------------------------------------------------------------------------
 Pyfa (validation reference only)
 ------------------------------------------------------------------------------
 

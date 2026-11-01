@@ -3,6 +3,7 @@ package tools
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -277,6 +278,62 @@ func TestRecentKills_ThrottledUpstream(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, data)
 	require.Equal(t, 4, srv.hits())
+}
+
+// A fetch queued behind the one that got the refusal stays unsent, and the pause stands.
+func TestRecentKills_QueuedFetchHonoursThePause(t *testing.T) {
+	var hits atomic.Int32
+	release := make(chan struct{})
+	c := &Client{HTTP: &http.Client{Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
+		if hits.Add(1) == 1 {
+			<-release
+			return &http.Response{StatusCode: 429, Header: http.Header{}, Body: io.NopCloser(strings.NewReader("slow down"))}, nil
+		}
+		return &http.Response{StatusCode: 200, Header: http.Header{}, Body: io.NopCloser(strings.NewReader("[]"))}, nil
+	})}, Throttle: NewThrottle(), UserAgent: "EVE-Cyno/test"}
+	ctx := context.Background()
+	var wg sync.WaitGroup
+	wg.Add(2)
+	go func() { defer wg.Done(); _, _ = c.kills.copyOf(ctx, c, 1, 1) }()
+	require.Eventually(t, func() bool { return hits.Load() == 1 }, time.Second, time.Millisecond)
+	go func() { defer wg.Done(); _, _ = c.kills.copyOf(ctx, c, 2, 1) }()
+	time.Sleep(100 * time.Millisecond) // the second one is waiting for its place: 1 request a second
+	close(release)
+	wg.Wait()
+	require.EqualValues(t, 1, hits.Load())
+	_, _, retryAt := c.kills.held("2/1")
+	require.False(t, retryAt.IsZero())
+}
+
+// A fetch that was under way when the host said stop does not lift the pause.
+func TestRecentKills_SuccessLeavesThePause(t *testing.T) {
+	deps := testDeps(t)
+	c, _, now := newKillsClient(t, twoKills())
+	inner := c.HTTP.Transport
+	c.HTTP.Transport = roundTripFunc(func(r *http.Request) (*http.Response, error) {
+		c.kills.mu.Lock()
+		c.kills.lastErr, c.kills.retryAt = errors.New("HTTP 429"), now.Add(killsRetry)
+		c.kills.mu.Unlock()
+		return inner.RoundTrip(r)
+	})
+	_, data, err := getRecentKills(context.Background(), c, deps.SDE, map[string]any{"system": "Jita"})
+	require.NoError(t, err)
+	require.NotNil(t, data)
+	_, _, retryAt := c.kills.held("x")
+	require.Equal(t, now.Add(killsRetry), retryAt)
+}
+
+// A failure of ours says nothing about the host: the next system is still asked.
+func TestRecentKills_OwnFailureIsNoPause(t *testing.T) {
+	deps := testDeps(t)
+	c, srv, _ := newKillsClient(t, "not json")
+	for _, system := range []string{"Jita", "Amarr"} {
+		text, data, err := getRecentKills(context.Background(), c, deps.SDE, map[string]any{"system": system})
+		require.NoError(t, err)
+		require.Nil(t, data)
+		require.Equal(t, killsUnavailable, text)
+	}
+	require.Equal(t, 2, srv.hits())
 }
 
 func TestRecentKills_BodyCap(t *testing.T) {

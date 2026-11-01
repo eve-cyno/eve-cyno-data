@@ -573,8 +573,21 @@ func zkillGet(ctx context.Context, c *Client, url string) ([]byte, error) {
 	return zkillGetCapped(ctx, c, url, 0)
 }
 
+// zkillStop is a failure zKillboard itself caused: it refused, or could not be reached. A caller
+// that keeps a pause pauses on this, and not on a failure of its own.
+type zkillStop struct{ err error }
+
+func (e *zkillStop) Error() string { return e.err.Error() }
+func (e *zkillStop) Unwrap() error { return e.err }
+
 // zkillGetCapped is zkillGet with a bound on the answer once unpacked; 0 means no bound.
 func zkillGetCapped(ctx context.Context, c *Client, url string, limit int64) ([]byte, error) {
+	return zkillGetGuarded(ctx, c, url, limit, nil)
+}
+
+// zkillGetGuarded is zkillGetCapped with a last check: ready runs once the request has its place
+// in the throttle queue, so a pause set while it waited still stops it. nil means no check.
+func zkillGetGuarded(ctx context.Context, c *Client, url string, limit int64, ready func() error) ([]byte, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
@@ -588,10 +601,15 @@ func zkillGetCapped(ctx context.Context, c *Client, url string, limit int64) ([]
 		return nil, err
 	}
 	defer rel()
+	if ready != nil {
+		if err := ready(); err != nil {
+			return nil, err
+		}
+	}
 
 	resp, err := c.HTTP.Do(req)
 	if err != nil {
-		return nil, err
+		return nil, &zkillStop{err}
 	}
 	defer resp.Body.Close()
 	// We set Accept-Encoding: gzip explicitly (parity with the Python client), which
@@ -615,7 +633,7 @@ func zkillGetCapped(ctx context.Context, c *Client, url string, limit int64) ([]
 		return nil, err
 	}
 	if resp.StatusCode != 200 {
-		return nil, fmt.Errorf("HTTP %d", resp.StatusCode)
+		return nil, &zkillStop{fmt.Errorf("HTTP %d", resp.StatusCode)}
 	}
 	if limit > 0 && int64(len(body)) > limit {
 		return nil, fmt.Errorf("answer over %d bytes", limit)

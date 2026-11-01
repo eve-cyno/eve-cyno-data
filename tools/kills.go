@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"slices"
@@ -122,7 +123,8 @@ func (b *killsBook) held(key string) (*killsCopy, error, time.Time) {
 // copyOf returns a copy no older than killsTTL, fetching one through c when needed. When a fetch
 // fails, or during the pause after one, it returns the held copy if it is at most killsStaleMax
 // old; otherwise the error. A caller whose ctx ends while waiting gets ctx's error; the fetch
-// itself carries on.
+// itself carries on. Only zKillboard's own refusal starts the pause, and only time ends it: a
+// fetch that was under way when the host said stop lifts nothing, and one still queued is not sent.
 func (b *killsBook) copyOf(ctx context.Context, c *Client, system, hours int) (*killsCopy, error) {
 	key := strconv.Itoa(system) + "/" + strconv.Itoa(hours)
 	cur, lastErr, retryAt := b.held(key)
@@ -147,18 +149,24 @@ func (b *killsBook) copyOf(ctx context.Context, c *Client, system, hours int) (*
 		}
 		fctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), killsTimeout)
 		defer cancel()
-		k, err := fetchKills(fctx, c, system, hours, b.clock())
+		ready := func() error {
+			if _, last, at := b.held(key); b.clock().Before(at) {
+				return fmt.Errorf("zkill list: paused after: %v", last) // %v: no second pause from this one
+			}
+			return nil
+		}
+		k, err := fetchKills(fctx, c, system, hours, b.clock(), ready)
 		if err != nil {
-			b.mu.Lock()
-			b.lastErr, b.retryAt = err, b.clock().Add(killsRetry)
-			b.mu.Unlock()
+			var stop *zkillStop
+			if errors.As(err, &stop) {
+				b.mu.Lock()
+				b.lastErr, b.retryAt = err, b.clock().Add(killsRetry)
+				b.mu.Unlock()
+			}
 			slog.Warn("tools: zKillboard list unavailable", "err", err)
 			return nil, err
 		}
 		b.store(key, k)
-		b.mu.Lock()
-		b.lastErr, b.retryAt = nil, time.Time{}
-		b.mu.Unlock()
 		return k, nil
 	})
 	select {
@@ -179,10 +187,10 @@ func (b *killsBook) copyOf(ctx context.Context, c *Client, system, hours int) (*
 }
 
 // fetchKills reads a system's list into a copy: the newest maxRecentKills, and how many it held.
-func fetchKills(ctx context.Context, c *Client, system, hours int, now time.Time) (*killsCopy, error) {
+func fetchKills(ctx context.Context, c *Client, system, hours int, now time.Time, ready func() error) (*killsCopy, error) {
 	// zKillboard takes pastSeconds in multiples of 3600.
 	url := fmt.Sprintf("%s/kills/solarSystemID/%d/pastSeconds/%d/", zkillBase, system, hours*3600)
-	body, err := zkillGetCapped(ctx, c, url, killsBodyMax)
+	body, err := zkillGetGuarded(ctx, c, url, killsBodyMax, ready)
 	if err != nil {
 		return nil, fmt.Errorf("zkill list: %w", err)
 	}
