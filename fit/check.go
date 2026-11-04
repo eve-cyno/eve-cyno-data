@@ -457,6 +457,15 @@ func check(s ValidateSDE, sp checkSpec) Report {
 	addLoad(CodeCPUOver, rep.CPUUsed, rep.CPUCap, "CPU", "fits with a 5 % CPU implant (EE-605)", cpuLoads)
 	addLoad(CodePGOver, rep.PGUsed, rep.PGCap, "PG", "fits with a 5 % powergrid implant (EG-605)", pgLoads)
 
+	// E18: calibration, hardpoints, charge legality (SDE data only).
+	if sp.sdeData {
+		var subs []placed
+		for _, gid := range subGroupOrder {
+			subs = append(subs, bySubGroup[gid][0])
+		}
+		checkE18(s, sp.entries, ship, subs, &rep)
+	}
+
 	// Names that are not modules.
 	if len(unknown) > 0 {
 		rep.Unresolved = unknown

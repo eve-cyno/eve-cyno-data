@@ -82,12 +82,14 @@ func t3Both(t *testing.T, f Fit, s interface {
 
 func TestT3_CompleteFitHasNoSlotOrSubsystemViolation(t *testing.T) {
 	s := qc2OpenSDE(t)
-	f := t3Fit(s, 7, 4, 3, t3Core, t3Def, t3Off, t3Prop)
+	// 6 launchers: Accelerated Ejection Bay gives 7 hi slots but launcherHardPointModifier
+	// 6 (SDE), so a seventh launcher is a hardpoint violation (E18), not a slot one.
+	f := t3Fit(s, 6, 4, 3, t3Core, t3Def, t3Off, t3Prop)
 	require.Len(t, f.Subsystem, 4)
 	v, _ := t3Both(t, f, s)
 	require.Empty(t, codes(v), "a full subsystem set with every slot used is valid")
 	require.Equal(t, SlotTable{
-		Hi: SlotCount{7, 7}, Mid: SlotCount{4, 7}, Low: SlotCount{3, 3},
+		Hi: SlotCount{6, 7}, Mid: SlotCount{4, 7}, Low: SlotCount{3, 3},
 		Rig: SlotCount{0, 3}, Subsystem: SlotCount{4, 4},
 	}, v.Slots)
 	require.Greater(t, v.CPUCap, 500.0, "subsystem + hull CPU, not the bare 310 x 1.25")
@@ -152,4 +154,15 @@ func TestT3_NonT3HullUnchanged(t *testing.T) {
 	v, _ := t3Both(t, f, s)
 	require.Empty(t, codes(v))
 	require.Equal(t, 0, v.Slots.Subsystem.Cap)
+}
+
+func TestT3_SeventhLauncherExceedsHardpoints(t *testing.T) {
+	s := qc2OpenSDE(t)
+	f := t3Fit(s, 7, 4, 3, t3Core, t3Def, t3Off, t3Prop)
+	v, _ := t3Both(t, f, s)
+	h := t3Find(v, CodeLauncherHardpointOver)
+	require.NotNil(t, h, "7 launchers on 6 launcher hardpoints")
+	require.Equal(t, 7, h.Count)
+	require.Equal(t, 6, h.Limit)
+	require.Nil(t, t3Find(v, CodeSlotOverflow), "the 7 hi slots are not exceeded")
 }
