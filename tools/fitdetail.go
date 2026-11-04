@@ -352,9 +352,16 @@ func applyValidation(ctx context.Context, fd *FitDetail, deps *Deps, shipName st
 		fd.Violations = []string{fmt.Sprintf("unknown hull: %s", shipName)}
 		return
 	}
+	var chargeNames []string
+	for _, m := range modules {
+		if m.Charge != "" {
+			chargeNames = append(chargeNames, m.Charge)
+		}
+	}
+	chargeIDs := deps.SDE.ResolveNames(chargeNames)
 	lines := make([]fit.RawLine, len(modules))
 	for i, m := range modules {
-		lines[i] = fit.RawLine{Name: m.Name, ParserSlot: m.Section, TypeID: nameToID[m.Name], State: m.State, Mutated: m.Mutated}
+		lines[i] = fit.RawLine{Name: m.Name, ParserSlot: m.Section, TypeID: nameToID[m.Name], State: m.State, Mutated: m.Mutated, Charge: m.Charge, ChargeID: chargeIDs[m.Charge]}
 	}
 	rep := fit.CheckRaw(ctx, deps.SDE, fit.RawInput{HullID: shipID, HullName: shipName, Lines: lines, SDESlots: true}, fit.RawOptions{})
 	fd.Resources.CPUUsed, fd.Resources.CPUCap = rep.CPUUsed, rep.CPUCap

@@ -148,10 +148,11 @@ func validateFitting(ctx context.Context, c *Client, s *sde.SDE, lg *fit.Legalit
 		}
 	}
 
-	// Loaded charges are resolved for the Alpha check only (SDE; an unknown charge
-	// is not an error here).
+	// Loaded charges are resolved from the SDE for the charge-legality rule and the Alpha
+	// check (an unknown charge is not an error here), and their dogma is fetched so the
+	// size class can be compared.
 	var chargeIDs map[string]int
-	if sdeAvail && alphaClone && lg != nil {
+	if sdeAvail {
 		var chargeNames []string
 		for _, m := range modules {
 			if m.Charge != "" {
@@ -159,6 +160,11 @@ func validateFitting(ctx context.Context, c *Client, s *sde.SDE, lg *fit.Legalit
 			}
 		}
 		chargeIDs = s.ResolveNames(chargeNames)
+		for _, id := range chargeIDs {
+			if _, ok := dogma[id]; !ok {
+				dogma[id] = s.GetDogma(id)
+			}
+		}
 	}
 	lines := make([]fit.RawLine, len(modules))
 	for i, m := range modules {
@@ -254,6 +260,15 @@ type fitView struct {
 
 func (v fitView) GetDogma(id int) map[int]float64 { return v.dogma[id] }
 
+// GetTypeEffectIDs lets the validator enforce turret and launcher hardpoints (nil in the
+// ESI-only mode, which has no effect data).
+func (v fitView) GetTypeEffectIDs(id int) []int {
+	if v.s == nil {
+		return nil
+	}
+	return v.s.GetTypeEffectIDs(id)
+}
+
 func (v fitView) GetShipSlotLimits(id int) map[int]int {
 	d := v.dogma[id]
 	return map[int]int{14: int(d[14]), 13: int(d[13]), 12: int(d[12]), 1137: int(d[1137]), 1367: int(d[1367])}
@@ -302,6 +317,11 @@ var validationOrder = map[fit.Code]int{
 	fit.CodeAlphaIllegalHull:   7,
 	fit.CodeSubsystemDuplicate: 8,
 	fit.CodeSubsystemMissing:   10,
+	// E18: calibration, hardpoints and charge legality, listed after the older rules.
+	fit.CodeCalibrationOver:       11,
+	fit.CodeTurretHardpointOver:   12,
+	fit.CodeLauncherHardpointOver: 13,
+	fit.CodeChargeIllegal:         14,
 }
 
 // validationViolations renders the Hard violations of a fit.Report as the tool's
@@ -391,6 +411,14 @@ func validationText(v fit.Violation) string {
 	case fit.CodeSubsystemMissing:
 		return fmt.Sprintf("missing subsystems: %s (%d of %d fitted; a T3 needs one of each group to undock)",
 			strings.Join(v.Names, ", "), v.Count, v.Limit)
+	case fit.CodeCalibrationOver:
+		return fmt.Sprintf("calibration over: %.0f/%.0f. Rigs: %s. Remove or downgrade one of these.", v.Load, v.Capacity, quoteNames(v.Names))
+	case fit.CodeTurretHardpointOver:
+		return fmt.Sprintf("turret hardpoints over: %d fitted, %d available. Turrets: %s.", v.Count, v.Limit, quoteNames(v.Names))
+	case fit.CodeLauncherHardpointOver:
+		return fmt.Sprintf("launcher hardpoints over: %d fitted, %d available. Launchers: %s.", v.Count, v.Limit, quoteNames(v.Names))
+	case fit.CodeChargeIllegal:
+		return fmt.Sprintf("%s cannot load %s (wrong charge group or size)", quoteNames(v.Names[:1]), quoteNames(v.Names[1:]))
 	case fit.CodeAlphaIllegalHull:
 		return fmt.Sprintf("alpha-clone illegal hull (an Alpha clone cannot fly it - Omega required): %s", strings.Join(v.Names, ", "))
 	}
