@@ -53,12 +53,20 @@ func run(in, out, version string) error {
 	if err != nil {
 		return err
 	}
-	defer f.Close()
 	var w io.Writer = f
+	var gz *gzip.Writer
 	if strings.HasSuffix(out, ".gz") {
-		gz := gzip.NewWriter(f)
-		defer gz.Close()
+		gz = gzip.NewWriter(f)
 		w = gz
 	}
-	return sub.WriteJSON(w)
+	err = sub.WriteJSON(w)
+	if gz != nil {
+		if cerr := gz.Close(); err == nil {
+			err = cerr
+		}
+	}
+	if cerr := f.Close(); err == nil {
+		err = cerr
+	}
+	return err
 }

@@ -733,7 +733,8 @@ func targeting(ship *Item) fit.TargetStats {
 // booster is fitted (its capacitor draw is a no-charges figure, so capacitor and tank
 // are not fully modelled).
 func blockFlags(defaultAmmo, chargeFedReps bool) fit.BlockFlags {
-	var fl fit.BlockFlags
+	// Empty, not nil: the API schema says these are arrays.
+	fl := fit.BlockFlags{Estimated: []fit.EstimatedFlag{}, NotModelled: []fit.NotModelledFlag{}}
 	if defaultAmmo {
 		const why = "weapons without a charge were loaded with the default ammo"
 		fl.Estimated = append(fl.Estimated,

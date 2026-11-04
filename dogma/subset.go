@@ -12,9 +12,11 @@ import (
 const SubsetFormat = 1
 
 // Subset is the slice of the SDE the fit engine needs, as plain data: ships, modules,
-// charges, drones, skills, implants and subsystems (published types of categories
-// 6, 7, 8, 16, 18, 20, 32), their dogma attributes and effects, the effect modifiers
-// and the attribute metadata. It is the content of the host data pack for the engine
+// charges, drones, skills, implants and subsystems (types of categories 6, 7, 8, 16, 18,
+// 20, 32, published or not, as the SQLite SDE resolves unpublished names too), their dogma
+// attributes and effects, the effect modifiers and the attribute metadata. Published types
+// of every other category (fighters, deployables, materials, ore) are listed with a name,
+// group and category only, so a fit's cargo lines resolve; they carry no attributes. It is the content of the host data pack for the engine
 // process (WASM or sidecar), so the engine runs without the 460 MB SQLite file.
 type Subset struct {
 	Format     int            `json:"format"`
@@ -33,6 +35,9 @@ type SubsetType struct {
 	Category int             `json:"category"`
 	Attrs    map[int]float64 `json:"attrs,omitempty"`
 	Effects  []int           `json:"effects,omitempty"`
+	// Unpublished marks a type the SDE does not publish. Name resolution prefers a
+	// published type; skills count published types only.
+	Unpublished bool `json:"unpublished,omitempty"`
 }
 
 // SubsetEffect is the effect category and modifiers of one effect.
@@ -52,11 +57,17 @@ type SubsetAttr struct {
 
 // WriteJSON writes the subset as compact JSON with a stable order (types, effects and
 // attributes sorted by id), so equal inputs give equal bytes.
+//
+// WriteJSON does not change the Subset (a Store built from it keeps pointers into its slices).
 func (s *Subset) WriteJSON(w io.Writer) error {
-	sort.Slice(s.Types, func(i, j int) bool { return s.Types[i].ID < s.Types[j].ID })
-	sort.Slice(s.Effects, func(i, j int) bool { return s.Effects[i].ID < s.Effects[j].ID })
-	sort.Slice(s.Attributes, func(i, j int) bool { return s.Attributes[i].ID < s.Attributes[j].ID })
-	return json.NewEncoder(w).Encode(s)
+	c := *s
+	c.Types = append([]SubsetType(nil), s.Types...)
+	c.Effects = append([]SubsetEffect(nil), s.Effects...)
+	c.Attributes = append([]SubsetAttr(nil), s.Attributes...)
+	sort.Slice(c.Types, func(i, j int) bool { return c.Types[i].ID < c.Types[j].ID })
+	sort.Slice(c.Effects, func(i, j int) bool { return c.Effects[i].ID < c.Effects[j].ID })
+	sort.Slice(c.Attributes, func(i, j int) bool { return c.Attributes[i].ID < c.Attributes[j].ID })
+	return json.NewEncoder(w).Encode(&c)
 }
 
 // ReadSubset reads a subset and builds its Store.
@@ -90,10 +101,11 @@ func NewStore(s *Subset) *Store {
 		t := &s.Types[i]
 		st.types[t.ID] = t
 		low := strings.ToLower(t.Name)
-		if old, ok := st.byName[low]; !ok || t.ID < old {
+		// Same rule as the SQLite SDE: a published type wins, then the lowest id.
+		if old, ok := st.byName[low]; !ok || (st.types[old].Unpublished && !t.Unpublished) || (st.types[old].Unpublished == t.Unpublished && t.ID < old) {
 			st.byName[low] = t.ID
 		}
-		if t.Category == 16 {
+		if t.Category == 16 && !t.Unpublished {
 			st.skills = append(st.skills, t.ID)
 		}
 	}
@@ -158,6 +170,15 @@ func (st *Store) GetEffectCategory(id int) int {
 func (st *Store) GetAttributeMeta(id int) AttrMeta {
 	a := st.attrs[id]
 	return AttrMeta{Stackable: a.Stackable, HighIsGood: a.HighIsGood, Name: a.Name}
+}
+
+// GetTypeName returns the name of a type, or nil.
+func (st *Store) GetTypeName(id int) *string {
+	if t := st.types[id]; t != nil {
+		n := t.Name
+		return &n
+	}
+	return nil
 }
 
 func (st *Store) GetSkillTypeIDs() []int { return append([]int(nil), st.skills...) }

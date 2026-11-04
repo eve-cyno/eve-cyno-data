@@ -85,8 +85,7 @@ const (
 // (ModAdd on the ship, effects 3782 / 3783) and Core subsystems powerEngineering
 // OutputBonus 313 / cpuOutputBonus2 424 (PostPercent on the ship, effects 490 /
 // 397); capacity.go OutputCapacity applies those. Hardpoint modifiers (1368 /
-// 1369) exist but check does not enforce turret / launcher hardpoints at all, so
-// they are not applied here.
+// 1369) are applied by the hardpoint rule (hardpoints.go), not to the slot counts here.
 const (
 	attrHiSlotModifier  = 1374
 	attrMedSlotModifier = 1375

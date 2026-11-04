@@ -108,6 +108,7 @@ const (
 )
 
 // Validate runs the full deterministic fit check against slot counts, CPU, PG,
+// calibration, turret and launcher hardpoints, the charge each module may load,
 // maxGroupFitted, and (when lg != nil and alpha == true) Alpha legality.
 // Returns a Report with zero or more Violations at Soft or Hard severity, each with
 // a Code. It shares one implementation (check) with CheckRaw, the same check for a

@@ -133,3 +133,10 @@ func (s *SDE) IsCharge(typeID int) bool {
 	catID := s.GetCategoryID(typeID)
 	return catID != nil && *catID == 8
 }
+
+// IsImplant returns true when the typeID is in the Implant category (categoryID=20), which
+// holds implants and boosters. fit.ParseEFT keeps these lines out of cargo.
+func (s *SDE) IsImplant(typeID int) bool {
+	catID := s.GetCategoryID(typeID)
+	return catID != nil && *catID == 20
+}

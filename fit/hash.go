@@ -12,21 +12,19 @@ import (
 // changes, so stored hashes of an older version are recognised and recomputed.
 const HashVersion = "h1"
 
-// Hash returns the content hash of a fit: the identity of a fit across sources
-// (a game fit, a corp fit and a community fit with the same hull and items are the
-// same fit). It covers the hull, every module with its charge and state and quantity,
+// Hash returns the content hash of a fit: the identity of a fit across sources that carry
+// the same information (EFT text, a community fit, an imported corp fit file). A fit read
+// from ESI carries less; see HashESI. It covers the hull, every module with its charge and state and quantity,
 // drones, cargo and implants. It ignores the fit name and the order of items inside
 // a group. Items are keyed by typeID; an item with no typeID falls back to its
 // lower-cased name.
 func Hash(f Fit) string {
-	var lines []string
+	// Equal items merge: a slot line "x2" is two modules, and a drone, cargo or implant
+	// stack split over several lines counts once with the summed quantity.
+	counts := map[string]int{}
 	add := func(group string, ms []FitModule) {
 		for _, m := range ms {
-			qty := m.Qty
-			if qty < 1 {
-				qty = 1
-			}
-			lines = append(lines, fmt.Sprintf("%s|%s|%s|%d|%s", group, itemKey(m.TypeID, m.Name), itemKey(m.ChargeID, m.Charge), qty, m.State))
+			counts[fmt.Sprintf("%s|%s|%s|%s", group, itemKey(m.TypeID, m.Name), itemKey(m.ChargeID, m.Charge), m.State)] += max(m.Qty, 1)
 		}
 	}
 	add("hi", f.High)
@@ -37,9 +35,22 @@ func Hash(f Fit) string {
 	add("drone", f.Drones)
 	add("cargo", f.Cargo)
 	add("implant", f.Implants)
+	lines := make([]string, 0, len(counts))
+	for k, n := range counts {
+		lines = append(lines, fmt.Sprintf("%s|%d", k, n))
+	}
 	sort.Strings(lines)
 	sum := sha256.Sum256([]byte(itemKey(f.HullID, f.HullName) + "\n" + strings.Join(lines, "\n")))
 	return HashVersion + ":" + hex.EncodeToString(sum[:])
+}
+
+// HashESI is the hash of what an ESI fitting can carry of f: the fit after ToESI and
+// FromESI. ESI stores no charge pairing, module state, implants or fit name, so a fit read
+// from the game and the same fit written as EFT have different Hash values; compare
+// HashESI(eftFit) with Hash(gameFit) to find the same fit across those two sources.
+func HashESI(f Fit) string {
+	items, _ := ToESI(f)
+	return Hash(FromESI(f.HullID, items))
 }
 
 func itemKey(id int, name string) string {

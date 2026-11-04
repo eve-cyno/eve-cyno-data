@@ -1,6 +1,7 @@
 package fit
 
 import (
+	"github.com/stretchr/testify/require"
 	"strings"
 	"testing"
 )
@@ -99,4 +100,25 @@ func TestParseEFT_ImplantsKeptOutOfCargo(t *testing.T) {
 	if len(f.Cargo) != 1 || len(f.Implants) != 1 || f.Implants[0].Name != "Crystal Alpha" {
 		t.Fatalf("cargo=%v implants=%v", f.Cargo, f.Implants)
 	}
+}
+
+func TestHash_MergesStacksAndExpandsSlotQty(t *testing.T) {
+	a := hashFit()
+	b := hashFit()
+	b.Drones = []FitModule{{TypeID: 4, Name: "Hobgoblin I", Qty: 2}, {TypeID: 4, Name: "Hobgoblin I", Qty: 3}}
+	require.Equal(t, Hash(a), Hash(b), "a split drone stack is the same stack")
+	c := hashFit()
+	c.High = []FitModule{{TypeID: 1, Name: "200mm AutoCannon I", Qty: 2, ChargeID: 10, Charge: "EMP S"}, c.High[1]}
+	d := hashFit()
+	d.High = []FitModule{d.High[0], d.High[0], d.High[1]}
+	require.Equal(t, Hash(c), Hash(d), "a slot line x2 is two modules")
+}
+
+func TestHashESI_MatchesAGameFit(t *testing.T) {
+	eftFit := hashFit() // has a charge pairing and an overheat state
+	items, dropped := ToESI(eftFit)
+	require.Empty(t, dropped)
+	game := FromESI(eftFit.HullID, items)
+	require.NotEqual(t, Hash(eftFit), Hash(game), "ESI loses charge pairing and state, so the plain hashes differ")
+	require.Equal(t, HashESI(eftFit), Hash(game))
 }

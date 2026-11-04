@@ -77,3 +77,22 @@ func TestToESI_TooManyAndInvalid(t *testing.T) {
 		t.Fatalf("%+v", b)
 	}
 }
+
+func TestToESI_ReportsWhatItCannotCarry(t *testing.T) {
+	f := Fit{
+		HullID:   1,
+		High:     []FitModule{{TypeID: 1, Qty: 2, State: "overheat"}},
+		Implants: []FitModule{{TypeID: 77, Qty: 1}},
+	}
+	items, dropped := ToESI(f)
+	if len(items) != 2 || items[0].Flag != "HiSlot0" || items[1].Flag != "HiSlot1" {
+		t.Fatalf("a slot line x2 must take two slots: %v", items)
+	}
+	if len(dropped) != 1 || dropped[0].TypeID != 77 {
+		t.Fatalf("implants must be reported as dropped: %v", dropped)
+	}
+	back := FromESI(1, items)
+	if back.High[0].State != "" {
+		t.Fatal("module state is not carried by ESI")
+	}
+}

@@ -3,6 +3,7 @@ package gofa
 import (
 	"bytes"
 	"compress/gzip"
+	"strings"
 	"testing"
 	"time"
 
@@ -23,7 +24,15 @@ func TestSubset_EngineMatchesSQLite(t *testing.T) {
 
 	// Size: the measured subset is 7,477 published types of the seven categories; the
 	// byte sizes are logged, not asserted (they move with every SDE build).
-	require.Len(t, sub.Types, 7477, "published types of categories 6,7,8,16,18,20,32 (analysis 19 engine-gap, measured)")
+	scoped := 0
+	inScope := map[int]bool{6: true, 7: true, 8: true, 16: true, 18: true, 20: true, 32: true}
+	for _, ty := range sub.Types {
+		if inScope[ty.Category] && !ty.Unpublished {
+			scoped++
+		}
+	}
+	require.Equal(t, 7477, scoped, "published types of categories 6,7,8,16,18,20,32 (analysis 19 engine-gap, measured)")
+	require.Greater(t, len(sub.Types), scoped, "unpublished in-scope types and name-only entries come on top")
 	var raw bytes.Buffer
 	require.NoError(t, sub.WriteJSON(&raw))
 	var gz bytes.Buffer
@@ -36,22 +45,47 @@ func TestSubset_EngineMatchesSQLite(t *testing.T) {
 	store, err := dogma.ReadSubset(bytes.NewReader(raw.Bytes()))
 	require.NoError(t, err)
 
-	f, unresolved := fit.ParseEFT(hawkEFT, s)
-	require.Empty(t, unresolved)
-	fs, unresolved := fit.ParseEFT(hawkEFT, store)
-	require.Empty(t, unresolved)
-	require.Equal(t, f, fs, "the same EFT parses to the same fit through both")
+	for name, eft := range map[string]string{
+		"hawk, no ammo":   hawkEFT,
+		"hawk, charged":   strings.Replace(hawkEFT, "Rocket Launcher II\n", "Rocket Launcher II, Scourge Rocket\n", -1),
+		"cargo and boost": hawkEFT + "\n\n\nLiquid Ozone x100\nSynth Blue Pill Booster\nStrontium Clathrates x50",
+		"unpublished":     "[Rifter, legacy]\n\nEmergency Damage Control I\nSupplemental Scanning CPU I",
+	} {
+		t.Run(name, func(t *testing.T) {
+			f, unresolved := fit.ParseEFT(eft, s)
+			fs, unresolvedS := fit.ParseEFT(eft, store)
+			require.Equal(t, unresolved, unresolvedS, "the same names resolve through both")
+			require.Equal(t, f.Cargo, fs.Cargo)
+			require.Equal(t, f.HullID, fs.HullID)
+			require.Equal(t, fit.Hash(f), fit.Hash(fs))
 
-	want, err := New(s).Stats(t.Context(), f, fit.StatsOpts{})
-	require.NoError(t, err)
-	got, err := New(store).Stats(t.Context(), fs, fit.StatsOpts{})
-	require.NoError(t, err)
-	require.Equal(t, want, got, "subset engine == SQLite engine")
+			for _, defAmmo := range []bool{false, true} {
+				we, ge := New(s), New(store)
+				if defAmmo {
+					we, ge = we.WithDefaultAmmo(), ge.WithDefaultAmmo()
+				}
+				want, err := we.Stats(t.Context(), f, fit.StatsOpts{})
+				require.NoError(t, err)
+				got, err := ge.Stats(t.Context(), fs, fit.StatsOpts{})
+				require.NoError(t, err)
+				require.Equal(t, want, got, "subset engine == SQLite engine (default ammo %v)", defAmmo)
+			}
+			require.Equal(t, fit.Validate(t.Context(), s, f, nil, false), fit.Validate(t.Context(), store, fs, nil, false))
+		})
+	}
+}
 
-	// Validation agrees too.
-	wr := fit.Validate(t.Context(), s, f, nil, false)
-	gr := fit.Validate(t.Context(), store, fs, nil, false)
-	require.Equal(t, wr, gr)
+func TestSubset_StoreSurvivesWriteJSON(t *testing.T) {
+	s := openRealSDE(t)
+	t.Cleanup(func() { _ = s.Close() })
+	sub, err := s.ExportSubset("test")
+	require.NoError(t, err)
+	store := dogma.NewStore(sub)
+	before := store.GetEffectCategory(sub.Effects[len(sub.Effects)/2].ID)
+	id := sub.Effects[len(sub.Effects)/2].ID
+	var buf bytes.Buffer
+	require.NoError(t, sub.WriteJSON(&buf))
+	require.Equal(t, before, store.GetEffectCategory(id), "WriteJSON must not reorder what the Store indexes")
 }
 
 func TestSubset_RejectsOtherFormat(t *testing.T) {

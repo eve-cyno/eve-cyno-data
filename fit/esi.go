@@ -54,24 +54,30 @@ func ParseSlotFlag(flag string) (group string, idx int, ok bool) {
 }
 
 // ToESI maps a Fit to ESI items. Modules take consecutive slots in their group in
-// the order given; a module beyond the group's flag range is returned in dropped.
-// Drones go to DroneBay, cargo to Cargo. A loaded charge becomes a separate Cargo
-// item: how the game stores a loaded charge is not verified (Q12, in-game session),
-// so the pairing is not claimed. Module state, fit name and implants have no ESI
-// field and are not written.
+// the order given (a slot line with quantity N takes N slots); a module beyond the
+// group's flag range is returned in dropped, and so are implants, which have no ESI
+// flag. Drones go to DroneBay, cargo to Cargo. A loaded charge becomes a separate Cargo
+// item: how the game stores a loaded charge is not verified (Q12, in-game session), so
+// the pairing is not claimed. What the round trip through ToESI and FromESI loses:
+// charge pairing (charges come back as cargo), module state, fit name, item names, slot
+// gaps and implants.
 func ToESI(f Fit) (items []ESIItem, dropped []FitModule) {
 	groups := map[string][]FitModule{"hi": f.High, "med": f.Mid, "low": f.Low, "rig": f.Rig, "subsystem": f.Subsystem}
 	var charges []ESIItem
 	for _, s := range esiSlots {
-		for i, m := range groups[s.group] {
-			flag := SlotFlag(s.group, i)
-			if flag == "" {
-				dropped = append(dropped, m)
-				continue
-			}
-			items = append(items, ESIItem{TypeID: m.TypeID, Flag: flag, Quantity: 1})
-			if m.ChargeID != 0 {
-				charges = append(charges, ESIItem{TypeID: m.ChargeID, Flag: "Cargo", Quantity: 1})
+		i := 0
+		for _, m := range groups[s.group] {
+			for range max(m.Qty, 1) {
+				flag := SlotFlag(s.group, i)
+				i++
+				if flag == "" {
+					dropped = append(dropped, m)
+					continue
+				}
+				items = append(items, ESIItem{TypeID: m.TypeID, Flag: flag, Quantity: 1})
+				if m.ChargeID != 0 {
+					charges = append(charges, ESIItem{TypeID: m.ChargeID, Flag: "Cargo", Quantity: 1})
+				}
 			}
 		}
 	}
@@ -82,6 +88,7 @@ func ToESI(f Fit) (items []ESIItem, dropped []FitModule) {
 	for _, m := range f.Cargo {
 		items = append(items, ESIItem{TypeID: m.TypeID, Flag: "Cargo", Quantity: maxInt(m.Qty, 1)})
 	}
+	dropped = append(dropped, f.Implants...)
 	return items, dropped
 }
 
