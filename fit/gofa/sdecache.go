@@ -5,7 +5,7 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"eve-cyno.dev/go/data/sde"
+	"eve-cyno.dev/go/data/dogma"
 )
 
 // The dogma interpreter is read-heavy on static data: one Stats call touches
@@ -89,9 +89,9 @@ type cachedSDE struct {
 	groupID     memo[*int]
 	categoryID  memo[*int]
 	typeEffects memo[[]int]
-	effectMods  memo[[]sde.Modifier]
+	effectMods  memo[[]dogma.Modifier]
 	effectCat   memo[int]
-	attrMeta    memo[sde.AttrMeta]
+	attrMeta    memo[dogma.AttrMeta]
 	skillIDs    atomic.Pointer[[]int]
 }
 
@@ -118,13 +118,13 @@ func (c *cachedSDE) GetCategoryID(typeID int) *int {
 func (c *cachedSDE) GetTypeEffectIDs(typeID int) []int {
 	return c.typeEffects.get(typeID, c.src.GetTypeEffectIDs)
 }
-func (c *cachedSDE) GetEffectModifiers(effectID int) []sde.Modifier {
+func (c *cachedSDE) GetEffectModifiers(effectID int) []dogma.Modifier {
 	return c.effectMods.get(effectID, c.src.GetEffectModifiers)
 }
 func (c *cachedSDE) GetEffectCategory(effectID int) int {
 	return c.effectCat.get(effectID, c.src.GetEffectCategory)
 }
-func (c *cachedSDE) GetAttributeMeta(attrID int) sde.AttrMeta {
+func (c *cachedSDE) GetAttributeMeta(attrID int) dogma.AttrMeta {
 	return c.attrMeta.get(attrID, c.src.GetAttributeMeta)
 }
 

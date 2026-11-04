@@ -3,7 +3,7 @@ package gofa
 import (
 	"math"
 
-	"eve-cyno.dev/go/data/sde"
+	"eve-cyno.dev/go/data/dogma"
 )
 
 // ItemKind classifies a fitted item. The kind decides whether a multiplicative
@@ -261,7 +261,7 @@ func resolveModifiers(s SDE, ship *Item, items []*Item, skills map[int]int) {
 
 // resolveTargets returns the set of items a modifier applies to, per its Domain
 // and Func. Offensive/irrelevant domains return no targets (caller skips them).
-func resolveTargets(s SDE, m sde.Modifier, ship, source *Item, items []*Item) []*Item {
+func resolveTargets(s SDE, m dogma.Modifier, ship, source *Item, items []*Item) []*Item {
 	// Domain selects the "location": the ship, the source item itself, or an
 	// out-of-fit target we ignore for fit statistics.
 	var location *Item

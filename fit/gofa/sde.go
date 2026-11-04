@@ -1,6 +1,6 @@
 package gofa
 
-import "eve-cyno.dev/go/data/sde"
+import "eve-cyno.dev/go/data/dogma"
 
 // SDE is the read-only static-data surface the dogma engine needs. It is
 // satisfied by *sde.SDE; tests can supply a stub. Keeping it an interface
@@ -15,17 +15,14 @@ type SDE interface {
 	// GetTypeEffectIDs returns the effect IDs attached to a type.
 	GetTypeEffectIDs(typeID int) []int
 	// GetEffectModifiers returns the modifierInfo entries for an effect.
-	GetEffectModifiers(effectID int) []sde.Modifier
+	GetEffectModifiers(effectID int) []dogma.Modifier
 	// GetEffectCategory returns the effect category (5 = overload, etc.), used to
 	// skip state-gated effects (e.g. overload bonuses) during passive resolution.
 	GetEffectCategory(effectID int) int
 	// GetAttributeMeta returns stacking/direction/name metadata for an attribute.
-	GetAttributeMeta(attrID int) sde.AttrMeta
+	GetAttributeMeta(attrID int) dogma.AttrMeta
 	// GetSkillTypeIDs returns every published skill typeID (category 16).
 	// Used by resolve() to build a complete all-V skill set (the all-skills-at-V
 	// reference character the oracle values use).
 	GetSkillTypeIDs() []int
 }
-
-// Compile-time assertion that the concrete *sde.SDE satisfies the interface.
-var _ SDE = (*sde.SDE)(nil)

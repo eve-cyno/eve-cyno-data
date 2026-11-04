@@ -3,18 +3,12 @@ package sde
 import (
 	"database/sql"
 	"encoding/json"
+
+	"eve-cyno.dev/go/data/dogma"
 )
 
-// Modifier represents one entry in the modifierInfo JSON array of a dgmEffects row.
-type Modifier struct {
-	Domain        string
-	Func          string
-	ModifiedAttr  int
-	ModifyingAttr int
-	Operation     int
-	GroupID       *int // present for LocationGroupModifier
-	SkillTypeID   *int // present for LocationRequiredSkillModifier
-}
+// Modifier is the engine-facing modifierInfo entry; see package dogma.
+type Modifier = dogma.Modifier
 
 // modifierJSON mirrors the on-disk JSON structure for unmarshalling.
 type modifierJSON struct {
@@ -78,13 +72,8 @@ func (s *SDE) GetTypeEffectIDs(typeID int) []int {
 	return ids
 }
 
-// AttrMeta holds stackability, direction, and naming metadata for a dogma
-// attribute (dgmAttributeTypes.stackable / highIsGood / attributeName).
-type AttrMeta struct {
-	Stackable  bool
-	HighIsGood bool
-	Name       string
-}
+// AttrMeta is the engine-facing attribute metadata; see package dogma.
+type AttrMeta = dogma.AttrMeta
 
 // GetAttributeMeta returns stacking/direction/name metadata for the given attrID.
 // The columns are listed in RequiredColumns; on a file that lacks them the query
