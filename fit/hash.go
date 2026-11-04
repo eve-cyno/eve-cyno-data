@@ -47,7 +47,9 @@ func Hash(f Fit) string {
 // HashESI is the hash of what an ESI fitting can carry of f: the fit after ToESI and
 // FromESI. ESI stores no charge pairing, module state, implants or fit name, so a fit read
 // from the game and the same fit written as EFT have different Hash values; compare
-// HashESI(eftFit) with Hash(gameFit) to find the same fit across those two sources.
+// HashESI(eftFit) with Hash(gameFit) to find the same fit across those two sources. This
+// assumes the game saves each loaded charge as one Cargo item of quantity 1 per module,
+// which ToESI also assumes and nobody has verified yet (Q12, in-game session).
 func HashESI(f Fit) string {
 	items, _ := ToESI(f)
 	return Hash(FromESI(f.HullID, items))
