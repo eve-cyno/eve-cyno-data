@@ -613,7 +613,8 @@ func (e *Engine) Stats(ctx context.Context, f fit.Fit, opts fit.StatsOpts) (fit.
 	launched := launchedDrones(ship, droneItems, opts.ActiveDroneTypeIDs)
 	dpsStats, totalVolley, droneDPS := computeDPS(weaponItems, launched, e.weaponNamer())
 	var unmodelled []string
-	if e.hasChargeFedReps(items) {
+	chargeFedReps := e.hasChargeFedReps(items)
+	if chargeFedReps {
 		unmodelled = append(unmodelled, UnmodelledChargeFedCap)
 	}
 	return fit.FitStats{
@@ -627,6 +628,7 @@ func (e *Engine) Stats(ctx context.Context, f fit.Fit, opts fit.StatsOpts) (fit.
 		Range:      weaponRange(weaponItems),
 		Estimated:  estimated,
 		Unmodelled: unmodelled,
+		Flags:      blockFlags(estimated, chargeFedReps),
 	}, nil
 }
 
@@ -724,4 +726,25 @@ func targeting(ship *Item) fit.TargetStats {
 		ScanResolution:   ship.Attrs[attrScanResolution],
 		MaxLockedTargets: int(ship.Attrs[attrMaxTargets]),
 	}
+}
+
+// blockFlags builds the per-block flags (E19) from the two conditions Stats knows:
+// default ammo was loaded (weapon blocks are estimated) and a charge-fed repairer or
+// booster is fitted (its capacitor draw is a no-charges figure, so capacitor and tank
+// are not fully modelled).
+func blockFlags(defaultAmmo, chargeFedReps bool) fit.BlockFlags {
+	var fl fit.BlockFlags
+	if defaultAmmo {
+		const why = "weapons without a charge were loaded with the default ammo"
+		fl.Estimated = append(fl.Estimated,
+			fit.EstimatedFlag{Block: fit.BlockDPS, Reason: why},
+			fit.EstimatedFlag{Block: fit.BlockRange, Reason: why})
+	}
+	if chargeFedReps {
+		fl.NotModelled = append(fl.NotModelled, fit.NotModelledFlag{
+			What:    UnmodelledChargeFedCap,
+			Affects: []fit.StatBlock{fit.BlockCapacitor, fit.BlockTank},
+		})
+	}
+	return fl
 }

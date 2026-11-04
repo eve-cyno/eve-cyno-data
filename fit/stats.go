@@ -56,6 +56,40 @@ type FitStats struct {
 	Estimated bool
 	// Unmodelled lists modules/effects the engine did not model.
 	Unmodelled []string
+	// Flags carries Estimated and Not modelled per stat block (E19). Estimated and
+	// Unmodelled above stay as the fit-wide summary; Flags says which blocks they hit.
+	Flags BlockFlags
+}
+
+// StatBlock names a group of FitStats the UI flags separately.
+type StatBlock string
+
+const (
+	BlockDPS        StatBlock = "dps"
+	BlockDrones     StatBlock = "drones"
+	BlockTank       StatBlock = "tank"
+	BlockCapacitor  StatBlock = "capacitor"
+	BlockNavigation StatBlock = "navigation"
+	BlockTargeting  StatBlock = "targeting"
+	BlockRange      StatBlock = "range"
+)
+
+// EstimatedFlag marks one block whose numbers are approximations, with the reason.
+type EstimatedFlag struct {
+	Block  StatBlock
+	Reason string
+}
+
+// NotModelledFlag names something the engine does not model and the blocks it affects.
+type NotModelledFlag struct {
+	What    string
+	Affects []StatBlock
+}
+
+// BlockFlags is the per-block form of the Estimated bool and the Unmodelled list.
+type BlockFlags struct {
+	Estimated   []EstimatedFlag
+	NotModelled []NotModelledFlag
 }
 
 // WeaponDPS holds per-weapon DPS breakdown.
