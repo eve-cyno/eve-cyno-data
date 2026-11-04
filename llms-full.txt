@@ -62,7 +62,7 @@ JSON body:
 - `eft` (string, required): The fit as an EFT block.
 - `activeDrones` (array of integer): Type IDs of the drones to launch, in priority order; omitted means automatic.
 
-Response `200`: FitStats with fields `DPS`, `Volley`, `Tank`, `Capacitor`, `Navigation`, `Range`, `Targeting`, `Drones`, `Estimated`, `Unmodelled`
+Response `200`: FitStats with fields `DPS`, `Volley`, `Tank`, `Capacitor`, `Navigation`, `Range`, `Targeting`, `Drones`, `Estimated`, `Unmodelled`, `Flags`
 
 ### POST /v1/fit/suggest
 

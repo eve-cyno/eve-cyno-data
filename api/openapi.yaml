@@ -2841,6 +2841,20 @@ components:
         - version
         - result
         - attribution
+    BlockFlags:
+      type: object
+      properties:
+        Estimated:
+          type: array
+          items:
+            $ref: '#/components/schemas/EstimatedFlag'
+        NotModelled:
+          type: array
+          items:
+            $ref: '#/components/schemas/NotModelledFlag'
+      required:
+        - Estimated
+        - NotModelled
     CapCard:
       type: object
       properties:
@@ -3197,6 +3211,16 @@ components:
       required:
         - code
         - message
+    EstimatedFlag:
+      type: object
+      properties:
+        Block:
+          type: string
+        Reason:
+          type: string
+      required:
+        - Block
+        - Reason
     FitCell:
       type: object
       properties:
@@ -3641,6 +3665,9 @@ components:
           description: Unmodelled lists modules/effects the engine did not model.
           items:
             type: string
+        Flags:
+          $ref: '#/components/schemas/BlockFlags'
+          description: Flags carries Estimated and Not modelled per stat block (E19). Estimated and Unmodelled above stay as the fit-wide summary; Flags says which blocks they hit.
       required:
         - DPS
         - Volley
@@ -3652,6 +3679,7 @@ components:
         - Drones
         - Estimated
         - Unmodelled
+        - Flags
     FitStatsRequest:
       type: object
       properties:
@@ -4866,6 +4894,18 @@ components:
         - MaxVelocity
         - AlignTimeSec
         - SignatureRadius
+    NotModelledFlag:
+      type: object
+      properties:
+        What:
+          type: string
+        Affects:
+          type: array
+          items:
+            type: string
+      required:
+        - What
+        - Affects
     PlanetaryStep:
       type: object
       properties:
