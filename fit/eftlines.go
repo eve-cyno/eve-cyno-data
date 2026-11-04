@@ -17,6 +17,8 @@ var eftSectionOrder = []string{"high", "mid", "low", "rig", "subsystem"}
 
 var (
 	eftHeaderRE = regexp.MustCompile(`^\[(.+?),`)
+	// eftNameRE reads the fit name after the first comma of the header: "[Hull, Name]".
+	eftNameRE = regexp.MustCompile(`^\[.+?,\s*(.*?)\s*\]?\s*$`)
 	// eftStateRE is a trailing module-state marker. EFT writes it as "/OFFLINE" or
 	// "//OVERHEAT" (some exporters use a single slash for both).
 	eftStateRE = regexp.MustCompile(`(?i)\s*//?(offline|overheat)\s*$`)
@@ -48,6 +50,7 @@ type EFTLine struct {
 // EFTBlock is a parsed EFT block: the hull and its lines in the order written.
 type EFTBlock struct {
 	Hull  string
+	Name  string // the fit name from the header, "" if absent
 	Lines []EFTLine
 }
 
@@ -62,6 +65,9 @@ func ParseEFTLines(eft string) EFTBlock {
 	for i, ln := range raw {
 		if m := eftHeaderRE.FindStringSubmatch(strings.TrimSpace(ln)); m != nil {
 			b.Hull = strings.TrimSpace(m[1])
+			if n := eftNameRE.FindStringSubmatch(strings.TrimSpace(ln)); n != nil {
+				b.Name = n[1]
+			}
 			hdr = i
 			break
 		}

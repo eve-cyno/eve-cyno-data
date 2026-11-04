@@ -1,0 +1,102 @@
+package fit
+
+import (
+	"strings"
+	"testing"
+)
+
+func hashFit() Fit {
+	return Fit{
+		HullID: 587, HullName: "Rifter", Name: "Fit A",
+		High: []FitModule{
+			{TypeID: 1, Name: "200mm AutoCannon I", Qty: 1, ChargeID: 10, Charge: "EMP S"},
+			{TypeID: 2, Name: "Light Missile Launcher I", Qty: 1},
+		},
+		Mid:    []FitModule{{TypeID: 3, Name: "1MN Afterburner I", Qty: 1, State: "overheat"}},
+		Drones: []FitModule{{TypeID: 4, Name: "Hobgoblin I", Qty: 5}},
+		Cargo:  []FitModule{{TypeID: 10, Name: "EMP S", Qty: 300}},
+	}
+}
+
+func TestHash_VersionedAndStable(t *testing.T) {
+	h := Hash(hashFit())
+	if !strings.HasPrefix(h, HashVersion+":") {
+		t.Fatalf("hash %q lacks the version prefix %q", h, HashVersion)
+	}
+	if h != Hash(hashFit()) {
+		t.Fatal("hash is not deterministic")
+	}
+}
+
+func TestHash_IgnoresNameAndSlotOrder(t *testing.T) {
+	a := hashFit()
+	b := hashFit()
+	b.Name = "Something else"
+	b.High[0], b.High[1] = b.High[1], b.High[0]
+	if Hash(a) != Hash(b) {
+		t.Fatal("hash must not depend on the fit name or on the order inside a slot group")
+	}
+}
+
+func TestHash_ChangesWithContent(t *testing.T) {
+	base := Hash(hashFit())
+	for name, mutate := range map[string]func(*Fit){
+		"charge": func(f *Fit) { f.High[0].ChargeID = 11 },
+		"state":  func(f *Fit) { f.Mid[0].State = "offline" },
+		"qty":    func(f *Fit) { f.Drones[0].Qty = 4 },
+		"cargo":  func(f *Fit) { f.Cargo = nil },
+		"hull":   func(f *Fit) { f.HullID = 588 },
+		"module": func(f *Fit) { f.Low = append(f.Low, FitModule{TypeID: 9, Name: "X", Qty: 1}) },
+	} {
+		f := hashFit()
+		mutate(&f)
+		if Hash(f) == base {
+			t.Errorf("%s: hash did not change", name)
+		}
+	}
+}
+
+func TestRenderEFTFull_NameCargoImplants(t *testing.T) {
+	f := hashFit()
+	f.Implants = []FitModule{{TypeID: 20, Name: "Crystal Alpha", Qty: 1}}
+	got := RenderEFTFull(f)
+	for _, want := range []string{"[Rifter, Fit A]", "200mm AutoCannon I, EMP S", "1MN Afterburner I /OVERHEAT", "Hobgoblin I x5", "EMP S x300", "Crystal Alpha"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("render lacks %q:\n%s", want, got)
+		}
+	}
+	// implants sit in their own paragraph, after the cargo one
+	if strings.Index(got, "Crystal Alpha") < strings.Index(got, "EMP S x300") {
+		t.Errorf("implant line rendered before cargo:\n%s", got)
+	}
+	if strings.Contains(RenderEFT(f), "EMP S x300") {
+		t.Error("the legacy RenderEFT must stay unchanged (no cargo)")
+	}
+}
+
+func TestParseEFTLines_KeepsName(t *testing.T) {
+	b := ParseEFTLines("[Rifter, My fit, with comma]\n\n200mm AutoCannon I")
+	if b.Name != "My fit, with comma" {
+		t.Fatalf("name = %q", b.Name)
+	}
+}
+
+type implantResolver struct{ NameResolver }
+
+func (implantResolver) ResolveNames(names []string) map[string]int {
+	out := map[string]int{}
+	for i, n := range names {
+		out[n] = 100 + i
+	}
+	return out
+}
+func (implantResolver) GetModuleSlot(int) *string { return nil }
+func (implantResolver) IsDrone(int) bool          { return false }
+func (implantResolver) IsImplant(id int) bool     { return id == 102 }
+
+func TestParseEFT_ImplantsKeptOutOfCargo(t *testing.T) {
+	f, _ := ParseEFT("[Rifter, X]\n\n\n\n\nEMP S x10\nCrystal Alpha", implantResolver{})
+	if len(f.Cargo) != 1 || len(f.Implants) != 1 || f.Implants[0].Name != "Crystal Alpha" {
+		t.Fatalf("cargo=%v implants=%v", f.Cargo, f.Implants)
+	}
+}

@@ -17,6 +17,10 @@ type NameResolver interface {
 	IsDrone(id int) bool
 }
 
+// implantChecker is an optional resolver capability: a resolver that can tell implants
+// and boosters apart (category 20) lets ParseEFT keep them out of cargo.
+type implantChecker interface{ IsImplant(id int) bool }
+
 // FitModule is a single resolved module entry in a Fit.
 type FitModule struct {
 	TypeID   int
@@ -31,6 +35,7 @@ type FitModule struct {
 type Fit struct {
 	HullID    int
 	HullName  string
+	Name      string // fit name from the EFT header; not part of the content hash
 	High      []FitModule
 	Mid       []FitModule
 	Low       []FitModule
@@ -38,6 +43,7 @@ type Fit struct {
 	Subsystem []FitModule
 	Drones    []FitModule
 	Cargo     []FitModule
+	Implants  []FitModule // implant and booster lines, kept apart from cargo
 }
 
 // HasMutatedModules reports whether the given EFT text carries a "[MUTATED]"
@@ -85,6 +91,7 @@ func ParseEFT(eft string, r NameResolver) (f Fit, unresolved []string) {
 		return f, nil
 	}
 	f.HullName = block.Hull
+	f.Name = block.Name
 
 	// The shared line reader has already dropped blank lines, comments and
 	// "[Empty High slot]" placeholders, stripped the state marker and the [MUTATED]
@@ -186,6 +193,8 @@ func ParseEFT(eft string, r NameResolver) (f Fit, unresolved []string) {
 			}
 		} else if r.IsDrone(id) {
 			f.Drones = append(f.Drones, m)
+		} else if ic, ok := r.(implantChecker); ok && ic.IsImplant(id) {
+			f.Implants = append(f.Implants, m)
 		} else {
 			f.Cargo = append(f.Cargo, m) // charges, ammo, boosters
 		}
