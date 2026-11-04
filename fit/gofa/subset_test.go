@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 
@@ -56,4 +57,34 @@ func TestSubset_EngineMatchesSQLite(t *testing.T) {
 func TestSubset_RejectsOtherFormat(t *testing.T) {
 	_, err := dogma.ReadSubset(bytes.NewBufferString(`{"format":99}`))
 	require.Error(t, err)
+}
+
+// TestSubset_StartAndStatsTime logs (does not assert) how long the engine takes to start
+// from the JSON subset and to evaluate a fit cold and warm; the L1 report quotes the numbers.
+func TestSubset_StartAndStatsTime(t *testing.T) {
+	s := openRealSDE(t)
+	t.Cleanup(func() { _ = s.Close() })
+	sub, err := s.ExportSubset("test")
+	require.NoError(t, err)
+	var raw bytes.Buffer
+	require.NoError(t, sub.WriteJSON(&raw))
+
+	t0 := time.Now()
+	store, err := dogma.ReadSubset(bytes.NewReader(raw.Bytes()))
+	require.NoError(t, err)
+	load := time.Since(t0)
+	f, _ := fit.ParseEFT(hawkEFT, store)
+	eng := New(store)
+	t1 := time.Now()
+	_, err = eng.Stats(t.Context(), f, fit.StatsOpts{})
+	require.NoError(t, err)
+	cold := time.Since(t1)
+	var warm time.Duration
+	const n = 20
+	t2 := time.Now()
+	for i := 0; i < n; i++ {
+		_, _ = eng.Stats(t.Context(), f, fit.StatsOpts{})
+	}
+	warm = time.Since(t2) / n
+	t.Logf("subset load %v, first Stats %v, warm Stats %v (mean of %d)", load, cold, warm, n)
 }
