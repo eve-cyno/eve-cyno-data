@@ -31,6 +31,26 @@ func (a *API) health(w http.ResponseWriter, r *http.Request) {
 		Corpus:           corpus,
 		CorpusConfigured: configured,
 		Stats:            a.deps.Stats != nil,
-		SDEBuild:         a.sdeBuild,
+		SDEBuild:         a.currentSDEBuild(),
 	})
+}
+
+// sdeBuildSource picks how /health learns the build id: the live function when
+// configured, otherwise the fixed string (nil when neither is set).
+func sdeBuildSource(cfg Config) func() string {
+	if cfg.SDEBuildFunc != nil {
+		return cfg.SDEBuildFunc
+	}
+	if cfg.SDEBuild != "" {
+		id := cfg.SDEBuild
+		return func() string { return id }
+	}
+	return nil
+}
+
+func (a *API) currentSDEBuild() string {
+	if a.sdeBuild == nil {
+		return ""
+	}
+	return a.sdeBuild()
 }

@@ -1,6 +1,7 @@
 package sde
 
 import (
+	"os"
 	"sync"
 	"time"
 
@@ -57,6 +58,21 @@ func (s *SDE) Generation() uint64 {
 	}
 	return s.db.handle().gen
 }
+
+// ServedFile returns the identity (inode, size, mtime) of the file the reader is serving
+// now, as stat'ed before it was opened, or nil for a nil SDE. It does
+// not run the reload check. Compare it with SameFile against a fresh os.Stat of the path to
+// tell whether the file on disk is the one being served.
+func (s *SDE) ServedFile() os.FileInfo {
+	if s == nil || s.db == nil {
+		return nil
+	}
+	return s.db.cur.Load().fi
+}
+
+// SameFile reports whether a and b describe the same file content, by the rule the
+// hot-reload uses to decide that a file was replaced: same inode, size and mtime.
+func SameFile(a, b os.FileInfo) bool { return sameFile(a, b) }
 
 // Available reports whether the database is open and answers; false for a nil SDE.
 func (s *SDE) Available() bool { return s != nil && s.db != nil && s.db.Ping() == nil }

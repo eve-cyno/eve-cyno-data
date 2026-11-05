@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
@@ -16,6 +17,7 @@ import (
 	"eve-cyno.dev/go/data/bootstrap"
 	"eve-cyno.dev/go/data/dataapi"
 	"eve-cyno.dev/go/data/dataapi/keys"
+	"eve-cyno.dev/go/data/sde"
 	"eve-cyno.dev/go/data/tools"
 )
 
@@ -318,6 +320,103 @@ func TestSDEBuild(t *testing.T) {
 	}
 	require.NoError(t, os.WriteFile(path+".build", []byte(strings.Repeat("a", 64)), 0o600))
 	require.Equal(t, strings.Repeat("a", 64), sdeBuild(path, log))
+}
+
+// writeTestSDE replaces path with a tiny valid SQLite file by atomic rename, the way the
+// ingest does, and records build in "<path>.build".
+func writeTestSDE(t *testing.T, path, build string) {
+	t.Helper()
+	tmp := path + ".tmp"
+	_ = os.Remove(tmp)
+	db, err := sql.Open("sqlite", tmp)
+	require.NoError(t, err)
+	_, err = db.Exec(`CREATE TABLE marker (id INTEGER)`)
+	require.NoError(t, err)
+	require.NoError(t, db.Close())
+	require.NoError(t, os.Rename(tmp, path))
+	require.NoError(t, os.WriteFile(path+".build", []byte(build+"\n"), 0o600))
+}
+
+// TestHealth_SDEBuildFollowsHotReload: /v1/health must name the build of the SDE file that
+// is being served, not the one the process started with.
+func TestHealth_SDEBuildFollowsHotReload(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "sde.sqlite")
+	writeTestSDE(t, path, "100_20261001")
+	s, err := sde.OpenWithReload(path, time.Nanosecond)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = s.Close() })
+
+	h, err := newHandler(&bootstrap.Deps{Tools: &tools.Deps{SDE: s}},
+		exposure{sdeBuild: followSDEBuild(path, s, slog.New(slog.DiscardHandler))}, slog.Default())
+	require.NoError(t, err)
+	require.Contains(t, get(h, "/v1/health").Body.String(), `"sde_build":"100_20261001"`)
+
+	time.Sleep(5 * time.Millisecond) // let the reload interval elapse
+	writeTestSDE(t, path, "200_20261104")
+	time.Sleep(5 * time.Millisecond)
+	body := get(h, "/v1/health").Body.String()
+	require.Contains(t, body, `"sde_build":"200_20261104"`)
+	require.Equal(t, uint64(2), s.Generation(), "the reader must have switched files")
+}
+
+// TestHealth_SDEBuildWaitsForTheReader: the ingest renames the new database into place and
+// writes the sidecar right after, but the reader switches only at its next due check. Until
+// then the old file is served, so health must keep naming the old build.
+func TestHealth_SDEBuildWaitsForTheReader(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "sde.sqlite")
+	writeTestSDE(t, path, "100_20261001")
+	s, err := sde.OpenWithReload(path, time.Second)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = s.Close() })
+
+	h, err := newHandler(&bootstrap.Deps{Tools: &tools.Deps{SDE: s}},
+		exposure{sdeBuild: followSDEBuild(path, s, slog.New(slog.DiscardHandler))}, slog.Default())
+	require.NoError(t, err)
+	require.Contains(t, get(h, "/v1/health").Body.String(), `"sde_build":"100_20261001"`)
+
+	writeTestSDE(t, path, "200_20261104") // replaced on disk, reload not yet due
+	require.Contains(t, get(h, "/v1/health").Body.String(), `"sde_build":"100_20261001"`,
+		"the old file is still served, so the old build must still be reported")
+	require.Equal(t, uint64(1), s.Generation())
+
+	require.Eventually(t, func() bool { return s.Generation() == 2 }, 5*time.Second, 50*time.Millisecond)
+	require.Contains(t, get(h, "/v1/health").Body.String(), `"sde_build":"200_20261104"`)
+}
+
+// TestHealth_SDEBuildPicksUpASidecarWrittenAfterTheReload: a reload that lands between the
+// database rename and the sidecar write must not pin the stale id.
+func TestHealth_SDEBuildPicksUpASidecarWrittenAfterTheReload(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "sde.sqlite")
+	writeTestSDE(t, path, "100_20261001")
+	s, err := sde.OpenWithReload(path, time.Nanosecond)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = s.Close() })
+	build := followSDEBuild(path, s, slog.New(slog.DiscardHandler))
+	require.Equal(t, "100_20261001", build())
+
+	writeTestSDE(t, path, "200_20261104")
+	require.NoError(t, os.Remove(path+".build")) // sidecar not written yet
+	time.Sleep(5 * time.Millisecond)
+	require.Equal(t, "", build())
+	require.Equal(t, uint64(2), s.Generation())
+
+	require.NoError(t, os.WriteFile(path+".build", []byte("200_20261104\n"), 0o600))
+	require.Equal(t, "200_20261104", build())
+}
+
+// TestHealth_SDEBuildKeepsTheStartupBuildWithReloadOff: a reader that never reloads keeps
+// serving the file it opened, so health keeps naming that file's build.
+func TestHealth_SDEBuildKeepsTheStartupBuildWithReloadOff(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "sde.sqlite")
+	writeTestSDE(t, path, "100_20261001")
+	s, err := sde.OpenWithReload(path, 0)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = s.Close() })
+	build := followSDEBuild(path, s, slog.New(slog.DiscardHandler))
+	require.Equal(t, "100_20261001", build())
+
+	writeTestSDE(t, path, "200_20261104")
+	require.Equal(t, "100_20261001", build())
 }
 
 func openStore(t *testing.T, cap int) *keys.Store {

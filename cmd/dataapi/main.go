@@ -122,6 +122,7 @@ import (
 	"eve-cyno.dev/go/data/dataapi"
 	"eve-cyno.dev/go/data/dataapi/keys"
 	"eve-cyno.dev/go/data/mcpserver"
+	"eve-cyno.dev/go/data/sde"
 )
 
 const (
@@ -221,6 +222,63 @@ func sdeBuild(sdePath string, log *slog.Logger) string {
 	return id
 }
 
+// followSDEBuild returns a function that reports the build id of the SDE file the reader is
+// serving. The id comes from the "<sdePath>.build" sidecar and is cached; it is re-read when
+// the reader's generation or the sidecar's identity changes, but only while the file on disk
+// is the file the reader serves. The ingest renames the database into place and writes the
+// sidecar right after, yet the reader switches files only at its next due reload check (never,
+// when reloading is off), so a sidecar that is ahead of the reader is ignored until the reader
+// has caught up; the next call after that picks it up, including a sidecar written after the
+// reload. Safe for concurrent use.
+func followSDEBuild(sdePath string, s *sde.SDE, log *slog.Logger) func() string {
+	var (
+		mu    sync.Mutex
+		gen   uint64
+		fi    os.FileInfo
+		id    string
+		fresh bool
+	)
+	return func() string {
+		if sdePath == "" {
+			return ""
+		}
+		var g uint64
+		inSync := true
+		if s != nil {
+			g = s.Generation() // runs the due reload check before the id is chosen
+			served, disk := s.ServedFile(), statOrNil(sdePath)
+			inSync = served != nil && disk != nil && sde.SameFile(served, disk)
+		}
+		cur := statOrNil(sdePath + ".build")
+		mu.Lock()
+		defer mu.Unlock()
+		if fresh && (!inSync || (g == gen && sameBuildFile(fi, cur))) {
+			return id
+		}
+		gen, fi, fresh = g, cur, true
+		id = sdeBuild(sdePath, log)
+		return id
+	}
+}
+
+// statOrNil returns the file info of path, or nil when it cannot be stat'ed.
+func statOrNil(path string) os.FileInfo {
+	fi, err := os.Stat(path)
+	if err != nil {
+		return nil
+	}
+	return fi
+}
+
+// sameBuildFile reports whether two stat results (nil for a missing file) describe the
+// same sidecar content: same inode, size and mtime.
+func sameBuildFile(a, b os.FileInfo) bool {
+	if a == nil || b == nil {
+		return a == nil && b == nil
+	}
+	return os.SameFile(a, b) && a.Size() == b.Size() && a.ModTime().Equal(b.ModTime())
+}
+
 // adminServer builds the admin listener, or nil when there is no key store or no token.
 func adminServer(store *keys.Store, token, addr string, log *slog.Logger) *http.Server {
 	if store == nil || token == "" {
@@ -283,8 +341,8 @@ type exposure struct {
 	// anonDailyCap is DATAAPI_ANON_DAILY_CAP: the requests per UTC day of a client without a
 	// key (0: no cap). It applies only when some key source is configured.
 	anonDailyCap int
-	// sdeBuild is the SDE build id /v1/health reports ("" when unknown).
-	sdeBuild string
+	// sdeBuild yields the SDE build id /v1/health reports at request time ("" when unknown).
+	sdeBuild func() string
 }
 
 // publicURL resolves DATAAPI_PUBLIC_URL: unset is fine, a value that is not an https origin
@@ -345,7 +403,7 @@ func newHandler(d *bootstrap.Deps, ex exposure, log *slog.Logger) (http.Handler,
 		LogSalt:          ex.logSalt,
 		Logger:           log,
 		KeyedLimitFactor: ex.keyedFactor,
-		SDEBuild:         ex.sdeBuild,
+		SDEBuildFunc:     ex.sdeBuild,
 	}
 	if ex.store != nil {
 		cfg.SelfServe = true
@@ -465,7 +523,7 @@ func run(log *slog.Logger) error {
 	ex := exposure{
 		toolAPI: exposeToolAPI(os.Getenv), mcp: exposeMCP(os.Getenv), auth: auth, publicURL: pub,
 		upstream: &upstream, logSalt: os.Getenv("DATAAPI_LOG_SALT"),
-		store: store, keyedFactor: factor, dailyCap: dayCap, anonDailyCap: anonCap, sdeBuild: sdeBuild(cfg.SDEPath, log),
+		store: store, keyedFactor: factor, dailyCap: dayCap, anonDailyCap: anonCap, sdeBuild: followSDEBuild(cfg.SDEPath, deps.Tools.SDE, log),
 	}
 	log.Info("ESI pass-through tools: shared Expires cache, fail-fast budget guard",
 		"upstream_tool_limit_per_min", upstream.Max, "upstream_tool_limit_per_min_keyed", upstream.KeyedMax, "esi_guard_percent", guard)

@@ -278,6 +278,11 @@ type Config struct {
 	// known.
 	SDEBuild string
 
+	// SDEBuildFunc, when set, supplies the build id on every /health request and takes
+	// precedence over SDEBuild. Use it when the SDE can be replaced while the process
+	// runs; it must be safe for concurrent use.
+	SDEBuildFunc func() string
+
 	// CorpusProbeTTL is how long /health reuses a corpus reachability verdict; zero
 	// means DefaultCorpusProbeTTL. Only a Retriever that implements Pinger is probed.
 	CorpusProbeTTL time.Duration
@@ -340,7 +345,7 @@ type API struct {
 	quota       Quota
 	anon        *anonQuota
 	usage       Usage
-	sdeBuild    string
+	sdeBuild    func() string
 	toolMode    ToolAPIMode
 	toolFormat  ToolFormat
 	toolTimeout time.Duration
@@ -404,7 +409,7 @@ func New(cfg Config) (*API, error) {
 		keyedFactor: cfg.KeyedLimitFactor,
 		quota:       cfg.Quota,
 		usage:       cfg.Usage,
-		sdeBuild:    cfg.SDEBuild,
+		sdeBuild:    sdeBuildSource(cfg),
 		toolMode:    cfg.ToolAPI,
 		toolFormat:  cfg.ToolFormat,
 		toolTimeout: cfg.ToolTimeout,
