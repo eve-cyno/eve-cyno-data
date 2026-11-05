@@ -21,3 +21,6 @@ data/
 .idea/
 .vscode/
 *.log
+
+# The Python examples resolve their dependencies on `uv run`; a lock would only pin stale versions.
+examples/python/uv.lock
