@@ -84,7 +84,7 @@ func TestReload_PicksUpAtomicallyReplacedFile(t *testing.T) {
 	require.True(t, s.HasTable("build_old"))
 	require.False(t, s.HasTable("build_new"))
 
-	writeSDE(t, path, []string{"build_new"}, nil) // monthly rebuild lands
+	writeSDE(t, path, []string{"build_new"}, nil) // a rebuild lands
 
 	// Inside the interval nothing is re-checked (no stat per query).
 	clk.advance(4 * time.Minute)

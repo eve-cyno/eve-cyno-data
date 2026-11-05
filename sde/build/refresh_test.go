@@ -180,7 +180,7 @@ func writeOldSchemaSDE(t *testing.T, path string) {
 }
 
 // A deployed SDE built before the fix keeps its (unchanged) Fuzzwork build id, so
-// without this the broken file would live until the next monthly dump. Refresh must
+// without this the broken file would live until the next dump. Refresh must
 // notice the missing columns and rebuild at the same build.
 func TestRefresh_UnchangedBuild_RebuildsWhenLiveFileLacksRequiredColumns(t *testing.T) {
 	const build = "sde-20250101-TRANQUILITY"

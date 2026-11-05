@@ -72,7 +72,7 @@ func (b *Builder) Refresh(ctx context.Context, recorded string) (latest string, 
 		// Same build. Normally a true no-op - unless the live file was built without
 		// columns the readers need (the pre-fix Go builder): its recorded build already
 		// equals the latest build, so without this it would stay broken until the next
-		// monthly dump. Rebuild it in place.
+		// dump. Rebuild it in place.
 		missing := liveMissingColumns(b.path)
 		if len(missing) == 0 {
 			return latest, false, nil

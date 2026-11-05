@@ -87,8 +87,9 @@ func (h *dbHandle) isClosed() bool {
 // reloadingDB is a read-only SQLite handle that follows an SDE file replaced by
 // atomic rename.
 //
-// The ingest rebuilds sde.sqlite monthly by writing a temp file and renaming it
-// over the old path. A plain sql.DB opened earlier keeps the OLD inode open and
+// The ingest rebuilds sde.sqlite when Fuzzwork publishes a new build (it checks
+// at every start and daily) by writing a temp file and renaming it over the old
+// path. A plain sql.DB opened earlier keeps the OLD inode open and
 // serves the old build until the process restarts (F17). reloadingDB stats the
 // path at most once per interval — piggy-backed on a query, no background
 // goroutine — and when the file's identity changed it opens the new file, swaps
