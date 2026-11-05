@@ -3,6 +3,8 @@ package gofa
 import (
 	"bytes"
 	"compress/gzip"
+	"database/sql"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -11,6 +13,8 @@ import (
 
 	"eve-cyno.dev/go/data/dogma"
 	"eve-cyno.dev/go/data/fit"
+	realsde "eve-cyno.dev/go/data/sde"
+	"eve-cyno.dev/go/data/sde/sdetest"
 )
 
 // The SDE subset (E7) must give the engine exactly what the SQLite SDE gives it. Needs the
@@ -19,19 +23,38 @@ func TestSubset_EngineMatchesSQLite(t *testing.T) {
 	s := openRealSDE(t)
 	t.Cleanup(func() { _ = s.Close() })
 
+	// The expected count comes from the SQLite SDE itself, read independently of the
+	// exporter, because it moves with every SDE build.
+	path := sdetest.Path(t)
+	db, err := sql.Open("sqlite", "file:"+path+"?mode=ro")
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = db.Close() })
+	cats := make([]string, len(realsde.SubsetCategories))
+	for i, c := range realsde.SubsetCategories {
+		cats[i] = strconv.Itoa(c)
+	}
+	catList := strings.Join(cats, ",")
+	var want int
+	require.NoError(t, db.QueryRow(`SELECT COUNT(*) FROM invTypes t JOIN invGroups g ON g.groupID = t.groupID
+		WHERE g.categoryID IN (`+catList+`) AND t.published = 1`).Scan(&want))
+	t.Logf("expected published in-scope types: %d (from %s)", want, path)
+
 	sub, err := s.ExportSubset("test")
 	require.NoError(t, err)
 
-	// Size: the measured subset is 7,477 published types of the seven categories; the
-	// byte sizes are logged, not asserted (they move with every SDE build).
+	// Size: the published types of the seven categories must equal the count read from the
+	// SQLite SDE above; the byte sizes are logged, not asserted (they move with every SDE build).
 	scoped := 0
-	inScope := map[int]bool{6: true, 7: true, 8: true, 16: true, 18: true, 20: true, 32: true}
+	inScope := map[int]bool{}
+	for _, c := range realsde.SubsetCategories {
+		inScope[c] = true
+	}
 	for _, ty := range sub.Types {
 		if inScope[ty.Category] && !ty.Unpublished {
 			scoped++
 		}
 	}
-	require.Equal(t, 7477, scoped, "published types of categories 6,7,8,16,18,20,32 (analysis 19 engine-gap, measured)")
+	require.Equal(t, want, scoped, "published types of categories "+catList+" in the subset match the SQLite SDE")
 	require.Greater(t, len(sub.Types), scoped, "unpublished in-scope types and name-only entries come on top")
 	var raw bytes.Buffer
 	require.NoError(t, sub.WriteJSON(&raw))
