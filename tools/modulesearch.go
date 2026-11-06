@@ -27,7 +27,7 @@ func moduleSearchRequested(args map[string]any) bool {
 }
 
 // moduleSizes lists the size vocabulary the tool schema names.
-func moduleSizes() []string { return []string{"Small", "Medium", "Large"} }
+func moduleSizes() []string { return []string{"Small", "Medium", "Large", "X-Large", "Capital"} }
 
 // moduleSlots lists the slot vocabulary of the search form.
 func moduleSlots() []string { return []string{"high", "low", "mid", "rig"} }

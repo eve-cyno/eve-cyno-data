@@ -85,7 +85,7 @@ func TestFindCanonicalModule_SizeIsValidated(t *testing.T) {
 			}
 			out, err := ExecuteTool(context.Background(), deps, "find_canonical_module", args)
 			require.NoError(t, err)
-			require.Equal(t, "Unknown size: "+bad+" (known: Small, Medium, Large).", out, "%q %v", bad, extra)
+			require.Equal(t, "Unknown size: "+bad+" (known: Small, Medium, Large, X-Large, Capital).", out, "%q %v", bad, extra)
 		}
 	}
 	for _, ok := range []string{"Small", "Medium", "Large", "large", " LARGE "} {
@@ -94,5 +94,21 @@ func TestFindCanonicalModule_SizeIsValidated(t *testing.T) {
 		require.NoError(t, err)
 		require.NotContains(t, out, "Unknown size", ok)
 		require.Contains(t, out, "Shield Extender", ok)
+	}
+}
+
+// TestFindCanonicalModule_SizeCapitalAndXLarge pins SV-M3 (review round 1): published names start
+// with Capital and X-Large, so both are valid sizes and find those modules.
+func TestFindCanonicalModule_SizeCapitalAndXLarge(t *testing.T) {
+	deps := testDeps(t)
+	for _, c := range []struct{ size, want string }{
+		{"Capital", "Capital Shield Booster"},
+		{"x-large", "X-Large Shield Booster"},
+	} {
+		out, err := ExecuteTool(context.Background(), deps, "find_canonical_module",
+			map[string]any{"family": "Shield Booster", "size": c.size, "slot": "mid"})
+		require.NoError(t, err)
+		require.NotContains(t, out, "Unknown size", c.size)
+		require.Contains(t, out, c.want, c.size)
 	}
 }
