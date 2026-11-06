@@ -127,22 +127,22 @@ func (s *SDE) TypeFactsForChecked(ids []int) (map[int]TypeFacts, error) {
 		seen[id] = true
 		chunk = append(chunk, id)
 		if len(chunk) == typeFactsChunk {
-			if err := s.typeFactsChunk(chunk, out); err != nil {
+			if err := s.readTypeFactsChunk(chunk, out); err != nil {
 				return out, err
 			}
 			chunk = chunk[:0]
 		}
 	}
 	if len(chunk) > 0 {
-		if err := s.typeFactsChunk(chunk, out); err != nil {
+		if err := s.readTypeFactsChunk(chunk, out); err != nil {
 			return out, err
 		}
 	}
 	return out, nil
 }
 
-// typeFactsChunk reads the facts of ids (distinct, at most typeFactsChunk) into out.
-func (s *SDE) typeFactsChunk(ids []int, out map[int]TypeFacts) error {
+// readTypeFactsChunk reads the facts of ids (distinct, at most typeFactsChunk) into out.
+func (s *SDE) readTypeFactsChunk(ids []int, out map[int]TypeFacts) error {
 	args := make([]any, 0, len(ids))
 	marks := make([]string, 0, len(ids))
 	for _, id := range ids {
