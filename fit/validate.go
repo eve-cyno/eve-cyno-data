@@ -120,16 +120,19 @@ const (
 // EG-605 implant closes it), anything larger is Hard.
 func Validate(_ context.Context, s ValidateSDE, f Fit, lg *Legality, alpha bool) Report {
 	var entries []placed
+	var oversized []Violation
 	for _, g := range slotGroups {
 		for _, m := range g.mods(&f) {
-			entries = append(entries, placed{mod: m, slot: g.key, kind: kindModule})
+			entries = expandQty(entries, placed{mod: m, slot: g.key, kind: kindModule}, m.Qty, &oversized)
 		}
 	}
 	for _, m := range f.Drones {
 		entries = append(entries, placed{mod: m, kind: kindSlotless, drone: true})
 	}
-	return check(s, checkSpec{
+	rep := check(s, checkSpec{
 		hullID: f.HullID, hullName: f.HullName, entries: entries,
 		sdeData: true, lg: lg, alpha: alpha,
 	})
+	rep.Violations = append(rep.Violations, oversized...)
+	return rep
 }

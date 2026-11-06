@@ -170,7 +170,7 @@ func validateFitting(ctx context.Context, c *Client, s *sde.SDE, lg *fit.Legalit
 	for i, m := range modules {
 		lines[i] = fit.RawLine{
 			Name: m.Name, ParserSlot: m.Section, TypeID: nameToID[m.Name], State: m.State, Mutated: m.Mutated,
-			Charge: m.Charge, ChargeID: chargeIDs[m.Charge],
+			Charge: m.Charge, ChargeID: chargeIDs[m.Charge], Qty: m.Qty,
 		}
 	}
 	view := fitView{dogma: dogma}
@@ -322,6 +322,7 @@ var validationOrder = map[fit.Code]int{
 	fit.CodeTurretHardpointOver:   12,
 	fit.CodeLauncherHardpointOver: 13,
 	fit.CodeChargeIllegal:         14,
+	fit.CodeFitTooLarge:           15,
 }
 
 // validationViolations renders the Hard violations of a fit.Report as the tool's

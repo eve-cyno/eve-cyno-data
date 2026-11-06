@@ -282,15 +282,15 @@ Note: skill profile = Power Grid Management V + CPU Management V (+25% PG/CPU), 
 ##### hc_qty_suffix_variants #####
 STATUS: VALID — Rifter
 
-CPU: 28.5 / 162.5 tf
-PG:  18.2 / 51.2 MW
-Hi slots:  2/3
+CPU: 35.2 / 162.5 tf
+PG:  21.8 / 51.2 MW
+Hi slots:  3/3 [FULL]
 Mid slots: 1/3
 Low slots: 0/4
 Rigs:      0/3
 Note: skill profile = Power Grid Management V + CPU Management V (+25% PG/CPU), Weapon Upgrades V (-25% turret/launcher CPU), Advanced Weapon Upgrades V (-10% turret/launcher PG), Energy Grid Upgrades V (-25% power-core CPU). Implants and faction-specific bonuses NOT modelled. Data: SDE.
 ---- typed ----
-{"ship":"Rifter","valid":true,"cpu":{"used":28.5,"capacity":162.5,"unit":"tf"},"pg":{"used":18.2,"capacity":51.25,"unit":"MW"},"slots":{"high":{"used":2,"capacity":3},"mid":{"used":1,"capacity":3},"low":{"used":0,"capacity":4},"rig":{"used":0,"capacity":3}},"violations":[],"unresolved_modules":[],"data_source":"SDE"}
+{"ship":"Rifter","valid":true,"cpu":{"used":35.25,"capacity":162.5,"unit":"tf"},"pg":{"used":21.8,"capacity":51.25,"unit":"MW"},"slots":{"high":{"used":3,"capacity":3},"mid":{"used":1,"capacity":3},"low":{"used":0,"capacity":4},"rig":{"used":0,"capacity":3}},"violations":[],"unresolved_modules":[],"data_source":"SDE"}
 ##### hc_markdown_fence #####
 STATUS: VALID — Rifter
 

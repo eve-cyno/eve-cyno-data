@@ -50,7 +50,17 @@ const (
 	// by its required skills (Legality.IsAlphaLegalType).
 	CodeAlphaIllegalModule Code = "alpha_illegal_module"
 	CodeAlphaIllegalHull   Code = "alpha_illegal_hull"
+	// CodeFitTooLarge: a slot line carries a quantity above maxSlotLineQty. The check
+	// counts the first maxSlotLineQty units (more than any hull has slots, so the other
+	// violations stay correct) and reports the rest here. Count is the quantity written,
+	// Limit the units counted, Names the line.
+	CodeFitTooLarge Code = "fit_too_large"
 )
+
+// maxSlotLineQty bounds how many units one slot line is expanded into. A hull has at
+// most 8 slots per group (the engine allows 16 for spare modules from refit exports),
+// so a larger quantity is already over every slot and cannot be legal.
+const maxSlotLineQty = 16
 
 // Consumer is one module's draw on CPU or powergrid.
 type Consumer struct {
@@ -527,6 +537,9 @@ type RawLine struct {
 	// Mutated: the line was a mutated (abyssal) module. TypeID is its base item, so
 	// its CPU / PG / slot are the base item's, not the rolled ones.
 	Mutated bool
+	// Qty is the quantity written on the line ("xN"); 0 and 1 are one module. A slot
+	// line with Qty N is N modules, the way the engine, ToESI and Hash read it.
+	Qty int
 }
 
 // RawInput is an EFT block ready to check: the hull and every module line, in order.
@@ -556,14 +569,40 @@ type RawOptions struct {
 // like Validate. The Report's Violations are the same type Validate returns.
 func CheckRaw(_ context.Context, s RawSDE, in RawInput, o RawOptions) Report {
 	entries := make([]placed, 0, len(in.Lines))
+	var oversized []Violation
 	for _, ln := range in.Lines {
-		entries = append(entries, classify(s, in.SDESlots, ln))
+		p := classify(s, in.SDESlots, ln)
+		qty := 1
+		if p.kind == kindModule {
+			qty = ln.Qty
+		}
+		entries = expandQty(entries, p, qty, &oversized)
 	}
-	return check(s, checkSpec{
+	rep := check(s, checkSpec{
 		hullID: in.HullID, hullName: in.HullName, entries: entries,
 		sdeData: in.SDESlots,
 		lg:      o.Legality, alpha: o.Alpha,
 	})
+	rep.Violations = append(rep.Violations, oversized...)
+	return rep
+}
+
+// expandQty appends p qty times (a slot line "xN" is N modules), at most maxSlotLineQty
+// times; a larger quantity adds one CodeFitTooLarge violation to oversized.
+func expandQty(entries []placed, p placed, qty int, oversized *[]Violation) []placed {
+	n := max(qty, 1)
+	if n > maxSlotLineQty {
+		*oversized = append(*oversized, Violation{
+			Severity: Hard, Code: CodeFitTooLarge,
+			Message: fmt.Sprintf("%s x%d: more than %d units on one slot line", p.mod.Name, qty, maxSlotLineQty),
+			Count:   qty, Limit: maxSlotLineQty, Names: []string{p.mod.Name},
+		})
+		n = maxSlotLineQty
+	}
+	for range n {
+		entries = append(entries, p)
+	}
+	return entries
 }
 
 // classify decides what a raw line is. With SDE data the SDE's slot wins over the

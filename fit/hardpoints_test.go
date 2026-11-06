@@ -100,3 +100,56 @@ func TestValidate_ChargeLegality(t *testing.T) {
 	require.Contains(t, run(20, 31), CodeChargeIllegal, "same group, wrong size")
 	require.NotContains(t, run(20, 0), CodeChargeIllegal, "no charge loaded")
 }
+
+// A slot line with a quantity is N modules, the way the engine, ToESI and Hash read it (SV-I4).
+func TestValidate_SlotLineQtyCountsEveryUnit(t *testing.T) {
+	s := e18Fixture()
+	ctx := context.Background()
+
+	rep := Validate(ctx, s, Fit{HullID: 100, High: []FitModule{{TypeID: 21, Name: "L", Qty: 4}}}, nil, false)
+	lv := byCode(rep)[CodeLauncherHardpointOver]
+	require.Equal(t, 4, lv.Count, "a launcher line x4 is four launchers")
+	require.Equal(t, 2, lv.Limit)
+
+	s.dogma[100][14] = 3
+	rep = Validate(ctx, s, Fit{HullID: 100, High: []FitModule{{TypeID: 21, Name: "L", Qty: 4}}}, nil, false)
+	require.Contains(t, byCode(rep), CodeSlotOverflow, "four modules in three high slots")
+
+	// A rig line x4 is four rigs: 4 x 100 calibration over 400 is fine, 4 x 150 is not.
+	s.dogma[10][1153] = 150
+	rep = Validate(ctx, s, Fit{HullID: 100, Rig: []FitModule{{TypeID: 10, Name: "R", Qty: 4}}}, nil, false)
+	require.Equal(t, 600.0, byCode(rep)[CodeCalibrationOver].Load)
+}
+
+func TestValidate_SlotLineQtyCapBoundary(t *testing.T) {
+	s := e18Fixture()
+	ctx := context.Background()
+	rep := Validate(ctx, s, Fit{HullID: 100, High: []FitModule{{TypeID: 21, Name: "L", Qty: maxSlotLineQty}}}, nil, false)
+	require.NotContains(t, byCode(rep), CodeFitTooLarge, "at the cap")
+	require.Equal(t, maxSlotLineQty, byCode(rep)[CodeLauncherHardpointOver].Count)
+
+	rep = Validate(ctx, s, Fit{HullID: 100, High: []FitModule{{TypeID: 21, Name: "L", Qty: 1_000_000}}}, nil, false)
+	require.Contains(t, byCode(rep), CodeFitTooLarge, "above the cap")
+	require.Equal(t, Hard, byCode(rep)[CodeFitTooLarge].Severity)
+	require.LessOrEqual(t, byCode(rep)[CodeLauncherHardpointOver].Count, maxSlotLineQty, "the loop stays bounded")
+}
+
+func TestCheckRaw_SlotLineQtyCountsEveryUnit(t *testing.T) {
+	s := rawStateFixture() // hull 300: 4 high slots
+	rep := CheckRaw(context.Background(), s, RawInput{HullID: 300, HullName: "Hull", SDESlots: true, Lines: []RawLine{
+		{Name: "Gun", TypeID: 10, Qty: 5},
+	}}, RawOptions{})
+	require.Equal(t, 5, rep.Slots.Hi.Used)
+	require.Contains(t, codes(rep), CodeSlotOverflow)
+	require.InDelta(t, 50.0, rep.CPUUsed, 1e-9, "five guns draw five times")
+
+	rep = CheckRaw(context.Background(), s, RawInput{HullID: 300, HullName: "Hull", SDESlots: true, Lines: []RawLine{
+		{Name: "Drone", TypeID: 50, Qty: 5},
+	}}, RawOptions{})
+	require.NotContains(t, codes(rep), CodeGroupLimit, "slotless lines are not expanded")
+
+	rep = CheckRaw(context.Background(), s, RawInput{HullID: 300, HullName: "Hull", SDESlots: true, Lines: []RawLine{
+		{Name: "Gun", TypeID: 10, Qty: 1_000_000},
+	}}, RawOptions{})
+	require.Contains(t, codes(rep), CodeFitTooLarge)
+}
