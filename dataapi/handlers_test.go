@@ -478,5 +478,5 @@ func TestTool_InternalErrorHasNoGoErrorText(t *testing.T) {
 	a.ServeHTTP(rec, req)
 	requireError(t, rec, http.StatusInternalServerError, "internal_error")
 	require.NotContains(t, rec.Body.String(), "context canceled")
-	require.Contains(t, rec.Body.String(), "the tool failed; see the server log")
+	require.Contains(t, rec.Body.String(), "the tool failed (internal error); quote the X-Request-ID response header when reporting it")
 }

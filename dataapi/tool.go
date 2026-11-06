@@ -182,7 +182,7 @@ func (a *API) tool(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			logFrom(r.Context()).Warn("tool_failed", "tool", name, "error", err)
-			writeError(w, r, http.StatusInternalServerError, "internal_error", "the tool failed; see the server log")
+			writeError(w, r, http.StatusInternalServerError, "internal_error", "the tool failed (internal error); quote the X-Request-ID response header when reporting it")
 		}
 		return
 	}
