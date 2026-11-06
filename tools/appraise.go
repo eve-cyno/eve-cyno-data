@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"strings"
@@ -44,12 +45,14 @@ func janiceAppraisal(ctx context.Context, c *Client, items, janiceAPIKey string)
 
 	resp, err := c.HTTP.Do(req)
 	if err != nil {
-		return fmt.Sprintf("Janice appraisal request failed: %v", err), nil
+		slog.Warn("tools: Janice appraisal request failed", "err", err)
+		return "Janice appraisal request failed.", nil
 	}
 	defer resp.Body.Close()
-	body, _ := io.ReadAll(resp.Body)
+	body, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
 	if resp.StatusCode != 200 {
-		return fmt.Sprintf("Janice error %d: %s", resp.StatusCode, string(body)), nil
+		slog.Warn("tools: Janice appraisal refused", "status", resp.StatusCode, "body", string(body[:min(len(body), 512)]))
+		return fmt.Sprintf("Janice error %d.", resp.StatusCode), nil
 	}
 
 	var result struct {
