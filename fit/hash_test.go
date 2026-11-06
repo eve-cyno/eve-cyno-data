@@ -120,5 +120,22 @@ func TestHashESI_MatchesAGameFit(t *testing.T) {
 	require.Empty(t, dropped)
 	game := FromESI(eftFit.HullID, items)
 	require.NotEqual(t, Hash(eftFit), Hash(game), "ESI loses charge pairing and state, so the plain hashes differ")
+	// Pinned from the code before SV-M14 (not computed through HashESI's own definition).
+	require.Equal(t, "h1:ead22eeef2fa123120e06e2d1305cb9d95c4eb6562be6c3311c38ec76e76169d", HashESI(eftFit))
 	require.Equal(t, HashESI(eftFit), Hash(game))
+}
+
+func TestHashESI_IgnoresWhatESICannotCarryAndKeepsTheRest(t *testing.T) {
+	base := hashFit()
+	same := hashFit()
+	same.Name = "renamed"
+	same.Mid[0].State = "offline"
+	same.Implants = []FitModule{{TypeID: 9941, Name: "Crystal Alpha", Qty: 1}}
+	require.Equal(t, HashESI(base), HashESI(same), "name, state and implants are not in ESI")
+	other := hashFit()
+	other.Mid[0] = FitModule{TypeID: 33, Name: "Other", Qty: 1}
+	require.NotEqual(t, HashESI(base), HashESI(other), "a different module is a different fit")
+	hull := hashFit()
+	hull.HullID = 588
+	require.NotEqual(t, HashESI(base), HashESI(hull))
 }
