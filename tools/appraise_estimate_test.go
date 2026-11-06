@@ -72,7 +72,7 @@ func TestEstimateAppraisal_EveryKeylessAnswerNamesTheSource(t *testing.T) {
 		require.Contains(t, out, ESIEstimateSource, name)
 	}
 	out, _ := estimateAppraisal(context.Background(), down, s, "Tritanium x1")
-	require.True(t, strings.HasPrefix(out, "No estimate (ESI average prices): the prices are unavailable right now ("), out)
+	require.True(t, strings.HasPrefix(out, "No estimate (ESI average prices): the prices are unavailable right now (HTTP 503)."), out)
 }
 
 func TestEstimateAppraisal_ACancelledCallerGetsTheError(t *testing.T) {

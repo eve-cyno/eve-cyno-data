@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"context"
 	"fmt"
+	"log/slog"
 	"slices"
 	"strings"
 
@@ -59,7 +60,12 @@ func estimateAppraisal(ctx context.Context, c *Client, s *sde.SDE, items string)
 		if ctx.Err() != nil {
 			return "", err
 		}
-		return fmt.Sprintf("%sthe prices are unavailable right now (%v). Try again in a few minutes.", noEstimate, err), nil
+		slog.Warn("tools: ESI price estimate unavailable", "err", err)
+		status := ""
+		if code, ok := esiStatus(err); ok {
+			status = fmt.Sprintf(" (HTTP %d)", code)
+		}
+		return fmt.Sprintf("%sthe prices are unavailable right now%s. Try again in a few minutes.", noEstimate, status), nil
 	}
 	return formatEstimate(found, unknown, skipped, snap), nil
 }
