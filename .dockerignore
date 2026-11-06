@@ -5,6 +5,12 @@
 .golangci.yml
 .dockerignore
 .idea
+# Local tool output and agent state: never part of the image (graphify-out alone is ~52 MB).
+graphify-out/
+.graphifyignore
+.superpowers/
+.gitnexus/
+.claude/
 .vscode
 *.swp
 *~

@@ -57,4 +57,7 @@ EXPOSE 8093
 
 # No HEALTHCHECK: distroless has no curl/wget. dataapi serves GET /v1/health; use an
 # orchestrator-level TCP/HTTP check.
+# Explicit non-root user: 65532 is the distroless nonroot uid/gid, so the image does not depend
+# on the base tag staying :nonroot.
+USER 65532:65532
 ENTRYPOINT ["/dataapi"]
