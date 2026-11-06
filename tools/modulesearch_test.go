@@ -72,3 +72,27 @@ func TestFindCanonicalModule_WildcardFamilyMatchesNothing(t *testing.T) {
 		require.Equal(t, 0, list.Total)
 	}
 }
+
+// TestFindCanonicalModule_SizeIsValidated pins SV-M3: size is checked against the
+// vocabulary before it reaches a LIKE, on both the family form and the search form.
+func TestFindCanonicalModule_SizeIsValidated(t *testing.T) {
+	deps := testDeps(t)
+	for _, bad := range []string{"%", "_", "Huge", "Lar%"} {
+		for _, extra := range []map[string]any{{}, {"slot": "mid"}} {
+			args := map[string]any{"family": "Shield Extender", "size": bad}
+			for k, v := range extra {
+				args[k] = v
+			}
+			out, err := ExecuteTool(context.Background(), deps, "find_canonical_module", args)
+			require.NoError(t, err)
+			require.Equal(t, "Unknown size: "+bad+" (known: Small, Medium, Large).", out, "%q %v", bad, extra)
+		}
+	}
+	for _, ok := range []string{"Small", "Medium", "Large", "large", " LARGE "} {
+		out, err := ExecuteTool(context.Background(), deps, "find_canonical_module",
+			map[string]any{"family": "Shield Extender", "size": ok, "slot": "mid"})
+		require.NoError(t, err)
+		require.NotContains(t, out, "Unknown size", ok)
+		require.Contains(t, out, "Shield Extender", ok)
+	}
+}

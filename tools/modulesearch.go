@@ -18,8 +18,16 @@ func moduleSearchRequested(args map[string]any) bool {
 			return true
 		}
 	}
+	// An unknown size takes the search form too, which answers with the vocabulary error.
+	if size := scalarName(args, "size"); size != "" {
+		_, bad := canonicalList([]string{size}, moduleSizes())
+		return bad != ""
+	}
 	return false
 }
+
+// moduleSizes lists the size vocabulary the tool schema names.
+func moduleSizes() []string { return []string{"Small", "Medium", "Large"} }
 
 // moduleSlots lists the slot vocabulary of the search form.
 func moduleSlots() []string { return []string{"high", "low", "mid", "rig"} }
@@ -50,8 +58,12 @@ func searchModules(s *sde.SDE, args map[string]any) (string, *ModuleList) {
 	f := sde.ItemSearch{Query: family, Kind: "module"}
 	var parts []string
 	if size := scalarName(args, "size"); size != "" {
-		f.Size = size
-		parts = append(parts, capitalizeWord(size))
+		canon, bad := canonicalList([]string{size}, moduleSizes())
+		if bad != "" {
+			return vocabError("size", size, moduleSizes()), nil
+		}
+		f.Size = canon[0]
+		parts = append(parts, canon[0])
 	}
 	if kind := strings.ToLower(scalarName(args, "kind")); kind != "" {
 		if _, ok := moduleKinds()[kind]; !ok {
@@ -126,15 +138,6 @@ func deref(p *string) string {
 		return ""
 	}
 	return *p
-}
-
-// capitalizeWord upper-cases the first letter and lower-cases the rest ("large" -> "Large").
-func capitalizeWord(w string) string {
-	if w == "" {
-		return w
-	}
-	r := []rune(strings.ToLower(w))
-	return strings.ToUpper(string(r[0])) + string(r[1:])
 }
 
 // moduleRow is the typed row of a search hit; CPU and PG belong to slot modules only.
