@@ -651,6 +651,9 @@ func zkillGetGuarded(ctx context.Context, c *Client, url string, limit int64, re
 	}
 	body, err := io.ReadAll(reader)
 	if err != nil {
+		if ctx.Err() != nil && time.Since(began) >= c.zkillSlowAfter() {
+			return nil, &zkillStop{err} // headers came, then the body hung past the budget
+		}
 		return nil, err
 	}
 	if resp.StatusCode != 200 {

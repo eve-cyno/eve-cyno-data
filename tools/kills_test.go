@@ -569,3 +569,27 @@ func TestRecentKills_UndecodableEsiAnswerSkipsOnlyThatRow(t *testing.T) {
 	require.NotNil(t, data)
 	require.Len(t, data.Kills, 1)
 }
+
+// stallBody sends nothing and fails with the request's ctx error once it ends.
+type stallBody struct{ ctx context.Context }
+
+func (b stallBody) Read([]byte) (int, error) { <-b.ctx.Done(); return 0, b.ctx.Err() }
+func (stallBody) Close() error               { return nil }
+
+// Review round 2 (SV-I1 follow-up): a zKillboard that sends headers and then stalls the body past
+// the budget is a hung upstream too, so it starts the pause.
+func TestRecentKills_BodyStalledAfterHeadersStartsPause(t *testing.T) {
+	deps := testDeps(t)
+	c := &Client{HTTP: &http.Client{Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
+		return &http.Response{StatusCode: 200, Request: r, Header: http.Header{}, Body: stallBody{r.Context()}}, nil
+	})}, Throttle: NewThrottle(), UserAgent: "EVE-Cyno/test"}
+	c.kills.timeout = 200 * time.Millisecond
+	c.zkillSlow = 50 * time.Millisecond
+
+	text, data, err := getRecentKills(context.Background(), c, deps.SDE, map[string]any{"system": "Jita"})
+	require.NoError(t, err)
+	require.Nil(t, data)
+	require.Equal(t, killsUnavailable, text)
+	_, retryAt, _ := c.kills.held("x")
+	require.False(t, retryAt.IsZero(), "a body that hangs after the headers starts the pause")
+}
