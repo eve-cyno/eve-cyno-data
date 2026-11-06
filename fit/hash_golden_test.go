@@ -54,7 +54,8 @@ func TestHash_SeparatorsInNamesDoNotCollide(t *testing.T) {
 	require.NotEqual(t, Hash(c), Hash(d), "newline in a hull name")
 
 	// A backslash must not undo the escaping.
-	e := Fit{HullName: "R", High: []FitModule{{Name: "a\\", Charge: "b", Qty: 1}}}
-	f := Fit{HullName: "R", High: []FitModule{{Name: "a", Charge: "\\b", Qty: 1}}}
+	// Both names escape to a\p if the backslash is not escaped itself.
+	e := Fit{HullName: "R", High: []FitModule{{Name: "a\\p", Qty: 1}}}
+	f := Fit{HullName: "R", High: []FitModule{{Name: "a|", Qty: 1}}}
 	require.NotEqual(t, Hash(e), Hash(f), "backslash")
 }
