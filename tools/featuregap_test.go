@@ -31,15 +31,16 @@ func TestFeatureGap_ToolsSayUnavailable(t *testing.T) {
 		args map[string]any
 		want string
 	}{
-		{"find_systems", map[string]any{"region": "The Forge"}, "SDE build incomplete — system search unavailable (missing mapDenormalize.groupID"},
-		{"get_system_info", map[string]any{"systems": []any{"Jita"}}, "SDE build incomplete — system lookup unavailable (missing mapDenormalize.groupID"},
-		{"get_npc_stations", map[string]any{"agent": map[string]any{"level": 4}}, "SDE build incomplete — agent search unavailable (missing agtAgentTypes.agentType"},
-		{"get_production_chain", map[string]any{"item_name": "Coolant"}, "SDE build incomplete — planetary production chains unavailable (missing planetSchematics.cycleTime"},
+		{"find_systems", map[string]any{"region": "The Forge"}, "SDE build incomplete — system search unavailable."},
+		{"get_system_info", map[string]any{"systems": []any{"Jita"}}, "SDE build incomplete — system lookup unavailable."},
+		{"get_npc_stations", map[string]any{"agent": map[string]any{"level": 4}}, "SDE build incomplete — agent search unavailable."},
+		{"get_production_chain", map[string]any{"item_name": "Coolant"}, "SDE build incomplete — planetary production chains unavailable."},
 	} {
 		t.Run(tc.tool, func(t *testing.T) {
 			got, err := ExecuteTool(testCtx(t), deps, tc.tool, tc.args)
 			require.NoError(t, err)
-			require.Contains(t, got, tc.want)
+			require.Equal(t, tc.want, got)
+			require.NotContains(t, got, "missing", "no table or column name in tool text")
 		})
 	}
 }

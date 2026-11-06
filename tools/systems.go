@@ -2,6 +2,7 @@ package tools
 
 import (
 	"fmt"
+	"log/slog"
 	"math"
 	"slices"
 	"sort"
@@ -65,7 +66,9 @@ func featureGap(s *sde.SDE, what string, tables []string) string {
 	if len(missing) == 0 {
 		return ""
 	}
-	return fmt.Sprintf("SDE build incomplete — %s unavailable (missing %s).", what, strings.Join(missing, ", "))
+	// The tables and columns go to the log; the tool text carries no schema names.
+	slog.Error("tools: SDE build lacks feature columns", "tool_need", what, "missing", missing)
+	return fmt.Sprintf("SDE build incomplete — %s unavailable.", what)
 }
 
 // findSystems answers find_systems: solar systems selected by filters and ranked, one line
