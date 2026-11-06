@@ -1,7 +1,6 @@
 package fit
 
 import (
-	"math"
 	"regexp"
 	"strconv"
 	"strings"
@@ -98,14 +97,14 @@ func ParseEFTLines(eft string) EFTBlock {
 			s = eftStateRE.ReplaceAllString(s, "")
 		}
 		if m := eftQtyRE.FindStringSubmatch(s); m != nil {
-			n, err := strconv.Atoi(m[1])
-			switch {
-			case err != nil:
-				line.Qty = math.MaxInt // digits beyond int: oversized, not 1
-			case n > 0:
-				line.Qty = n
+			// Digits beyond int are not a quantity: the suffix stays in the name as typed, so the
+			// line resolves to nothing and is reported (OversizedEFTLines lists it too).
+			if n, err := strconv.Atoi(m[1]); err == nil {
+				if n > 0 {
+					line.Qty = n
+				}
+				s = eftQtyRE.ReplaceAllString(s, "")
 			}
-			s = eftQtyRE.ReplaceAllString(s, "")
 		}
 		name, charge, _ := strings.Cut(s, ",")
 		line.Name, line.Mutated = stripMutated(name)

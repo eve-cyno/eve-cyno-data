@@ -2,7 +2,6 @@ package gofa
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"sort"
 
@@ -103,8 +102,8 @@ func (e *Engine) resolveForStats(ctx context.Context, f fit.Fit, opts fit.StatsO
 		{f.High, KindModule, "high", maxSlotUnits},
 		{f.Mid, KindModule, "mid", maxSlotUnits},
 		{f.Low, KindModule, "low", maxSlotUnits},
-		{f.Subsystem, KindSubsystem, "subsystem", 4}, // T3 subsystems: unpenalized role bonuses (see KindSubsystem)
-		{f.Rig, KindRig, "rig", 3},
+		{f.Subsystem, KindSubsystem, "subsystem", 8}, // T3 subsystems: unpenalized role bonuses (see KindSubsystem)
+		{f.Rig, KindRig, "rig", 6},
 		{f.Drones, KindDrone, "drone", maxDroneUnits},
 		// f.Cargo intentionally omitted
 	}
@@ -138,7 +137,7 @@ func (e *Engine) resolveForStats(ctx context.Context, f fit.Fit, opts fit.StatsO
 			// Per-group caps match EVE (the ESI slot range per group; a drone bay holds at most a few
 			// hundred drones). They bound the interpreter's sources x targets cost, not only memory.
 			if n > g.limit-groupUnits {
-				return nil, nil, nil, nil, fmt.Errorf("%w: more than %d %s units (typeID %d, quantity %d)", ErrFitTooLarge, g.limit, g.name, fm.TypeID, fm.Qty)
+				return nil, nil, nil, nil, fmt.Errorf("%w: more than %d %s units (typeID %d, quantity %d)", fit.ErrFitTooLarge, g.limit, g.name, fm.TypeID, fm.Qty)
 			}
 			groupUnits += n
 			perUnit := 1
@@ -146,7 +145,7 @@ func (e *Engine) resolveForStats(ctx context.Context, f fit.Fit, opts fit.StatsO
 				perUnit = 2
 			}
 			if n > budget/perUnit {
-				return nil, nil, nil, nil, fmt.Errorf("%w: more than %d items (typeID %d, quantity %d)", ErrFitTooLarge, maxExpandedItems, fm.TypeID, fm.Qty)
+				return nil, nil, nil, nil, fmt.Errorf("%w: more than %d items (typeID %d, quantity %d)", fit.ErrFitTooLarge, maxExpandedItems, fm.TypeID, fm.Qty)
 			}
 			budget -= n * perUnit
 			for i := 0; i < n; i++ {
@@ -676,19 +675,18 @@ func (e *Engine) weaponNamer() func(module, charge int) string {
 const maxActiveDrones = 5
 
 // Engine limits on what one resolve expands per unit. The interpreter's collect pass costs
-// sources x targets, so the caps bound CPU as well as memory: a real fit has at most 31 slot
-// units, and a drone bay holds a few hundred drones at most. The total is the last line.
+// sources x targets, so the caps bound CPU as well as memory. A hull has at most 8 slots per
+// group, 3 rigs and 4 subsystems, but a pasted refit export lists spare slot modules in the
+// cargo paragraph and ParseEFT places them by SDE slot, so the caps leave room for the doubled
+// count. Known limit: the Rorqual's bay holds more than 500 light drones; that fit is refused.
 const (
-	maxSlotUnits  = 8   // high, mid, low (the ESI flag range)
+	maxSlotUnits  = 16  // high, mid, low
 	maxDroneUnits = 500 // drones in total
 )
 
 // maxExpandedItems caps all units plus loaded charges. A variable only so a test can lower it:
-// the group caps keep the real worst case (555) below it.
-var maxExpandedItems = 600
-
-// ErrFitTooLarge is returned when a fit expands beyond the limits above; it is a client fault.
-var ErrFitTooLarge = errors.New("gofa: fit too large")
+// the group caps keep the real worst case (594) below it.
+var maxExpandedItems = 700
 
 // launchedDrones picks the drones in space. When a priority list is given it is
 // the EXCLUSIVE selection (only those typeIDs launch, in that order); otherwise

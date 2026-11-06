@@ -3,6 +3,7 @@ package gofa
 import (
 	"context"
 	"runtime"
+	"strings"
 	"testing"
 	"time"
 
@@ -191,7 +192,7 @@ func TestEngine_DominixQuantityShapeIsRefusedFast(t *testing.T) {
 	_, err := New(s).Stats(context.Background(), f, fit.StatsOpts{})
 	took := time.Since(start)
 	runtime.ReadMemStats(&after)
-	require.ErrorIs(t, err, ErrFitTooLarge)
+	require.ErrorIs(t, err, fit.ErrFitTooLarge)
 	require.Less(t, took, time.Second)
 	require.Less(t, after.TotalAlloc-before.TotalAlloc, uint64(64<<20))
 }
@@ -214,12 +215,28 @@ func TestEngine_FullDroneBoatKeepsItsNumbers(t *testing.T) {
 func TestEngine_GroupCaps(t *testing.T) {
 	s := &fakeSDE{dogma: map[int]map[int]float64{1: {40: 1}, 2: {50: 1}}}
 	ok := func(f fit.Fit) error { _, _, err := New(s).resolve(f, fit.StatsOpts{}); return err }
-	require.NoError(t, ok(fit.Fit{HullID: 1, Low: []fit.FitModule{{TypeID: 2, Qty: 8}}}))
-	require.ErrorIs(t, ok(fit.Fit{HullID: 1, Low: []fit.FitModule{{TypeID: 2, Qty: 5}, {TypeID: 2, Qty: 4}}}), ErrFitTooLarge)
-	require.NoError(t, ok(fit.Fit{HullID: 1, Rig: []fit.FitModule{{TypeID: 2, Qty: 3}}}))
-	require.ErrorIs(t, ok(fit.Fit{HullID: 1, Rig: []fit.FitModule{{TypeID: 2, Qty: 4}}}), ErrFitTooLarge)
+	require.NoError(t, ok(fit.Fit{HullID: 1, Low: []fit.FitModule{{TypeID: 2, Qty: 16}}}))
+	require.ErrorIs(t, ok(fit.Fit{HullID: 1, Low: []fit.FitModule{{TypeID: 2, Qty: 9}, {TypeID: 2, Qty: 8}}}), fit.ErrFitTooLarge)
+	require.NoError(t, ok(fit.Fit{HullID: 1, Rig: []fit.FitModule{{TypeID: 2, Qty: 6}}}))
+	require.ErrorIs(t, ok(fit.Fit{HullID: 1, Rig: []fit.FitModule{{TypeID: 2, Qty: 7}}}), fit.ErrFitTooLarge)
 	require.NoError(t, ok(fit.Fit{HullID: 1, Drones: []fit.FitModule{{TypeID: 2, Qty: maxDroneUnits}}}))
-	require.ErrorIs(t, ok(fit.Fit{HullID: 1, Drones: []fit.FitModule{{TypeID: 2, Qty: maxDroneUnits + 1}}}), ErrFitTooLarge)
+	require.ErrorIs(t, ok(fit.Fit{HullID: 1, Drones: []fit.FitModule{{TypeID: 2, Qty: maxDroneUnits + 1}}}), fit.ErrFitTooLarge)
+}
+
+// A pasted refit export lists spare slot modules in the cargo paragraph; ParseEFT places them by
+// SDE slot, so a group can hold more than 8 units. Main computed this fit and so must we (SVR2-I1).
+func TestEngine_RefitExportWithSpareModulesStillComputes(t *testing.T) {
+	s := openRealSDE(t)
+	eft := "[Abaddon, refit]\n" + strings.Repeat("Heat Sink II\n", 3) + strings.Repeat("Multispectrum Energized Membrane II\n", 4) +
+		"\n" + strings.Repeat("Large Shield Extender II\n", 4) + "\n" +
+		strings.Repeat("Mega Pulse Laser II, Multifrequency L\n", 8) + "\n\n\n" +
+		"Multispectrum Energized Membrane II x2\nMobile Depot"
+	f, _ := fit.ParseEFT(eft, s)
+	require.Greater(t, len(f.Low), 0)
+	st, err := New(s).Stats(context.Background(), f, fit.StatsOpts{})
+	require.NoError(t, err)
+	require.InDelta(t, 876.208021, st.DPS.Theoretical, 1e-5) // same as main
+	require.InDelta(t, 113451.242425, st.Tank.TotalEHP, 1e-3)
 }
 
 // A module with a loaded charge costs two units against the total budget (SVR-M4).
@@ -237,5 +254,5 @@ func TestEngine_ChargeCountsTowardTheBudget(t *testing.T) {
 	}
 	// 4 charged modules = 8 units; 12 drones fill the budget of 20, 13 do not.
 	require.NoError(t, run(12))
-	require.ErrorIs(t, run(13), ErrFitTooLarge)
+	require.ErrorIs(t, run(13), fit.ErrFitTooLarge)
 }

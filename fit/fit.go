@@ -1,6 +1,7 @@
 package fit
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 )
@@ -258,9 +259,16 @@ func RenderEFT(f Fit) string {
 func OversizedEFTLines(eft string) []string {
 	var out []string
 	for _, l := range ParseEFTLines(eft).Lines {
-		if l.Qty > MaxEFTQty {
+		switch {
+		case l.Qty > MaxEFTQty:
 			out = append(out, fmt.Sprintf("%s x%d", l.Name, l.Qty))
+		case eftQtyRE.MatchString(l.Name): // digits beyond int stayed in the name
+			out = append(out, l.Name)
 		}
 	}
 	return out
 }
+
+// ErrFitTooLarge is returned by a stats engine when a fit expands beyond its limits; it is the
+// caller's fault, not an engine failure.
+var ErrFitTooLarge = errors.New("fit too large")

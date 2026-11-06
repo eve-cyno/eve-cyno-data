@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"eve-cyno.dev/go/data/fit"
-	"eve-cyno.dev/go/data/fit/gofa"
 )
 
 type fitStatsRequest struct {
@@ -34,7 +33,7 @@ func (a *API) fitStats(w http.ResponseWriter, r *http.Request) {
 	}
 	f, _ := fit.ParseEFT(req.EFT, s)
 	stats, err := a.deps.Stats.Stats(r.Context(), f, fit.StatsOpts{ActiveDroneTypeIDs: req.ActiveDrones})
-	if errors.Is(err, gofa.ErrFitTooLarge) {
+	if errors.Is(err, fit.ErrFitTooLarge) {
 		logFrom(r.Context()).Info("fit_stats_too_large", "error", err)
 		writeError(w, r, http.StatusBadRequest, "invalid_request", "fit too large: more units than a ship can fit or carry")
 		return

@@ -171,3 +171,11 @@ func TestParseEFT_HugeQtyIsReportedNotParsed(t *testing.T) {
 	require.Empty(t, unresolved)
 	require.Equal(t, MaxEFTQty, f.Drones[0].Qty)
 }
+
+// Digits beyond int stay as typed in the name: no sentinel reaches user-visible text (SVR2-M2).
+func TestParseEFTLines_BeyondIntKeepsTheTypedDigits(t *testing.T) {
+	b := ParseEFTLines("[Rifter, T]\n\nHobgoblin I x9223372036854775808")
+	require.Len(t, b.Lines, 1)
+	require.Equal(t, "Hobgoblin I x9223372036854775808", b.Lines[0].Name)
+	require.Equal(t, []string{"Hobgoblin I x9223372036854775808"}, OversizedEFTLines("[Rifter, T]\n\nHobgoblin I x9223372036854775808"))
+}
