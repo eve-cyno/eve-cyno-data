@@ -257,11 +257,13 @@ func fetchKills(ctx context.Context, c *Client, system, hours int, now time.Time
 		list = list[:maxRecentKills]
 	}
 	rows := make([]killRow, 0, len(list))
+	reads, failed := 0, 0 // id-only rows whose killmail was read through ESI, and those that failed
 	for _, k := range list {
 		if k.Time.IsZero() {
 			if !killHashRE.MatchString(k.ZKB.Hash) {
 				continue // never build an ESI path from a hash we cannot vouch for
 			}
+			reads++
 			raw, err := esiGetJSON(ctx, c, fmt.Sprintf("/killmails/%d/%s", k.KillmailID, k.ZKB.Hash))
 			if err != nil {
 				if ctx.Err() != nil {
@@ -270,15 +272,23 @@ func fetchKills(ctx context.Context, c *Client, system, hours int, now time.Time
 				// One killmail ESI cannot give must not fail the whole list (and keep it out of
 				// the cache); skip the row.
 				slog.Warn("tools: recent kills: killmail read failed, row skipped", "killmail", k.KillmailID, "err", err)
+				failed++
 				continue
 			}
 			value := k.ZKB.TotalValue
 			if err := json.Unmarshal(raw, &k); err != nil {
-				return nil, fmt.Errorf("zkill list: killmail: decode: %w", err)
+				slog.Warn("tools: recent kills: killmail does not decode, row skipped", "killmail", k.KillmailID, "err", err)
+				failed++
+				continue
 			}
 			k.ZKB.TotalValue = value
 		}
 		rows = append(rows, killRow{ID: k.KillmailID, Time: k.Time, ShipTypeID: k.Victim.ShipTypeID, Value: k.ZKB.TotalValue, Attackers: len(k.Attackers)})
+	}
+	if reads > 0 && failed == reads && len(rows) == 0 {
+		// ESI backed off or is down: a "0 of N" copy would be cached for killsTTL. Report it
+		// unavailable and keep nothing.
+		return nil, fmt.Errorf("zkill list: none of %d killmails could be read", reads)
 	}
 	slices.SortStableFunc(rows, func(a, b killRow) int { return b.Time.Compare(a.Time) })
 	return &killsCopy{Rows: rows, Total: total, fetched: now}, nil

@@ -518,3 +518,54 @@ func TestRecentKills_FailedEsiReadSkipsOnlyThatRow(t *testing.T) {
 	require.NotNil(t, data)
 	require.Len(t, data.Kills, 1)
 }
+
+// idOnlyList is a zKillboard list whose rows carry only ids and hashes, so every row needs an ESI read.
+func idOnlyList() string {
+	return `[{"killmail_id":301,"zkb":{"hash":"` + hash300 + `","totalValue":1}},{"killmail_id":300,"zkb":{"hash":"` + hash300 + `","totalValue":5}}]`
+}
+
+func esiAnswering(c *Client, status int, body string) {
+	base := c.HTTP.Transport
+	c.HTTP.Transport = roundTripFunc(func(r *http.Request) (*http.Response, error) {
+		if strings.Contains(r.URL.Path, "/killmails/") {
+			return &http.Response{StatusCode: status, Header: http.Header{"Content-Type": {"application/json"}}, Body: io.NopCloser(strings.NewReader(body))}, nil
+		}
+		return base.RoundTrip(r)
+	})
+}
+
+// Review round 2 (SV-M1): when ESI backs off and every id-only row fails, the answer is the
+// unavailable text and no "0 of N" copy is kept for the next two minutes.
+func TestRecentKills_EveryEsiReadFailedIsUnavailableAndNotCached(t *testing.T) {
+	deps := testDeps(t)
+	c, srv, _ := newKillsClient(t, idOnlyList())
+	esiAnswering(c, 500, "boom")
+	for i := 0; i < 2; i++ {
+		text, data, err := getRecentKills(context.Background(), c, deps.SDE, map[string]any{"system": "Jita"})
+		require.NoError(t, err)
+		require.Nil(t, data)
+		require.Equal(t, killsUnavailable, text)
+	}
+	require.Equal(t, 2, srv.hits(), "no copy was stored, so the second call asks zKillboard again")
+}
+
+// Review round 2 (SV-M1): a killmail that ESI answers with unreadable JSON skips that row only.
+func TestRecentKills_UndecodableEsiAnswerSkipsOnlyThatRow(t *testing.T) {
+	deps := testDeps(t)
+	c, _, _ := newKillsClient(t, idOnlyList())
+	full := killJSON(300, killsNow.Add(-5*time.Minute), 587, 5, 3)
+	base := c.HTTP.Transport
+	c.HTTP.Transport = roundTripFunc(func(r *http.Request) (*http.Response, error) {
+		switch {
+		case strings.Contains(r.URL.Path, "/killmails/301/"):
+			return &http.Response{StatusCode: 200, Header: http.Header{"Content-Type": {"application/json"}}, Body: io.NopCloser(strings.NewReader("not json"))}, nil
+		case strings.Contains(r.URL.Path, "/killmails/"):
+			return &http.Response{StatusCode: 200, Header: http.Header{"Content-Type": {"application/json"}}, Body: io.NopCloser(strings.NewReader(full))}, nil
+		}
+		return base.RoundTrip(r)
+	})
+	_, data, err := getRecentKills(context.Background(), c, deps.SDE, map[string]any{"system": "Jita"})
+	require.NoError(t, err)
+	require.NotNil(t, data)
+	require.Len(t, data.Kills, 1)
+}
