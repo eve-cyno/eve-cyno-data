@@ -221,5 +221,8 @@ func TestLPOffers_FailureNamesTheCorporation(t *testing.T) {
 	c, _ := newFakeESIClient(t, lpHandler(`{"error":"boom"}`, http.StatusInternalServerError, lpPricesBody))
 	text, _, err := getLPOffers(context.Background(), c, testSDE(t), map[string]any{"corporation": "Caldari Navy"})
 	require.NoError(t, err)
-	require.Equal(t, `get_lp_offers: ESI request failed for corporation_id=1000035: esi: GET /loyalty/stores/1000035/offers: HTTP 500: {"error":"boom"}`, text)
+	// S-c: the upstream body snippet and the request path stay in the log, not in the tool text.
+	require.Equal(t, "get_lp_offers: ESI request failed for corporation_id=1000035 (HTTP 500).", text)
+	require.NotContains(t, text, "boom")
+	require.NotContains(t, text, "/loyalty/")
 }

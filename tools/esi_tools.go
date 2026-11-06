@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"slices"
@@ -194,9 +195,15 @@ func esiError(tool string, typeID int, err error) string {
 	return esiErrorFor(tool, "type_id", typeID, err)
 }
 
-// esiErrorFor is esiError for a request keyed by something other than a type id.
+// esiErrorFor is esiError for a request keyed by something other than a type id. The tool
+// text keeps only the HTTP status of a typed ESI error: the request path, the transport
+// error and the upstream body snippet go to the log, not to the caller.
 func esiErrorFor(tool, idName string, id int, err error) string {
-	return fmt.Sprintf("%s: ESI request failed for %s=%d: %v", tool, idName, id, err)
+	slog.Warn("tools: ESI request failed", "tool", tool, idName, id, "err", err)
+	if status, ok := esiStatus(err); ok {
+		return fmt.Sprintf("%s: ESI request failed for %s=%d (HTTP %d).", tool, idName, id, status)
+	}
+	return fmt.Sprintf("%s: ESI request failed for %s=%d.", tool, idName, id)
 }
 
 // esiStatus extracts the HTTP status of a typed ESI error (StatusError or RateLimitError).
