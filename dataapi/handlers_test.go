@@ -1,6 +1,7 @@
 package dataapi_test
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"io"
@@ -455,4 +456,27 @@ func TestFitStats_OversizedMessageIsShort(t *testing.T) {
 	require.NotContains(t, body, strings.Repeat("N", 81))
 	require.Contains(t, body, "and 2 more")
 	require.NotContains(t, body, "D x2000000000")
+}
+
+// Review round 1: a tool that fails with a plain Go error answers a fixed internal_error text,
+// never the error string (it can carry hosts and upstream detail); the error goes to the log.
+func TestTool_InternalErrorHasNoGoErrorText(t *testing.T) {
+	s := realSDE(t)
+	stub := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+	t.Cleanup(stub.Close)
+	ec, err := esi.New(esi.Config{BaseURL: stub.URL, HTTPClient: stub.Client()})
+	require.NoError(t, err)
+	deps := &tools.Deps{SDE: s, Client: &tools.Client{HTTP: stub.Client(), Throttle: tools.NewThrottle(), ESI: ec}}
+	a := newAPI(t, dataapi.Config{Deps: dataapi.Deps{Tools: deps}, ToolAPI: dataapi.ToolAPILoopback})
+
+	// A caller that went away makes the tool end with ctx's error, which is neither a timeout
+	// nor an unknown tool.
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	req := httptest.NewRequest("POST", "/v1/tool/get_sovereignty", strings.NewReader(`{"system_name":"Jita"}`)).WithContext(ctx)
+	rec := httptest.NewRecorder()
+	a.ServeHTTP(rec, req)
+	requireError(t, rec, http.StatusInternalServerError, "internal_error")
+	require.NotContains(t, rec.Body.String(), "context canceled")
+	require.Contains(t, rec.Body.String(), "the tool failed; see the server log")
 }
