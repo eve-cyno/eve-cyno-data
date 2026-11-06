@@ -361,11 +361,13 @@ func TestHealth_SDEBuildFollowsHotReload(t *testing.T) {
 
 // TestHealth_SDEBuildWaitsForTheReader: the ingest renames the new database into place and
 // writes the sidecar right after, but the reader switches only at its next due check. Until
-// then the old file is served, so health must keep naming the old build.
+// then the old file is served, so health must keep naming the old build. The interval is an
+// hour, so the reload is never due however slow the runner is; the catch-up after a reload is
+// covered by TestHealth_SDEBuildPicksUpASidecarWrittenAfterTheReload.
 func TestHealth_SDEBuildWaitsForTheReader(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "sde.sqlite")
 	writeTestSDE(t, path, "100_20261001")
-	s, err := sde.OpenWithReload(path, time.Second)
+	s, err := sde.OpenWithReload(path, time.Hour)
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = s.Close() })
 
@@ -378,9 +380,6 @@ func TestHealth_SDEBuildWaitsForTheReader(t *testing.T) {
 	require.Contains(t, get(h, "/v1/health").Body.String(), `"sde_build":"100_20261001"`,
 		"the old file is still served, so the old build must still be reported")
 	require.Equal(t, uint64(1), s.Generation())
-
-	require.Eventually(t, func() bool { return s.Generation() == 2 }, 5*time.Second, 50*time.Millisecond)
-	require.Contains(t, get(h, "/v1/health").Body.String(), `"sde_build":"200_20261104"`)
 }
 
 // TestHealth_SDEBuildPicksUpASidecarWrittenAfterTheReload: a reload that lands between the
