@@ -55,6 +55,9 @@ type Client struct {
 	thera theraBook
 	// kills keeps short-lived copies of zKillboard's per-system lists (zero value is ready).
 	kills killsBook
+	// zkillSlow is how long a zKillboard request must have run before an expired budget counts
+	// as a hung upstream; zero means zkillSlowAfter (tests set it).
+	zkillSlow time.Duration
 	// names caches /universe/names answers (alliance and corporation names; zero value is ready).
 	names idNameCache
 

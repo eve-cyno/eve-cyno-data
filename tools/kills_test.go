@@ -442,3 +442,55 @@ func TestRecentKills_BadHashSkipsOnlyThatRow(t *testing.T) {
 	require.Contains(t, esiPaths[0], "/killmails/300/"+hash300)
 	require.Equal(t, 1, srv.hits())
 }
+
+// SV-I1 (review round 1): a zKillboard that hangs past the budget is the upstream's fault, so it
+// starts the pause; the same expiry after only a short run (our own queue ate the budget) does not.
+func TestRecentKills_HungUpstreamStartsPause(t *testing.T) {
+	deps := testDeps(t)
+	c := &Client{HTTP: &http.Client{Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
+		<-r.Context().Done()
+		return nil, r.Context().Err()
+	})}, Throttle: NewThrottle(), UserAgent: "EVE-Cyno/test"}
+	c.kills.timeout = 200 * time.Millisecond
+	c.zkillSlow = 50 * time.Millisecond
+
+	text, data, err := getRecentKills(context.Background(), c, deps.SDE, map[string]any{"system": "Jita"})
+	require.NoError(t, err)
+	require.Nil(t, data)
+	require.Equal(t, killsUnavailable, text)
+	_, retryAt, _ := c.kills.held("x")
+	require.False(t, retryAt.IsZero(), "a hung upstream starts the pause")
+}
+
+func TestRecentKills_SlotHeldByOtherIsNoPause(t *testing.T) {
+	deps := testDeps(t)
+	c := &Client{HTTP: &http.Client{Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
+		<-r.Context().Done()
+		return nil, r.Context().Err()
+	})}, Throttle: NewThrottle(), UserAgent: "EVE-Cyno/test"}
+	c.kills.timeout = 200 * time.Millisecond
+	c.zkillSlow = 150 * time.Millisecond
+	// Another caller holds every zKillboard slot until the budget is nearly gone.
+	var rels []func()
+	for {
+		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Millisecond)
+		rel, err := c.Throttle.Acquire(ctx, "https://zkillboard.com/api/x")
+		cancel()
+		if err != nil {
+			break
+		}
+		rels = append(rels, rel)
+	}
+	go func() {
+		time.Sleep(170 * time.Millisecond)
+		for _, r := range rels {
+			r()
+		}
+	}()
+
+	_, data, err := getRecentKills(context.Background(), c, deps.SDE, map[string]any{"system": "Jita"})
+	require.NoError(t, err)
+	require.Nil(t, data)
+	_, retryAt, _ := c.kills.held("x")
+	require.True(t, retryAt.IsZero(), "time spent queued is no pause")
+}

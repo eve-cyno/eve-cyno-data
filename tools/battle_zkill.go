@@ -589,6 +589,16 @@ func zkillGetCapped(ctx context.Context, c *Client, url string, limit int64) ([]
 // errZkillAnswerTooLarge marks an answer longer than the caller's limit.
 var errZkillAnswerTooLarge = errors.New("zkill answer too large")
 
+// zkillSlowAfter is the run time after which an expired budget is blamed on zKillboard.
+const zkillSlowAfter = 10 * time.Second
+
+func (c *Client) zkillSlowAfter() time.Duration {
+	if c.zkillSlow > 0 {
+		return c.zkillSlow
+	}
+	return zkillSlowAfter
+}
+
 // zkillGetGuarded is zkillGetCapped with a last check: ready runs once the request has its place
 // in the throttle queue, so a pause set while it waited still stops it. nil means no check.
 func zkillGetGuarded(ctx context.Context, c *Client, url string, limit int64, ready func() error) ([]byte, error) {
@@ -611,11 +621,13 @@ func zkillGetGuarded(ctx context.Context, c *Client, url string, limit int64, re
 		}
 	}
 
+	began := time.Now()
 	resp, err := c.HTTP.Do(req)
 	if err != nil {
-		if ctx.Err() != nil {
-			// Our own budget ran out (time spent queued counts): that says nothing about
-			// zKillboard, so it must not pause every lookup.
+		if ctx.Err() != nil && time.Since(began) < c.zkillSlowAfter() {
+			// Our own budget ran out while the request queued or barely ran: that says
+			// nothing about zKillboard, so it must not pause every lookup. A request that ran
+			// for a long time before the budget ended is a hung upstream and does.
 			return nil, err
 		}
 		return nil, &zkillStop{err}
