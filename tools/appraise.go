@@ -24,6 +24,13 @@ func appraiseItems(ctx context.Context, c *Client, s *sde.SDE, items, janiceAPIK
 	return estimateAppraisal(ctx, c, s, items)
 }
 
+// Body caps: an error answer is only logged (a small cap is enough); a 200 answer carries one
+// row per distinct item and must be read whole.
+const (
+	janiceMaxErrBody = 64 << 10
+	janiceMaxBody    = 16 << 20
+)
+
 // janiceAppraisal posts the list to Janice's appraisal API with key and returns the buy,
 // sell and split totals and the appraisal link.
 func janiceAppraisal(ctx context.Context, c *Client, items, janiceAPIKey string) (string, error) {
@@ -49,7 +56,15 @@ func janiceAppraisal(ctx context.Context, c *Client, items, janiceAPIKey string)
 		return "Janice appraisal request failed.", nil
 	}
 	defer resp.Body.Close()
-	body, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+	limit := int64(janiceMaxBody)
+	if resp.StatusCode != 200 {
+		limit = janiceMaxErrBody
+	}
+	body, _ := io.ReadAll(io.LimitReader(resp.Body, limit+1))
+	capHit := int64(len(body)) > limit
+	if capHit {
+		body = body[:limit]
+	}
 	if resp.StatusCode != 200 {
 		slog.Warn("tools: Janice appraisal refused", "status", resp.StatusCode, "body", string(body[:min(len(body), 512)]))
 		return fmt.Sprintf("Janice error %d.", resp.StatusCode), nil
@@ -61,7 +76,12 @@ func janiceAppraisal(ctx context.Context, c *Client, items, janiceAPIKey string)
 		SellTotal  float64 `json:"sellTotal"`
 		SplitTotal float64 `json:"splitTotal"`
 	}
+	if capHit {
+		slog.Warn("tools: Janice appraisal answer over the size cap", "body_len", len(body), "cap_hit", true)
+		return "Failed to parse Janice appraisal response.", nil
+	}
 	if err := json.Unmarshal(body, &result); err != nil {
+		slog.Warn("tools: Janice appraisal answer does not parse", "body_len", len(body), "cap_hit", false, "err", err)
 		return "Failed to parse Janice appraisal response.", nil
 	}
 
