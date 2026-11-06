@@ -12,6 +12,7 @@ import (
 	"compress/gzip"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -585,6 +586,9 @@ func zkillGetCapped(ctx context.Context, c *Client, url string, limit int64) ([]
 	return zkillGetGuarded(ctx, c, url, limit, nil)
 }
 
+// errZkillAnswerTooLarge marks an answer longer than the caller's limit.
+var errZkillAnswerTooLarge = errors.New("zkill answer too large")
+
 // zkillGetGuarded is zkillGetCapped with a last check: ready runs once the request has its place
 // in the throttle queue, so a pause set while it waited still stops it. nil means no check.
 func zkillGetGuarded(ctx context.Context, c *Client, url string, limit int64, ready func() error) ([]byte, error) {
@@ -641,7 +645,7 @@ func zkillGetGuarded(ctx context.Context, c *Client, url string, limit int64, re
 		return nil, &zkillStop{fmt.Errorf("HTTP %d", resp.StatusCode)}
 	}
 	if limit > 0 && int64(len(body)) > limit {
-		return nil, fmt.Errorf("answer over %d bytes", limit)
+		return nil, fmt.Errorf("%w: answer over %d bytes", errZkillAnswerTooLarge, limit)
 	}
 	return body, nil
 }

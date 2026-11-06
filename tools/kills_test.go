@@ -340,11 +340,25 @@ func TestRecentKills_OwnFailureIsNoPause(t *testing.T) {
 
 func TestRecentKills_BodyCap(t *testing.T) {
 	deps := testDeps(t)
-	c, _, _ := newKillsClient(t, "["+strings.Repeat(" ", killsBodyMax+1)+"]")
-	text, data, err := getRecentKills(context.Background(), c, deps.SDE, map[string]any{"system": "Jita"})
+	c, srv, now := newKillsClient(t, "["+strings.Repeat(" ", killsBodyMax+1)+"]")
+	args := map[string]any{"system": "Jita"}
+	text, data, err := getRecentKills(context.Background(), c, deps.SDE, args)
 	require.NoError(t, err)
 	require.Nil(t, data)
-	require.Equal(t, killsUnavailable, text)
+	require.Equal(t, killsTooLarge, text)
+
+	// SV-S-a: the verdict is kept for killsTTL, so the 4 MiB is not downloaded again per call.
+	text, _, err = getRecentKills(context.Background(), c, deps.SDE, args)
+	require.NoError(t, err)
+	require.Equal(t, killsTooLarge, text)
+	require.Equal(t, 1, srv.hits())
+	_, retryAt, _ := c.kills.held("x")
+	require.True(t, retryAt.IsZero(), "too large is no pause for other systems")
+
+	*now = now.Add(killsTTL)
+	_, _, err = getRecentKills(context.Background(), c, deps.SDE, args)
+	require.NoError(t, err)
+	require.Equal(t, 2, srv.hits())
 }
 
 func TestRecentKills_NoClient(t *testing.T) {

@@ -42,8 +42,13 @@ const (
 	// killsCopiesMax bounds the copies a process keeps.
 	killsCopiesMax = 512
 
+	killsTooLarge = "Recent kills are not shown for this system and window: the list is too large to read. Try a shorter window."
+
 	killsUnavailable = "Recent kills are unavailable right now (zKillboard did not answer). Try again in a few minutes."
 )
+
+// errKillsTooLarge marks a list over killsBodyMax; it is no sign that zKillboard is down.
+var errKillsTooLarge = errors.New("kills list too large")
 
 // zkillKill is one list entry as the tool reads it. Only these fields are decoded; the attackers
 // count as elements, their fields are never read.
@@ -83,7 +88,10 @@ type killsBook struct {
 	copies  map[string]*killsCopy
 	lastErr error
 	retryAt time.Time
-	flight  singleflight.Group
+	// tooLarge is when a key's list last came back over killsBodyMax; for killsTTL after that the
+	// key is not asked again.
+	tooLarge map[string]time.Time
+	flight   singleflight.Group
 	// now is the clock; nil means time.Now (tests set it).
 	now func() time.Time
 	// timeout overrides killsTimeout when positive (tests set it).
@@ -123,6 +131,27 @@ func (b *killsBook) store(key string, k *killsCopy) {
 	b.copies[key] = k
 }
 
+// markTooLarge remembers that a key's list is over the body cap.
+func (b *killsBook) markTooLarge(key string) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	if b.tooLarge == nil {
+		b.tooLarge = map[string]time.Time{}
+	}
+	if _, ok := b.tooLarge[key]; !ok && len(b.tooLarge) >= killsCopiesMax {
+		clear(b.tooLarge)
+	}
+	b.tooLarge[key] = b.clock()
+}
+
+// isTooLarge reports whether a key's list was over the cap less than killsTTL ago.
+func (b *killsBook) isTooLarge(key string) bool {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	at, ok := b.tooLarge[key]
+	return ok && b.clock().Sub(at) < killsTTL
+}
+
 // held returns a key's copy and the back-off state.
 func (b *killsBook) held(key string) (*killsCopy, time.Time, error) {
 	b.mu.Lock()
@@ -149,6 +178,12 @@ func (b *killsBook) copyOf(ctx context.Context, c *Client, system, hours int) (*
 		}
 		return nil, lastErr
 	}
+	if b.isTooLarge(key) {
+		if usable() {
+			return cur, nil
+		}
+		return nil, errKillsTooLarge
+	}
 	ch := b.flight.DoChan(key, func() (any, error) {
 		// Another flight may have finished between the check above and this one.
 		got, gotRetry, gotErr := b.held(key)
@@ -167,6 +202,10 @@ func (b *killsBook) copyOf(ctx context.Context, c *Client, system, hours int) (*
 		}
 		k, err := fetchKills(fctx, c, system, hours, b.clock(), ready)
 		if err != nil {
+			if errors.Is(err, errZkillAnswerTooLarge) {
+				b.markTooLarge(key)
+				err = fmt.Errorf("%w: %v", errKillsTooLarge, err)
+			}
 			var stop *zkillStop
 			if errors.As(err, &stop) {
 				b.mu.Lock()
@@ -269,6 +308,9 @@ func getRecentKills(ctx context.Context, c *Client, s *sde.SDE, args map[string]
 	if err != nil {
 		if ctx.Err() != nil {
 			return "", nil, err
+		}
+		if errors.Is(err, errKillsTooLarge) {
+			return killsTooLarge, nil, nil
 		}
 		return killsUnavailable, nil, nil
 	}
