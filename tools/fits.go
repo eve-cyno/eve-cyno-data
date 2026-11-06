@@ -3,6 +3,7 @@ package tools
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"regexp"
 	"sort"
 	"strings"
@@ -152,6 +153,14 @@ func renderFits(hits []rag.FitHit, deps *Deps, includeEFT bool) (lines []string,
 	return lines, rows
 }
 
+// corpusUnavailable logs a retriever failure and returns the fixed tool line. The raw error
+// carries the Qdrant URL (host, port, collection) or its response body and must not leave
+// the data API.
+func corpusUnavailable(tool string, err error) string {
+	slog.Warn("tools: community-fit corpus unavailable", "tool", tool, "err", err)
+	return fmt.Sprintf("[%s error: the community-fit corpus is unavailable]", tool)
+}
+
 // getFitByID answers get_fits with fit_id: one fit, shaped like a one-hit get_fits.
 func getFitByID(ctx context.Context, deps *Deps, id string, includeEFT bool) (string, *CommunityFits, error) {
 	if !fitIDPattern.MatchString(id) {
@@ -159,7 +168,7 @@ func getFitByID(ctx context.Context, deps *Deps, id string, includeEFT bool) (st
 	}
 	hit, ok, err := deps.Retriever.FitByID(ctx, strings.ToLower(id))
 	if err != nil {
-		return fmt.Sprintf("[get_fits error: %v]", err), nil, nil
+		return corpusUnavailable("get_fits", err), nil, nil
 	}
 	if !ok {
 		return fmt.Sprintf("No community fit with id %s.", id), nil, nil
@@ -208,7 +217,7 @@ func getFits(ctx context.Context, deps *Deps, args map[string]any) (string, *Com
 
 	res, err := deps.Retriever.ScrollFits(ctx, q)
 	if err != nil {
-		return fmt.Sprintf("[get_fits error: %v]", err), nil, nil
+		return corpusUnavailable("get_fits", err), nil, nil
 	}
 
 	bounded := q.Limit
@@ -329,7 +338,7 @@ func listFits(ctx context.Context, deps *Deps, args map[string]any) (string, *Fi
 
 	res, err := deps.Retriever.ScrollListFits(ctx, q)
 	if err != nil {
-		return fmt.Sprintf("[list_fits error: %v]", err), nil, nil
+		return corpusUnavailable("list_fits", err), nil, nil
 	}
 
 	if res.Total == 0 {
