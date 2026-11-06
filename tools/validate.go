@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"slices"
 	"sort"
@@ -111,7 +112,11 @@ func validateFitting(ctx context.Context, c *Client, s *sde.SDE, lg *fit.Legalit
 	} else if c != nil {
 		extra, err := esiResolveNames(ctx, c, allNames)
 		if err != nil {
-			return fmt.Sprintf("Could not resolve names via ESI: %v", err), nil, nil
+			slog.Warn("tools: validate_fitting: ESI name resolution failed", "err", err)
+			if status, ok := esiStatus(err); ok {
+				return fmt.Sprintf("Could not resolve names via ESI (HTTP %d).", status), nil, nil
+			}
+			return "Could not resolve names via ESI.", nil, nil
 		}
 		nameToID = extra
 	}
