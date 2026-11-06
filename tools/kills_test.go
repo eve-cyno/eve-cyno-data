@@ -142,19 +142,25 @@ func TestRecentKills_ListWithOnlyIdsIsReadThroughESI(t *testing.T) {
 	c, srv, _ := newKillsClient(t, `[{"killmail_id":300,"zkb":{"hash":"`+hash300+`","totalValue":5}}]`)
 	full := killJSON(300, killsNow.Add(-5*time.Minute), 587, 5, 3)
 	base := c.HTTP.Transport
+	// The transport runs in the singleflight goroutine: a require there would Goexit it and leave
+	// the caller waiting. It records the path; the test goroutine checks it.
+	var esiPath string
 	c.HTTP.Transport = roundTripFunc(func(r *http.Request) (*http.Response, error) {
 		if strings.Contains(r.URL.Path, "/killmails/") {
 			srv.mu.Lock()
 			defer srv.mu.Unlock()
 			srv.esi++
-			require.Contains(t, r.URL.Path, "/killmails/300/"+hash300)
+			esiPath = r.URL.Path
 			return &http.Response{StatusCode: 200, Header: http.Header{"Content-Type": {"application/json"}}, Body: io.NopCloser(strings.NewReader(full))}, nil
 		}
 		return base.RoundTrip(r)
 	})
 	_, data, err := getRecentKills(context.Background(), c, deps.SDE, map[string]any{"system": "Jita"})
 	require.NoError(t, err)
+	srv.mu.Lock()
 	require.Equal(t, 1, srv.esi)
+	require.Contains(t, esiPath, "/killmails/300/"+hash300)
+	srv.mu.Unlock()
 	require.Len(t, data.Kills, 1)
 	require.Equal(t, 3, data.Kills[0].Attackers)
 	require.Equal(t, "Rifter", data.Kills[0].Ship)
