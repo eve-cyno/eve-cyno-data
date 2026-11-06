@@ -470,7 +470,7 @@ func TestRecentKills_SlotHeldByOtherIsNoPause(t *testing.T) {
 	})}, Throttle: NewThrottle(), UserAgent: "EVE-Cyno/test"}
 	c.kills.timeout = 200 * time.Millisecond
 	c.zkillSlow = 150 * time.Millisecond
-	// Another caller holds every zKillboard slot until the budget is nearly gone.
+	// Another caller holds every zKillboard slot until most of the budget is gone.
 	var rels []func()
 	for {
 		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Millisecond)
@@ -481,6 +481,9 @@ func TestRecentKills_SlotHeldByOtherIsNoPause(t *testing.T) {
 		}
 		rels = append(rels, rel)
 	}
+	// Throttle.Acquire sleeps through the min-interval ignoring ctx; without this reset the
+	// request would start with an expired ctx and the test would not exercise the queued case.
+	c.Throttle.lastReq["zkill"] = time.Time{}
 	go func() {
 		time.Sleep(170 * time.Millisecond)
 		for _, r := range rels {
