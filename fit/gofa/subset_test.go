@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"compress/gzip"
 	"database/sql"
+	"encoding/json"
+	"sort"
 	"strconv"
 	"strings"
 	"testing"
@@ -103,12 +105,30 @@ func TestSubset_StoreSurvivesWriteJSON(t *testing.T) {
 	t.Cleanup(func() { _ = s.Close() })
 	sub, err := s.ExportSubset("test")
 	require.NoError(t, err)
+	// Reverse the effects so WriteJSON has real sorting to do; the Store is built after, so
+	// it indexes the shuffled slice. A WriteJSON that sorted in place would move the
+	// effects under the Store's pointers.
+	for i, j := 0, len(sub.Effects)-1; i < j; i, j = i+1, j-1 {
+		sub.Effects[i], sub.Effects[j] = sub.Effects[j], sub.Effects[i]
+	}
 	store := dogma.NewStore(sub)
-	before := store.GetEffectCategory(sub.Effects[len(sub.Effects)/2].ID)
-	id := sub.Effects[len(sub.Effects)/2].ID
+	want := map[int]int{}
+	for _, e := range sub.Effects {
+		want[e.ID] = store.GetEffectCategory(e.ID)
+	}
 	var buf bytes.Buffer
 	require.NoError(t, sub.WriteJSON(&buf))
-	require.Equal(t, before, store.GetEffectCategory(id), "WriteJSON must not reorder what the Store indexes")
+	for id, cat := range want {
+		require.Equal(t, cat, store.GetEffectCategory(id), "WriteJSON must not reorder what the Store indexes (effect %d)", id)
+	}
+	var out struct{ Effects []struct{ ID int } }
+	require.NoError(t, json.Unmarshal(buf.Bytes(), &out))
+	require.True(t, sort.SliceIsSorted(out.Effects, func(i, j int) bool { return out.Effects[i].ID < out.Effects[j].ID }), "WriteJSON writes effects sorted by id")
+	back, err := dogma.ReadSubset(bytes.NewReader(buf.Bytes()))
+	require.NoError(t, err)
+	for id, cat := range want {
+		require.Equal(t, cat, back.GetEffectCategory(id), "the written subset keeps every effect (effect %d)", id)
+	}
 }
 
 func TestSubset_RejectsOtherFormat(t *testing.T) {
