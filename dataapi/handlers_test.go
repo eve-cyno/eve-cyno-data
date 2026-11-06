@@ -430,3 +430,29 @@ func TestFitsDetail_HugeQtyIsCheap(t *testing.T) {
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	require.Less(t, time.Since(start), 5*time.Second)
 }
+
+func esc(s string) string { return strings.ReplaceAll(s, "\n", `\n`) }
+
+// A budget refusal is the client's fault: 400, not 502 (SVR-M2).
+func TestFitStats_TooLargeFitIs400(t *testing.T) {
+	s := realSDE(t)
+	a := newAPI(t, dataapi.Config{Deps: dataapi.Deps{Tools: &tools.Deps{SDE: s}, Stats: gofa.New(s)}})
+	rec := do(a, "POST", "/v1/fit/stats", `{"eft":"`+esc("[Dominix, x]\n\n\n\n\n\nHobgoblin I x6000")+`"}`)
+	requireError(t, rec, http.StatusBadRequest, "invalid_request")
+	require.Contains(t, rec.Body.String(), "too large")
+}
+
+// The 400 names at most three lines, each cut to 80 characters (SVR-M3).
+func TestFitStats_OversizedMessageIsShort(t *testing.T) {
+	s := realSDE(t)
+	a := newAPI(t, dataapi.Config{Deps: dataapi.Deps{Tools: &tools.Deps{SDE: s}, Stats: gofa.New(s)}})
+	long := strings.Repeat("N", 200)
+	eft := "[Rifter, x]\n\n\n\n\n" + long + " x2000000000\nA x2000000000\nB x2000000000\nC x2000000000\nD x2000000000"
+	rec := do(a, "POST", "/v1/fit/stats", `{"eft":"`+esc(eft)+`"}`)
+	requireError(t, rec, http.StatusBadRequest, "invalid_request")
+	body := rec.Body.String()
+	require.Contains(t, body, strings.Repeat("N", 80))
+	require.NotContains(t, body, strings.Repeat("N", 81))
+	require.Contains(t, body, "and 2 more")
+	require.NotContains(t, body, "D x2000000000")
+}

@@ -2,6 +2,7 @@ package gofa
 
 import (
 	"context"
+	"runtime"
 	"testing"
 	"time"
 
@@ -164,7 +165,7 @@ func TestEngine_ResolveRejectsHugeQty(t *testing.T) {
 		{"drones", fit.Fit{HullID: 1, Drones: []fit.FitModule{{TypeID: 2, Qty: huge}}}},
 		{"modules", fit.Fit{HullID: 1, Mid: []fit.FitModule{{TypeID: 2, Qty: huge}}}},
 		{"split", fit.Fit{HullID: 1, Drones: []fit.FitModule{
-			{TypeID: 2, Qty: maxExpandedItems}, {TypeID: 2, Qty: maxExpandedItems}}}},
+			{TypeID: 2, Qty: maxDroneUnits}, {TypeID: 2, Qty: maxDroneUnits}}}},
 	}
 	for _, c := range cases {
 		start := time.Now()
@@ -176,4 +177,65 @@ func TestEngine_ResolveRejectsHugeQty(t *testing.T) {
 	cancel()
 	_, _, _, _, err := New(s).resolveForStats(ctx, fit.Fit{HullID: 1, Mid: []fit.FitModule{{TypeID: 2, Qty: 5}}}, fit.StatsOpts{})
 	require.ErrorIs(t, err, context.Canceled)
+}
+
+// The worst shape the old 5000 budget admitted (2500 amplifiers x 2500 drones, about 6 s and 1.5 GiB
+// of interpreter work) is refused before anything is built (SVR-I1).
+func TestEngine_DominixQuantityShapeIsRefusedFast(t *testing.T) {
+	s := openRealSDE(t)
+	f, _ := fit.ParseEFT("[Dominix, x]\n\nDrone Damage Amplifier II x2500\n\n\n\n\nHobgoblin II x2500", s)
+	require.NotEmpty(t, f.Drones)
+	var before, after runtime.MemStats
+	runtime.ReadMemStats(&before)
+	start := time.Now()
+	_, err := New(s).Stats(context.Background(), f, fit.StatsOpts{})
+	took := time.Since(start)
+	runtime.ReadMemStats(&after)
+	require.ErrorIs(t, err, ErrFitTooLarge)
+	require.Less(t, took, time.Second)
+	require.Less(t, after.TotalAlloc-before.TotalAlloc, uint64(64<<20))
+}
+
+// A legal heavy shape (8 amplifiers, 50 drones) still computes the same numbers as on main.
+func TestEngine_FullDroneBoatKeepsItsNumbers(t *testing.T) {
+	s := openRealSDE(t)
+	f, un := fit.ParseEFT("[Dominix, x]\n\nDrone Damage Amplifier II x8\n\n\n\n\nHobgoblin II x50", s)
+	require.Empty(t, un)
+	start := time.Now()
+	st, err := New(s).Stats(context.Background(), f, fit.StatsOpts{})
+	require.NoError(t, err)
+	require.Less(t, time.Since(start), 2*time.Second)
+	require.InDelta(t, 256.513723702, st.DPS.Theoretical, 1e-6)
+	require.InDelta(t, 256.513723702, st.Drones.DPS, 1e-6)
+	require.InDelta(t, 1026.054894809, st.Volley, 1e-6)
+}
+
+// Per-group caps: more than the slot range of a group is refused, at the cap it is accepted.
+func TestEngine_GroupCaps(t *testing.T) {
+	s := &fakeSDE{dogma: map[int]map[int]float64{1: {40: 1}, 2: {50: 1}}}
+	ok := func(f fit.Fit) error { _, _, err := New(s).resolve(f, fit.StatsOpts{}); return err }
+	require.NoError(t, ok(fit.Fit{HullID: 1, Low: []fit.FitModule{{TypeID: 2, Qty: 8}}}))
+	require.ErrorIs(t, ok(fit.Fit{HullID: 1, Low: []fit.FitModule{{TypeID: 2, Qty: 5}, {TypeID: 2, Qty: 4}}}), ErrFitTooLarge)
+	require.NoError(t, ok(fit.Fit{HullID: 1, Rig: []fit.FitModule{{TypeID: 2, Qty: 3}}}))
+	require.ErrorIs(t, ok(fit.Fit{HullID: 1, Rig: []fit.FitModule{{TypeID: 2, Qty: 4}}}), ErrFitTooLarge)
+	require.NoError(t, ok(fit.Fit{HullID: 1, Drones: []fit.FitModule{{TypeID: 2, Qty: maxDroneUnits}}}))
+	require.ErrorIs(t, ok(fit.Fit{HullID: 1, Drones: []fit.FitModule{{TypeID: 2, Qty: maxDroneUnits + 1}}}), ErrFitTooLarge)
+}
+
+// A module with a loaded charge costs two units against the total budget (SVR-M4).
+func TestEngine_ChargeCountsTowardTheBudget(t *testing.T) {
+	old := maxExpandedItems
+	maxExpandedItems = 20
+	t.Cleanup(func() { maxExpandedItems = old })
+	s := &fakeSDE{dogma: map[int]map[int]float64{1: {40: 1}, 2: {50: 1}, 3: {51: 1}}}
+	run := func(drones int) error {
+		f := fit.Fit{HullID: 1,
+			Drones: []fit.FitModule{{TypeID: 2, Qty: drones}},
+			High:   []fit.FitModule{{TypeID: 2, ChargeID: 3, Qty: 4}}}
+		_, _, err := New(s).resolve(f, fit.StatsOpts{})
+		return err
+	}
+	// 4 charged modules = 8 units; 12 drones fill the budget of 20, 13 do not.
+	require.NoError(t, run(12))
+	require.ErrorIs(t, run(13), ErrFitTooLarge)
 }

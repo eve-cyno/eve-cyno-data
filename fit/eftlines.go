@@ -1,6 +1,7 @@
 package fit
 
 import (
+	"math"
 	"regexp"
 	"strconv"
 	"strings"
@@ -97,7 +98,11 @@ func ParseEFTLines(eft string) EFTBlock {
 			s = eftStateRE.ReplaceAllString(s, "")
 		}
 		if m := eftQtyRE.FindStringSubmatch(s); m != nil {
-			if n, err := strconv.Atoi(m[1]); err == nil && n > 0 {
+			n, err := strconv.Atoi(m[1])
+			switch {
+			case err != nil:
+				line.Qty = math.MaxInt // digits beyond int: oversized, not 1
+			case n > 0:
 				line.Qty = n
 			}
 			s = eftQtyRE.ReplaceAllString(s, "")

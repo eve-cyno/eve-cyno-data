@@ -1,6 +1,7 @@
 package fit
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -157,10 +158,14 @@ func TestParseEFT_HugeQtyIsReportedNotParsed(t *testing.T) {
 		ids:    map[string]int{"Gila": 17720, "Hammerhead II": 2185},
 		drones: map[int]bool{2185: true},
 	}
-	for _, q := range []string{"2000000000", "2147483648", "1000001"} {
+	for _, q := range []string{"2000000000", "2147483648", "1000001", "9223372036854775808", "99999999999999999999"} {
 		f, unresolved := ParseEFT("[Gila, pve]\n\n\n\n\nHammerhead II x"+q, r)
 		require.Empty(t, f.Drones, "x"+q)
-		require.Equal(t, []string{"Hammerhead II x" + q}, unresolved, "x"+q)
+		require.Len(t, unresolved, 1, "x"+q)
+		require.True(t, strings.HasPrefix(unresolved[0], "Hammerhead II x"), "x"+q) // beyond int the digits read as MaxInt
+		if len(q) < 19 {
+			require.Equal(t, "Hammerhead II x"+q, unresolved[0])
+		}
 	}
 	f, unresolved := ParseEFT("[Gila, pve]\n\n\n\n\nHammerhead II x1000000", r)
 	require.Empty(t, unresolved)
