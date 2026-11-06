@@ -264,7 +264,13 @@ func fetchKills(ctx context.Context, c *Client, system, hours int, now time.Time
 			}
 			raw, err := esiGetJSON(ctx, c, fmt.Sprintf("/killmails/%d/%s", k.KillmailID, k.ZKB.Hash))
 			if err != nil {
-				return nil, fmt.Errorf("zkill list: killmail: %w", err)
+				if ctx.Err() != nil {
+					return nil, fmt.Errorf("zkill list: killmail: %w", err)
+				}
+				// One killmail ESI cannot give must not fail the whole list (and keep it out of
+				// the cache); skip the row.
+				slog.Warn("tools: recent kills: killmail read failed, row skipped", "killmail", k.KillmailID, "err", err)
+				continue
 			}
 			value := k.ZKB.TotalValue
 			if err := json.Unmarshal(raw, &k); err != nil {

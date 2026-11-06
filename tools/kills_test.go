@@ -494,3 +494,24 @@ func TestRecentKills_SlotHeldByOtherIsNoPause(t *testing.T) {
 	_, retryAt, _ := c.kills.held("x")
 	require.True(t, retryAt.IsZero(), "time spent queued is no pause")
 }
+
+// SV-M1 (review round 1): one id-only row whose ESI read fails is skipped; the rest is kept.
+func TestRecentKills_FailedEsiReadSkipsOnlyThatRow(t *testing.T) {
+	deps := testDeps(t)
+	c, _, _ := newKillsClient(t, `[{"killmail_id":301,"zkb":{"hash":"`+hash300+`","totalValue":1}},{"killmail_id":300,"zkb":{"hash":"`+hash300+`","totalValue":5}}]`)
+	full := killJSON(300, killsNow.Add(-5*time.Minute), 587, 5, 3)
+	base := c.HTTP.Transport
+	c.HTTP.Transport = roundTripFunc(func(r *http.Request) (*http.Response, error) {
+		switch {
+		case strings.Contains(r.URL.Path, "/killmails/301/"):
+			return &http.Response{StatusCode: 500, Header: http.Header{}, Body: io.NopCloser(strings.NewReader("boom"))}, nil
+		case strings.Contains(r.URL.Path, "/killmails/"):
+			return &http.Response{StatusCode: 200, Header: http.Header{"Content-Type": {"application/json"}}, Body: io.NopCloser(strings.NewReader(full))}, nil
+		}
+		return base.RoundTrip(r)
+	})
+	_, data, err := getRecentKills(context.Background(), c, deps.SDE, map[string]any{"system": "Jita"})
+	require.NoError(t, err)
+	require.NotNil(t, data)
+	require.Len(t, data.Kills, 1)
+}
