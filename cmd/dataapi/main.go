@@ -229,7 +229,8 @@ func sdeBuild(sdePath string, log *slog.Logger) string {
 // sidecar right after, yet the reader switches files only at its next due reload check (never,
 // when reloading is off), so a sidecar that is ahead of the reader is ignored until the reader
 // has caught up; the next call after that picks it up, including a sidecar written after the
-// reload. Safe for concurrent use.
+// reload. Before the first id is cached, a disk that is ahead of the reader gives "" (the
+// served file's build is unknown). Safe for concurrent use.
 func followSDEBuild(sdePath string, s *sde.SDE, log *slog.Logger) func() string {
 	var (
 		mu    sync.Mutex
@@ -252,6 +253,12 @@ func followSDEBuild(sdePath string, s *sde.SDE, log *slog.Logger) func() string 
 		cur := statOrNil(sdePath + ".build")
 		mu.Lock()
 		defer mu.Unlock()
+		if !inSync && !fresh {
+			// The disk is ahead of the reader and nothing is cached: the sidecar names a file
+			// that is not served, and the id of the served one is unknown. Report none, and
+			// do not cache that, so the first call after the reader catches up reads it.
+			return ""
+		}
 		if fresh && (!inSync || (g == gen && sameBuildFile(fi, cur))) {
 			return id
 		}

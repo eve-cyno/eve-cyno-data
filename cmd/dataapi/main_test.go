@@ -419,6 +419,22 @@ func TestHealth_SDEBuildKeepsTheStartupBuildWithReloadOff(t *testing.T) {
 	require.Equal(t, "100_20261001", build())
 }
 
+// TestHealth_SDEBuildNeverNamesAFileThatIsNotServedOnTheFirstCall (SV-M9): with reload off the
+// reader keeps serving the file it opened. A first health call after the file was replaced on
+// disk must not read the new sidecar and name a build that is not served.
+func TestHealth_SDEBuildNeverNamesAFileThatIsNotServedOnTheFirstCall(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "sde.sqlite")
+	writeTestSDE(t, path, "100_20261001")
+	s, err := sde.OpenWithReload(path, 0)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = s.Close() })
+
+	writeTestSDE(t, path, "200_20261104") // replaced before anyone asked for health
+	build := followSDEBuild(path, s, slog.New(slog.DiscardHandler))
+	require.NotEqual(t, "200_20261104", build(), "the new file is not served, so its build must not be named")
+	require.NotEqual(t, "200_20261104", build(), "a second call must not name it either")
+}
+
 func openStore(t *testing.T, cap int) *keys.Store {
 	t.Helper()
 	s, err := keys.Open(filepath.Join(t.TempDir(), "keys.db"), keys.Options{DailyCap: cap})
