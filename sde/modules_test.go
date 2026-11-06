@@ -210,3 +210,49 @@ func TestGetItemMetaTier_UsesTheIndex(t *testing.T) {
 	require.Contains(t, joined, "idx_invmetatypes_type", joined)
 	require.NotContains(t, joined, "SCAN mt", joined)
 }
+
+// TestSearchItemsPage_SameAsFullSearch pins SV-M2: the counted and limited page equals the
+// slice of the full search, for broad, narrow, empty, filtered and last-page queries.
+func TestSearchItemsPage_SameAsFullSearch(t *testing.T) {
+	s := testSDE(t)
+	filters := []ItemSearch{
+		{Query: "i"},
+		{Query: "Shield Extender", Slot: "mid"},
+		{Query: "Rapid Light Missile Launcher", Slot: "high", MetaGroup: "Tech II"},
+		{Query: "Hobgoblin", Kind: "drone"},
+		{Query: "Antimatter", Kind: "charge"},
+		{Query: "Extender", Size: "Large"},
+		{Query: "no such module anywhere"},
+		{Query: "%"},
+	}
+	for _, f := range filters {
+		all := s.SearchItems(f)
+		for _, limit := range []int{0, 1, 3, 30, len(all), len(all) + 5} {
+			page, total := s.SearchItemsPage(f, limit)
+			require.Equal(t, len(all), total, "%+v limit %d", f, limit)
+			require.Equal(t, all[:min(limit, len(all))], page, "%+v limit %d", f, limit)
+		}
+	}
+	// last page: the limit lands on the final match
+	f := ItemSearch{Query: "Shield Extender", Slot: "mid"}
+	all := s.SearchItems(f)
+	page, _ := s.SearchItemsPage(f, len(all))
+	require.Equal(t, all, page)
+	require.Greater(t, len(s.SearchItems(ItemSearch{Query: "i"})), 100, "broad query must be broad")
+}
+
+// TestSearchItemsPage_QueryIsBounded pins that the page query carries a LIMIT of the page size
+// and the total is a COUNT, so a broad family never loads every match.
+func TestSearchItemsPage_QueryIsBounded(t *testing.T) {
+	s := testSDE(t)
+	for _, f := range []ItemSearch{{Query: "i"}, {Query: "Hobgoblin", Kind: "drone"}, {Query: "x", MetaGroup: "Tech II"}} {
+		iq, ok := s.buildItemSearch(f)
+		require.True(t, ok)
+		q, args := iq.pageSQL(30)
+		require.Contains(t, q, "LIMIT ?")
+		require.Equal(t, 30, args[len(args)-1])
+		cq, _ := iq.countSQL()
+		require.True(t, strings.HasPrefix(cq, "SELECT COUNT(*) FROM ("), cq)
+		require.NotContains(t, cq, "LIMIT")
+	}
+}

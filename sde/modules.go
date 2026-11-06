@@ -2,6 +2,7 @@ package sde
 
 import (
 	"log/slog"
+	"slices"
 	"strings"
 )
 
@@ -172,11 +173,17 @@ func (s *SDE) SearchItems(f ItemSearch) []ModuleHit {
 // SearchItems) and the total number of matches. Only the returned rows pay for
 // the per-row dogma and meta lookups.
 func (s *SDE) SearchItemsPage(f ItemSearch, limit int) ([]ModuleHit, int) {
-	hits, kind := s.searchItemsBare(f, 0)
-	total := len(hits)
-	hits = hits[:min(max(limit, 0), total)]
+	iq, ok := s.buildItemSearch(f)
+	if !ok {
+		return nil, 0
+	}
+	total := s.countItemSearch(iq, f)
+	if limit <= 0 || total == 0 {
+		return []ModuleHit{}, total
+	}
+	hits := s.runItemSearch(iq, f, limit)
 	for i := range hits {
-		s.enrichHit(&hits[i], kind)
+		s.enrichHit(&hits[i], iq.kind)
 	}
 	return hits, total
 }
@@ -220,11 +227,58 @@ func (s *SDE) searchItems(f ItemSearch, limit int) []ModuleHit {
 	return hits
 }
 
+// itemQuery is a built item search: the SELECT with its WHERE and GROUP BY, without
+// ORDER BY or LIMIT, so the count and the page share one filter.
+type itemQuery struct {
+	base string
+	args []any
+	kind string
+	// empty marks a search that cannot match (a meta filter without its tables).
+	empty bool
+}
+
+// pageSQL is the ordered query; limit <= 0 means no limit.
+func (iq itemQuery) pageSQL(limit int) (string, []any) {
+	lim := -1
+	if limit > 0 {
+		lim = limit
+	}
+	return iq.base + " ORDER BY t.typeName, t.typeID LIMIT ?", append(slices.Clone(iq.args), lim)
+}
+
+// countSQL counts the matches of the same filter.
+func (iq itemQuery) countSQL() (string, []any) {
+	return "SELECT COUNT(*) FROM (" + iq.base + ")", iq.args
+}
+
 // searchItemsBare runs the search and returns the matches with id, name, group
 // and slot only, plus the normalised kind.
 func (s *SDE) searchItemsBare(f ItemSearch, limit int) ([]ModuleHit, string) {
-	if s == nil || s.db == nil {
+	iq, ok := s.buildItemSearch(f)
+	if !ok {
 		return nil, ""
+	}
+	return s.runItemSearch(iq, f, limit), iq.kind
+}
+
+// countItemSearch is the number of matches; a failed query counts 0.
+func (s *SDE) countItemSearch(iq itemQuery, f ItemSearch) int {
+	if iq.empty {
+		return 0
+	}
+	q, args := iq.countSQL()
+	var n int
+	if err := s.db.QueryRow(q, args...).Scan(&n); err != nil {
+		slog.Warn("sde: item search count failed", "kind", iq.kind, "slot", f.Slot, "error", err)
+		return 0
+	}
+	return n
+}
+
+// buildItemSearch builds the query for f; ok is false without a database.
+func (s *SDE) buildItemSearch(f ItemSearch) (itemQuery, bool) {
+	if s == nil || s.db == nil {
+		return itemQuery{}, false
 	}
 	kind := strings.ToLower(strings.TrimSpace(f.Kind))
 	if kind == "" {
@@ -232,22 +286,18 @@ func (s *SDE) searchItemsBare(f ItemSearch, limit int) ([]ModuleHit, string) {
 	}
 	meta := strings.ToLower(strings.TrimSpace(f.MetaGroup))
 	if meta != "" && (!s.HasTable("invMetaTypes") || !s.HasTable("invMetaGroups")) {
-		return []ModuleHit{}, kind
+		return itemQuery{kind: kind, empty: true}, true
 	}
 	like := likeContains(f.Query)
 	sizeSQL, sizeArgs := "", []any(nil)
 	if strings.TrimSpace(f.Size) != "" {
 		sizeSQL, sizeArgs = sizeNameClause(f.Query, f.Size)
 	}
-	lim := -1
-	if limit > 0 {
-		lim = limit
-	}
 	var (
 		q    string
 		args []any
 	)
-	order := [...]int{12, 13, 11, 2663}
+	order := itemSlotOrder
 	switch kind {
 	case "charge", "drone":
 		cat := 8
@@ -296,13 +346,24 @@ JOIN dgmTypeEffects e ON e.typeID = t.typeID`
 	if kind != "charge" && kind != "drone" {
 		q += " GROUP BY t.typeID"
 	}
-	q += " ORDER BY t.typeName, t.typeID LIMIT ?"
-	args = append(args, lim)
+	return itemQuery{base: q, args: args, kind: kind}, true
+}
 
+// itemSlotOrder is the slot effect ids in rank order: high, mid, low, rig.
+var itemSlotOrder = [...]int{12, 13, 11, 2663}
+
+// runItemSearch runs the ordered query; limit <= 0 means no limit.
+func (s *SDE) runItemSearch(iq itemQuery, f ItemSearch, limit int) []ModuleHit {
+	kind := iq.kind
+	if iq.empty {
+		return []ModuleHit{}
+	}
+	order := itemSlotOrder
+	q, args := iq.pageSQL(limit)
 	rows, err := s.db.Query(q, args...)
 	if err != nil {
 		slog.Warn("sde: item search failed", "kind", kind, "slot", f.Slot, "error", err)
-		return []ModuleHit{}, kind
+		return []ModuleHit{}
 	}
 	defer rows.Close()
 	out := []ModuleHit{}
@@ -322,7 +383,7 @@ JOIN dgmTypeEffects e ON e.typeID = t.typeID`
 	}
 	if err := rows.Err(); err != nil {
 		slog.Warn("sde: item search failed", "kind", kind, "slot", f.Slot, "error", err)
-		return []ModuleHit{}, kind
+		return []ModuleHit{}
 	}
-	return out, kind
+	return out
 }
