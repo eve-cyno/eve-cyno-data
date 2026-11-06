@@ -58,6 +58,9 @@ func TestSubset_EngineMatchesSQLite(t *testing.T) {
 	}
 	require.Equal(t, want, scoped, "published types of categories "+catList+" in the subset match the SQLite SDE")
 	require.Greater(t, len(sub.Types), scoped, "unpublished in-scope types and name-only entries come on top")
+	var all int
+	require.NoError(t, db.QueryRow(`SELECT COUNT(*) FROM invTypes`).Scan(&all))
+	require.Equal(t, all, len(sub.Types), "every type ResolveNames can resolve is in the subset")
 	var raw bytes.Buffer
 	require.NoError(t, sub.WriteJSON(&raw))
 	var gz bytes.Buffer
@@ -75,6 +78,9 @@ func TestSubset_EngineMatchesSQLite(t *testing.T) {
 		"hawk, charged":   strings.Replace(hawkEFT, "Rocket Launcher II\n", "Rocket Launcher II, Scourge Rocket\n", -1),
 		"cargo and boost": hawkEFT + "\n\n\nLiquid Ozone x100\nSynth Blue Pill Booster\nStrontium Clathrates x50",
 		"unpublished":     "[Rifter, legacy]\n\nEmergency Damage Control I\nSupplemental Scanning CPU I",
+		// Chalcopyrite (27029) is an unpublished mineral, outside the engine's categories:
+		// the SQLite SDE resolves it, so the subset must too (SV-M13).
+		"unpublished cargo": "[Rifter, cargo]\n\nChalcopyrite x10",
 	} {
 		t.Run(name, func(t *testing.T) {
 			f, unresolved := fit.ParseEFT(eft, s)

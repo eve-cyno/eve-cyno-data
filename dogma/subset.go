@@ -14,9 +14,10 @@ const SubsetFormat = 1
 // Subset is the slice of the SDE the fit engine needs, as plain data: ships, modules,
 // charges, drones, skills, implants and subsystems (types of categories 6, 7, 8, 16, 18,
 // 20, 32, published or not, as the SQLite SDE resolves unpublished names too), their dogma
-// attributes and effects, the effect modifiers and the attribute metadata. Published types
-// of every other category (fighters, deployables, materials, ore) are listed with a name,
-// group and category only, so a fit's cargo lines resolve; they carry no attributes. It is the content of the host data pack for the engine
+// attributes and effects, the effect modifiers and the attribute metadata. Types of every
+// other category (fighters, deployables, materials, ore), published or not, are listed with
+// a name, group and category only, so a fit's cargo lines resolve as they do against the
+// SQLite SDE; they carry no attributes. It is the content of the host data pack for the engine
 // process (WASM or sidecar), so the engine runs without the 460 MB SQLite file.
 type Subset struct {
 	Format     int            `json:"format"`

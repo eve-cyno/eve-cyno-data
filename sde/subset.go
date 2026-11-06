@@ -4,8 +4,6 @@ import (
 	"database/sql"
 	"fmt"
 	"sort"
-	"strconv"
-	"strings"
 
 	"eve-cyno.dev/go/data/dogma"
 )
@@ -20,12 +18,13 @@ var SubsetCategories = []int{6, 7, 8, 16, 18, 20, 32}
 // engine sees.
 func (s *SDE) ExportSubset(sdeVersion string) (*dogma.Subset, error) {
 	out := &dogma.Subset{Format: dogma.SubsetFormat, SDEVersion: sdeVersion}
-	// Types of the engine's categories, published or not (the SQLite SDE resolves
-	// unpublished names and serves their dogma), plus published types of other categories
-	// as name-only entries so cargo lines resolve.
-	rows, err := s.db.Query(`SELECT t.typeID, t.typeName, t.groupID, g.categoryID, t.published
-		FROM invTypes t JOIN invGroups g ON t.groupID = g.groupID
-		WHERE g.categoryID IN (` + inList(SubsetCategories) + `) OR t.published = 1 ORDER BY t.typeID`)
+	// Every type, published or not: ResolveNames resolves every invTypes row, so a cargo
+	// line naming an unpublished type of any category resolves in both engines and the
+	// fit's unresolved list, cargo and hash agree. Types of the engine's categories carry
+	// their dogma below; the others are name-only entries. A type whose group is missing
+	// still resolves through ResolveNames, so it is kept with category 0.
+	rows, err := s.db.Query(`SELECT t.typeID, t.typeName, COALESCE(t.groupID, 0), COALESCE(g.categoryID, 0), t.published
+		FROM invTypes t LEFT JOIN invGroups g ON t.groupID = g.groupID ORDER BY t.typeID`)
 	if err != nil {
 		return nil, fmt.Errorf("sde: export subset: types: %w", err)
 	}
@@ -94,12 +93,4 @@ func (s *SDE) ExportSubset(sdeVersion string) (*dogma.Subset, error) {
 	}
 	out.Types = types
 	return out, nil
-}
-
-func inList(ids []int) string {
-	parts := make([]string, len(ids))
-	for i, id := range ids {
-		parts[i] = strconv.Itoa(id)
-	}
-	return strings.Join(parts, ",")
 }
