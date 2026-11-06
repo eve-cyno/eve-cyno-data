@@ -662,9 +662,16 @@ func getProductionChain(ctx context.Context, c *Client, s *sde.SDE, req producti
 		lines = append(lines, "Manufacturing fees:")
 		lines = append(lines, fmt.Sprintf("  Job cost = estimated item value × (system cost index + facility tax + %.0f%% SCC surcharge); "+
 			"the estimated item value is the ME 0 inputs at ESI adjusted prices, not their market cost.", sccSurcharge*100))
-		lines = append(lines, fmt.Sprintf(
-			"  At cost index %.4f in an NPC station (facility tax %.2f%%), the job costs %.2f%% of the estimated item value.",
-			systemCostIndex, npcFacilityTax*100, (systemCostIndex+npcFacilityTax+sccSurcharge)*100))
+		if req.FacilityTaxSet || req.FacilityTaxPct != 0 {
+			tax := req.facilityTax()
+			lines = append(lines, fmt.Sprintf(
+				"  At cost index %.4f with facility tax %.2f%%, the job costs %.2f%% of the estimated item value.",
+				systemCostIndex, tax, (systemCostIndex+tax/100+sccSurcharge)*100))
+		} else {
+			lines = append(lines, fmt.Sprintf(
+				"  At cost index %.4f in an NPC station (facility tax %.2f%%), the job costs %.2f%% of the estimated item value.",
+				systemCostIndex, npcFacilityTax*100, (systemCostIndex+npcFacilityTax+sccSurcharge)*100))
+		}
 		lines = append(lines, "  Multiply the estimated item value by that percentage to estimate the job cost.")
 		if sub := len(jobs) - 1; sub > 0 {
 			lines = append(lines, fmt.Sprintf(

@@ -420,3 +420,26 @@ func TestIntArg_CoercesNumericStrings(t *testing.T) {
 	require.Equal(t, 3, intArg(map[string]any{"n": "  "}, "n", 3))
 	require.Equal(t, 3, intArg(map[string]any{"n": "abc"}, "n", 3))
 }
+
+// S-d: the fee note prints the facility tax the request asked for, not the NPC 0.25 %.
+func TestProductionChain_FeeNoteUsesTheGivenFacilityTax(t *testing.T) {
+	s := openCorpusSDE(t)
+	note := func(req productionRequest) string {
+		req.Item, req.Runs, req.ME, req.CostIndex = "Rifter", 1, 10, 0.05
+		text, _, _ := getProductionChain(context.Background(), nil, s, req)
+		return text
+	}
+
+	// 5% index + 1% tax + 4% SCC = 10%.
+	out := note(productionRequest{FacilityTaxPct: 1, FacilityTaxSet: true})
+	require.Contains(t, out, "  At cost index 0.0500 with facility tax 1.00%, the job costs 10.00% of the estimated item value.")
+	require.NotContains(t, out, "NPC station")
+
+	// An explicit 0 is a given tax too: 5% + 0% + 4% = 9%.
+	out = note(productionRequest{FacilityTaxSet: true})
+	require.Contains(t, out, "  At cost index 0.0500 with facility tax 0.00%, the job costs 9.00% of the estimated item value.")
+
+	// No tax given: the NPC station default stays.
+	require.Contains(t, note(productionRequest{}),
+		"  At cost index 0.0500 in an NPC station (facility tax 0.25%), the job costs 9.25% of the estimated item value.")
+}
