@@ -727,6 +727,18 @@ Note: Alpha clone legality not checked (Alpha skill caps unavailable without the
 Note: skill profile = Power Grid Management V + CPU Management V (+25% PG/CPU), Weapon Upgrades V (-25% turret/launcher CPU), Advanced Weapon Upgrades V (-10% turret/launcher PG), Energy Grid Upgrades V (-25% power-core CPU). Implants and faction-specific bonuses NOT modelled. Data: ESI.
 ---- typed ----
 {"ship":"Fake Hull","valid":true,"cpu":{"used":65,"capacity":125,"unit":"tf"},"pg":{"used":33,"capacity":62.5,"unit":"MW"},"slots":{"high":{"used":2,"capacity":3},"mid":{"used":1,"capacity":3},"low":{"used":1,"capacity":3},"rig":{"used":0,"capacity":3}},"violations":[],"unresolved_modules":[],"data_source":"ESI","alpha_unchecked":true}
+##### hc_esi_only_cargo_stack #####
+STATUS: VALID — Fake Hull
+
+CPU: 45.0 / 125.0 tf
+PG:  24.0 / 62.5 MW
+Hi slots:  1/3
+Mid slots: 1/3
+Low slots: 1/3
+Rigs:      0/3
+Note: skill profile = Power Grid Management V + CPU Management V (+25% PG/CPU), Weapon Upgrades V (-25% turret/launcher CPU), Advanced Weapon Upgrades V (-10% turret/launcher PG), Energy Grid Upgrades V (-25% power-core CPU). Implants and faction-specific bonuses NOT modelled. Data: ESI.
+---- typed ----
+{"ship":"Fake Hull","valid":true,"cpu":{"used":45,"capacity":125,"unit":"tf"},"pg":{"used":24,"capacity":62.5,"unit":"MW"},"slots":{"high":{"used":1,"capacity":3},"mid":{"used":1,"capacity":3},"low":{"used":1,"capacity":3},"rig":{"used":0,"capacity":3}},"violations":[],"unresolved_modules":[],"data_source":"ESI"}
 ##### hc_no_sde_no_esi #####
 Could not resolve ship 'Rifter' to a type_id.
 ---- typed ----

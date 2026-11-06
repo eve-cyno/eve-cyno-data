@@ -573,7 +573,8 @@ func CheckRaw(_ context.Context, s RawSDE, in RawInput, o RawOptions) Report {
 	for _, ln := range in.Lines {
 		p := classify(s, in.SDESlots, ln)
 		qty := 1
-		if p.kind == kindModule {
+		// Only with SDE slots: without them classify marks drone and cargo lines as modules too.
+		if p.kind == kindModule && in.SDESlots {
 			qty = ln.Qty
 		}
 		entries = expandQty(entries, p, qty, &oversized)

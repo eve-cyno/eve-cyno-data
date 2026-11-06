@@ -510,6 +510,16 @@ Fake Gun I
 Fake Prop I
 
 Fake Plate I
+=== hc_esi_only_cargo_stack | alpha=false | env=esi-only
+[Fake Hull, esi only cargo stack]
+Fake Gun I
+
+Fake Prop I
+
+Fake Plate I
+
+
+Fake Plate I x1000
 === hc_no_sde_no_esi | alpha=false | env=none
 [Rifter, nothing available]
 200mm AutoCannon II

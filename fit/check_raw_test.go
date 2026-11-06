@@ -108,3 +108,15 @@ func TestCheckRaw_AlphaChecksAMutatedModuleAsItsBase(t *testing.T) {
 		Lines: []RawLine{{Name: "T2 Gun", TypeID: 52, Mutated: true}}}, RawOptions{Legality: lg, Alpha: true})
 	require.Contains(t, codes(rep), CodeAlphaIllegalModule)
 }
+
+// SV-I4 review round 1: without SDE slots every resolved line classifies as a module, drone
+// and cargo lines included, so a cargo stack must keep counting as one line (the ESI fallback).
+func TestCheckRaw_WithoutSDESlotsQtyIsNotExpanded(t *testing.T) {
+	s := rawStateFixture()
+	rep := CheckRaw(context.Background(), s, RawInput{HullID: 300, HullName: "Hull", SDESlots: false, Lines: []RawLine{
+		{Name: "Gun", TypeID: 10, ParserSlot: "high", Qty: 1},
+		{Name: "Barrage S", TypeID: 50, ParserSlot: "subsystem", Qty: 1000},
+	}}, RawOptions{})
+	require.NotContains(t, codes(rep), CodeFitTooLarge)
+	require.Equal(t, 2, rep.Slots.Hi.Used+rep.Slots.Mid.Used+rep.Slots.Low.Used+rep.Slots.Rig.Used+rep.Slots.Subsystem.Used, "one entry per line, as before")
+}
