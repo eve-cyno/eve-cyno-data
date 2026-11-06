@@ -67,7 +67,7 @@ func featureGap(s *sde.SDE, what string, tables []string) string {
 		return ""
 	}
 	// The tables and columns go to the log; the tool text carries no schema names.
-	slog.Error("tools: SDE build lacks feature columns", "tool_need", what, "missing", missing)
+	slog.Warn("tools: SDE build lacks feature columns", "tool_need", what, "missing", missing)
 	return fmt.Sprintf("SDE build incomplete — %s unavailable.", what)
 }
 
