@@ -73,3 +73,21 @@ func TestMarketIndex_PathStopsOnCycleAndUnknown(t *testing.T) {
 	require.Equal(t, []string{"D", "C"}, m.path(3)) // the cycle ends, the walk does not hang
 	require.Nil(t, m.path(99))
 }
+
+// SV-M13 review round 1: the desktop pack builder passes every ExportSubset id (53k+),
+// which is past the 32766 bound variables of one IN (...) query.
+func TestTypeFactsFor_EverySubsetIDResolves(t *testing.T) {
+	s := testSDE(t)
+	sub, err := s.ExportSubset("test")
+	require.NoError(t, err)
+	ids := make([]int, 0, len(sub.Types))
+	for _, ty := range sub.Types {
+		ids = append(ids, ty.ID)
+	}
+	require.Greater(t, len(ids), 32766, "the SDE must hold more types than one query can bind")
+	facts, err := s.TypeFactsForChecked(ids)
+	require.NoError(t, err)
+	require.Len(t, facts, len(ids))
+	require.Len(t, s.TypeFactsFor(ids), len(ids))
+	require.Equal(t, "Frigate", facts[587].Group)
+}

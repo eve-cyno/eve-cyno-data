@@ -2,6 +2,7 @@ package sde
 
 import (
 	"database/sql"
+	"fmt"
 	"log/slog"
 	"strconv"
 	"strings"
@@ -99,20 +100,52 @@ func (s *SDE) TypeFacts(typeID int) (TypeFacts, bool) {
 	return f, ok
 }
 
-// TypeFactsFor returns the facts of every known id with one query. Unknown ids are absent.
+// typeFactsChunk bounds the ids of one IN (...) query; modernc allows 32766 bound variables.
+const typeFactsChunk = 10000
+
+// TypeFactsFor returns the facts of every known id. Unknown ids are absent. A failed query is
+// logged and the ids it covered are missing from the result; a builder that must not ship a
+// partial result calls TypeFactsForChecked.
 func (s *SDE) TypeFactsFor(ids []int) map[int]TypeFacts {
-	out := map[int]TypeFacts{}
-	if len(ids) == 0 {
-		return out
+	out, err := s.TypeFactsForChecked(ids)
+	if err != nil {
+		slog.Warn("sde: type facts query failed", "error", err)
 	}
-	args := make([]any, 0, len(ids))
-	marks := make([]string, 0, len(ids))
+	return out
+}
+
+// TypeFactsForChecked is TypeFactsFor that returns the first query error with the facts read so far.
+// Ids are queried in chunks of typeFactsChunk.
+func (s *SDE) TypeFactsForChecked(ids []int) (map[int]TypeFacts, error) {
+	out := map[int]TypeFacts{}
 	seen := map[int]bool{}
+	chunk := make([]int, 0, typeFactsChunk)
 	for _, id := range ids {
 		if seen[id] {
 			continue
 		}
 		seen[id] = true
+		chunk = append(chunk, id)
+		if len(chunk) == typeFactsChunk {
+			if err := s.typeFactsChunk(chunk, out); err != nil {
+				return out, err
+			}
+			chunk = chunk[:0]
+		}
+	}
+	if len(chunk) > 0 {
+		if err := s.typeFactsChunk(chunk, out); err != nil {
+			return out, err
+		}
+	}
+	return out, nil
+}
+
+// typeFactsChunk reads the facts of ids (distinct, at most typeFactsChunk) into out.
+func (s *SDE) typeFactsChunk(ids []int, out map[int]TypeFacts) error {
+	args := make([]any, 0, len(ids))
+	marks := make([]string, 0, len(ids))
+	for _, id := range ids {
 		args = append(args, id)
 		marks = append(marks, "?")
 	}
@@ -129,8 +162,7 @@ func (s *SDE) TypeFactsFor(ids []int) map[int]TypeFacts {
 		WHERE t.typeID IN (` + strings.Join(marks, ",") + `)`
 	rows, err := s.db.Query(q, args...)
 	if err != nil {
-		slog.Warn("sde: type facts query failed", "error", err)
-		return out
+		return fmt.Errorf("sde: type facts: %w", err)
 	}
 	defer rows.Close()
 	type raw struct {
@@ -172,10 +204,10 @@ func (s *SDE) TypeFactsFor(ids []int) map[int]TypeFacts {
 		got = append(got, raw{f: f, market: textInt(marketGroup.String)})
 	}
 	if err := rows.Err(); err != nil {
-		slog.Warn("sde: type facts rows failed", "error", err)
+		return fmt.Errorf("sde: type facts rows: %w", err)
 	}
 	if len(got) == 0 {
-		return out
+		return nil
 	}
 	idx := s.ensureMarketIndex()
 	for _, r := range got {
@@ -186,7 +218,7 @@ func (s *SDE) TypeFactsFor(ids []int) map[int]TypeFacts {
 		f.MarketGroupPath = idx.path(r.market)
 		out[r.f.TypeID] = f
 	}
-	return out
+	return nil
 }
 
 // textIntPtr parses an integer kept in a TEXT column (a float spelling such as "5.0" counts); nil when empty.
