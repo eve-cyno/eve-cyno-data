@@ -85,6 +85,8 @@ type killsBook struct {
 	flight  singleflight.Group
 	// now is the clock; nil means time.Now (tests set it).
 	now func() time.Time
+	// timeout overrides killsTimeout when positive (tests set it).
+	timeout time.Duration
 }
 
 func (b *killsBook) clock() time.Time {
@@ -92,6 +94,13 @@ func (b *killsBook) clock() time.Time {
 		return b.now()
 	}
 	return time.Now()
+}
+
+func (b *killsBook) fetchTimeout() time.Duration {
+	if b.timeout > 0 {
+		return b.timeout
+	}
+	return killsTimeout
 }
 
 // store keeps a copy; a full book drops its oldest.
@@ -147,7 +156,7 @@ func (b *killsBook) copyOf(ctx context.Context, c *Client, system, hours int) (*
 		} else if n.Before(gotRetry) {
 			return nil, gotErr
 		}
-		fctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), killsTimeout)
+		fctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), b.fetchTimeout())
 		defer cancel()
 		ready := func() error {
 			if _, at, last := b.held(key); b.clock().Before(at) {

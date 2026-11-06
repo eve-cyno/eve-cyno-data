@@ -609,6 +609,11 @@ func zkillGetGuarded(ctx context.Context, c *Client, url string, limit int64, re
 
 	resp, err := c.HTTP.Do(req)
 	if err != nil {
+		if ctx.Err() != nil {
+			// Our own budget ran out (time spent queued counts): that says nothing about
+			// zKillboard, so it must not pause every lookup.
+			return nil, err
+		}
 		return nil, &zkillStop{err}
 	}
 	defer resp.Body.Close()

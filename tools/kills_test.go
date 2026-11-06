@@ -363,3 +363,31 @@ func TestRecentKills_BookIsBounded(t *testing.T) {
 	require.NotContains(t, b.copies, "0", "the oldest copy goes first")
 	require.Contains(t, b.copies, fmt.Sprintf("%d", killsCopiesMax+4))
 }
+
+// SV-I1: a fetch whose own 20 s budget ran out (queued in our throttle, then too little left for
+// the request) says nothing about zKillboard; it must not start the pause for every system.
+func TestRecentKills_OwnDeadlineIsNoPause(t *testing.T) {
+	deps := testDeps(t)
+	var hits atomic.Int32
+	c := &Client{HTTP: &http.Client{Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
+		if hits.Add(1) == 1 {
+			<-r.Context().Done() // the budget ends before the request is answered
+			return nil, r.Context().Err()
+		}
+		return &http.Response{StatusCode: 200, Header: http.Header{}, Body: io.NopCloser(strings.NewReader(twoKills()))}, nil
+	})}, Throttle: NewThrottle(), UserAgent: "EVE-Cyno/test"}
+	c.kills.timeout = 50 * time.Millisecond
+
+	text, data, err := getRecentKills(context.Background(), c, deps.SDE, map[string]any{"system": "Jita"})
+	require.NoError(t, err)
+	require.Nil(t, data)
+	require.Equal(t, killsUnavailable, text)
+	_, retryAt, _ := c.kills.held("x")
+	require.True(t, retryAt.IsZero(), "our own deadline is no pause")
+
+	c.kills.timeout = 0
+	_, data, err = getRecentKills(context.Background(), c, deps.SDE, map[string]any{"system": "Jita"})
+	require.NoError(t, err)
+	require.NotNil(t, data)
+	require.EqualValues(t, 2, hits.Load())
+}
