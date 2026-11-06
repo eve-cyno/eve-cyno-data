@@ -3,6 +3,7 @@ package sde
 import (
 	"os"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	_ "modernc.org/sqlite"
@@ -21,6 +22,10 @@ type SDE struct {
 
 	marketMu sync.Mutex   // guards market
 	market   *marketIndex // lazily built market-group tree, tied to one db generation
+
+	stationMu    sync.Mutex     // guards stations
+	stations     *stationTables // lazily loaded NPC corporation, service and agent tables, tied to one db generation
+	stationLoads atomic.Int64   // how many times the station tables were loaded (tests)
 
 	jumpMu sync.Mutex // guards jumps
 	jumps  *jumpIndex // lazily built jump-drive index (positions, network, hulls), tied to one db generation

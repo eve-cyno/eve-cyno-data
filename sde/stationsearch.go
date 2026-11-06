@@ -112,11 +112,11 @@ func (s *SDE) FindStations(f StationFilter) []StationMatch {
 		}
 	}
 
-	corps, corpFaction := npcCorporations(db)
-	opServices := operationServices(db)
+	tabs := s.stationTables()
+	corps, opServices := tabs.corps, tabs.opServices
 	var agentsByStation map[int][]Agent
 	if f.Agent != nil {
-		agentsByStation = matchingAgents(db, *f.Agent, corps, corpFaction)
+		agentsByStation = tabs.matchingAgents(*f.Agent)
 		if len(agentsByStation) == 0 {
 			return []StationMatch{}
 		}
@@ -148,7 +148,7 @@ func (s *SDE) FindStations(f StationFilter) []StationMatch {
 		m := StationMatch{
 			StationID: id, Name: name.String, SystemID: sys, System: sf.Name, Security: sf.Security,
 			RegionID: sf.RegionID, Region: sf.Region, OwnerID: int(corp.Int64), Owner: corps[int(corp.Int64)],
-			Services: opServices[int(op.Int64)], Jumps: -1,
+			Services: slices.Clone(opServices[int(op.Int64)]), Jumps: -1,
 		}
 		if f.Near != nil {
 			d, ok := dist[sys]
@@ -223,9 +223,58 @@ func operationServices(db *sql.DB) map[int][]string {
 	return out
 }
 
-// matchingAgents reads the agents that pass f, grouped by station and in agentID order. The
-// agtAgents columns are TEXT in the generic table, so they are cast in Go.
-func matchingAgents(db *sql.DB, f AgentFilter, corps map[int]string, corpFaction map[int]int) map[int][]Agent {
+// stationTables holds the NPC tables FindStations reads on every request, loaded once per
+// SDE generation. Callers must not change the maps or slices: FindStations hands out copies.
+type stationTables struct {
+	gen         uint64
+	corps       map[int]string
+	corpFaction map[int]int
+	opServices  map[int][]string
+	agents      []Agent // every agent with its names resolved, in agentID order
+}
+
+// stationTables returns the cached tables, reloading them when the SDE file was replaced.
+func (s *SDE) stationTables() *stationTables {
+	h, err := s.db.acquire()
+	if err != nil {
+		return &stationTables{}
+	}
+	defer h.release()
+	s.stationMu.Lock()
+	defer s.stationMu.Unlock()
+	if s.stations != nil && s.stations.gen == h.gen {
+		return s.stations
+	}
+	s.stationLoads.Add(1)
+	t := &stationTables{gen: h.gen, opServices: operationServices(h.db)}
+	t.corps, t.corpFaction = npcCorporations(h.db)
+	t.agents = loadAgents(h.db, t.corps)
+	s.stations = t
+	return t
+}
+
+// matchingAgents returns the agents that pass f, grouped by station and in agentID order. The
+// groups are fresh slices, so a caller may change them.
+func (t *stationTables) matchingAgents(f AgentFilter) map[int][]Agent {
+	out := map[int][]Agent{}
+	for _, a := range t.agents {
+		switch {
+		case f.Level != 0 && a.Level != f.Level,
+			f.DivisionID != 0 && a.DivisionID != f.DivisionID,
+			f.TypeIDs != nil && !slices.Contains(f.TypeIDs, a.TypeID),
+			f.CorporationID != 0 && a.CorporationID != f.CorporationID,
+			f.FactionID != 0 && t.corpFaction[a.CorporationID] != f.FactionID,
+			f.LocatorOnly && !a.Locator:
+			continue
+		}
+		out[a.StationID] = append(out[a.StationID], a)
+	}
+	return out
+}
+
+// loadAgents reads every agent with its names, sorted by agentID. The agtAgents columns are
+// TEXT in the generic table, so they are cast in Go.
+func loadAgents(db *sql.DB, corps map[int]string) []Agent {
 	names := map[int]string{}
 	eachRow(db, "agent names", "SELECT a.agentID, n.itemName FROM agtAgents a JOIN invNames n ON n.itemID = a.agentID", func(r *sql.Rows) error {
 		var id, name sql.NullString
@@ -249,23 +298,10 @@ func matchingAgents(db *sql.DB, f AgentFilter, corps map[int]string, corpFaction
 			StationID: textInt(loc.String), Level: textInt(lvl.String), TypeID: textInt(typ.String),
 			Locator: textInt(locator.String) != 0,
 		}
-		switch {
-		case f.Level != 0 && a.Level != f.Level,
-			f.DivisionID != 0 && a.DivisionID != f.DivisionID,
-			f.TypeIDs != nil && !slices.Contains(f.TypeIDs, a.TypeID),
-			f.CorporationID != 0 && a.CorporationID != f.CorporationID,
-			f.FactionID != 0 && corpFaction[a.CorporationID] != f.FactionID,
-			f.LocatorOnly && !a.Locator:
-			return nil
-		}
 		a.Name, a.Division, a.Type, a.Corporation = names[a.ID], divisions[a.DivisionID], types[a.TypeID], corps[a.CorporationID]
 		all = append(all, a)
 		return nil
 	})
 	sort.SliceStable(all, func(i, j int) bool { return all[i].ID < all[j].ID })
-	out := map[int][]Agent{}
-	for _, a := range all {
-		out[a.StationID] = append(out[a.StationID], a)
-	}
-	return out
+	return all
 }
