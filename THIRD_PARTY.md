@@ -32,15 +32,15 @@ allowlist with `go-licenses check ./...`. Re-run the command and re-check this f
 | `github.com/segmentio/asm` | v1.1.3 | MIT | Segment | via `segmentio/encoding` |
 | `github.com/segmentio/encoding` | v0.5.4 | MIT | Segment.io, Inc. | via the MCP SDK (its JSON codec) |
 | `github.com/yosida95/uritemplate/v3` | v3.0.2 | BSD-3-Clause | Kohei YOSHIDA | via the MCP SDK |
-| `go.yaml.in/yaml/v3` | v3.0.5 | MIT AND Apache-2.0 | Canonical Ltd; Kirill Simonov (libyaml) | writes the generated `api/openapi.yaml` (`dataapi`); parts ported from libyaml (MIT), the rest Apache-2.0 with a Canonical `NOTICE` |
-| `golang.org/x/oauth2` | v0.35.0 | BSD-3-Clause | The Go Authors | via the MCP SDK (the OAuth token types its transports mention); ships a `PATENTS` grant |
+| `go.yaml.in/yaml/v3` | v3.0.6 | MIT AND Apache-2.0 | Canonical Ltd; Kirill Simonov (libyaml) | writes the generated `api/openapi.yaml` (`dataapi`); parts ported from libyaml (MIT), the rest Apache-2.0 with a Canonical `NOTICE` |
+| `golang.org/x/oauth2` | v0.37.0 | BSD-3-Clause | The Go Authors | via the MCP SDK (the OAuth token types its transports mention) |
 | `golang.org/x/sync` | v0.24.0 | BSD-3-Clause | The Go Authors | ships a `PATENTS` grant |
 | `golang.org/x/sys` | v0.49.0 | BSD-3-Clause | The Go Authors | ships a `PATENTS` grant |
-| `golang.org/x/time` | v0.15.0 | BSD-3-Clause | The Go Authors | via the MCP SDK; ships a `PATENTS` grant |
+| `golang.org/x/time` | v0.16.0 | BSD-3-Clause | The Go Authors | via the MCP SDK; ships a `PATENTS` grant |
 | `modernc.org/libc` | v1.79.0 | BSD-3-Clause | The Libc Authors | embeds Go (BSD-3-Clause), musl libc (MIT), go-netdb (MIT) and NixOS/nixpkgs (MIT) material; notices in its `LICENSE-3RD-PARTY.md` |
 | `modernc.org/mathutil` | v1.7.1 | BSD-3-Clause | The mathutil Authors | |
 | `modernc.org/memory` | v1.12.1 | BSD-3-Clause | The Memory Authors | also carries `LICENSE-GO` and `LICENSE-MMAP-GO` for code adapted from Go and `edsrzf/mmap-go` |
-| `modernc.org/sqlite` | v1.61.0 | BSD-3-Clause | The Sqlite Authors | contains SQLite transpiled to Go (public domain). Only the driver package is imported (`modernc.org/sqlite`); the optional `sqlite-vec` (MIT) and `vfs` packages are not. Notices in its `LICENSE-3RD-PARTY.md` |
+| `modernc.org/sqlite` | v1.61.1 | BSD-3-Clause | The Sqlite Authors | contains SQLite transpiled to Go (public domain). Only the driver package is imported (`modernc.org/sqlite`); the optional `sqlite-vec` (MIT) and `vfs` packages are not. Notices in its `LICENSE-3RD-PARTY.md` |
 
 The Go standard library and toolchain are BSD-3-Clause (The Go Authors, https://go.dev/LICENSE).
 
