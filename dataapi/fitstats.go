@@ -1,7 +1,9 @@
 package dataapi
 
 import (
+	"fmt"
 	"net/http"
+	"strings"
 
 	"eve-cyno.dev/go/data/fit"
 )
@@ -22,6 +24,10 @@ func (a *API) fitStats(w http.ResponseWriter, r *http.Request) {
 	}
 	var req fitStatsRequest
 	if !decodeJSON(w, r, fitBodyMax, &req) {
+		return
+	}
+	if over := fit.OversizedEFTLines(req.EFT); len(over) > 0 {
+		writeError(w, r, http.StatusBadRequest, "invalid_request", fmt.Sprintf("quantity above %d: %s", fit.MaxEFTQty, strings.Join(over, ", ")))
 		return
 	}
 	f, _ := fit.ParseEFT(req.EFT, s)

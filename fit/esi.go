@@ -67,17 +67,21 @@ func ToESI(f Fit) (items []ESIItem, dropped []FitModule) {
 	for _, s := range esiSlots {
 		i := 0
 		for _, m := range groups[s.group] {
-			for range max(m.Qty, 1) {
-				flag := SlotFlag(s.group, i)
+			// Units that fit the group's flag range, then the rest once: a huge Qty must
+			// not cost one iteration or one dropped entry per unit.
+			n := max(m.Qty, 1)
+			placed := min(n, max(s.n-i, 0))
+			for range placed {
+				items = append(items, ESIItem{TypeID: m.TypeID, Flag: SlotFlag(s.group, i), Quantity: 1})
 				i++
-				if flag == "" {
-					dropped = append(dropped, m)
-					continue
-				}
-				items = append(items, ESIItem{TypeID: m.TypeID, Flag: flag, Quantity: 1})
 				if m.ChargeID != 0 {
 					charges = append(charges, ESIItem{TypeID: m.ChargeID, Flag: "Cargo", Quantity: 1})
 				}
+			}
+			if n > placed {
+				left := m
+				left.Qty = n - placed
+				dropped = append(dropped, left)
 			}
 		}
 	}

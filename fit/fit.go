@@ -251,3 +251,16 @@ func RenderEFT(f Fit) string {
 	}
 	return strings.TrimRight(b.String(), "\n")
 }
+
+// OversizedEFTLines lists the lines of an EFT block whose quantity is above MaxEFTQty, as
+// "Name xN". ParseEFT reports the same lines among its unresolved names; this is for callers
+// that refuse the whole request instead of computing a fit that lacks them.
+func OversizedEFTLines(eft string) []string {
+	var out []string
+	for _, l := range ParseEFTLines(eft).Lines {
+		if l.Qty > MaxEFTQty {
+			out = append(out, fmt.Sprintf("%s x%d", l.Name, l.Qty))
+		}
+	}
+	return out
+}

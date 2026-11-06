@@ -2,7 +2,9 @@ package dataapi
 
 import (
 	"context"
+	"fmt"
 	"net/http"
+	"strings"
 
 	"eve-cyno.dev/go/data/fit"
 	"eve-cyno.dev/go/data/rag"
@@ -36,6 +38,10 @@ func (a *API) fitSuggest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if over := fit.OversizedEFTLines(req.EFT); len(over) > 0 {
+		writeError(w, r, http.StatusBadRequest, "invalid_request", fmt.Sprintf("quantity above %d: %s", fit.MaxEFTQty, strings.Join(over, ", ")))
+		return
+	}
 	f, _ := fit.ParseEFT(req.EFT, s)
 
 	// CPU/PG headroom from the deterministic detail builder.

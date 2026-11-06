@@ -96,3 +96,18 @@ func TestToESI_ReportsWhatItCannotCarry(t *testing.T) {
 		t.Fatal("module state is not carried by ESI")
 	}
 }
+
+// ToESI and Hash do not loop per unit of a huge Qty: slot modules beyond the slot range are
+// recorded once per line with the leftover quantity (SV-C1 round 2).
+func TestToESI_HugeQtyIsNotExpandedPerUnit(t *testing.T) {
+	f := Fit{HullID: 587, High: []FitModule{
+		{TypeID: 1, Qty: MaxEFTQty}, {TypeID: 2, Qty: MaxEFTQty}, {TypeID: 3, Qty: MaxEFTQty}}}
+	items, dropped := ToESI(f)
+	if len(items) != 8 || len(dropped) != 3 {
+		t.Fatalf("items=%d dropped=%d", len(items), len(dropped))
+	}
+	if dropped[0].Qty != MaxEFTQty-8 || dropped[1].Qty != MaxEFTQty || dropped[2].TypeID != 3 {
+		t.Fatalf("leftover quantities wrong: %+v", dropped)
+	}
+	_ = HashESI(f)
+}

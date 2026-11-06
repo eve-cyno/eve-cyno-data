@@ -408,3 +408,25 @@ func TestTool_InvalidArgumentsDoNotSpendTheUpstreamBudget(t *testing.T) {
 	require.Equal(t, http.StatusOK, do(a, "POST", "/v1/tool/get_market_price", `{"type_id":0}`).Code)
 	requireError(t, do(a, "POST", "/v1/tool/get_market_price", `{"type_id":0}`), http.StatusTooManyRequests, "rate_limited")
 }
+
+// An oversized quantity is refused, never silently dropped (SV-C1 round 2).
+func TestFitStatsAndSuggest_OversizedQtyIs400(t *testing.T) {
+	s := realSDE(t)
+	a := newAPI(t, dataapi.Config{Deps: dataapi.Deps{Tools: &tools.Deps{SDE: s}, Stats: gofa.New(s)}})
+	eft := "[Rifter, x]\n\n\n\n\nHobgoblin I x2000000000"
+	rec := do(a, "POST", "/v1/fit/stats", `{"eft":"`+strings.ReplaceAll(eft, "\n", `\n`)+`"}`)
+	requireError(t, rec, http.StatusBadRequest, "invalid_request")
+	require.Contains(t, rec.Body.String(), "Hobgoblin I x2000000000")
+	rec = do(a, "POST", "/v1/fit/suggest", `{"slot":"low","eft":"`+strings.ReplaceAll(eft, "\n", `\n`)+`"}`)
+	requireError(t, rec, http.StatusBadRequest, "invalid_request")
+}
+
+// fits/detail never reads Qty, so a huge one costs nothing.
+func TestFitsDetail_HugeQtyIsCheap(t *testing.T) {
+	s := realSDE(t)
+	a := newAPI(t, dataapi.Config{Deps: dataapi.Deps{Tools: &tools.Deps{SDE: s}}})
+	start := time.Now()
+	rec := do(a, "POST", "/v1/fits/detail", `{"eft":"[Rifter, x]\n\n\n\n\nHobgoblin I x2000000000"}`)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	require.Less(t, time.Since(start), 5*time.Second)
+}
