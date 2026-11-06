@@ -24,7 +24,7 @@ func Hash(f Fit) string {
 	counts := map[string]int{}
 	add := func(group string, ms []FitModule) {
 		for _, m := range ms {
-			counts[fmt.Sprintf("%s|%s|%s|%s", group, itemKey(m.TypeID, m.Name), itemKey(m.ChargeID, m.Charge), m.State)] += max(m.Qty, 1)
+			counts[fmt.Sprintf("%s|%s|%s|%s", group, itemKey(m.TypeID, m.Name), itemKey(m.ChargeID, m.Charge), escapeField(m.State))] += max(m.Qty, 1)
 		}
 	}
 	add("hi", f.High)
@@ -62,8 +62,15 @@ func itemKey(id int, name string) string {
 	if name == "" {
 		return ""
 	}
-	return "n:" + strings.ToLower(strings.TrimSpace(name))
+	return "n:" + escapeField(strings.ToLower(strings.TrimSpace(name)))
 }
+
+// fieldEscaper protects the separators of the canonical form ("|" and newline) and its own
+// escape character inside a free-text field. A field without those three characters is
+// unchanged, so every hash of such a fit stays what it was under HashVersion h1.
+var fieldEscaper = strings.NewReplacer(`\`, `\\`, "|", `\p`, "\n", `\n`)
+
+func escapeField(s string) string { return fieldEscaper.Replace(s) }
 
 // RenderEFTFull renders a Fit to EFT including the fit name, cargo and implants.
 // Paragraphs: slot groups (high, mid, low, rig, subsystem), drones, cargo, implants.
