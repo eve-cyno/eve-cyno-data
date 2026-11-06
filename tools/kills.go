@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"regexp"
 	"slices"
 	"strconv"
 	"strings"
@@ -195,6 +196,9 @@ func (b *killsBook) copyOf(ctx context.Context, c *Client, system, hours int) (*
 	}
 }
 
+// killHashRE is the shape of a killmail hash: 40 lowercase hex characters.
+var killHashRE = regexp.MustCompile(`^[0-9a-f]{40}$`)
+
 // fetchKills reads a system's list into a copy: the newest maxRecentKills, and how many it held.
 func fetchKills(ctx context.Context, c *Client, system, hours int, now time.Time, ready func() error) (*killsCopy, error) {
 	// zKillboard takes pastSeconds in multiples of 3600.
@@ -216,6 +220,9 @@ func fetchKills(ctx context.Context, c *Client, system, hours int, now time.Time
 	rows := make([]killRow, 0, len(list))
 	for _, k := range list {
 		if k.Time.IsZero() {
+			if !killHashRE.MatchString(k.ZKB.Hash) {
+				continue // never build an ESI path from a hash we cannot vouch for
+			}
 			raw, err := esiGetJSON(ctx, c, fmt.Sprintf("/killmails/%d/%s", k.KillmailID, k.ZKB.Hash))
 			if err != nil {
 				return nil, fmt.Errorf("zkill list: killmail: %w", err)

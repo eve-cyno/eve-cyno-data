@@ -135,9 +135,11 @@ func TestRecentKills_AtMostTenAndSaysSo(t *testing.T) {
 	require.Contains(t, text, "10 of 13")
 }
 
+const hash300 = "0123456789abcdef0123456789abcdef01234567"
+
 func TestRecentKills_ListWithOnlyIdsIsReadThroughESI(t *testing.T) {
 	deps := testDeps(t)
-	c, srv, _ := newKillsClient(t, `[{"killmail_id":300,"zkb":{"hash":"h300","totalValue":5}}]`)
+	c, srv, _ := newKillsClient(t, `[{"killmail_id":300,"zkb":{"hash":"`+hash300+`","totalValue":5}}]`)
 	full := killJSON(300, killsNow.Add(-5*time.Minute), 587, 5, 3)
 	base := c.HTTP.Transport
 	c.HTTP.Transport = roundTripFunc(func(r *http.Request) (*http.Response, error) {
@@ -145,7 +147,7 @@ func TestRecentKills_ListWithOnlyIdsIsReadThroughESI(t *testing.T) {
 			srv.mu.Lock()
 			defer srv.mu.Unlock()
 			srv.esi++
-			require.Contains(t, r.URL.Path, "/killmails/300/h300")
+			require.Contains(t, r.URL.Path, "/killmails/300/"+hash300)
 			return &http.Response{StatusCode: 200, Header: http.Header{"Content-Type": {"application/json"}}, Body: io.NopCloser(strings.NewReader(full))}, nil
 		}
 		return base.RoundTrip(r)
@@ -390,4 +392,33 @@ func TestRecentKills_OwnDeadlineIsNoPause(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, data)
 	require.EqualValues(t, 2, hits.Load())
+}
+
+// SV-M1: a hash that is not 40 hex characters is never put into an ESI path; that one row is
+// skipped and the rest of the list is kept.
+func TestRecentKills_BadHashSkipsOnlyThatRow(t *testing.T) {
+	deps := testDeps(t)
+	c, srv, _ := newKillsClient(t, `[{"killmail_id":301,"zkb":{"hash":"../x","totalValue":1}},{"killmail_id":300,"zkb":{"hash":"`+hash300+`","totalValue":5}}]`)
+	full := killJSON(300, killsNow.Add(-5*time.Minute), 587, 5, 3)
+	base := c.HTTP.Transport
+	var esiPaths []string
+	var mu sync.Mutex
+	c.HTTP.Transport = roundTripFunc(func(r *http.Request) (*http.Response, error) {
+		if strings.Contains(r.URL.Path, "/killmails/") {
+			mu.Lock()
+			esiPaths = append(esiPaths, r.URL.Path)
+			mu.Unlock()
+			return &http.Response{StatusCode: 200, Header: http.Header{"Content-Type": {"application/json"}}, Body: io.NopCloser(strings.NewReader(full))}, nil
+		}
+		return base.RoundTrip(r)
+	})
+	_, data, err := getRecentKills(context.Background(), c, deps.SDE, map[string]any{"system": "Jita"})
+	require.NoError(t, err)
+	require.NotNil(t, data)
+	require.Len(t, data.Kills, 1)
+	mu.Lock()
+	defer mu.Unlock()
+	require.Len(t, esiPaths, 1)
+	require.Contains(t, esiPaths[0], "/killmails/300/"+hash300)
+	require.Equal(t, 1, srv.hits())
 }
