@@ -3,6 +3,7 @@ package gofa
 import (
 	"context"
 	"testing"
+	"time"
 
 	"eve-cyno.dev/go/data/fit"
 	"eve-cyno.dev/go/data/sde"
@@ -149,4 +150,30 @@ func TestEngine_ExpandQty(t *testing.T) {
 		(1 + 0.10*stackingFactor(1)) *
 		(1 + 0.10*stackingFactor(2))
 	require.InDelta(t, want, ship.Attrs[attrTarget], 1e-6)
+}
+
+// One hand-built line with a huge Qty must fail fast with an error and allocate
+// nothing per unit (SV-C1).
+func TestEngine_ResolveRejectsHugeQty(t *testing.T) {
+	s := &fakeSDE{dogma: map[int]map[int]float64{1: {40: 1000}, 2: {50: 10}}}
+	huge := 2_000_000_000
+	cases := []struct {
+		name string
+		f    fit.Fit
+	}{
+		{"drones", fit.Fit{HullID: 1, Drones: []fit.FitModule{{TypeID: 2, Qty: huge}}}},
+		{"modules", fit.Fit{HullID: 1, Mid: []fit.FitModule{{TypeID: 2, Qty: huge}}}},
+		{"split", fit.Fit{HullID: 1, Drones: []fit.FitModule{
+			{TypeID: 2, Qty: maxExpandedItems}, {TypeID: 2, Qty: maxExpandedItems}}}},
+	}
+	for _, c := range cases {
+		start := time.Now()
+		_, _, err := New(s).resolve(c.f, fit.StatsOpts{})
+		require.Error(t, err, c.name)
+		require.Less(t, time.Since(start), 2*time.Second, c.name)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	_, _, _, _, err := New(s).resolveForStats(ctx, fit.Fit{HullID: 1, Mid: []fit.FitModule{{TypeID: 2, Qty: 5}}}, fit.StatsOpts{})
+	require.ErrorIs(t, err, context.Canceled)
 }

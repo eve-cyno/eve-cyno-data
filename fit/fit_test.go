@@ -150,3 +150,19 @@ func TestParseEFT_MutatedSuffixCaseInsensitiveAndOnCharge(t *testing.T) {
 	require.Equal(t, "Barrage S", f.High[0].Charge)
 	require.Equal(t, 12345, f.High[0].ChargeID, "mutated charge must resolve against its base name")
 }
+
+// A quantity above MaxEFTQty never enters the fit: the line is reported as unresolved (SV-C1).
+func TestParseEFT_HugeQtyIsReportedNotParsed(t *testing.T) {
+	r := fakeResolver{
+		ids:    map[string]int{"Gila": 17720, "Hammerhead II": 2185},
+		drones: map[int]bool{2185: true},
+	}
+	for _, q := range []string{"2000000000", "2147483648", "1000001"} {
+		f, unresolved := ParseEFT("[Gila, pve]\n\n\n\n\nHammerhead II x"+q, r)
+		require.Empty(t, f.Drones, "x"+q)
+		require.Equal(t, []string{"Hammerhead II x" + q}, unresolved, "x"+q)
+	}
+	f, unresolved := ParseEFT("[Gila, pve]\n\n\n\n\nHammerhead II x1000000", r)
+	require.Empty(t, unresolved)
+	require.Equal(t, MaxEFTQty, f.Drones[0].Qty)
+}

@@ -81,6 +81,11 @@ func normaliseSlot(s string) string {
 	}
 }
 
+// MaxEFTQty bounds one EFT line quantity in a fit (cargo ammo and drone stacks reach the hundred
+// thousands). A line above it is reported as unresolved instead of entering the fit. The engine
+// keeps its own, much smaller budget on what it expands per unit.
+const MaxEFTQty = 1_000_000
+
 // ParseEFT parses an EFT block into a Fit. Every module name is resolved to a
 // typeID; names that do not resolve are returned in unresolved and NOT added to
 // the Fit — a fabricated module cannot enter the typed structure.
@@ -162,6 +167,11 @@ func ParseEFT(eft string, r NameResolver) (f Fit, unresolved []string) {
 	// Drones MUST NOT fall through to a slot bucket, or they would be miscounted
 	// against subsystem slots and trigger false slot-overflow violations.
 	for _, entry := range rawEntries {
+		if entry.Qty > MaxEFTQty {
+			// Not a plausible stack: reported with the unresolved names, never expanded.
+			unresolved = append(unresolved, fmt.Sprintf("%s x%d", entry.Name, entry.Qty))
+			continue
+		}
 		id, canon, ok := resolve(entry.Name)
 		if !ok {
 			unresolved = append(unresolved, entry.Name)

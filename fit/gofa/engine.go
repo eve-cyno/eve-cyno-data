@@ -54,14 +54,14 @@ var _ fit.StatsProvider = (*Engine)(nil)
 // Error cases: hull typeID has no dogma data in the SDE (GetDogma returns nil
 // or an empty map). All other type lookups silently produce zero-attr items.
 func (e *Engine) resolve(f fit.Fit, opts fit.StatsOpts) (ship *Item, items []*Item, err error) {
-	ship, items, _, _, err = e.resolveForStats(f, opts)
+	ship, items, _, _, err = e.resolveForStats(context.Background(), f, opts)
 	return ship, items, err
 }
 
 // resolveForStats is like resolve but also returns the weapon instances (each
 // module paired with its charge Item) and the expanded drone Items for DPS
 // calculation. Convergence tests use resolve(); Stats uses resolveForStats().
-func (e *Engine) resolveForStats(f fit.Fit, opts fit.StatsOpts) (ship *Item, items []*Item, weapons []weaponInstance, drones []*Item, err error) {
+func (e *Engine) resolveForStats(ctx context.Context, f fit.Fit, opts fit.StatsOpts) (ship *Item, items []*Item, weapons []weaponInstance, drones []*Item, err error) {
 	// One SDE view for the whole resolve: memoized reads of the current SDE
 	// generation (the dogma lookups below and the interpreter repeat per item).
 	sdeView := e.reader()
@@ -114,8 +114,14 @@ func (e *Engine) resolveForStats(f fit.Fit, opts fit.StatsOpts) (ship *Item, ite
 	// Built during item construction so the DPS calc can pair them after resolution.
 	chargeByModule := map[*Item]*Item{}
 
+	// Hard budget on per-unit Items, whatever the caller passes: a Qty is checked before
+	// anything is allocated for it. Charges count as units too.
+	budget := maxExpandedItems
 	for _, g := range groups {
 		for _, fm := range g.modules {
+			if err := ctx.Err(); err != nil {
+				return nil, nil, nil, nil, err
+			}
 			// Offline modules contribute nothing to stats — skip them entirely.
 			if fm.State == "offline" {
 				seenTypeID[fm.TypeID] = struct{}{}
@@ -125,6 +131,14 @@ func (e *Engine) resolveForStats(f fit.Fit, opts fit.StatsOpts) (ship *Item, ite
 			if n <= 0 {
 				n = 1
 			}
+			perUnit := 1
+			if g.kind == KindModule && fm.ChargeID != 0 {
+				perUnit = 2
+			}
+			if n > budget/perUnit {
+				return nil, nil, nil, nil, fmt.Errorf("gofa: fit expands to more than %d items (typeID %d, quantity %d)", maxExpandedItems, fm.TypeID, fm.Qty)
+			}
+			budget -= n * perUnit
 			for i := 0; i < n; i++ {
 				// Each instance gets its OWN copy of the dogma map so that
 				// resolveModifiers can mutate each independently.
@@ -605,7 +619,7 @@ func (e *Engine) Stats(ctx context.Context, f fit.Fit, opts fit.StatsOpts) (fit.
 			estimated = estimated || u.Default
 		}
 	}
-	ship, items, weaponItems, droneItems, err := e.resolveForStats(f, opts)
+	ship, items, weaponItems, droneItems, err := e.resolveForStats(ctx, f, opts)
 	if err != nil {
 		return fit.FitStats{}, err
 	}
@@ -650,6 +664,11 @@ func (e *Engine) weaponNamer() func(module, charge int) string {
 }
 
 const maxActiveDrones = 5
+
+// maxExpandedItems is the hard budget of per-unit Items one resolve may build (modules, drones and
+// their charges together). Far above any real fit (a few dozen slots, a drone bay of at most a few
+// hundred), far below what exhausts memory.
+const maxExpandedItems = 5000
 
 // launchedDrones picks the drones in space. When a priority list is given it is
 // the EXCLUSIVE selection (only those typeIDs launch, in that order); otherwise
