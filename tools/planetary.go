@@ -16,6 +16,11 @@ import (
 // ME, rigs and cost indices do not apply; with include_cost the raw resources are valued at ESI
 // average prices.
 func planetaryChain(ctx context.Context, c *Client, s *sde.SDE, req productionRequest, itemName string, targetID int, systemName string) (text string, chain *ProductionChain, ok bool, err error) {
+	if s.PlanetaryTier(targetID) >= 1 {
+		if msg := featureGap(s, "planetary production chains", sde.PlanetaryFeatureTables); msg != "" {
+			return msg, nil, true, nil
+		}
+	}
 	root, ok := s.SchematicFor(targetID)
 	if !ok {
 		return "", nil, false, nil

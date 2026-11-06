@@ -146,6 +146,11 @@ func findNPCStations(s *sde.SDE, args map[string]any) (string, *StationList) {
 	if !s.Available() {
 		return "SDE not loaded — station query unavailable.", nil
 	}
+	if hasValue(args["agent"]) {
+		if msg := featureGap(s, "agent search", sde.AgentFeatureTables); msg != "" {
+			return msg, nil
+		}
+	}
 	f := sde.StationFilter{}
 	var echo strings.Builder // the header after "NPC stations"
 

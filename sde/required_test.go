@@ -15,8 +15,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// writeRequiredSDE writes a tiny SDE at path containing every RequiredColumns
-// table, minus the "table.column" entries listed in omit and minus whole tables
+// writeRequiredSDE writes a tiny SDE at path containing every RequiredColumns and
+// FeatureColumns table, minus the "table.column" entries listed in omit and minus whole tables
 // listed in omitTables. Like the real builder it goes through a temp file and an
 // atomic rename.
 func writeRequiredSDE(t *testing.T, path string, omit []string, omitTables ...string) {
@@ -34,7 +34,14 @@ func writeRequiredSDE(t *testing.T, path string, omit []string, omitTables ...st
 	_ = os.Remove(tmp)
 	db, err := sql.Open("sqlite", tmp)
 	require.NoError(t, err)
+	all := map[string][]string{}
 	for tbl, cols := range RequiredColumns {
+		all[tbl] = cols
+	}
+	for tbl, cols := range FeatureColumns {
+		all[tbl] = cols
+	}
+	for tbl, cols := range all {
 		if skipTable[tbl] {
 			continue
 		}
@@ -188,4 +195,48 @@ func TestReload_LogsMissingRequiredColumnsForReplacedFile(t *testing.T) {
 	lines := errorLines(buf)
 	require.Len(t, lines, 1, "got: %v", lines)
 	require.Contains(t, lines[0], "dgmEffects.modifierInfo")
+}
+
+// SV-M11: a column is either hard (the build fails without it) or a feature (the build
+// publishes, the tool says "unavailable"), never both; every FeatureGap table group is in
+// FeatureColumns.
+func TestFeatureColumns_ApartFromRequiredColumns(t *testing.T) {
+	for tbl := range FeatureColumns {
+		_, hard := RequiredColumns[tbl]
+		require.False(t, hard, "%s is both hard and feature", tbl)
+	}
+	for _, group := range [][]string{SystemFeatureTables, AgentFeatureTables, PlanetaryFeatureTables} {
+		for _, tbl := range group {
+			require.Contains(t, FeatureColumns, tbl)
+		}
+	}
+}
+
+func TestFeatureGap_ReportsOnlyTheAskedTables(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "sde.sqlite")
+	writeRequiredSDE(t, path, []string{"mapDenormalize.groupID"}, "planetSchematics")
+	s, err := OpenWithReload(path, 0)
+	require.NoError(t, err)
+	defer s.Close()
+
+	require.Equal(t, []string{"mapDenormalize.groupID"}, s.FeatureGap(SystemFeatureTables...))
+	require.Equal(t, []string{"planetSchematics.cycleTime", "planetSchematics.schematicID", "planetSchematics.schematicName"},
+		s.FeatureGap(PlanetaryFeatureTables...))
+	require.Empty(t, s.FeatureGap(AgentFeatureTables...))
+	var nilSDE *SDE
+	require.Empty(t, nilSDE.FeatureGap(SystemFeatureTables...))
+}
+
+// A file missing only feature columns opens with a WARN, not the hard-column ERROR.
+func TestOpen_MissingFeatureColumnsWarnOnly(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "sde.sqlite")
+	writeRequiredSDE(t, path, nil, "agtAgents")
+	buf := captureLog(t)
+
+	s, err := OpenWithReload(path, 0)
+	require.NoError(t, err)
+	defer s.Close()
+	require.Empty(t, errorLines(buf))
+	require.Contains(t, buf.String(), "level=WARN")
+	require.Contains(t, buf.String(), "agtAgents.agentID")
 }

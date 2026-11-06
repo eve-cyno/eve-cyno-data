@@ -520,7 +520,10 @@ func TestPublishGate_RejectsMissingRequiredColumn(t *testing.T) {
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "dgmEffects.modifierInfo")
 	require.Contains(t, err.Error(), "dgmAttributeTypes.stackable")
-	require.Contains(t, err.Error(), "chrCloneGradeSkills.level", "the Alpha clone skill tables are required too")
+	require.Contains(t, err.Error(), "invMetaTypes.metaGroupID", "the meta tier is a hard generic table")
+	// SV-M11: a feature table (the Alpha clone skill caps) only logs; validate_fitting
+	// then skips the Alpha check and says so.
+	require.NotContains(t, err.Error(), "chrCloneGradeSkills")
 }
 
 func TestPublishGate_PassesCompleteBuild(t *testing.T) {

@@ -507,7 +507,10 @@ type Client interface {
 }
 
 // Gate is the publish gate: the last check a freshly built SDE must pass before it
-// replaces the live file. Every required column (sde RequiredColumns) must exist, and
+// replaces the live file. Every required column (sde RequiredColumns) must exist; a
+// missing feature column (sde FeatureColumns: a generic CSV that failed or was renamed)
+// is logged at ERROR and does not block the publish, as the tool that needs it then
+// answers "unavailable". And
 // the columns the dogma readers depend on must actually carry data: a build whose
 // CREATE TABLE is right but whose CSV extraction silently produced NULLs is just as
 // useless as one missing the column. The zero Gate has no row-count floors (required
@@ -534,6 +537,14 @@ func (g Gate) check(ctx context.Context, db *sql.DB) error {
 	}
 	if len(missing) > 0 {
 		problems = append(problems, "missing required columns: "+strings.Join(missing, ", "))
+	}
+	feature, err := coresde.MissingFeatureColumns(db)
+	if err != nil {
+		return fmt.Errorf("check feature columns: %w", err)
+	}
+	if len(feature) > 0 {
+		slog.Error("sde build: publishing without feature columns; the tools that need them answer unavailable until the next build",
+			"missing", feature)
 	}
 
 	// The row-count probes only make sense for columns that exist.

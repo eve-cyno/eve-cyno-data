@@ -56,11 +56,26 @@ func scalarName(args map[string]any, key string) string {
 	return strings.TrimSpace(v)
 }
 
+// featureGap is the answer of a tool whose data the loaded SDE build lacks (sde
+// FeatureColumns of tables: a generic CSV failed or was renamed, and the build published
+// without it). The tool says so rather than answer from the missing data. "" when the
+// tables are complete.
+func featureGap(s *sde.SDE, what string, tables []string) string {
+	missing := s.FeatureGap(tables...)
+	if len(missing) == 0 {
+		return ""
+	}
+	return fmt.Sprintf("SDE build incomplete — %s unavailable (missing %s).", what, strings.Join(missing, ", "))
+}
+
 // findSystems answers find_systems: solar systems selected by filters and ranked, one line
 // each. The *SystemList is built with the text and is nil for every text-only answer.
 func findSystems(s *sde.SDE, args map[string]any) (string, *SystemList) {
 	if !s.Available() {
 		return "SDE not loaded — system search unavailable.", nil
+	}
+	if msg := featureGap(s, "system search", sde.SystemFeatureTables); msg != "" {
+		return msg, nil
 	}
 	f := sde.SystemFilter{}
 	var echo []string // the Filter line parts, in the documented order
@@ -466,6 +481,9 @@ func systemRow(m sde.SystemMatch, near *sde.NearFilter, ice *icebelts.Dataset) S
 func getSystemInfo(s *sde.SDE, systems []string) (string, *SystemInfoList) {
 	if !s.Available() {
 		return "SDE not loaded — system lookup unavailable.", nil
+	}
+	if msg := featureGap(s, "system lookup", sde.SystemFeatureTables); msg != "" {
+		return msg, nil
 	}
 	if len(systems) == 0 {
 		return fmt.Sprintf("systems: give 1 to %d system names.", maxSystemsBatch), nil

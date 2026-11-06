@@ -218,3 +218,72 @@ func TestRefresh_UnchangedBuild_HealthyLiveFileIsNotRebuilt(t *testing.T) {
 	require.False(t, fr.built)
 	require.False(t, rebuilt)
 }
+
+// SV-M11: the generic build phase skips a CSV that fails, and Fuzzwork may rename a
+// column. A feature column (sde FeatureColumns) missing from the dump must not block the
+// publish, and the next check at the same build must not download the dump again: only
+// the tool that needs the column answers "unavailable".
+func TestRefresh_FeatureColumnMissing_PublishesAndDoesNotRedownload(t *testing.T) {
+	const build = "sde-20250707-TRANQUILITY"
+	for name, edit := range map[string]func(map[string]string){
+		"renamed column": func(tb map[string]string) {
+			tb["mapDenormalize"] = "itemID,typeID,groupKey,solarSystemID\n"
+		},
+		"failed csv": func(tb map[string]string) { delete(tb, "planetSchematics") },
+	} {
+		t.Run(name, func(t *testing.T) {
+			logs := captureLog(t)
+			tables := minimalFuzzwork(t).tables
+			edit(tables)
+			sdePath := filepath.Join(t.TempDir(), "sde.sqlite")
+
+			fr := &fakeRemote{fakeFuzzwork: fakeFuzzwork{tables: tables}, latest: build}
+			latest, rebuilt, err := NewWithRemote(fr, sdePath, fixtureGate).Refresh(context.Background(), "")
+			require.NoError(t, err, "a missing feature column does not fail the build")
+			require.True(t, rebuilt)
+			require.Equal(t, build, latest)
+			_, statErr := os.Stat(sdePath)
+			require.NoError(t, statErr, "the build is published")
+			require.Contains(t, logs.String(), "feature columns", "the gate logs the missing feature columns")
+
+			next := &fakeRemote{fakeFuzzwork: fakeFuzzwork{tables: tables}, latest: build}
+			_, rebuilt, err = NewWithRemote(next, sdePath, fixtureGate).Refresh(context.Background(), build)
+			require.NoError(t, err)
+			require.False(t, next.built, "an unchanged build missing only feature columns is not downloaded again")
+			require.False(t, rebuilt)
+		})
+	}
+}
+
+// A hard column (sde RequiredColumns) of a generic table still fails the build: the meta
+// tier feeds item facts, module search and the fit detail, and would silently read "Tech I".
+func TestRefresh_HardGenericColumnMissing_FailsTheBuild(t *testing.T) {
+	tables := minimalFuzzwork(t).tables
+	tables["invMetaTypes"] = "typeID,parentTypeID,metaGroupKey\n"
+	sdePath := filepath.Join(t.TempDir(), "sde.sqlite")
+	fr := &fakeRemote{fakeFuzzwork: fakeFuzzwork{tables: tables}, latest: "sde-20250707-TRANQUILITY"}
+	_, rebuilt, err := NewWithRemote(fr, sdePath, fixtureGate).Refresh(context.Background(), "")
+	require.ErrorContains(t, err, "invMetaTypes.metaGroupID")
+	require.False(t, rebuilt)
+	_, statErr := os.Stat(sdePath)
+	require.True(t, os.IsNotExist(statErr), "a rejected build is not published")
+}
+
+// The live file lacks only a feature table (it was published that way, or an older build
+// predates it): the same build is not downloaded again on every start and daily check.
+func TestRefresh_UnchangedBuild_LiveFileLackingOnlyFeatureColumnsIsNotRebuilt(t *testing.T) {
+	const build = "sde-20250101-TRANQUILITY"
+	sdePath := filepath.Join(t.TempDir(), "sde.sqlite")
+	require.NoError(t, buildSQLite(context.Background(), sdePath, minimalFuzzwork(t), fixtureGate))
+	db, err := sql.Open("sqlite", sdePath)
+	require.NoError(t, err)
+	_, err = db.Exec(`DROP TABLE mapLocationWormholeClasses`)
+	require.NoError(t, err)
+	require.NoError(t, db.Close())
+
+	fr := &fakeRemote{fakeFuzzwork: fakeFuzzwork{tables: minimalFuzzwork(t).tables}, latest: build}
+	_, rebuilt, err := NewWithRemote(fr, sdePath, fixtureGate).Refresh(context.Background(), build)
+	require.NoError(t, err)
+	require.False(t, fr.built, "a missing feature table does not trigger a download at an unchanged build")
+	require.False(t, rebuilt)
+}

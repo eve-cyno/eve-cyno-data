@@ -53,7 +53,9 @@ func NewWithRemote(remote Remote, path string, gate Gate) *Builder {
 //
 //   - recorded == latest build -> (latest, false, nil): a true no-op, unless the
 //     existing file lacks columns the readers need (sde RequiredColumns):
-//     then it is rebuilt in place like a changed build.
+//     then it is rebuilt in place like a changed build. Missing feature columns
+//     (sde FeatureColumns) do not count: the same dump would most likely lack them
+//     again, and every start and daily check would download it for nothing.
 //   - otherwise the local database is rebuilt (BuildSQLite, behind the publish
 //     gate) and Refresh returns (latest, true, nil); the caller should record
 //     latest.
