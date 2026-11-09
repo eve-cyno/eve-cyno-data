@@ -403,3 +403,71 @@ func TestCandidates_DowngradeNeverOffersHigherMeta(t *testing.T) {
 	// Refit still offers the higher variants.
 	require.Contains(t, ids(c.Candidates(oneHigh(100, 0), hi0, refit(full))), 101)
 }
+
+// M6: direct Candidates and chargeFor tests for the filters a mutation run found unguarded.
+// Each added type is rejected by exactly one rule and would win the pick if that rule were gone.
+func filterSubset() *dogma.Subset {
+	sub := testSubset()
+	split := func(extra map[int]float64) map[int]float64 {
+		m := map[int]float64{114: 10, attrChargeSize: 2}
+		for k, v := range extra {
+			m[k] = v
+		}
+		return m
+	}
+	sub.Types = append(sub.Types,
+		// Variant of the launcher family 100 in the low slot (effect 11) with the launcher
+		// hardpoint (40): only the slot filter excludes it.
+		withMeta(ty(113, groupLaunc, 7, []int{11, 40}, map[int]float64{attrMetaLevel: 9, 604: groupChg, attrChargeSize: 2}), 2, 100),
+		// Charges of 200's group and split whose only fault is the one named, each of a
+		// meta level above 205's.
+		withMeta(ty(212, groupChg, 8, nil, split(map[int]float64{attrMetaLevel: 20})), 2, 0), // other meta group
+		ty(213, groupChg, 8, nil, map[int]float64{114: 10, attrMetaLevel: 30}),               // no charge size
+		ty(215, groupChg, 8, nil, needs(skillRare, 1, split(map[int]float64{attrMetaLevel: 50}))),
+		// Rigs of family 400: a size-2 member on a size-1 hull, and a size-2 sibling of 401's
+		// shape that fits another hull group only.
+		withMeta(ty(404, groupRig, 7, []int{2663}, map[int]float64{attrRigSize: 2}), 2, 400),
+		ty(405, groupRig, 7, []int{2663}, map[int]float64{attrRigSize: 2, 1298: groupHull2}),
+	)
+	return sub
+}
+
+func TestCandidates_SlotFilter(t *testing.T) {
+	c := NewCatalog(filterSubset())
+	got := ids(c.Candidates(oneHigh(100, 0), hi0, refit(full)))
+	require.NotContains(t, got, 113, "a low-slot variant in a high-slot family")
+	require.Contains(t, got, 101)
+}
+
+func TestCandidates_VariantMustBeUsable(t *testing.T) {
+	c := NewCatalog(filterSubset())
+	got := ids(c.Candidates(oneHigh(100, 0), hi0, refit(poor)))
+	require.NotContains(t, got, 108, "needs the rare skill the pilot lacks")
+	require.Contains(t, got, 101)
+	require.Contains(t, ids(c.Candidates(oneHigh(100, 0), hi0, refit(full))), 108)
+}
+
+func TestChargeFor_ReplacementRules(t *testing.T) {
+	c := NewCatalog(filterSubset())
+	// 200 needs the rare skill; the poor pilot takes the best sibling that shares group,
+	// meta group, split and size and that the pilot can use: 205. The higher-level 212
+	// (other meta group), 213 (no charge size) and 215 (needs the rare skill) are out.
+	require.Equal(t, 205, c.chargeFor(100, 200, poor))
+	// The pilot who can use 215 and 200 keeps 200.
+	require.Equal(t, 200, c.chargeFor(100, 200, full))
+}
+
+func TestCandidates_RigSizeAndHullFilters(t *testing.T) {
+	c := NewCatalog(filterSubset())
+	rf := fit.Fit{HullID: hullSmall, Rig: []fit.FitModule{{TypeID: 400, Qty: 1}}}
+	rig0 := LineRef{Slot: SlotRig}
+	o := refit(full)
+	o.Policy.AllowRigChanges = true
+	require.Equal(t, []int{400, 402, 0}, ids(c.Candidates(rf, rig0, o)), "404 is a size-2 rig on a size-1 hull")
+
+	// Convert onto the big hull: 401 and 404 are size 2 and fit; 405 lists another hull group.
+	cv := Options{Kind: KindConvert, TargetHull: hullBig, Skills: full, Policy: Fallback(KindConvert)}
+	got := ids(c.Candidates(rf, rig0, cv))
+	require.Contains(t, got, 401)
+	require.NotContains(t, got, 405, "restricted to another hull group")
+}
