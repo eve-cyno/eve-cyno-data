@@ -1,0 +1,2275 @@
+{
+ "build": "3670638_20261104",
+ "method": "worksheet.py: plain arithmetic over SDE values; no engine, Pyfa or eos code. Tolerances: resources 0.01 absolute (plan), counts and flags exact, the rest 1e-6 relative (stricter than the plan 0.1 %).",
+ "pairs": [
+  {
+   "id": "1:all0",
+   "ref": 1,
+   "hull": "Rifter",
+   "profile": "all0",
+   "numbers": {
+    "cpu_used": {
+     "value": 165.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Fitting\" (CPU, powergrid, calibration); SDE attrs 48/50 (CPU), 11/30 (PG), 1132/1153 (calibration); skill bonuses per skill description and its SDE bonus attribute",
+     "formula": "sum of module CPU: 1x Damage Control I (attr 50 cpu: base 25 => 25) = 25 | 1x Small Armor Repairer I (attr 50 cpu: base 5 => 5) = 5 | 1x Gyrostabilizer I (attr 50 cpu: base 27 => 27) = 27 | 1x 200mm Steel Plates I (attr 50 cpu: base 15 => 15) = 15 | 1x 1MN Afterburner I (attr 50 cpu: base 15 => 15) = 15 | 1x Stasis Webifier I (attr 50 cpu: base 25 => 25) = 25 | 1x Initiated Compact Warp Scrambler (attr 50 cpu: base 26 => 26) = 26 | 3x 200mm AutoCannon I (attr 50 cpu: base 9; Weapon Upgrades +0% => 9) = 9 | 2x Small Projectile Burst Aerator I (attr 50 cpu: base 0 => 0) = 0"
+    },
+    "cpu_cap": {
+     "value": 130.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Fitting\" (CPU, powergrid, calibration); SDE attrs 48/50 (CPU), 11/30 (PG), 1132/1153 (calibration); skill bonuses per skill description and its SDE bonus attribute",
+     "formula": "attr 48 cpuOutput: base 130; CPU Management +0% => 130"
+    },
+    "pg_used": {
+     "value": 43.52,
+     "tol": "abs0.01",
+     "source": "EVE University \"Fitting\" (CPU, powergrid, calibration); SDE attrs 48/50 (CPU), 11/30 (PG), 1132/1153 (calibration); skill bonuses per skill description and its SDE bonus attribute",
+     "formula": "sum of module PG: 1x Damage Control I (attr 30 power: base 1 => 1) = 1 | 1x Small Armor Repairer I (attr 30 power: base 5 => 5) = 5 | 1x Gyrostabilizer I (attr 30 power: base 1 => 1) = 1 | 1x 200mm Steel Plates I (attr 30 power: base 10 => 10) = 10 | 1x 1MN Afterburner I (attr 30 power: base 10 => 10) = 10 | 1x Stasis Webifier I (attr 30 power: base 1 => 1) = 1 | 1x Initiated Compact Warp Scrambler (attr 30 power: base 1 => 1) = 1 | 3x 200mm AutoCannon I (attr 30 power: base 4; Advanced Weapon Upgrades +0%; Small Projectile Burst Aerator I +10%; Small Projectile Burst Aerator I +10% => 4.84) = 4.84 | 2x Small Projectile Burst Aerator I (attr 30 power: base 0 => 0) = 0"
+    },
+    "pg_cap": {
+     "value": 41.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Fitting\" (CPU, powergrid, calibration); SDE attrs 48/50 (CPU), 11/30 (PG), 1132/1153 (calibration); skill bonuses per skill description and its SDE bonus attribute",
+     "formula": "attr 11 powerOutput: base 41; Power Grid Management +0% => 41"
+    },
+    "calib_used": {
+     "value": 400.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Fitting\" (CPU, powergrid, calibration); SDE attrs 48/50 (CPU), 11/30 (PG), 1132/1153 (calibration); skill bonuses per skill description and its SDE bonus attribute",
+     "formula": "sum of rig upgradeCost (attr 1153): 200 + 200"
+    },
+    "calib_cap": {
+     "value": 400.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Fitting\" (CPU, powergrid, calibration); SDE attrs 48/50 (CPU), 11/30 (PG), 1132/1153 (calibration); skill bonuses per skill description and its SDE bonus attribute",
+     "formula": "attr 1132 upgradeCapacity: base 400 => 400"
+    },
+    "drone_bw_cap": {
+     "value": 0.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Drones\"; SDE attrs 1271 (bandwidth), 1272 (bandwidth used), 283 (bay), 161 (volume), 352 (max active; Drones skill attr 353 per level)",
+     "formula": "attr 1271 droneBandwidth: base 0 => 0"
+    },
+    "drone_bw_used": {
+     "value": 0.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Drones\"; SDE attrs 1271 (bandwidth), 1272 (bandwidth used), 283 (bay), 161 (volume), 352 (max active; Drones skill attr 353 per level)",
+     "formula": "0 launched drones x attr 1272 (drones launch in fit order while bandwidth and the active cap allow)"
+    },
+    "drone_bay_cap": {
+     "value": 0.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Drones\"; SDE attrs 1271 (bandwidth), 1272 (bandwidth used), 283 (bay), 161 (volume), 352 (max active; Drones skill attr 353 per level)",
+     "formula": "attr 283 droneCapacity: base 0 => 0"
+    },
+    "drone_bay_used": {
+     "value": 0.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Drones\"; SDE attrs 1271 (bandwidth), 1272 (bandwidth used), 283 (bay), 161 (volume), 352 (max active; Drones skill attr 353 per level)",
+     "formula": "sum of drone volumes (invTypes.volume) of the 0 drones in the bay"
+    },
+    "drone_max_active": {
+     "value": 0.0,
+     "tol": "exact",
+     "source": "EVE University \"Drones\"; SDE attrs 1271 (bandwidth), 1272 (bandwidth used), 283 (bay), 161 (volume), 352 (max active; Drones skill attr 353 per level)",
+     "formula": "attr 352 maxActiveDrones: base 0; +0 Drones => 0 (pilot; Drones level x 1)"
+    },
+    "drone_active": {
+     "value": 0.0,
+     "tol": "exact",
+     "source": "EVE University \"Drones\"; SDE attrs 1271 (bandwidth), 1272 (bandwidth used), 283 (bay), 161 (volume), 352 (max active; Drones skill attr 353 per level)",
+     "formula": "min(max active 0, drones that fit in bandwidth 0)"
+    },
+    "max_locked": {
+     "value": 2.0,
+     "tol": "exact",
+     "source": "EVE University \"Targeting\"; locked targets = min(ship attr 192, pilot attr 192 = 2 + Target Management + Advanced Target Management, skill attr 311)",
+     "formula": "min(ship 4, pilot 2)"
+    },
+    "dps_weapons": {
+     "value": 37.81922774,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Turret mechanics\" and \"Missile mechanics\"; SDE attrs 114/116/117/118 (damage), 64 (multiplier), 51 (cycle ms), 212 (pilot missile damage multiplier, raised by Ballistic Control System attr 213)",
+     "formula": "200mm AutoCannon I: (EMP S damage 12) x multiplier 3.089625 / (cycle 2941.003998 ms/1000) ; summed over 3 weapons"
+    },
+    "dps_drones": {
+     "value": 0.0,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Turret mechanics\" and \"Missile mechanics\"; SDE attrs 114/116/117/118 (damage), 64 (multiplier), 51 (cycle ms), 212 (pilot missile damage multiplier, raised by Ballistic Control System attr 213)",
+     "formula": "first bay drone,  ; summed over the 0 launched drones"
+    },
+    "dps_total": {
+     "value": 37.81922774,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Turret mechanics\" and \"Missile mechanics\"; SDE attrs 114/116/117/118 (damage), 64 (multiplier), 51 (cycle ms), 212 (pilot missile damage multiplier, raised by Ballistic Control System attr 213)",
+     "formula": "weapons + drones"
+    },
+    "ehp": {
+     "value": 2898.765982,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Effective HP\"; SDE attrs 263/265/9 (HP), resonances 271-274, 267-270, 109/110/111/113; uniform profile",
+     "formula": "shield 450/mean(0.925,0.4625,0.555,0.74) + armor 900/mean(0.36,0.81,0.675,0.585) + hull 350/mean(0.469,0.469,0.469,0.469)"
+    },
+    "cap_capacity": {
+     "value": 250.0,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
+     "formula": "attr 482 capacitorCapacity: base 250; Capacitor Management +0% => 250"
+    },
+    "cap_recharge_s": {
+     "value": 125.0,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
+     "formula": "attr 55 rechargeRate: base 125000; Capacitor Systems Operation +0% => 125000 (ms)"
+    },
+    "cap_stable": {
+     "value": 0.0,
+     "tol": "exact",
+     "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
+     "formula": "use 10.666667 GJ/s (sum need/cycle), injection 0 GJ/s, peak 2.5*250/125 = 5 GJ/s; stable iff peak + injection >= use"
+    },
+    "cap_seconds_to_empty": {
+     "value": 35.41850075,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
+     "formula": "RK4 integration (h = 0.05 s) of dc/dt = 10/T*(sqrt(c)-c) - net/Cmax from c = 1 to c = 0, net drain 10.666667 GJ/s",
+     "estimated": "continuous drain stands in for discrete module cycles",
+     "finding": "F2"
+    },
+    "speed": {
+     "value": 733.8488576,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Stacking penalties\" (page read 2026-11-09); propulsion boost = speedFactor(20)/100 x thrust(567)/total mass (SDE attr 567 description: \"Used to divide with mass\"); mass = hull mass + massAddition(796) of plates and the propulsion module",
+     "formula": "passive max velocity 365 x (1 + speedFactor/100 x thrust/mass) for each active propulsion module, mass 1707000; no propulsion module: passive value"
+    }
+   }
+  },
+  {
+   "id": "1:allI",
+   "ref": 1,
+   "hull": "Rifter",
+   "profile": "allI",
+   "numbers": {
+    "cpu_used": {
+     "value": 158.25,
+     "tol": "abs0.01",
+     "source": "EVE University \"Fitting\" (CPU, powergrid, calibration); SDE attrs 48/50 (CPU), 11/30 (PG), 1132/1153 (calibration); skill bonuses per skill description and its SDE bonus attribute",
+     "formula": "sum of module CPU: 1x Damage Control I (attr 50 cpu: base 25 => 25) = 25 | 1x Small Armor Repairer I (attr 50 cpu: base 5 => 5) = 5 | 1x Gyrostabilizer I (attr 50 cpu: base 27 => 27) = 27 | 1x 200mm Steel Plates I (attr 50 cpu: base 15 => 15) = 15 | 1x 1MN Afterburner I (attr 50 cpu: base 15 => 15) = 15 | 1x Stasis Webifier I (attr 50 cpu: base 25 => 25) = 25 | 1x Initiated Compact Warp Scrambler (attr 50 cpu: base 26 => 26) = 26 | 3x 200mm AutoCannon I (attr 50 cpu: base 9; Weapon Upgrades -25% => 6.75) = 6.75 | 2x Small Projectile Burst Aerator I (attr 50 cpu: base 0 => 0) = 0"
+    },
+    "cpu_cap": {
+     "value": 162.5,
+     "tol": "abs0.01",
+     "source": "EVE University \"Fitting\" (CPU, powergrid, calibration); SDE attrs 48/50 (CPU), 11/30 (PG), 1132/1153 (calibration); skill bonuses per skill description and its SDE bonus attribute",
+     "formula": "attr 48 cpuOutput: base 130; CPU Management +25% => 162.5"
+    },
+    "pg_used": {
+     "value": 41.83148,
+     "tol": "abs0.01",
+     "source": "EVE University \"Fitting\" (CPU, powergrid, calibration); SDE attrs 48/50 (CPU), 11/30 (PG), 1132/1153 (calibration); skill bonuses per skill description and its SDE bonus attribute",
+     "formula": "sum of module PG: 1x Damage Control I (attr 30 power: base 1 => 1) = 1 | 1x Small Armor Repairer I (attr 30 power: base 5 => 5) = 5 | 1x Gyrostabilizer I (attr 30 power: base 1 => 1) = 1 | 1x 200mm Steel Plates I (attr 30 power: base 10 => 10) = 10 | 1x 1MN Afterburner I (attr 30 power: base 10 => 10) = 10 | 1x Stasis Webifier I (attr 30 power: base 1 => 1) = 1 | 1x Initiated Compact Warp Scrambler (attr 30 power: base 1 => 1) = 1 | 3x 200mm AutoCannon I (attr 30 power: base 4; Advanced Weapon Upgrades -10%; Small Projectile Burst Aerator I +9%; Small Projectile Burst Aerator I +9% => 4.27716) = 4.27716 | 2x Small Projectile Burst Aerator I (attr 30 power: base 0 => 0) = 0"
+    },
+    "pg_cap": {
+     "value": 51.25,
+     "tol": "abs0.01",
+     "source": "EVE University \"Fitting\" (CPU, powergrid, calibration); SDE attrs 48/50 (CPU), 11/30 (PG), 1132/1153 (calibration); skill bonuses per skill description and its SDE bonus attribute",
+     "formula": "attr 11 powerOutput: base 41; Power Grid Management +25% => 51.25"
+    },
+    "calib_used": {
+     "value": 400.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Fitting\" (CPU, powergrid, calibration); SDE attrs 48/50 (CPU), 11/30 (PG), 1132/1153 (calibration); skill bonuses per skill description and its SDE bonus attribute",
+     "formula": "sum of rig upgradeCost (attr 1153): 200 + 200"
+    },
+    "calib_cap": {
+     "value": 400.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Fitting\" (CPU, powergrid, calibration); SDE attrs 48/50 (CPU), 11/30 (PG), 1132/1153 (calibration); skill bonuses per skill description and its SDE bonus attribute",
+     "formula": "attr 1132 upgradeCapacity: base 400 => 400"
+    },
+    "drone_bw_cap": {
+     "value": 0.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Drones\"; SDE attrs 1271 (bandwidth), 1272 (bandwidth used), 283 (bay), 161 (volume), 352 (max active; Drones skill attr 353 per level)",
+     "formula": "attr 1271 droneBandwidth: base 0 => 0"
+    },
+    "drone_bw_used": {
+     "value": 0.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Drones\"; SDE attrs 1271 (bandwidth), 1272 (bandwidth used), 283 (bay), 161 (volume), 352 (max active; Drones skill attr 353 per level)",
+     "formula": "0 launched drones x attr 1272 (drones launch in fit order while bandwidth and the active cap allow)"
+    },
+    "drone_bay_cap": {
+     "value": 0.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Drones\"; SDE attrs 1271 (bandwidth), 1272 (bandwidth used), 283 (bay), 161 (volume), 352 (max active; Drones skill attr 353 per level)",
+     "formula": "attr 283 droneCapacity: base 0 => 0"
+    },
+    "drone_bay_used": {
+     "value": 0.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Drones\"; SDE attrs 1271 (bandwidth), 1272 (bandwidth used), 283 (bay), 161 (volume), 352 (max active; Drones skill attr 353 per level)",
+     "formula": "sum of drone volumes (invTypes.volume) of the 0 drones in the bay"
+    },
+    "drone_max_active": {
+     "value": 5.0,
+     "tol": "exact",
+     "source": "EVE University \"Drones\"; SDE attrs 1271 (bandwidth), 1272 (bandwidth used), 283 (bay), 161 (volume), 352 (max active; Drones skill attr 353 per level)",
+     "formula": "attr 352 maxActiveDrones: base 0; +5 Drones => 5 (pilot; Drones level x 1)"
+    },
+    "drone_active": {
+     "value": 0.0,
+     "tol": "exact",
+     "source": "EVE University \"Drones\"; SDE attrs 1271 (bandwidth), 1272 (bandwidth used), 283 (bay), 161 (volume), 352 (max active; Drones skill attr 353 per level)",
+     "formula": "min(max active 5, drones that fit in bandwidth 0)"
+    },
+    "max_locked": {
+     "value": 4.0,
+     "tol": "exact",
+     "source": "EVE University \"Targeting\"; locked targets = min(ship attr 192, pilot attr 192 = 2 + Target Management + Advanced Target Management, skill attr 311)",
+     "formula": "min(ship 4, pilot 8)"
+    },
+    "dps_weapons": {
+     "value": 72.71842251,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Turret mechanics\" and \"Missile mechanics\"; SDE attrs 114/116/117/118 (damage), 64 (multiplier), 51 (cycle ms), 212 (pilot missile damage multiplier, raised by Ballistic Control System attr 213)",
+     "formula": "200mm AutoCannon I: (EMP S damage 12) x multiplier 3.977892188 / (cycle 1969.296277 ms/1000) ; summed over 3 weapons"
+    },
+    "dps_drones": {
+     "value": 0.0,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Turret mechanics\" and \"Missile mechanics\"; SDE attrs 114/116/117/118 (damage), 64 (multiplier), 51 (cycle ms), 212 (pilot missile damage multiplier, raised by Ballistic Control System attr 213)",
+     "formula": "first bay drone,  ; summed over the 0 launched drones"
+    },
+    "dps_total": {
+     "value": 72.71842251,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Turret mechanics\" and \"Missile mechanics\"; SDE attrs 114/116/117/118 (damage), 64 (multiplier), 51 (cycle ms), 212 (pilot missile damage multiplier, raised by Ballistic Control System attr 213)",
+     "formula": "weapons + drones"
+    },
+    "ehp": {
+     "value": 3623.457477,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Effective HP\"; SDE attrs 263/265/9 (HP), resonances 271-274, 267-270, 109/110/111/113; uniform profile",
+     "formula": "shield 562.5/mean(0.925,0.4625,0.555,0.74) + armor 1125/mean(0.36,0.81,0.675,0.585) + hull 437.5/mean(0.469,0.469,0.469,0.469)"
+    },
+    "cap_capacity": {
+     "value": 300.0,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
+     "formula": "attr 482 capacitorCapacity: base 250; Capacitor Management +20% => 300"
+    },
+    "cap_recharge_s": {
+     "value": 118.75,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
+     "formula": "attr 55 rechargeRate: base 125000; Capacitor Systems Operation -5% => 118750 (ms)"
+    },
+    "cap_stable": {
+     "value": 0.0,
+     "tol": "exact",
+     "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
+     "formula": "use 11.871242 GJ/s (sum need/cycle), injection 0 GJ/s, peak 2.5*300/118.75 = 6.3157895 GJ/s; stable iff peak + injection >= use"
+    },
+    "cap_seconds_to_empty": {
+     "value": 41.40047062,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
+     "formula": "RK4 integration (h = 0.05 s) of dc/dt = 10/T*(sqrt(c)-c) - net/Cmax from c = 1 to c = 0, net drain 11.871242 GJ/s",
+     "estimated": "continuous drain stands in for discrete module cycles",
+     "finding": "F2"
+    },
+    "speed": {
+     "value": 949.0950181,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Stacking penalties\" (page read 2026-11-09); propulsion boost = speedFactor(20)/100 x thrust(567)/total mass (SDE attr 567 description: \"Used to divide with mass\"); mass = hull mass + massAddition(796) of plates and the propulsion module",
+     "formula": "passive max velocity 456.25 x (1 + speedFactor/100 x thrust/mass) for each active propulsion module, mass 1676760; no propulsion module: passive value"
+    }
+   }
+  },
+  {
+   "id": "1:allIII",
+   "ref": 1,
+   "hull": "Rifter",
+   "profile": "allIII",
+   "numbers": {
+    "cpu_used": {
+     "value": 158.25,
+     "tol": "abs0.01",
+     "source": "EVE University \"Fitting\" (CPU, powergrid, calibration); SDE attrs 48/50 (CPU), 11/30 (PG), 1132/1153 (calibration); skill bonuses per skill description and its SDE bonus attribute",
+     "formula": "sum of module CPU: 1x Damage Control I (attr 50 cpu: base 25 => 25) = 25 | 1x Small Armor Repairer I (attr 50 cpu: base 5 => 5) = 5 | 1x Gyrostabilizer I (attr 50 cpu: base 27 => 27) = 27 | 1x 200mm Steel Plates I (attr 50 cpu: base 15 => 15) = 15 | 1x 1MN Afterburner I (attr 50 cpu: base 15 => 15) = 15 | 1x Stasis Webifier I (attr 50 cpu: base 25 => 25) = 25 | 1x Initiated Compact Warp Scrambler (attr 50 cpu: base 26 => 26) = 26 | 3x 200mm AutoCannon I (attr 50 cpu: base 9; Weapon Upgrades -25% => 6.75) = 6.75 | 2x Small Projectile Burst Aerator I (attr 50 cpu: base 0 => 0) = 0"
+    },
+    "cpu_cap": {
+     "value": 162.5,
+     "tol": "abs0.01",
+     "source": "EVE University \"Fitting\" (CPU, powergrid, calibration); SDE attrs 48/50 (CPU), 11/30 (PG), 1132/1153 (calibration); skill bonuses per skill description and its SDE bonus attribute",
+     "formula": "attr 48 cpuOutput: base 130; CPU Management +25% => 162.5"
+    },
+    "pg_used": {
+     "value": 41.36492,
+     "tol": "abs0.01",
+     "source": "EVE University \"Fitting\" (CPU, powergrid, calibration); SDE attrs 48/50 (CPU), 11/30 (PG), 1132/1153 (calibration); skill bonuses per skill description and its SDE bonus attribute",
+     "formula": "sum of module PG: 1x Damage Control I (attr 30 power: base 1 => 1) = 1 | 1x Small Armor Repairer I (attr 30 power: base 5 => 5) = 5 | 1x Gyrostabilizer I (attr 30 power: base 1 => 1) = 1 | 1x 200mm Steel Plates I (attr 30 power: base 10 => 10) = 10 | 1x 1MN Afterburner I (attr 30 power: base 10 => 10) = 10 | 1x Stasis Webifier I (attr 30 power: base 1 => 1) = 1 | 1x Initiated Compact Warp Scrambler (attr 30 power: base 1 => 1) = 1 | 3x 200mm AutoCannon I (attr 30 power: base 4; Advanced Weapon Upgrades -10%; Small Projectile Burst Aerator I +7%; Small Projectile Burst Aerator I +7% => 4.12164) = 4.12164 | 2x Small Projectile Burst Aerator I (attr 30 power: base 0 => 0) = 0"
+    },
+    "pg_cap": {
+     "value": 51.25,
+     "tol": "abs0.01",
+     "source": "EVE University \"Fitting\" (CPU, powergrid, calibration); SDE attrs 48/50 (CPU), 11/30 (PG), 1132/1153 (calibration); skill bonuses per skill description and its SDE bonus attribute",
+     "formula": "attr 11 powerOutput: base 41; Power Grid Management +25% => 51.25"
+    },
+    "calib_used": {
+     "value": 400.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Fitting\" (CPU, powergrid, calibration); SDE attrs 48/50 (CPU), 11/30 (PG), 1132/1153 (calibration); skill bonuses per skill description and its SDE bonus attribute",
+     "formula": "sum of rig upgradeCost (attr 1153): 200 + 200"
+    },
+    "calib_cap": {
+     "value": 400.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Fitting\" (CPU, powergrid, calibration); SDE attrs 48/50 (CPU), 11/30 (PG), 1132/1153 (calibration); skill bonuses per skill description and its SDE bonus attribute",
+     "formula": "attr 1132 upgradeCapacity: base 400 => 400"
+    },
+    "drone_bw_cap": {
+     "value": 0.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Drones\"; SDE attrs 1271 (bandwidth), 1272 (bandwidth used), 283 (bay), 161 (volume), 352 (max active; Drones skill attr 353 per level)",
+     "formula": "attr 1271 droneBandwidth: base 0 => 0"
+    },
+    "drone_bw_used": {
+     "value": 0.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Drones\"; SDE attrs 1271 (bandwidth), 1272 (bandwidth used), 283 (bay), 161 (volume), 352 (max active; Drones skill attr 353 per level)",
+     "formula": "0 launched drones x attr 1272 (drones launch in fit order while bandwidth and the active cap allow)"
+    },
+    "drone_bay_cap": {
+     "value": 0.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Drones\"; SDE attrs 1271 (bandwidth), 1272 (bandwidth used), 283 (bay), 161 (volume), 352 (max active; Drones skill attr 353 per level)",
+     "formula": "attr 283 droneCapacity: base 0 => 0"
+    },
+    "drone_bay_used": {
+     "value": 0.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Drones\"; SDE attrs 1271 (bandwidth), 1272 (bandwidth used), 283 (bay), 161 (volume), 352 (max active; Drones skill attr 353 per level)",
+     "formula": "sum of drone volumes (invTypes.volume) of the 0 drones in the bay"
+    },
+    "drone_max_active": {
+     "value": 5.0,
+     "tol": "exact",
+     "source": "EVE University \"Drones\"; SDE attrs 1271 (bandwidth), 1272 (bandwidth used), 283 (bay), 161 (volume), 352 (max active; Drones skill attr 353 per level)",
+     "formula": "attr 352 maxActiveDrones: base 0; +5 Drones => 5 (pilot; Drones level x 1)"
+    },
+    "drone_active": {
+     "value": 0.0,
+     "tol": "exact",
+     "source": "EVE University \"Drones\"; SDE attrs 1271 (bandwidth), 1272 (bandwidth used), 283 (bay), 161 (volume), 352 (max active; Drones skill attr 353 per level)",
+     "formula": "min(max active 5, drones that fit in bandwidth 0)"
+    },
+    "max_locked": {
+     "value": 4.0,
+     "tol": "exact",
+     "source": "EVE University \"Targeting\"; locked targets = min(ship attr 192, pilot attr 192 = 2 + Target Management + Advanced Target Management, skill attr 311)",
+     "formula": "min(ship 4, pilot 10)"
+    },
+    "dps_weapons": {
+     "value": 83.95030596,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Turret mechanics\" and \"Missile mechanics\"; SDE attrs 114/116/117/118 (damage), 64 (multiplier), 51 (cycle ms), 212 (pilot missile damage multiplier, raised by Ballistic Control System attr 213)",
+     "formula": "200mm AutoCannon I: (EMP S damage 12) x multiplier 4.209614063 / (cycle 1805.188254 ms/1000) ; summed over 3 weapons"
+    },
+    "dps_drones": {
+     "value": 0.0,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Turret mechanics\" and \"Missile mechanics\"; SDE attrs 114/116/117/118 (damage), 64 (multiplier), 51 (cycle ms), 212 (pilot missile damage multiplier, raised by Ballistic Control System attr 213)",
+     "formula": "first bay drone,  ; summed over the 0 launched drones"
+    },
+    "dps_total": {
+     "value": 83.95030596,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Turret mechanics\" and \"Missile mechanics\"; SDE attrs 114/116/117/118 (damage), 64 (multiplier), 51 (cycle ms), 212 (pilot missile damage multiplier, raised by Ballistic Control System attr 213)",
+     "formula": "weapons + drones"
+    },
+    "ehp": {
+     "value": 3623.457477,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Effective HP\"; SDE attrs 263/265/9 (HP), resonances 271-274, 267-270, 109/110/111/113; uniform profile",
+     "formula": "shield 562.5/mean(0.925,0.4625,0.555,0.74) + armor 1125/mean(0.36,0.81,0.675,0.585) + hull 437.5/mean(0.469,0.469,0.469,0.469)"
+    },
+    "cap_capacity": {
+     "value": 300.0,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
+     "formula": "attr 482 capacitorCapacity: base 250; Capacitor Management +20% => 300"
+    },
+    "cap_recharge_s": {
+     "value": 106.25,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
+     "formula": "attr 55 rechargeRate: base 125000; Capacitor Systems Operation -15% => 106250 (ms)"
+    },
+    "cap_stable": {
+     "value": 0.0,
+     "tol": "exact",
+     "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
+     "formula": "use 11.54183 GJ/s (sum need/cycle), injection 0 GJ/s, peak 2.5*300/106.25 = 7.0588235 GJ/s; stable iff peak + injection >= use"
+    },
+    "cap_seconds_to_empty": {
+     "value": 47.88617594,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
+     "formula": "RK4 integration (h = 0.05 s) of dc/dt = 10/T*(sqrt(c)-c) - net/Cmax from c = 1 to c = 0, net drain 11.54183 GJ/s",
+     "estimated": "continuous drain stands in for discrete module cycles",
+     "finding": "F2"
+    },
+    "speed": {
+     "value": 997.4787042,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Stacking penalties\" (page read 2026-11-09); propulsion boost = speedFactor(20)/100 x thrust(567)/total mass (SDE attr 567 description: \"Used to divide with mass\"); mass = hull mass + massAddition(796) of plates and the propulsion module",
+     "formula": "passive max velocity 456.25 x (1 + speedFactor/100 x thrust/mass) for each active propulsion module, mass 1672280; no propulsion module: passive value"
+    }
+   }
+  },
+  {
+   "id": "1:alpha",
+   "ref": 1,
+   "hull": "Rifter",
+   "profile": "alpha",
+   "numbers": {
+    "cpu_used": {
+     "value": 158.25,
+     "tol": "abs0.01",
+     "source": "EVE University \"Fitting\" (CPU, powergrid, calibration); SDE attrs 48/50 (CPU), 11/30 (PG), 1132/1153 (calibration); skill bonuses per skill description and its SDE bonus attribute",
+     "formula": "sum of module CPU: 1x Damage Control I (attr 50 cpu: base 25 => 25) = 25 | 1x Small Armor Repairer I (attr 50 cpu: base 5 => 5) = 5 | 1x Gyrostabilizer I (attr 50 cpu: base 27 => 27) = 27 | 1x 200mm Steel Plates I (attr 50 cpu: base 15 => 15) = 15 | 1x 1MN Afterburner I (attr 50 cpu: base 15 => 15) = 15 | 1x Stasis Webifier I (attr 50 cpu: base 25 => 25) = 25 | 1x Initiated Compact Warp Scrambler (attr 50 cpu: base 26 => 26) = 26 | 3x 200mm AutoCannon I (attr 50 cpu: base 9; Weapon Upgrades -25% => 6.75) = 6.75 | 2x Small Projectile Burst Aerator I (attr 50 cpu: base 0 => 0) = 0"
+    },
+    "cpu_cap": {
+     "value": 162.5,
+     "tol": "abs0.01",
+     "source": "EVE University \"Fitting\" (CPU, powergrid, calibration); SDE attrs 48/50 (CPU), 11/30 (PG), 1132/1153 (calibration); skill bonuses per skill description and its SDE bonus attribute",
+     "formula": "attr 48 cpuOutput: base 130; CPU Management +25% => 162.5"
+    },
+    "pg_used": {
+     "value": 41.914472,
+     "tol": "abs0.01",
+     "source": "EVE University \"Fitting\" (CPU, powergrid, calibration); SDE attrs 48/50 (CPU), 11/30 (PG), 1132/1153 (calibration); skill bonuses per skill description and its SDE bonus attribute",
+     "formula": "sum of module PG: 1x Damage Control I (attr 30 power: base 1 => 1) = 1 | 1x Small Armor Repairer I (attr 30 power: base 5 => 5) = 5 | 1x Gyrostabilizer I (attr 30 power: base 1 => 1) = 1 | 1x 200mm Steel Plates I (attr 30 power: base 10 => 10) = 10 | 1x 1MN Afterburner I (attr 30 power: base 10 => 10) = 10 | 1x Stasis Webifier I (attr 30 power: base 1 => 1) = 1 | 1x Initiated Compact Warp Scrambler (attr 30 power: base 1 => 1) = 1 | 3x 200mm AutoCannon I (attr 30 power: base 4; Advanced Weapon Upgrades -6%; Small Projectile Burst Aerator I +7%; Small Projectile Burst Aerator I +7% => 4.304824) = 4.304824 | 2x Small Projectile Burst Aerator I (attr 30 power: base 0 => 0) = 0"
+    },
+    "pg_cap": {
+     "value": 51.25,
+     "tol": "abs0.01",
+     "source": "EVE University \"Fitting\" (CPU, powergrid, calibration); SDE attrs 48/50 (CPU), 11/30 (PG), 1132/1153 (calibration); skill bonuses per skill description and its SDE bonus attribute",
+     "formula": "attr 11 powerOutput: base 41; Power Grid Management +25% => 51.25"
+    },
+    "calib_used": {
+     "value": 400.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Fitting\" (CPU, powergrid, calibration); SDE attrs 48/50 (CPU), 11/30 (PG), 1132/1153 (calibration); skill bonuses per skill description and its SDE bonus attribute",
+     "formula": "sum of rig upgradeCost (attr 1153): 200 + 200"
+    },
+    "calib_cap": {
+     "value": 400.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Fitting\" (CPU, powergrid, calibration); SDE attrs 48/50 (CPU), 11/30 (PG), 1132/1153 (calibration); skill bonuses per skill description and its SDE bonus attribute",
+     "formula": "attr 1132 upgradeCapacity: base 400 => 400"
+    },
+    "drone_bw_cap": {
+     "value": 0.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Drones\"; SDE attrs 1271 (bandwidth), 1272 (bandwidth used), 283 (bay), 161 (volume), 352 (max active; Drones skill attr 353 per level)",
+     "formula": "attr 1271 droneBandwidth: base 0 => 0"
+    },
+    "drone_bw_used": {
+     "value": 0.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Drones\"; SDE attrs 1271 (bandwidth), 1272 (bandwidth used), 283 (bay), 161 (volume), 352 (max active; Drones skill attr 353 per level)",
+     "formula": "0 launched drones x attr 1272 (drones launch in fit order while bandwidth and the active cap allow)"
+    },
+    "drone_bay_cap": {
+     "value": 0.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Drones\"; SDE attrs 1271 (bandwidth), 1272 (bandwidth used), 283 (bay), 161 (volume), 352 (max active; Drones skill attr 353 per level)",
+     "formula": "attr 283 droneCapacity: base 0 => 0"
+    },
+    "drone_bay_used": {
+     "value": 0.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Drones\"; SDE attrs 1271 (bandwidth), 1272 (bandwidth used), 283 (bay), 161 (volume), 352 (max active; Drones skill attr 353 per level)",
+     "formula": "sum of drone volumes (invTypes.volume) of the 0 drones in the bay"
+    },
+    "drone_max_active": {
+     "value": 5.0,
+     "tol": "exact",
+     "source": "EVE University \"Drones\"; SDE attrs 1271 (bandwidth), 1272 (bandwidth used), 283 (bay), 161 (volume), 352 (max active; Drones skill attr 353 per level)",
+     "formula": "attr 352 maxActiveDrones: base 0; +5 Drones => 5 (pilot; Drones level x 1)"
+    },
+    "drone_active": {
+     "value": 0.0,
+     "tol": "exact",
+     "source": "EVE University \"Drones\"; SDE attrs 1271 (bandwidth), 1272 (bandwidth used), 283 (bay), 161 (volume), 352 (max active; Drones skill attr 353 per level)",
+     "formula": "min(max active 5, drones that fit in bandwidth 0)"
+    },
+    "max_locked": {
+     "value": 4.0,
+     "tol": "exact",
+     "source": "EVE University \"Targeting\"; locked targets = min(ship attr 192, pilot attr 192 = 2 + Target Management + Advanced Target Management, skill attr 311)",
+     "formula": "min(ship 4, pilot 6)"
+    },
+    "dps_weapons": {
+     "value": 100.050867,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Turret mechanics\" and \"Missile mechanics\"; SDE attrs 114/116/117/118 (damage), 64 (multiplier), 51 (cycle ms), 212 (pilot missile damage multiplier, raised by Ballistic Control System attr 213)",
+     "formula": "200mm AutoCannon I: (EMP S damage 12) x multiplier 4.325475 / (cycle 1556.379316 ms/1000) ; summed over 3 weapons"
+    },
+    "dps_drones": {
+     "value": 0.0,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Turret mechanics\" and \"Missile mechanics\"; SDE attrs 114/116/117/118 (damage), 64 (multiplier), 51 (cycle ms), 212 (pilot missile damage multiplier, raised by Ballistic Control System attr 213)",
+     "formula": "first bay drone,  ; summed over the 0 launched drones"
+    },
+    "dps_total": {
+     "value": 100.050867,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Turret mechanics\" and \"Missile mechanics\"; SDE attrs 114/116/117/118 (damage), 64 (multiplier), 51 (cycle ms), 212 (pilot missile damage multiplier, raised by Ballistic Control System attr 213)",
+     "formula": "weapons + drones"
+    },
+    "ehp": {
+     "value": 3589.906685,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Effective HP\"; SDE attrs 263/265/9 (HP), resonances 271-274, 267-270, 109/110/111/113; uniform profile",
+     "formula": "shield 540/mean(0.925,0.4625,0.555,0.74) + armor 1125/mean(0.36,0.81,0.675,0.585) + hull 437.5/mean(0.469,0.469,0.469,0.469)"
+    },
+    "cap_capacity": {
+     "value": 300.0,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
+     "formula": "attr 482 capacitorCapacity: base 250; Capacitor Management +20% => 300"
+    },
+    "cap_recharge_s": {
+     "value": 106.25,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
+     "formula": "attr 55 rechargeRate: base 125000; Capacitor Systems Operation -15% => 106250 (ms)"
+    },
+    "cap_stable": {
+     "value": 0.0,
+     "tol": "exact",
+     "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
+     "formula": "use 12.135948 GJ/s (sum need/cycle), injection 0 GJ/s, peak 2.5*300/106.25 = 7.0588235 GJ/s; stable iff peak + injection >= use"
+    },
+    "cap_seconds_to_empty": {
+     "value": 43.46761292,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
+     "formula": "RK4 integration (h = 0.05 s) of dc/dt = 10/T*(sqrt(c)-c) - net/Cmax from c = 1 to c = 0, net drain 12.135948 GJ/s",
+     "estimated": "continuous drain stands in for discrete module cycles",
+     "finding": "F2"
+    },
+    "speed": {
+     "value": 949.1073529,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Stacking penalties\" (page read 2026-11-09); propulsion boost = speedFactor(20)/100 x thrust(567)/total mass (SDE attr 567 description: \"Used to divide with mass\"); mass = hull mass + massAddition(796) of plates and the propulsion module",
+     "formula": "passive max velocity 438 x (1 + speedFactor/100 x thrust/mass) for each active propulsion module, mass 1700000; no propulsion module: passive value"
+    }
+   }
+  },
+  {
+   "id": "2:all0",
+   "ref": 2,
+   "hull": "Vexor",
+   "profile": "all0",
+   "numbers": {
+    "cpu_used": {
+     "value": 330.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Fitting\" (CPU, powergrid, calibration); SDE attrs 48/50 (CPU), 11/30 (PG), 1132/1153 (calibration); skill bonuses per skill description and its SDE bonus attribute",
+     "formula": "sum of module CPU: 2x Drone Damage Amplifier II (attr 50 cpu: base 30 => 30) = 30 | 1x Medium Armor Repairer II (attr 50 cpu: base 28 => 28) = 28 | 1x Multispectrum Energized Membrane II (attr 50 cpu: base 36 => 36) = 36 | 1x Damage Control II (attr 50 cpu: base 30 => 30) = 30 | 1x 10MN Afterburner II (attr 50 cpu: base 25 => 25) = 25 | 1x Medium Capacitor Booster II (attr 50 cpu: base 25 => 25) = 25 | 1x Drone Navigation Computer II (attr 50 cpu: base 35 => 35) = 35 | 1x Warp Scrambler II (attr 50 cpu: base 36 => 36) = 36 | 1x Drone Link Augmentor II (attr 50 cpu: base 55 => 55) = 55 | 2x Medium Auxiliary Nano Pump I (attr 50 cpu: base 0 => 0) = 0 | 1x Medium Nanobot Accelerator I (attr 50 cpu: base 0 => 0) = 0"
+    },
+    "cpu_cap": {
+     "value": 300.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Fitting\" (CPU, powergrid, calibration); SDE attrs 48/50 (CPU), 11/30 (PG), 1132/1153 (calibration); skill bonuses per skill description and its SDE bonus attribute",
+     "formula": "attr 48 cpuOutput: base 300; CPU Management +0% => 300"
+    },
+    "pg_used": {
+     "value": 410.678,
+     "tol": "abs0.01",
+     "source": "EVE University \"Fitting\" (CPU, powergrid, calibration); SDE attrs 48/50 (CPU), 11/30 (PG), 1132/1153 (calibration); skill bonuses per skill description and its SDE bonus attribute",
+     "formula": "sum of module PG: 2x Drone Damage Amplifier II (attr 30 power: base 1 => 1) = 1 | 1x Medium Armor Repairer II (attr 30 power: base 138; Medium Auxiliary Nano Pump I +10%; Medium Auxiliary Nano Pump I +10%; Medium Nanobot Accelerator I +10% => 183.678) = 183.678 | 1x Multispectrum Energized Membrane II (attr 30 power: base 1 => 1) = 1 | 1x Damage Control II (attr 30 power: base 1 => 1) = 1 | 1x 10MN Afterburner II (attr 30 power: base 55 => 55) = 55 | 1x Medium Capacitor Booster II (attr 30 power: base 165 => 165) = 165 | 1x Drone Navigation Computer II (attr 30 power: base 1 => 1) = 1 | 1x Warp Scrambler II (attr 30 power: base 1 => 1) = 1 | 1x Drone Link Augmentor II (attr 30 power: base 1 => 1) = 1 | 2x Medium Auxiliary Nano Pump I (attr 30 power: base 0 => 0) = 0 | 1x Medium Nanobot Accelerator I (attr 30 power: base 0 => 0) = 0"
+    },
+    "pg_cap": {
+     "value": 700.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Fitting\" (CPU, powergrid, calibration); SDE attrs 48/50 (CPU), 11/30 (PG), 1132/1153 (calibration); skill bonuses per skill description and its SDE bonus attribute",
+     "formula": "attr 11 powerOutput: base 700; Power Grid Management +0% => 700"
+    },
+    "calib_used": {
+     "value": 300.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Fitting\" (CPU, powergrid, calibration); SDE attrs 48/50 (CPU), 11/30 (PG), 1132/1153 (calibration); skill bonuses per skill description and its SDE bonus attribute",
+     "formula": "sum of rig upgradeCost (attr 1153): 100 + 100 + 100"
+    },
+    "calib_cap": {
+     "value": 400.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Fitting\" (CPU, powergrid, calibration); SDE attrs 48/50 (CPU), 11/30 (PG), 1132/1153 (calibration); skill bonuses per skill description and its SDE bonus attribute",
+     "formula": "attr 1132 upgradeCapacity: base 400 => 400"
+    },
+    "drone_bw_cap": {
+     "value": 75.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Drones\"; SDE attrs 1271 (bandwidth), 1272 (bandwidth used), 283 (bay), 161 (volume), 352 (max active; Drones skill attr 353 per level)",
+     "formula": "attr 1271 droneBandwidth: base 75 => 75"
+    },
+    "drone_bw_used": {
+     "value": 0.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Drones\"; SDE attrs 1271 (bandwidth), 1272 (bandwidth used), 283 (bay), 161 (volume), 352 (max active; Drones skill attr 353 per level)",
+     "formula": "0 launched drones x attr 1272 (drones launch in fit order while bandwidth and the active cap allow)"
+    },
+    "drone_bay_cap": {
+     "value": 125.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Drones\"; SDE attrs 1271 (bandwidth), 1272 (bandwidth used), 283 (bay), 161 (volume), 352 (max active; Drones skill attr 353 per level)",
+     "formula": "attr 283 droneCapacity: base 125 => 125"
+    },
+    "drone_bay_used": {
+     "value": 125.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Drones\"; SDE attrs 1271 (bandwidth), 1272 (bandwidth used), 283 (bay), 161 (volume), 352 (max active; Drones skill attr 353 per level)",
+     "formula": "sum of drone volumes (invTypes.volume) of the 15 drones in the bay"
+    },
+    "drone_max_active": {
+     "value": 0.0,
+     "tol": "exact",
+     "source": "EVE University \"Drones\"; SDE attrs 1271 (bandwidth), 1272 (bandwidth used), 283 (bay), 161 (volume), 352 (max active; Drones skill attr 353 per level)",
+     "formula": "attr 352 maxActiveDrones: base 0; +0 Drones => 0 (pilot; Drones level x 1)"
+    },
+    "drone_active": {
+     "value": 0.0,
+     "tol": "exact",
+     "source": "EVE University \"Drones\"; SDE attrs 1271 (bandwidth), 1272 (bandwidth used), 283 (bay), 161 (volume), 352 (max active; Drones skill attr 353 per level)",
+     "formula": "min(max active 0, drones that fit in bandwidth 75)"
+    },
+    "max_locked": {
+     "value": 2.0,
+     "tol": "exact",
+     "source": "EVE University \"Targeting\"; locked targets = min(ship attr 192, pilot attr 192 = 2 + Target Management + Advanced Target Management, skill attr 311)",
+     "formula": "min(ship 6, pilot 2)"
+    },
+    "dps_weapons": {
+     "value": 0.0,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Turret mechanics\" and \"Missile mechanics\"; SDE attrs 114/116/117/118 (damage), 64 (multiplier), 51 (cycle ms), 212 (pilot missile damage multiplier, raised by Ballistic Control System attr 213)",
+     "formula": "Medium Capacitor Booster II: (Navy Cap Booster 400 damage 0) x multiplier 1 / (cycle 0 ms/1000) ; summed over 1 weapons"
+    },
+    "dps_drones": {
+     "value": 0.0,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Turret mechanics\" and \"Missile mechanics\"; SDE attrs 114/116/117/118 (damage), 64 (multiplier), 51 (cycle ms), 212 (pilot missile damage multiplier, raised by Ballistic Control System attr 213)",
+     "formula": "first bay drone, Hammerhead II: damage 32 x 2.725813177 / (4000 ms/1000) ; summed over the 0 launched drones"
+    },
+    "dps_total": {
+     "value": 0.0,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Turret mechanics\" and \"Missile mechanics\"; SDE attrs 114/116/117/118 (damage), 64 (multiplier), 51 (cycle ms), 212 (pilot missile damage multiplier, raised by Ballistic Control System attr 213)",
+     "formula": "weapons + drones"
+    },
+    "ehp": {
+     "value": 11066.413,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Effective HP\"; SDE attrs 263/265/9 (HP), resonances 271-274, 267-270, 109/110/111/113; uniform profile",
+     "formula": "shield 1100/mean(0.875,0.4375,0.525,0.7) + armor 2000/mean(0.34,0.612,0.442,0.442) + hull 2000/mean(0.402,0.402,0.402,0.402)"
+    },
+    "cap_capacity": {
+     "value": 1450.0,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
+     "formula": "attr 482 capacitorCapacity: base 1450; Capacitor Management +0% => 1450"
+    },
+    "cap_recharge_s": {
+     "value": 482.5,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
+     "formula": "attr 55 rechargeRate: base 482500; Capacitor Systems Operation +0% => 482500 (ms)"
+    },
+    "cap_stable": {
+     "value": 1.0,
+     "tol": "exact",
+     "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
+     "formula": "use 25.886275 GJ/s (sum need/cycle), injection 33.333333 GJ/s, peak 2.5*1450/482.5 = 7.5129534 GJ/s; stable iff peak + injection >= use",
+     "estimated": "cap booster charge count and reload (10 s) not modelled: injection taken as continuous charge/cycle"
+    },
+    "cap_stable_pct": {
+     "value": 100.0,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
+     "formula": "net drain -7.4470588; k = net/peak = 0; pct = 100*((1+sqrt(1-k))/2)^2",
+     "estimated": "cap booster charge count and reload (10 s) not modelled: injection taken as continuous charge/cycle"
+    },
+    "speed": {
+     "value": 440.2639752,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Stacking penalties\" (page read 2026-11-09); propulsion boost = speedFactor(20)/100 x thrust(567)/total mass (SDE attr 567 description: \"Used to divide with mass\"); mass = hull mass + massAddition(796) of plates and the propulsion module",
+     "formula": "passive max velocity 195 x (1 + speedFactor/100 x thrust/mass) for each active propulsion module, mass 16100000; no propulsion module: passive value"
+    }
+   }
+  },
+  {
+   "id": "2:droner",
+   "ref": 2,
+   "hull": "Vexor",
+   "profile": "droner",
+   "numbers": {
+    "cpu_used": {
+     "value": 330.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Fitting\" (CPU, powergrid, calibration); SDE attrs 48/50 (CPU), 11/30 (PG), 1132/1153 (calibration); skill bonuses per skill description and its SDE bonus attribute",
+     "formula": "sum of module CPU: 2x Drone Damage Amplifier II (attr 50 cpu: base 30 => 30) = 30 | 1x Medium Armor Repairer II (attr 50 cpu: base 28 => 28) = 28 | 1x Multispectrum Energized Membrane II (attr 50 cpu: base 36 => 36) = 36 | 1x Damage Control II (attr 50 cpu: base 30 => 30) = 30 | 1x 10MN Afterburner II (attr 50 cpu: base 25 => 25) = 25 | 1x Medium Capacitor Booster II (attr 50 cpu: base 25 => 25) = 25 | 1x Drone Navigation Computer II (attr 50 cpu: base 35 => 35) = 35 | 1x Warp Scrambler II (attr 50 cpu: base 36 => 36) = 36 | 1x Drone Link Augmentor II (attr 50 cpu: base 55 => 55) = 55 | 2x Medium Auxiliary Nano Pump I (attr 50 cpu: base 0 => 0) = 0 | 1x Medium Nanobot Accelerator I (attr 50 cpu: base 0 => 0) = 0"
+    },
+    "cpu_cap": {
+     "value": 345.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Fitting\" (CPU, powergrid, calibration); SDE attrs 48/50 (CPU), 11/30 (PG), 1132/1153 (calibration); skill bonuses per skill description and its SDE bonus attribute",
+     "formula": "attr 48 cpuOutput: base 300; CPU Management +15% => 345"
+    },
+    "pg_used": {
+     "value": 410.678,
+     "tol": "abs0.01",
+     "source": "EVE University \"Fitting\" (CPU, powergrid, calibration); SDE attrs 48/50 (CPU), 11/30 (PG), 1132/1153 (calibration); skill bonuses per skill description and its SDE bonus attribute",
+     "formula": "sum of module PG: 2x Drone Damage Amplifier II (attr 30 power: base 1 => 1) = 1 | 1x Medium Armor Repairer II (attr 30 power: base 138; Medium Auxiliary Nano Pump I +10%; Medium Auxiliary Nano Pump I +10%; Medium Nanobot Accelerator I +10% => 183.678) = 183.678 | 1x Multispectrum Energized Membrane II (attr 30 power: base 1 => 1) = 1 | 1x Damage Control II (attr 30 power: base 1 => 1) = 1 | 1x 10MN Afterburner II (attr 30 power: base 55 => 55) = 55 | 1x Medium Capacitor Booster II (attr 30 power: base 165 => 165) = 165 | 1x Drone Navigation Computer II (attr 30 power: base 1 => 1) = 1 | 1x Warp Scrambler II (attr 30 power: base 1 => 1) = 1 | 1x Drone Link Augmentor II (attr 30 power: base 1 => 1) = 1 | 2x Medium Auxiliary Nano Pump I (attr 30 power: base 0 => 0) = 0 | 1x Medium Nanobot Accelerator I (attr 30 power: base 0 => 0) = 0"
+    },
+    "pg_cap": {
+     "value": 805.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Fitting\" (CPU, powergrid, calibration); SDE attrs 48/50 (CPU), 11/30 (PG), 1132/1153 (calibration); skill bonuses per skill description and its SDE bonus attribute",
+     "formula": "attr 11 powerOutput: base 700; Power Grid Management +15% => 805"
+    },
+    "calib_used": {
+     "value": 300.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Fitting\" (CPU, powergrid, calibration); SDE attrs 48/50 (CPU), 11/30 (PG), 1132/1153 (calibration); skill bonuses per skill description and its SDE bonus attribute",
+     "formula": "sum of rig upgradeCost (attr 1153): 100 + 100 + 100"
+    },
+    "calib_cap": {
+     "value": 400.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Fitting\" (CPU, powergrid, calibration); SDE attrs 48/50 (CPU), 11/30 (PG), 1132/1153 (calibration); skill bonuses per skill description and its SDE bonus attribute",
+     "formula": "attr 1132 upgradeCapacity: base 400 => 400"
+    },
+    "drone_bw_cap": {
+     "value": 75.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Drones\"; SDE attrs 1271 (bandwidth), 1272 (bandwidth used), 283 (bay), 161 (volume), 352 (max active; Drones skill attr 353 per level)",
+     "formula": "attr 1271 droneBandwidth: base 75 => 75"
+    },
+    "drone_bw_used": {
+     "value": 40.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Drones\"; SDE attrs 1271 (bandwidth), 1272 (bandwidth used), 283 (bay), 161 (volume), 352 (max active; Drones skill attr 353 per level)",
+     "formula": "4 launched drones x attr 1272 (drones launch in fit order while bandwidth and the active cap allow)"
+    },
+    "drone_bay_cap": {
+     "value": 125.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Drones\"; SDE attrs 1271 (bandwidth), 1272 (bandwidth used), 283 (bay), 161 (volume), 352 (max active; Drones skill attr 353 per level)",
+     "formula": "attr 283 droneCapacity: base 125 => 125"
+    },
+    "drone_bay_used": {
+     "value": 125.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Drones\"; SDE attrs 1271 (bandwidth), 1272 (bandwidth used), 283 (bay), 161 (volume), 352 (max active; Drones skill attr 353 per level)",
+     "formula": "sum of drone volumes (invTypes.volume) of the 15 drones in the bay"
+    },
+    "drone_max_active": {
+     "value": 4.0,
+     "tol": "exact",
+     "source": "EVE University \"Drones\"; SDE attrs 1271 (bandwidth), 1272 (bandwidth used), 283 (bay), 161 (volume), 352 (max active; Drones skill attr 353 per level)",
+     "formula": "attr 352 maxActiveDrones: base 0; +4 Drones => 4 (pilot; Drones level x 1)"
+    },
+    "drone_active": {
+     "value": 4.0,
+     "tol": "exact",
+     "source": "EVE University \"Drones\"; SDE attrs 1271 (bandwidth), 1272 (bandwidth used), 283 (bay), 161 (volume), 352 (max active; Drones skill attr 353 per level)",
+     "formula": "min(max active 4, drones that fit in bandwidth 75)"
+    },
+    "max_locked": {
+     "value": 2.0,
+     "tol": "exact",
+     "source": "EVE University \"Targeting\"; locked targets = min(ship attr 192, pilot attr 192 = 2 + Target Management + Advanced Target Management, skill attr 311)",
+     "formula": "min(ship 6, pilot 2)"
+    },
+    "dps_weapons": {
+     "value": 0.0,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Turret mechanics\" and \"Missile mechanics\"; SDE attrs 114/116/117/118 (damage), 64 (multiplier), 51 (cycle ms), 212 (pilot missile damage multiplier, raised by Ballistic Control System attr 213)",
+     "formula": "Medium Capacitor Booster II: (Navy Cap Booster 400 damage 0) x multiplier 1 / (cycle 0 ms/1000) ; summed over 1 weapons"
+    },
+    "dps_drones": {
+     "value": 146.5397164,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Turret mechanics\" and \"Missile mechanics\"; SDE attrs 114/116/117/118 (damage), 64 (multiplier), 51 (cycle ms), 212 (pilot missile damage multiplier, raised by Ballistic Control System attr 213)",
+     "formula": "first bay drone, Hammerhead II: damage 32 x 4.579366138 / (4000 ms/1000) ; summed over the 4 launched drones"
+    },
+    "dps_total": {
+     "value": 146.5397164,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Turret mechanics\" and \"Missile mechanics\"; SDE attrs 114/116/117/118 (damage), 64 (multiplier), 51 (cycle ms), 212 (pilot missile damage multiplier, raised by Ballistic Control System attr 213)",
+     "formula": "weapons + drones"
+    },
+    "ehp": {
+     "value": 12466.27643,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Effective HP\"; SDE attrs 263/265/9 (HP), resonances 271-274, 267-270, 109/110/111/113; uniform profile",
+     "formula": "shield 1100/mean(0.875,0.4375,0.525,0.7) + armor 2300/mean(0.34,0.612,0.442,0.442) + hull 2300/mean(0.402,0.402,0.402,0.402)"
+    },
+    "cap_capacity": {
+     "value": 1450.0,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
+     "formula": "attr 482 capacitorCapacity: base 1450; Capacitor Management +0% => 1450"
+    },
+    "cap_recharge_s": {
+     "value": 482.5,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
+     "formula": "attr 55 rechargeRate: base 482500; Capacitor Systems Operation +0% => 482500 (ms)"
+    },
+    "cap_stable": {
+     "value": 1.0,
+     "tol": "exact",
+     "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
+     "formula": "use 28.654441 GJ/s (sum need/cycle), injection 33.333333 GJ/s, peak 2.5*1450/482.5 = 7.5129534 GJ/s; stable iff peak + injection >= use",
+     "estimated": "cap booster charge count and reload (10 s) not modelled: injection taken as continuous charge/cycle"
+    },
+    "cap_stable_pct": {
+     "value": 100.0,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
+     "formula": "net drain -4.6788927; k = net/peak = 0; pct = 100*((1+sqrt(1-k))/2)^2",
+     "estimated": "cap booster charge count and reload (10 s) not modelled: injection taken as continuous charge/cycle"
+    },
+    "speed": {
+     "value": 440.2639752,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Stacking penalties\" (page read 2026-11-09); propulsion boost = speedFactor(20)/100 x thrust(567)/total mass (SDE attr 567 description: \"Used to divide with mass\"); mass = hull mass + massAddition(796) of plates and the propulsion module",
+     "formula": "passive max velocity 195 x (1 + speedFactor/100 x thrust/mass) for each active propulsion module, mass 16100000; no propulsion module: passive value"
+    }
+   }
+  },
+  {
+   "id": "2:alpha",
+   "ref": 2,
+   "hull": "Vexor",
+   "profile": "alpha",
+   "numbers": {
+    "cpu_used": {
+     "value": 330.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Fitting\" (CPU, powergrid, calibration); SDE attrs 48/50 (CPU), 11/30 (PG), 1132/1153 (calibration); skill bonuses per skill description and its SDE bonus attribute",
+     "formula": "sum of module CPU: 2x Drone Damage Amplifier II (attr 50 cpu: base 30 => 30) = 30 | 1x Medium Armor Repairer II (attr 50 cpu: base 28 => 28) = 28 | 1x Multispectrum Energized Membrane II (attr 50 cpu: base 36 => 36) = 36 | 1x Damage Control II (attr 50 cpu: base 30 => 30) = 30 | 1x 10MN Afterburner II (attr 50 cpu: base 25 => 25) = 25 | 1x Medium Capacitor Booster II (attr 50 cpu: base 25 => 25) = 25 | 1x Drone Navigation Computer II (attr 50 cpu: base 35 => 35) = 35 | 1x Warp Scrambler II (attr 50 cpu: base 36 => 36) = 36 | 1x Drone Link Augmentor II (attr 50 cpu: base 55 => 55) = 55 | 2x Medium Auxiliary Nano Pump I (attr 50 cpu: base 0 => 0) = 0 | 1x Medium Nanobot Accelerator I (attr 50 cpu: base 0 => 0) = 0"
+    },
+    "cpu_cap": {
+     "value": 375.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Fitting\" (CPU, powergrid, calibration); SDE attrs 48/50 (CPU), 11/30 (PG), 1132/1153 (calibration); skill bonuses per skill description and its SDE bonus attribute",
+     "formula": "attr 48 cpuOutput: base 300; CPU Management +25% => 375"
+    },
+    "pg_used": {
+     "value": 396.055934,
+     "tol": "abs0.01",
+     "source": "EVE University \"Fitting\" (CPU, powergrid, calibration); SDE attrs 48/50 (CPU), 11/30 (PG), 1132/1153 (calibration); skill bonuses per skill description and its SDE bonus attribute",
+     "formula": "sum of module PG: 2x Drone Damage Amplifier II (attr 30 power: base 1 => 1) = 1 | 1x Medium Armor Repairer II (attr 30 power: base 138; Medium Auxiliary Nano Pump I +7%; Medium Auxiliary Nano Pump I +7%; Medium Nanobot Accelerator I +7% => 169.055934) = 169.055934 | 1x Multispectrum Energized Membrane II (attr 30 power: base 1 => 1) = 1 | 1x Damage Control II (attr 30 power: base 1 => 1) = 1 | 1x 10MN Afterburner II (attr 30 power: base 55 => 55) = 55 | 1x Medium Capacitor Booster II (attr 30 power: base 165 => 165) = 165 | 1x Drone Navigation Computer II (attr 30 power: base 1 => 1) = 1 | 1x Warp Scrambler II (attr 30 power: base 1 => 1) = 1 | 1x Drone Link Augmentor II (attr 30 power: base 1 => 1) = 1 | 2x Medium Auxiliary Nano Pump I (attr 30 power: base 0 => 0) = 0 | 1x Medium Nanobot Accelerator I (attr 30 power: base 0 => 0) = 0"
+    },
+    "pg_cap": {
+     "value": 875.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Fitting\" (CPU, powergrid, calibration); SDE attrs 48/50 (CPU), 11/30 (PG), 1132/1153 (calibration); skill bonuses per skill description and its SDE bonus attribute",
+     "formula": "attr 11 powerOutput: base 700; Power Grid Management +25% => 875"
+    },
+    "calib_used": {
+     "value": 300.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Fitting\" (CPU, powergrid, calibration); SDE attrs 48/50 (CPU), 11/30 (PG), 1132/1153 (calibration); skill bonuses per skill description and its SDE bonus attribute",
+     "formula": "sum of rig upgradeCost (attr 1153): 100 + 100 + 100"
+    },
+    "calib_cap": {
+     "value": 400.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Fitting\" (CPU, powergrid, calibration); SDE attrs 48/50 (CPU), 11/30 (PG), 1132/1153 (calibration); skill bonuses per skill description and its SDE bonus attribute",
+     "formula": "attr 1132 upgradeCapacity: base 400 => 400"
+    },
+    "drone_bw_cap": {
+     "value": 75.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Drones\"; SDE attrs 1271 (bandwidth), 1272 (bandwidth used), 283 (bay), 161 (volume), 352 (max active; Drones skill attr 353 per level)",
+     "formula": "attr 1271 droneBandwidth: base 75 => 75"
+    },
+    "drone_bw_used": {
+     "value": 50.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Drones\"; SDE attrs 1271 (bandwidth), 1272 (bandwidth used), 283 (bay), 161 (volume), 352 (max active; Drones skill attr 353 per level)",
+     "formula": "5 launched drones x attr 1272 (drones launch in fit order while bandwidth and the active cap allow)"
+    },
+    "drone_bay_cap": {
+     "value": 125.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Drones\"; SDE attrs 1271 (bandwidth), 1272 (bandwidth used), 283 (bay), 161 (volume), 352 (max active; Drones skill attr 353 per level)",
+     "formula": "attr 283 droneCapacity: base 125 => 125"
+    },
+    "drone_bay_used": {
+     "value": 125.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Drones\"; SDE attrs 1271 (bandwidth), 1272 (bandwidth used), 283 (bay), 161 (volume), 352 (max active; Drones skill attr 353 per level)",
+     "formula": "sum of drone volumes (invTypes.volume) of the 15 drones in the bay"
+    },
+    "drone_max_active": {
+     "value": 5.0,
+     "tol": "exact",
+     "source": "EVE University \"Drones\"; SDE attrs 1271 (bandwidth), 1272 (bandwidth used), 283 (bay), 161 (volume), 352 (max active; Drones skill attr 353 per level)",
+     "formula": "attr 352 maxActiveDrones: base 0; +5 Drones => 5 (pilot; Drones level x 1)"
+    },
+    "drone_active": {
+     "value": 5.0,
+     "tol": "exact",
+     "source": "EVE University \"Drones\"; SDE attrs 1271 (bandwidth), 1272 (bandwidth used), 283 (bay), 161 (volume), 352 (max active; Drones skill attr 353 per level)",
+     "formula": "min(max active 5, drones that fit in bandwidth 75)"
+    },
+    "max_locked": {
+     "value": 6.0,
+     "tol": "exact",
+     "source": "EVE University \"Targeting\"; locked targets = min(ship attr 192, pilot attr 192 = 2 + Target Management + Advanced Target Management, skill attr 311)",
+     "formula": "min(ship 6, pilot 6)"
+    },
+    "dps_weapons": {
+     "value": 0.0,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Turret mechanics\" and \"Missile mechanics\"; SDE attrs 114/116/117/118 (damage), 64 (multiplier), 51 (cycle ms), 212 (pilot missile damage multiplier, raised by Ballistic Control System attr 213)",
+     "formula": "Medium Capacitor Booster II: (Navy Cap Booster 400 damage 0) x multiplier 1 / (cycle 0 ms/1000) ; summed over 1 weapons"
+    },
+    "dps_drones": {
+     "value": 247.6521207,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Turret mechanics\" and \"Missile mechanics\"; SDE attrs 114/116/117/118 (damage), 64 (multiplier), 51 (cycle ms), 212 (pilot missile damage multiplier, raised by Ballistic Control System attr 213)",
+     "formula": "first bay drone, Hammerhead II: damage 32 x 6.191303019 / (4000 ms/1000) ; summed over the 5 launched drones"
+    },
+    "dps_total": {
+     "value": 247.6521207,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Turret mechanics\" and \"Missile mechanics\"; SDE attrs 114/116/117/118 (damage), 64 (multiplier), 51 (cycle ms), 212 (pilot missile damage multiplier, raised by Ballistic Control System attr 213)",
+     "formula": "weapons + drones"
+    },
+    "ehp": {
+     "value": 13885.97375,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Effective HP\"; SDE attrs 263/265/9 (HP), resonances 271-274, 267-270, 109/110/111/113; uniform profile",
+     "formula": "shield 1320/mean(0.875,0.4375,0.525,0.7) + armor 2500/mean(0.3315,0.5967,0.43095,0.43095) + hull 2500/mean(0.402,0.402,0.402,0.402)"
+    },
+    "cap_capacity": {
+     "value": 1740.0,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
+     "formula": "attr 482 capacitorCapacity: base 1450; Capacitor Management +20% => 1740"
+    },
+    "cap_recharge_s": {
+     "value": 410.125,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
+     "formula": "attr 55 rechargeRate: base 482500; Capacitor Systems Operation -15% => 410125 (ms)"
+    },
+    "cap_stable": {
+     "value": 1.0,
+     "tol": "exact",
+     "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
+     "formula": "use 29.286797 GJ/s (sum need/cycle), injection 33.333333 GJ/s, peak 2.5*1740/410.125 = 10.606522 GJ/s; stable iff peak + injection >= use",
+     "estimated": "cap booster charge count and reload (10 s) not modelled: injection taken as continuous charge/cycle"
+    },
+    "cap_stable_pct": {
+     "value": 100.0,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
+     "formula": "net drain -4.0465359; k = net/peak = 0; pct = 100*((1+sqrt(1-k))/2)^2",
+     "estimated": "cap booster charge count and reload (10 s) not modelled: injection taken as continuous charge/cycle"
+    },
+    "speed": {
+     "value": 572.4642857,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Stacking penalties\" (page read 2026-11-09); propulsion boost = speedFactor(20)/100 x thrust(567)/total mass (SDE attr 567 description: \"Used to divide with mass\"); mass = hull mass + massAddition(796) of plates and the propulsion module",
+     "formula": "passive max velocity 234 x (1 + speedFactor/100 x thrust/mass) for each active propulsion module, mass 16100000; no propulsion module: passive value"
+    }
+   }
+  },
+  {
+   "id": "3:missiler",
+   "ref": 3,
+   "hull": "Cerberus",
+   "profile": "missiler",
+   "numbers": {
+    "cpu_used": {
+     "value": 577.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Fitting\" (CPU, powergrid, calibration); SDE attrs 48/50 (CPU), 11/30 (PG), 1132/1153 (calibration); skill bonuses per skill description and its SDE bonus attribute",
+     "formula": "sum of module CPU: 2x Ballistic Control System II (attr 50 cpu: base 40 => 40) = 40 | 1x Damage Control II (attr 50 cpu: base 30 => 30) = 30 | 1x Power Diagnostic System II (attr 50 cpu: base 22; Energy Grid Upgrades -25% => 16.5) = 16.5 | 1x 10MN Afterburner II (attr 50 cpu: base 25 => 25) = 25 | 2x Large Shield Extender II (attr 50 cpu: base 45 => 45) = 45 | 1x Multispectrum Shield Hardener II (attr 50 cpu: base 44 => 44) = 44 | 1x Warp Disruptor II (attr 50 cpu: base 44 => 44) = 44 | 6x Heavy Missile Launcher II (attr 50 cpu: base 55; Weapon Upgrades -25% => 41.25) = 41.25 | 2x Medium Core Defense Field Extender I (attr 50 cpu: base 0 => 0) = 0"
+    },
+    "cpu_cap": {
+     "value": 668.75,
+     "tol": "abs0.01",
+     "source": "EVE University \"Fitting\" (CPU, powergrid, calibration); SDE attrs 48/50 (CPU), 11/30 (PG), 1132/1153 (calibration); skill bonuses per skill description and its SDE bonus attribute",
+     "formula": "attr 48 cpuOutput: base 535; CPU Management +25% => 668.75"
+    },
+    "pg_used": {
+     "value": 867.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Fitting\" (CPU, powergrid, calibration); SDE attrs 48/50 (CPU), 11/30 (PG), 1132/1153 (calibration); skill bonuses per skill description and its SDE bonus attribute",
+     "formula": "sum of module PG: 2x Ballistic Control System II (attr 30 power: base 1 => 1) = 1 | 1x Damage Control II (attr 30 power: base 1 => 1) = 1 | 1x Power Diagnostic System II (attr 30 power: base 0 => 0) = 0 | 1x 10MN Afterburner II (attr 30 power: base 55 => 55) = 55 | 2x Large Shield Extender II (attr 30 power: base 160; Shield Upgrades -25% => 120) = 120 | 1x Multispectrum Shield Hardener II (attr 30 power: base 1 => 1) = 1 | 1x Warp Disruptor II (attr 30 power: base 1 => 1) = 1 | 6x Heavy Missile Launcher II (attr 30 power: base 105; Advanced Weapon Upgrades -10% => 94.5) = 94.5 | 2x Medium Core Defense Field Extender I (attr 30 power: base 0 => 0) = 0"
+    },
+    "pg_cap": {
+     "value": 1086.5,
+     "tol": "abs0.01",
+     "source": "EVE University \"Fitting\" (CPU, powergrid, calibration); SDE attrs 48/50 (CPU), 11/30 (PG), 1132/1153 (calibration); skill bonuses per skill description and its SDE bonus attribute",
+     "formula": "attr 11 powerOutput: base 820; x1.06 Power Diagnostic System II; Power Grid Management +25% => 1086.5"
+    },
+    "calib_used": {
+     "value": 100.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Fitting\" (CPU, powergrid, calibration); SDE attrs 48/50 (CPU), 11/30 (PG), 1132/1153 (calibration); skill bonuses per skill description and its SDE bonus attribute",
+     "formula": "sum of rig upgradeCost (attr 1153): 50 + 50"
+    },
+    "calib_cap": {
+     "value": 400.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Fitting\" (CPU, powergrid, calibration); SDE attrs 48/50 (CPU), 11/30 (PG), 1132/1153 (calibration); skill bonuses per skill description and its SDE bonus attribute",
+     "formula": "attr 1132 upgradeCapacity: base 400 => 400"
+    },
+    "drone_bw_cap": {
+     "value": 15.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Drones\"; SDE attrs 1271 (bandwidth), 1272 (bandwidth used), 283 (bay), 161 (volume), 352 (max active; Drones skill attr 353 per level)",
+     "formula": "attr 1271 droneBandwidth: base 15 => 15"
+    },
+    "drone_bw_used": {
+     "value": 0.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Drones\"; SDE attrs 1271 (bandwidth), 1272 (bandwidth used), 283 (bay), 161 (volume), 352 (max active; Drones skill attr 353 per level)",
+     "formula": "0 launched drones x attr 1272 (drones launch in fit order while bandwidth and the active cap allow)"
+    },
+    "drone_bay_cap": {
+     "value": 15.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Drones\"; SDE attrs 1271 (bandwidth), 1272 (bandwidth used), 283 (bay), 161 (volume), 352 (max active; Drones skill attr 353 per level)",
+     "formula": "attr 283 droneCapacity: base 15 => 15"
+    },
+    "drone_bay_used": {
+     "value": 0.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Drones\"; SDE attrs 1271 (bandwidth), 1272 (bandwidth used), 283 (bay), 161 (volume), 352 (max active; Drones skill attr 353 per level)",
+     "formula": "sum of drone volumes (invTypes.volume) of the 0 drones in the bay"
+    },
+    "drone_max_active": {
+     "value": 5.0,
+     "tol": "exact",
+     "source": "EVE University \"Drones\"; SDE attrs 1271 (bandwidth), 1272 (bandwidth used), 283 (bay), 161 (volume), 352 (max active; Drones skill attr 353 per level)",
+     "formula": "attr 352 maxActiveDrones: base 0; +5 Drones => 5 (pilot; Drones level x 1)"
+    },
+    "drone_active": {
+     "value": 0.0,
+     "tol": "exact",
+     "source": "EVE University \"Drones\"; SDE attrs 1271 (bandwidth), 1272 (bandwidth used), 283 (bay), 161 (volume), 352 (max active; Drones skill attr 353 per level)",
+     "formula": "min(max active 5, drones that fit in bandwidth 15)"
+    },
+    "max_locked": {
+     "value": 6.0,
+     "tol": "exact",
+     "source": "EVE University \"Targeting\"; locked targets = min(ship attr 192, pilot attr 192 = 2 + Target Management + Advanced Target Management, skill attr 311)",
+     "formula": "min(ship 6, pilot 12)"
+    },
+    "dps_weapons": {
+     "value": 216.969719,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Turret mechanics\" and \"Missile mechanics\"; SDE attrs 114/116/117/118 (damage), 64 (multiplier), 51 (cycle ms), 212 (pilot missile damage multiplier, raised by Ballistic Control System attr 213)",
+     "formula": "Heavy Missile Launcher II: (Scourge Heavy Missile damage 222.103125) x multiplier 1.195603198 / (cycle 7343.343792 ms/1000) ; summed over 6 weapons"
+    },
+    "dps_drones": {
+     "value": 0.0,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Turret mechanics\" and \"Missile mechanics\"; SDE attrs 114/116/117/118 (damage), 64 (multiplier), 51 (cycle ms), 212 (pilot missile damage multiplier, raised by Ballistic Control System attr 213)",
+     "formula": "first bay drone,  ; summed over the 0 launched drones"
+    },
+    "dps_total": {
+     "value": 216.969719,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Turret mechanics\" and \"Missile mechanics\"; SDE attrs 114/116/117/118 (damage), 64 (multiplier), 51 (cycle ms), 212 (pilot missile damage multiplier, raised by Ballistic Control System attr 213)",
+     "formula": "weapons + drones"
+    },
+    "ehp": {
+     "value": 50364.12195,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Effective HP\"; SDE attrs 263/265/9 (HP), resonances 271-274, 267-270, 109/110/111/113; uniform profile",
+     "formula": "shield 12497.6/mean(0.590625,0.295313,0.177188,0.118125) + armor 1500/mean(0.425,0.765,0.31875,0.116875) + hull 1750/mean(0.402,0.402,0.402,0.402)"
+    },
+    "cap_capacity": {
+     "value": 1575.0,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
+     "formula": "attr 482 capacitorCapacity: base 1200; x1.05 Power Diagnostic System II; Capacitor Management +25% => 1575"
+    },
+    "cap_recharge_s": {
+     "value": 161.26875,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
+     "formula": "attr 55 rechargeRate: base 235000; x0.915 Power Diagnostic System II; Capacitor Systems Operation -25% => 161268.75 (ms)"
+    },
+    "cap_stable": {
+     "value": 1.0,
+     "tol": "exact",
+     "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
+     "formula": "use 10.7 GJ/s (sum need/cycle), injection 0 GJ/s, peak 2.5*1575/161.26875 = 24.415766 GJ/s; stable iff peak + injection >= use"
+    },
+    "cap_stable_pct": {
+     "value": 76.51924185,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
+     "formula": "net drain 10.7; k = net/peak = 0.43824143; pct = 100*((1+sqrt(1-k))/2)^2",
+     "finding": "F1"
+    },
+    "speed": {
+     "value": 667.82943,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Stacking penalties\" (page read 2026-11-09); propulsion boost = speedFactor(20)/100 x thrust(567)/total mass (SDE attr 567 description: \"Used to divide with mass\"); mass = hull mass + massAddition(796) of plates and the propulsion module",
+     "formula": "passive max velocity 275 x (1 + speedFactor/100 x thrust/mass) for each active propulsion module, mass 17720000; no propulsion module: passive value"
+    }
+   }
+  },
+  {
+   "id": "3:fitIII",
+   "ref": 3,
+   "hull": "Cerberus",
+   "profile": "fitIII",
+   "numbers": {
+    "cpu_used": {
+     "value": 595.7,
+     "tol": "abs0.01",
+     "source": "EVE University \"Fitting\" (CPU, powergrid, calibration); SDE attrs 48/50 (CPU), 11/30 (PG), 1132/1153 (calibration); skill bonuses per skill description and its SDE bonus attribute",
+     "formula": "sum of module CPU: 2x Ballistic Control System II (attr 50 cpu: base 40 => 40) = 40 | 1x Damage Control II (attr 50 cpu: base 30 => 30) = 30 | 1x Power Diagnostic System II (attr 50 cpu: base 22; Energy Grid Upgrades -15% => 18.7) = 18.7 | 1x 10MN Afterburner II (attr 50 cpu: base 25 => 25) = 25 | 2x Large Shield Extender II (attr 50 cpu: base 45 => 45) = 45 | 1x Multispectrum Shield Hardener II (attr 50 cpu: base 44 => 44) = 44 | 1x Warp Disruptor II (attr 50 cpu: base 44 => 44) = 44 | 6x Heavy Missile Launcher II (attr 50 cpu: base 55; Weapon Upgrades -20% => 44) = 44 | 2x Medium Core Defense Field Extender I (attr 50 cpu: base 0 => 0) = 0"
+    },
+    "cpu_cap": {
+     "value": 615.25,
+     "tol": "abs0.01",
+     "source": "EVE University \"Fitting\" (CPU, powergrid, calibration); SDE attrs 48/50 (CPU), 11/30 (PG), 1132/1153 (calibration); skill bonuses per skill description and its SDE bonus attribute",
+     "formula": "attr 48 cpuOutput: base 535; CPU Management +15% => 615.25"
+    },
+    "pg_used": {
+     "value": 924.2,
+     "tol": "abs0.01",
+     "source": "EVE University \"Fitting\" (CPU, powergrid, calibration); SDE attrs 48/50 (CPU), 11/30 (PG), 1132/1153 (calibration); skill bonuses per skill description and its SDE bonus attribute",
+     "formula": "sum of module PG: 2x Ballistic Control System II (attr 30 power: base 1 => 1) = 1 | 1x Damage Control II (attr 30 power: base 1 => 1) = 1 | 1x Power Diagnostic System II (attr 30 power: base 0 => 0) = 0 | 1x 10MN Afterburner II (attr 30 power: base 55 => 55) = 55 | 2x Large Shield Extender II (attr 30 power: base 160; Shield Upgrades -15% => 136) = 136 | 1x Multispectrum Shield Hardener II (attr 30 power: base 1 => 1) = 1 | 1x Warp Disruptor II (attr 30 power: base 1 => 1) = 1 | 6x Heavy Missile Launcher II (attr 30 power: base 105; Advanced Weapon Upgrades -6% => 98.7) = 98.7 | 2x Medium Core Defense Field Extender I (attr 30 power: base 0 => 0) = 0"
+    },
+    "pg_cap": {
+     "value": 999.58,
+     "tol": "abs0.01",
+     "source": "EVE University \"Fitting\" (CPU, powergrid, calibration); SDE attrs 48/50 (CPU), 11/30 (PG), 1132/1153 (calibration); skill bonuses per skill description and its SDE bonus attribute",
+     "formula": "attr 11 powerOutput: base 820; x1.06 Power Diagnostic System II; Power Grid Management +15% => 999.58"
+    },
+    "calib_used": {
+     "value": 100.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Fitting\" (CPU, powergrid, calibration); SDE attrs 48/50 (CPU), 11/30 (PG), 1132/1153 (calibration); skill bonuses per skill description and its SDE bonus attribute",
+     "formula": "sum of rig upgradeCost (attr 1153): 50 + 50"
+    },
+    "calib_cap": {
+     "value": 400.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Fitting\" (CPU, powergrid, calibration); SDE attrs 48/50 (CPU), 11/30 (PG), 1132/1153 (calibration); skill bonuses per skill description and its SDE bonus attribute",
+     "formula": "attr 1132 upgradeCapacity: base 400 => 400"
+    },
+    "drone_bw_cap": {
+     "value": 15.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Drones\"; SDE attrs 1271 (bandwidth), 1272 (bandwidth used), 283 (bay), 161 (volume), 352 (max active; Drones skill attr 353 per level)",
+     "formula": "attr 1271 droneBandwidth: base 15 => 15"
+    },
+    "drone_bw_used": {
+     "value": 0.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Drones\"; SDE attrs 1271 (bandwidth), 1272 (bandwidth used), 283 (bay), 161 (volume), 352 (max active; Drones skill attr 353 per level)",
+     "formula": "0 launched drones x attr 1272 (drones launch in fit order while bandwidth and the active cap allow)"
+    },
+    "drone_bay_cap": {
+     "value": 15.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Drones\"; SDE attrs 1271 (bandwidth), 1272 (bandwidth used), 283 (bay), 161 (volume), 352 (max active; Drones skill attr 353 per level)",
+     "formula": "attr 283 droneCapacity: base 15 => 15"
+    },
+    "drone_bay_used": {
+     "value": 0.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Drones\"; SDE attrs 1271 (bandwidth), 1272 (bandwidth used), 283 (bay), 161 (volume), 352 (max active; Drones skill attr 353 per level)",
+     "formula": "sum of drone volumes (invTypes.volume) of the 0 drones in the bay"
+    },
+    "drone_max_active": {
+     "value": 5.0,
+     "tol": "exact",
+     "source": "EVE University \"Drones\"; SDE attrs 1271 (bandwidth), 1272 (bandwidth used), 283 (bay), 161 (volume), 352 (max active; Drones skill attr 353 per level)",
+     "formula": "attr 352 maxActiveDrones: base 0; +5 Drones => 5 (pilot; Drones level x 1)"
+    },
+    "drone_active": {
+     "value": 0.0,
+     "tol": "exact",
+     "source": "EVE University \"Drones\"; SDE attrs 1271 (bandwidth), 1272 (bandwidth used), 283 (bay), 161 (volume), 352 (max active; Drones skill attr 353 per level)",
+     "formula": "min(max active 5, drones that fit in bandwidth 15)"
+    },
+    "max_locked": {
+     "value": 6.0,
+     "tol": "exact",
+     "source": "EVE University \"Targeting\"; locked targets = min(ship attr 192, pilot attr 192 = 2 + Target Management + Advanced Target Management, skill attr 311)",
+     "formula": "min(ship 6, pilot 12)"
+    },
+    "dps_weapons": {
+     "value": 246.0542035,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Turret mechanics\" and \"Missile mechanics\"; SDE attrs 114/116/117/118 (damage), 64 (multiplier), 51 (cycle ms), 212 (pilot missile damage multiplier, raised by Ballistic Control System attr 213)",
+     "formula": "Heavy Missile Launcher II: (Scourge Heavy Missile damage 230.484375) x multiplier 1.195603198 / (cycle 6719.686604 ms/1000) ; summed over 6 weapons"
+    },
+    "dps_drones": {
+     "value": 0.0,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Turret mechanics\" and \"Missile mechanics\"; SDE attrs 114/116/117/118 (damage), 64 (multiplier), 51 (cycle ms), 212 (pilot missile damage multiplier, raised by Ballistic Control System attr 213)",
+     "formula": "first bay drone,  ; summed over the 0 launched drones"
+    },
+    "dps_total": {
+     "value": 246.0542035,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Turret mechanics\" and \"Missile mechanics\"; SDE attrs 114/116/117/118 (damage), 64 (multiplier), 51 (cycle ms), 212 (pilot missile damage multiplier, raised by Ballistic Control System attr 213)",
+     "formula": "weapons + drones"
+    },
+    "ehp": {
+     "value": 50364.12195,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Effective HP\"; SDE attrs 263/265/9 (HP), resonances 271-274, 267-270, 109/110/111/113; uniform profile",
+     "formula": "shield 12497.6/mean(0.590625,0.295313,0.177188,0.118125) + armor 1500/mean(0.425,0.765,0.31875,0.116875) + hull 1750/mean(0.402,0.402,0.402,0.402)"
+    },
+    "cap_capacity": {
+     "value": 1575.0,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
+     "formula": "attr 482 capacitorCapacity: base 1200; x1.05 Power Diagnostic System II; Capacitor Management +25% => 1575"
+    },
+    "cap_recharge_s": {
+     "value": 161.26875,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
+     "formula": "attr 55 rechargeRate: base 235000; x0.915 Power Diagnostic System II; Capacitor Systems Operation -25% => 161268.75 (ms)"
+    },
+    "cap_stable": {
+     "value": 1.0,
+     "tol": "exact",
+     "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
+     "formula": "use 10.7 GJ/s (sum need/cycle), injection 0 GJ/s, peak 2.5*1575/161.26875 = 24.415766 GJ/s; stable iff peak + injection >= use"
+    },
+    "cap_stable_pct": {
+     "value": 76.51924185,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
+     "formula": "net drain 10.7; k = net/peak = 0.43824143; pct = 100*((1+sqrt(1-k))/2)^2",
+     "finding": "F1"
+    },
+    "speed": {
+     "value": 667.82943,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Stacking penalties\" (page read 2026-11-09); propulsion boost = speedFactor(20)/100 x thrust(567)/total mass (SDE attr 567 description: \"Used to divide with mass\"); mass = hull mass + massAddition(796) of plates and the propulsion module",
+     "formula": "passive max velocity 275 x (1 + speedFactor/100 x thrust/mass) for each active propulsion module, mass 17720000; no propulsion module: passive value"
+    }
+   }
+  },
+  {
+   "id": "4:fitIII",
+   "ref": 4,
+   "hull": "Tengu",
+   "profile": "fitIII",
+   "numbers": {
+    "cpu_used": {
+     "value": 373.25,
+     "tol": "abs0.01",
+     "source": "EVE University \"Fitting\" (CPU, powergrid, calibration); SDE attrs 48/50 (CPU), 11/30 (PG), 1132/1153 (calibration); skill bonuses per skill description and its SDE bonus attribute",
+     "formula": "sum of module CPU: 2x Ballistic Control System II (attr 50 cpu: base 40 => 40) = 40 | 2x Large Shield Extender II (attr 50 cpu: base 45 => 45) = 45 | 3x Cap Recharger II (attr 50 cpu: base 15; Energy Grid Upgrades -15% => 12.75) = 12.75 | 5x Heavy Missile Launcher II (attr 50 cpu: base 55; Weapon Upgrades -20%; Tengu Offensive - Accelerated Ejection Bay -25% => 33) = 33 | 3x Medium Core Defense Field Extender I (attr 50 cpu: base 0 => 0) = 0 | 1x Tengu Core - Augmented Graviton Reactor (attr 50 cpu: base 0 => 0) = 0 | 1x Tengu Defensive - Amplification Node (attr 50 cpu: base 0 => 0) = 0 | 1x Tengu Offensive - Accelerated Ejection Bay (attr 50 cpu: base 0 => 0) = 0 | 1x Tengu Propulsion - Fuel Catalyst (attr 50 cpu: base 0 => 0) = 0"
+    },
+    "cpu_cap": {
+     "value": 540.5,
+     "tol": "abs0.01",
+     "source": "EVE University \"Fitting\" (CPU, powergrid, calibration); SDE attrs 48/50 (CPU), 11/30 (PG), 1132/1153 (calibration); skill bonuses per skill description and its SDE bonus attribute",
+     "formula": "attr 48 cpuOutput: base 310; +160 Tengu Offensive - Accelerated Ejection Bay; CPU Management +15% => 540.5"
+    },
+    "pg_used": {
+     "value": 647.125,
+     "tol": "abs0.01",
+     "source": "EVE University \"Fitting\" (CPU, powergrid, calibration); SDE attrs 48/50 (CPU), 11/30 (PG), 1132/1153 (calibration); skill bonuses per skill description and its SDE bonus attribute",
+     "formula": "sum of module PG: 2x Ballistic Control System II (attr 30 power: base 1 => 1) = 1 | 2x Large Shield Extender II (attr 30 power: base 160; Shield Upgrades -15% => 136) = 136 | 3x Cap Recharger II (attr 30 power: base 1 => 1) = 1 | 5x Heavy Missile Launcher II (attr 30 power: base 105; Advanced Weapon Upgrades -6%; Tengu Offensive - Accelerated Ejection Bay -25% => 74.025) = 74.025 | 3x Medium Core Defense Field Extender I (attr 30 power: base 0 => 0) = 0 | 1x Tengu Core - Augmented Graviton Reactor (attr 30 power: base 0 => 0) = 0 | 1x Tengu Defensive - Amplification Node (attr 30 power: base 0 => 0) = 0 | 1x Tengu Offensive - Accelerated Ejection Bay (attr 30 power: base 0 => 0) = 0 | 1x Tengu Propulsion - Fuel Catalyst (attr 30 power: base 0 => 0) = 0"
+    },
+    "pg_cap": {
+     "value": 841.8,
+     "tol": "abs0.01",
+     "source": "EVE University \"Fitting\" (CPU, powergrid, calibration); SDE attrs 48/50 (CPU), 11/30 (PG), 1132/1153 (calibration); skill bonuses per skill description and its SDE bonus attribute",
+     "formula": "attr 11 powerOutput: base 420; +190 Tengu Offensive - Accelerated Ejection Bay; Power Grid Management +15%; Tengu Core - Augmented Graviton Reactor +20% => 841.8"
+    },
+    "calib_used": {
+     "value": 150.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Fitting\" (CPU, powergrid, calibration); SDE attrs 48/50 (CPU), 11/30 (PG), 1132/1153 (calibration); skill bonuses per skill description and its SDE bonus attribute",
+     "formula": "sum of rig upgradeCost (attr 1153): 50 + 50 + 50"
+    },
+    "calib_cap": {
+     "value": 400.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Fitting\" (CPU, powergrid, calibration); SDE attrs 48/50 (CPU), 11/30 (PG), 1132/1153 (calibration); skill bonuses per skill description and its SDE bonus attribute",
+     "formula": "attr 1132 upgradeCapacity: base 400 => 400"
+    },
+    "drone_bw_cap": {
+     "value": 0.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Drones\"; SDE attrs 1271 (bandwidth), 1272 (bandwidth used), 283 (bay), 161 (volume), 352 (max active; Drones skill attr 353 per level)",
+     "formula": "attr 1271 droneBandwidth: base 0; +0 Tengu Offensive - Accelerated Ejection Bay => 0"
+    },
+    "drone_bw_used": {
+     "value": 0.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Drones\"; SDE attrs 1271 (bandwidth), 1272 (bandwidth used), 283 (bay), 161 (volume), 352 (max active; Drones skill attr 353 per level)",
+     "formula": "0 launched drones x attr 1272 (drones launch in fit order while bandwidth and the active cap allow)"
+    },
+    "drone_bay_cap": {
+     "value": 0.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Drones\"; SDE attrs 1271 (bandwidth), 1272 (bandwidth used), 283 (bay), 161 (volume), 352 (max active; Drones skill attr 353 per level)",
+     "formula": "attr 283 droneCapacity: base 0; +0 Tengu Offensive - Accelerated Ejection Bay => 0"
+    },
+    "drone_bay_used": {
+     "value": 0.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Drones\"; SDE attrs 1271 (bandwidth), 1272 (bandwidth used), 283 (bay), 161 (volume), 352 (max active; Drones skill attr 353 per level)",
+     "formula": "sum of drone volumes (invTypes.volume) of the 0 drones in the bay"
+    },
+    "drone_max_active": {
+     "value": 5.0,
+     "tol": "exact",
+     "source": "EVE University \"Drones\"; SDE attrs 1271 (bandwidth), 1272 (bandwidth used), 283 (bay), 161 (volume), 352 (max active; Drones skill attr 353 per level)",
+     "formula": "attr 352 maxActiveDrones: base 0; +5 Drones => 5 (pilot; Drones level x 1)"
+    },
+    "drone_active": {
+     "value": 0.0,
+     "tol": "exact",
+     "source": "EVE University \"Drones\"; SDE attrs 1271 (bandwidth), 1272 (bandwidth used), 283 (bay), 161 (volume), 352 (max active; Drones skill attr 353 per level)",
+     "formula": "min(max active 5, drones that fit in bandwidth 0)"
+    },
+    "max_locked": {
+     "value": 6.0,
+     "tol": "exact",
+     "source": "EVE University \"Targeting\"; locked targets = min(ship attr 192, pilot attr 192 = 2 + Target Management + Advanced Target Management, skill attr 311)",
+     "formula": "min(ship 6, pilot 12)"
+    },
+    "dps_weapons": {
+     "value": 364.5247459,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Turret mechanics\" and \"Missile mechanics\"; SDE attrs 114/116/117/118 (damage), 64 (multiplier), 51 (cycle ms), 212 (pilot missile damage multiplier, raised by Ballistic Control System attr 213)",
+     "formula": "Heavy Missile Launcher II: (Scourge Heavy Missile damage 256.09375) x multiplier 1.195603198 / (cycle 4199.804128 ms/1000) ; summed over 5 weapons"
+    },
+    "dps_drones": {
+     "value": 0.0,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Turret mechanics\" and \"Missile mechanics\"; SDE attrs 114/116/117/118 (damage), 64 (multiplier), 51 (cycle ms), 212 (pilot missile damage multiplier, raised by Ballistic Control System attr 213)",
+     "formula": "first bay drone,  ; summed over the 0 launched drones"
+    },
+    "dps_total": {
+     "value": 364.5247459,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Turret mechanics\" and \"Missile mechanics\"; SDE attrs 114/116/117/118 (damage), 64 (multiplier), 51 (cycle ms), 212 (pilot missile damage multiplier, raised by Ballistic Control System attr 213)",
+     "formula": "weapons + drones"
+    },
+    "ehp": {
+     "value": 34945.84823,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Effective HP\"; SDE attrs 263/265/9 (HP), resonances 271-274, 267-270, 109/110/111/113; uniform profile",
+     "formula": "shield 15779.1/mean(1,0.5,0.45,0.4) + armor 2750/mean(0.5,0.9,0.5625,0.275) + hull 2125/mean(0.67,0.67,0.67,0.67)"
+    },
+    "cap_capacity": {
+     "value": 2187.5,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
+     "formula": "attr 482 capacitorCapacity: base 1400; +50 Tengu Core - Augmented Graviton Reactor; +300 Tengu Defensive - Amplification Node; Capacitor Management +25%; Tengu Core - Augmented Graviton Reactor +0% => 2187.5"
+    },
+    "cap_recharge_s": {
+     "value": 134.4,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
+     "formula": "attr 55 rechargeRate: base 350000; x0.8 Cap Recharger II; x0.8 Cap Recharger II; x0.8 Cap Recharger II; Capacitor Systems Operation -25% => 134400 (ms)"
+    },
+    "cap_stable": {
+     "value": 1.0,
+     "tol": "exact",
+     "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
+     "formula": "use 0 GJ/s (sum need/cycle), injection 0 GJ/s, peak 2.5*2187.5/134.4 = 40.690104 GJ/s; stable iff peak + injection >= use"
+    },
+    "cap_stable_pct": {
+     "value": 100.0,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
+     "formula": "net drain 0; k = net/peak = 0; pct = 100*((1+sqrt(1-k))/2)^2"
+    },
+    "speed": {
+     "value": 212.5,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Stacking penalties\" (page read 2026-11-09); propulsion boost = speedFactor(20)/100 x thrust(567)/total mass (SDE attr 567 description: \"Used to divide with mass\"); mass = hull mass + massAddition(796) of plates and the propulsion module",
+     "formula": "passive max velocity 212.5 x (1 + speedFactor/100 x thrust/mass) for each active propulsion module, mass 14400000; no propulsion module: passive value"
+    }
+   }
+  },
+  {
+   "id": "5:allIII",
+   "ref": 5,
+   "hull": "Megathron",
+   "profile": "allIII",
+   "numbers": {
+    "cpu_used": {
+     "value": 723.5,
+     "tol": "abs0.01",
+     "source": "EVE University \"Fitting\" (CPU, powergrid, calibration); SDE attrs 48/50 (CPU), 11/30 (PG), 1132/1153 (calibration); skill bonuses per skill description and its SDE bonus attribute",
+     "formula": "sum of module CPU: 1x Damage Control II (attr 50 cpu: base 30 => 30) = 30 | 3x Magnetic Field Stabilizer II (attr 50 cpu: base 30 => 30) = 30 | 2x 1600mm Steel Plates II (attr 50 cpu: base 35 => 35) = 35 | 2x Multispectrum Energized Membrane II (attr 50 cpu: base 36 => 36) = 36 | 1x 500MN Microwarpdrive II (attr 50 cpu: base 75 => 75) = 75 | 1x Warp Scrambler II (attr 50 cpu: base 36 => 36) = 36 | 1x Stasis Webifier II (attr 50 cpu: base 30 => 30) = 30 | 1x Sensor Booster II (attr 50 cpu: base 16 => 16) = 16 | 7x Neutron Blaster Cannon II (attr 50 cpu: base 58; Weapon Upgrades -25% => 43.5) = 43.5 | 3x Large Trimark Armor Pump I (attr 50 cpu: base 0 => 0) = 0"
+    },
+    "cpu_cap": {
+     "value": 750.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Fitting\" (CPU, powergrid, calibration); SDE attrs 48/50 (CPU), 11/30 (PG), 1132/1153 (calibration); skill bonuses per skill description and its SDE bonus attribute",
+     "formula": "attr 48 cpuOutput: base 600; CPU Management +25% => 750"
+    },
+    "pg_used": {
+     "value": 15581.7,
+     "tol": "abs0.01",
+     "source": "EVE University \"Fitting\" (CPU, powergrid, calibration); SDE attrs 48/50 (CPU), 11/30 (PG), 1132/1153 (calibration); skill bonuses per skill description and its SDE bonus attribute",
+     "formula": "sum of module PG: 1x Damage Control II (attr 30 power: base 1 => 1) = 1 | 3x Magnetic Field Stabilizer II (attr 30 power: base 1 => 1) = 1 | 2x 1600mm Steel Plates II (attr 30 power: base 550 => 550) = 550 | 2x Multispectrum Energized Membrane II (attr 30 power: base 1 => 1) = 1 | 1x 500MN Microwarpdrive II (attr 30 power: base 1375 => 1375) = 1375 | 1x Warp Scrambler II (attr 30 power: base 1 => 1) = 1 | 1x Stasis Webifier II (attr 30 power: base 1 => 1) = 1 | 1x Sensor Booster II (attr 30 power: base 1 => 1) = 1 | 7x Neutron Blaster Cannon II (attr 30 power: base 2079; Advanced Weapon Upgrades -10% => 1871.1) = 1871.1 | 3x Large Trimark Armor Pump I (attr 30 power: base 0 => 0) = 0"
+    },
+    "pg_cap": {
+     "value": 19375.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Fitting\" (CPU, powergrid, calibration); SDE attrs 48/50 (CPU), 11/30 (PG), 1132/1153 (calibration); skill bonuses per skill description and its SDE bonus attribute",
+     "formula": "attr 11 powerOutput: base 15500; Power Grid Management +25% => 19375"
+    },
+    "calib_used": {
+     "value": 150.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Fitting\" (CPU, powergrid, calibration); SDE attrs 48/50 (CPU), 11/30 (PG), 1132/1153 (calibration); skill bonuses per skill description and its SDE bonus attribute",
+     "formula": "sum of rig upgradeCost (attr 1153): 50 + 50 + 50"
+    },
+    "calib_cap": {
+     "value": 400.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Fitting\" (CPU, powergrid, calibration); SDE attrs 48/50 (CPU), 11/30 (PG), 1132/1153 (calibration); skill bonuses per skill description and its SDE bonus attribute",
+     "formula": "attr 1132 upgradeCapacity: base 400 => 400"
+    },
+    "drone_bw_cap": {
+     "value": 75.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Drones\"; SDE attrs 1271 (bandwidth), 1272 (bandwidth used), 283 (bay), 161 (volume), 352 (max active; Drones skill attr 353 per level)",
+     "formula": "attr 1271 droneBandwidth: base 75 => 75"
+    },
+    "drone_bw_used": {
+     "value": 50.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Drones\"; SDE attrs 1271 (bandwidth), 1272 (bandwidth used), 283 (bay), 161 (volume), 352 (max active; Drones skill attr 353 per level)",
+     "formula": "5 launched drones x attr 1272 (drones launch in fit order while bandwidth and the active cap allow)"
+    },
+    "drone_bay_cap": {
+     "value": 75.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Drones\"; SDE attrs 1271 (bandwidth), 1272 (bandwidth used), 283 (bay), 161 (volume), 352 (max active; Drones skill attr 353 per level)",
+     "formula": "attr 283 droneCapacity: base 75 => 75"
+    },
+    "drone_bay_used": {
+     "value": 50.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Drones\"; SDE attrs 1271 (bandwidth), 1272 (bandwidth used), 283 (bay), 161 (volume), 352 (max active; Drones skill attr 353 per level)",
+     "formula": "sum of drone volumes (invTypes.volume) of the 5 drones in the bay"
+    },
+    "drone_max_active": {
+     "value": 5.0,
+     "tol": "exact",
+     "source": "EVE University \"Drones\"; SDE attrs 1271 (bandwidth), 1272 (bandwidth used), 283 (bay), 161 (volume), 352 (max active; Drones skill attr 353 per level)",
+     "formula": "attr 352 maxActiveDrones: base 0; +5 Drones => 5 (pilot; Drones level x 1)"
+    },
+    "drone_active": {
+     "value": 5.0,
+     "tol": "exact",
+     "source": "EVE University \"Drones\"; SDE attrs 1271 (bandwidth), 1272 (bandwidth used), 283 (bay), 161 (volume), 352 (max active; Drones skill attr 353 per level)",
+     "formula": "min(max active 5, drones that fit in bandwidth 75)"
+    },
+    "max_locked": {
+     "value": 7.0,
+     "tol": "exact",
+     "source": "EVE University \"Targeting\"; locked targets = min(ship attr 192, pilot attr 192 = 2 + Target Management + Advanced Target Management, skill attr 311)",
+     "formula": "min(ship 7, pilot 10)"
+    },
+    "dps_weapons": {
+     "value": 984.1717966,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Turret mechanics\" and \"Missile mechanics\"; SDE attrs 114/116/117/118 (damage), 64 (multiplier), 51 (cycle ms), 212 (pilot missile damage multiplier, raised by Ballistic Control System attr 213)",
+     "formula": "Neutron Blaster Cannon II: (Void L damage 70.8) x multiplier 8.04946433 / (cycle 4053.473728 ms/1000) ; Sensor Booster II: (Scan Resolution Script damage 0) x multiplier 1 / (cycle 0 ms/1000) ; summed over 8 weapons"
+    },
+    "dps_drones": {
+     "value": 140.4288,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Turret mechanics\" and \"Missile mechanics\"; SDE attrs 114/116/117/118 (damage), 64 (multiplier), 51 (cycle ms), 212 (pilot missile damage multiplier, raised by Ballistic Control System attr 213)",
+     "formula": "first bay drone, Hammerhead II: damage 32 x 3.51072 / (4000 ms/1000) ; summed over the 5 launched drones"
+    },
+    "dps_total": {
+     "value": 1124.600597,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Turret mechanics\" and \"Missile mechanics\"; SDE attrs 114/116/117/118 (damage), 64 (multiplier), 51 (cycle ms), 212 (pilot missile damage multiplier, raised by Ballistic Control System attr 213)",
+     "formula": "weapons + drones"
+    },
+    "ehp": {
+     "value": 155210.3921,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Effective HP\"; SDE attrs 263/265/9 (HP), resonances 271-274, 267-270, 109/110/111/113; uniform profile",
+     "formula": "shield 8662.5/mean(0.875,0.4375,0.525,0.7) + armor 40968.6/mean(0.261834,0.4713,0.340384,0.340384) + hull 10312.5/mean(0.402,0.402,0.402,0.402)"
+    },
+    "cap_capacity": {
+     "value": 5760.0,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
+     "formula": "attr 482 capacitorCapacity: base 6000; x0.8 500MN Microwarpdrive II; Capacitor Management +20% => 5760"
+    },
+    "cap_recharge_s": {
+     "value": 977.5,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
+     "formula": "attr 55 rechargeRate: base 1.15e+06; Capacitor Systems Operation -15% => 977500 (ms)"
+    },
+    "cap_stable": {
+     "value": 0.0,
+     "tol": "exact",
+     "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
+     "formula": "use 51.025938 GJ/s (sum need/cycle), injection 0 GJ/s, peak 2.5*5760/977.5 = 14.731458 GJ/s; stable iff peak + injection >= use"
+    },
+    "cap_seconds_to_empty": {
+     "value": 141.3032608,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
+     "formula": "RK4 integration (h = 0.05 s) of dc/dt = 10/T*(sqrt(c)-c) - net/Cmax from c = 1 to c = 0, net drain 51.025938 GJ/s",
+     "estimated": "continuous drain stands in for discrete module cycles",
+     "finding": "F2"
+    },
+    "speed": {
+     "value": 1023.454784,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Stacking penalties\" (page read 2026-11-09); propulsion boost = speedFactor(20)/100 x thrust(567)/total mass (SDE attr 567 description: \"Used to divide with mass\"); mass = hull mass + massAddition(796) of plates and the propulsion module",
+     "formula": "passive max velocity 152.5 x (1 + speedFactor/100 x thrust/mass) for each active propulsion module, mass 154040000; no propulsion module: passive value"
+    }
+   }
+  },
+  {
+   "id": "5:alpha",
+   "ref": 5,
+   "hull": "Megathron",
+   "profile": "alpha",
+   "numbers": {
+    "cpu_used": {
+     "value": 723.5,
+     "tol": "abs0.01",
+     "source": "EVE University \"Fitting\" (CPU, powergrid, calibration); SDE attrs 48/50 (CPU), 11/30 (PG), 1132/1153 (calibration); skill bonuses per skill description and its SDE bonus attribute",
+     "formula": "sum of module CPU: 1x Damage Control II (attr 50 cpu: base 30 => 30) = 30 | 3x Magnetic Field Stabilizer II (attr 50 cpu: base 30 => 30) = 30 | 2x 1600mm Steel Plates II (attr 50 cpu: base 35 => 35) = 35 | 2x Multispectrum Energized Membrane II (attr 50 cpu: base 36 => 36) = 36 | 1x 500MN Microwarpdrive II (attr 50 cpu: base 75 => 75) = 75 | 1x Warp Scrambler II (attr 50 cpu: base 36 => 36) = 36 | 1x Stasis Webifier II (attr 50 cpu: base 30 => 30) = 30 | 1x Sensor Booster II (attr 50 cpu: base 16 => 16) = 16 | 7x Neutron Blaster Cannon II (attr 50 cpu: base 58; Weapon Upgrades -25% => 43.5) = 43.5 | 3x Large Trimark Armor Pump I (attr 50 cpu: base 0 => 0) = 0"
+    },
+    "cpu_cap": {
+     "value": 750.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Fitting\" (CPU, powergrid, calibration); SDE attrs 48/50 (CPU), 11/30 (PG), 1132/1153 (calibration); skill bonuses per skill description and its SDE bonus attribute",
+     "formula": "attr 48 cpuOutput: base 600; CPU Management +25% => 750"
+    },
+    "pg_used": {
+     "value": 16163.82,
+     "tol": "abs0.01",
+     "source": "EVE University \"Fitting\" (CPU, powergrid, calibration); SDE attrs 48/50 (CPU), 11/30 (PG), 1132/1153 (calibration); skill bonuses per skill description and its SDE bonus attribute",
+     "formula": "sum of module PG: 1x Damage Control II (attr 30 power: base 1 => 1) = 1 | 3x Magnetic Field Stabilizer II (attr 30 power: base 1 => 1) = 1 | 2x 1600mm Steel Plates II (attr 30 power: base 550 => 550) = 550 | 2x Multispectrum Energized Membrane II (attr 30 power: base 1 => 1) = 1 | 1x 500MN Microwarpdrive II (attr 30 power: base 1375 => 1375) = 1375 | 1x Warp Scrambler II (attr 30 power: base 1 => 1) = 1 | 1x Stasis Webifier II (attr 30 power: base 1 => 1) = 1 | 1x Sensor Booster II (attr 30 power: base 1 => 1) = 1 | 7x Neutron Blaster Cannon II (attr 30 power: base 2079; Advanced Weapon Upgrades -6% => 1954.26) = 1954.26 | 3x Large Trimark Armor Pump I (attr 30 power: base 0 => 0) = 0"
+    },
+    "pg_cap": {
+     "value": 19375.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Fitting\" (CPU, powergrid, calibration); SDE attrs 48/50 (CPU), 11/30 (PG), 1132/1153 (calibration); skill bonuses per skill description and its SDE bonus attribute",
+     "formula": "attr 11 powerOutput: base 15500; Power Grid Management +25% => 19375"
+    },
+    "calib_used": {
+     "value": 150.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Fitting\" (CPU, powergrid, calibration); SDE attrs 48/50 (CPU), 11/30 (PG), 1132/1153 (calibration); skill bonuses per skill description and its SDE bonus attribute",
+     "formula": "sum of rig upgradeCost (attr 1153): 50 + 50 + 50"
+    },
+    "calib_cap": {
+     "value": 400.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Fitting\" (CPU, powergrid, calibration); SDE attrs 48/50 (CPU), 11/30 (PG), 1132/1153 (calibration); skill bonuses per skill description and its SDE bonus attribute",
+     "formula": "attr 1132 upgradeCapacity: base 400 => 400"
+    },
+    "drone_bw_cap": {
+     "value": 75.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Drones\"; SDE attrs 1271 (bandwidth), 1272 (bandwidth used), 283 (bay), 161 (volume), 352 (max active; Drones skill attr 353 per level)",
+     "formula": "attr 1271 droneBandwidth: base 75 => 75"
+    },
+    "drone_bw_used": {
+     "value": 50.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Drones\"; SDE attrs 1271 (bandwidth), 1272 (bandwidth used), 283 (bay), 161 (volume), 352 (max active; Drones skill attr 353 per level)",
+     "formula": "5 launched drones x attr 1272 (drones launch in fit order while bandwidth and the active cap allow)"
+    },
+    "drone_bay_cap": {
+     "value": 75.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Drones\"; SDE attrs 1271 (bandwidth), 1272 (bandwidth used), 283 (bay), 161 (volume), 352 (max active; Drones skill attr 353 per level)",
+     "formula": "attr 283 droneCapacity: base 75 => 75"
+    },
+    "drone_bay_used": {
+     "value": 50.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Drones\"; SDE attrs 1271 (bandwidth), 1272 (bandwidth used), 283 (bay), 161 (volume), 352 (max active; Drones skill attr 353 per level)",
+     "formula": "sum of drone volumes (invTypes.volume) of the 5 drones in the bay"
+    },
+    "drone_max_active": {
+     "value": 5.0,
+     "tol": "exact",
+     "source": "EVE University \"Drones\"; SDE attrs 1271 (bandwidth), 1272 (bandwidth used), 283 (bay), 161 (volume), 352 (max active; Drones skill attr 353 per level)",
+     "formula": "attr 352 maxActiveDrones: base 0; +5 Drones => 5 (pilot; Drones level x 1)"
+    },
+    "drone_active": {
+     "value": 5.0,
+     "tol": "exact",
+     "source": "EVE University \"Drones\"; SDE attrs 1271 (bandwidth), 1272 (bandwidth used), 283 (bay), 161 (volume), 352 (max active; Drones skill attr 353 per level)",
+     "formula": "min(max active 5, drones that fit in bandwidth 75)"
+    },
+    "max_locked": {
+     "value": 6.0,
+     "tol": "exact",
+     "source": "EVE University \"Targeting\"; locked targets = min(ship attr 192, pilot attr 192 = 2 + Target Management + Advanced Target Management, skill attr 311)",
+     "formula": "min(ship 7, pilot 6)"
+    },
+    "dps_weapons": {
+     "value": 1019.436391,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Turret mechanics\" and \"Missile mechanics\"; SDE attrs 114/116/117/118 (damage), 64 (multiplier), 51 (cycle ms), 212 (pilot missile damage multiplier, raised by Ballistic Control System attr 213)",
+     "formula": "Neutron Blaster Cannon II: (Void L damage 70.8) x multiplier 7.490725331 / (cycle 3641.623456 ms/1000) ; Sensor Booster II: (Scan Resolution Script damage 0) x multiplier 1 / (cycle 0 ms/1000) ; summed over 8 weapons"
+    },
+    "dps_drones": {
+     "value": 124.60032,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Turret mechanics\" and \"Missile mechanics\"; SDE attrs 114/116/117/118 (damage), 64 (multiplier), 51 (cycle ms), 212 (pilot missile damage multiplier, raised by Ballistic Control System attr 213)",
+     "formula": "first bay drone, Hammerhead II: damage 32 x 3.115008 / (4000 ms/1000) ; summed over the 5 launched drones"
+    },
+    "dps_total": {
+     "value": 1144.036711,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Turret mechanics\" and \"Missile mechanics\"; SDE attrs 114/116/117/118 (damage), 64 (multiplier), 51 (cycle ms), 212 (pilot missile damage multiplier, raised by Ballistic Control System attr 213)",
+     "formula": "weapons + drones"
+    },
+    "ehp": {
+     "value": 151948.7551,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Effective HP\"; SDE attrs 263/265/9 (HP), resonances 271-274, 267-270, 109/110/111/113; uniform profile",
+     "formula": "shield 8316/mean(0.875,0.4375,0.525,0.7) + armor 40968.6/mean(0.268115,0.482607,0.34855,0.34855) + hull 10312.5/mean(0.402,0.402,0.402,0.402)"
+    },
+    "cap_capacity": {
+     "value": 5760.0,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
+     "formula": "attr 482 capacitorCapacity: base 6000; x0.8 500MN Microwarpdrive II; Capacitor Management +20% => 5760"
+    },
+    "cap_recharge_s": {
+     "value": 977.5,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
+     "formula": "attr 55 rechargeRate: base 1.15e+06; Capacitor Systems Operation -15% => 977500 (ms)"
+    },
+    "cap_stable": {
+     "value": 0.0,
+     "tol": "exact",
+     "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
+     "formula": "use 52.259078 GJ/s (sum need/cycle), injection 0 GJ/s, peak 2.5*5760/977.5 = 14.731458 GJ/s; stable iff peak + injection >= use"
+    },
+    "cap_seconds_to_empty": {
+     "value": 137.1142494,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
+     "formula": "RK4 integration (h = 0.05 s) of dc/dt = 10/T*(sqrt(c)-c) - net/Cmax from c = 1 to c = 0, net drain 52.259078 GJ/s",
+     "estimated": "continuous drain stands in for discrete module cycles",
+     "finding": "F2"
+    },
+    "speed": {
+     "value": 974.5330976,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Stacking penalties\" (page read 2026-11-09); propulsion boost = speedFactor(20)/100 x thrust(567)/total mass (SDE attr 567 description: \"Used to divide with mass\"); mass = hull mass + massAddition(796) of plates and the propulsion module",
+     "formula": "passive max velocity 146.4 x (1 + speedFactor/100 x thrust/mass) for each active propulsion module, mass 155525000; no propulsion module: passive value"
+    }
+   }
+  },
+  {
+   "id": "6:tanker",
+   "ref": 6,
+   "hull": "Myrmidon",
+   "profile": "tanker",
+   "numbers": {
+    "cpu_used": {
+     "value": 471.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Fitting\" (CPU, powergrid, calibration); SDE attrs 48/50 (CPU), 11/30 (PG), 1132/1153 (calibration); skill bonuses per skill description and its SDE bonus attribute",
+     "formula": "sum of module CPU: 2x Medium Armor Repairer II (attr 50 cpu: base 28 => 28) = 28 | 1x Reactive Armor Hardener (attr 50 cpu: base 24 => 24) = 24 | 1x Damage Control II (attr 50 cpu: base 30 => 30) = 30 | 1x Multispectrum Energized Membrane II (attr 50 cpu: base 36 => 36) = 36 | 1x Drone Damage Amplifier II (attr 50 cpu: base 30 => 30) = 30 | 1x 10MN Afterburner II (attr 50 cpu: base 25 => 25) = 25 | 1x Medium Capacitor Booster II (attr 50 cpu: base 25 => 25) = 25 | 1x Cap Recharger II (attr 50 cpu: base 15; Energy Grid Upgrades +0% => 15) = 15 | 1x Drone Navigation Computer II (attr 50 cpu: base 35 => 35) = 35 | 1x Warp Scrambler II (attr 50 cpu: base 36 => 36) = 36 | 4x Heavy Electron Blaster II (attr 50 cpu: base 26; Weapon Upgrades +0% => 26) = 26 | 1x Drone Link Augmentor II (attr 50 cpu: base 55 => 55) = 55 | 1x Medium Auxiliary Nano Pump I (attr 50 cpu: base 0 => 0) = 0 | 1x Medium Nanobot Accelerator I (attr 50 cpu: base 0 => 0) = 0 | 1x Medium Capacitor Control Circuit I (attr 50 cpu: base 0 => 0) = 0"
+    },
+    "cpu_cap": {
+     "value": 400.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Fitting\" (CPU, powergrid, calibration); SDE attrs 48/50 (CPU), 11/30 (PG), 1132/1153 (calibration); skill bonuses per skill description and its SDE bonus attribute",
+     "formula": "attr 48 cpuOutput: base 400; CPU Management +0% => 400"
+    },
+    "pg_used": {
+     "value": 929.96,
+     "tol": "abs0.01",
+     "source": "EVE University \"Fitting\" (CPU, powergrid, calibration); SDE attrs 48/50 (CPU), 11/30 (PG), 1132/1153 (calibration); skill bonuses per skill description and its SDE bonus attribute",
+     "formula": "sum of module PG: 2x Medium Armor Repairer II (attr 30 power: base 138; Medium Auxiliary Nano Pump I +10%; Medium Nanobot Accelerator I +10% => 166.98) = 166.98 | 1x Reactive Armor Hardener (attr 30 power: base 1 => 1) = 1 | 1x Damage Control II (attr 30 power: base 1 => 1) = 1 | 1x Multispectrum Energized Membrane II (attr 30 power: base 1 => 1) = 1 | 1x Drone Damage Amplifier II (attr 30 power: base 1 => 1) = 1 | 1x 10MN Afterburner II (attr 30 power: base 55 => 55) = 55 | 1x Medium Capacitor Booster II (attr 30 power: base 165 => 165) = 165 | 1x Cap Recharger II (attr 30 power: base 1 => 1) = 1 | 1x Drone Navigation Computer II (attr 30 power: base 1 => 1) = 1 | 1x Warp Scrambler II (attr 30 power: base 1 => 1) = 1 | 4x Heavy Electron Blaster II (attr 30 power: base 92; Advanced Weapon Upgrades +0% => 92) = 92 | 1x Drone Link Augmentor II (attr 30 power: base 1 => 1) = 1 | 1x Medium Auxiliary Nano Pump I (attr 30 power: base 0 => 0) = 0 | 1x Medium Nanobot Accelerator I (attr 30 power: base 0 => 0) = 0 | 1x Medium Capacitor Control Circuit I (attr 30 power: base 0 => 0) = 0"
+    },
+    "pg_cap": {
+     "value": 1207.5,
+     "tol": "abs0.01",
+     "source": "EVE University \"Fitting\" (CPU, powergrid, calibration); SDE attrs 48/50 (CPU), 11/30 (PG), 1132/1153 (calibration); skill bonuses per skill description and its SDE bonus attribute",
+     "formula": "attr 11 powerOutput: base 1050; Power Grid Management +15% => 1207.5"
+    },
+    "calib_used": {
+     "value": 300.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Fitting\" (CPU, powergrid, calibration); SDE attrs 48/50 (CPU), 11/30 (PG), 1132/1153 (calibration); skill bonuses per skill description and its SDE bonus attribute",
+     "formula": "sum of rig upgradeCost (attr 1153): 100 + 100 + 100"
+    },
+    "calib_cap": {
+     "value": 400.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Fitting\" (CPU, powergrid, calibration); SDE attrs 48/50 (CPU), 11/30 (PG), 1132/1153 (calibration); skill bonuses per skill description and its SDE bonus attribute",
+     "formula": "attr 1132 upgradeCapacity: base 400 => 400"
+    },
+    "drone_bw_cap": {
+     "value": 100.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Drones\"; SDE attrs 1271 (bandwidth), 1272 (bandwidth used), 283 (bay), 161 (volume), 352 (max active; Drones skill attr 353 per level)",
+     "formula": "attr 1271 droneBandwidth: base 100 => 100"
+    },
+    "drone_bw_used": {
+     "value": 0.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Drones\"; SDE attrs 1271 (bandwidth), 1272 (bandwidth used), 283 (bay), 161 (volume), 352 (max active; Drones skill attr 353 per level)",
+     "formula": "0 launched drones x attr 1272 (drones launch in fit order while bandwidth and the active cap allow)"
+    },
+    "drone_bay_cap": {
+     "value": 200.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Drones\"; SDE attrs 1271 (bandwidth), 1272 (bandwidth used), 283 (bay), 161 (volume), 352 (max active; Drones skill attr 353 per level)",
+     "formula": "attr 283 droneCapacity: base 200 => 200"
+    },
+    "drone_bay_used": {
+     "value": 175.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Drones\"; SDE attrs 1271 (bandwidth), 1272 (bandwidth used), 283 (bay), 161 (volume), 352 (max active; Drones skill attr 353 per level)",
+     "formula": "sum of drone volumes (invTypes.volume) of the 20 drones in the bay"
+    },
+    "drone_max_active": {
+     "value": 0.0,
+     "tol": "exact",
+     "source": "EVE University \"Drones\"; SDE attrs 1271 (bandwidth), 1272 (bandwidth used), 283 (bay), 161 (volume), 352 (max active; Drones skill attr 353 per level)",
+     "formula": "attr 352 maxActiveDrones: base 0; +0 Drones => 0 (pilot; Drones level x 1)"
+    },
+    "drone_active": {
+     "value": 0.0,
+     "tol": "exact",
+     "source": "EVE University \"Drones\"; SDE attrs 1271 (bandwidth), 1272 (bandwidth used), 283 (bay), 161 (volume), 352 (max active; Drones skill attr 353 per level)",
+     "formula": "min(max active 0, drones that fit in bandwidth 100)"
+    },
+    "max_locked": {
+     "value": 2.0,
+     "tol": "exact",
+     "source": "EVE University \"Targeting\"; locked targets = min(ship attr 192, pilot attr 192 = 2 + Target Management + Advanced Target Management, skill attr 311)",
+     "formula": "min(ship 7, pilot 2)"
+    },
+    "dps_weapons": {
+     "value": 64.68,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Turret mechanics\" and \"Missile mechanics\"; SDE attrs 114/116/117/118 (damage), 64 (multiplier), 51 (cycle ms), 212 (pilot missile damage multiplier, raised by Ballistic Control System attr 213)",
+     "formula": "Heavy Electron Blaster II: (Null M damage 22) x multiplier 2.205 / (cycle 3000 ms/1000) ; Medium Capacitor Booster II: (Navy Cap Booster 400 damage 0) x multiplier 1 / (cycle 0 ms/1000) ; summed over 5 weapons"
+    },
+    "dps_drones": {
+     "value": 0.0,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Turret mechanics\" and \"Missile mechanics\"; SDE attrs 114/116/117/118 (damage), 64 (multiplier), 51 (cycle ms), 212 (pilot missile damage multiplier, raised by Ballistic Control System attr 213)",
+     "formula": "first bay drone, Hammerhead II: damage 32 x 2.54496 / (4000 ms/1000) ; summed over the 0 launched drones"
+    },
+    "dps_total": {
+     "value": 64.68,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Turret mechanics\" and \"Missile mechanics\"; SDE attrs 114/116/117/118 (damage), 64 (multiplier), 51 (cycle ms), 212 (pilot missile damage multiplier, raised by Ballistic Control System attr 213)",
+     "formula": "weapons + drones"
+    },
+    "ehp": {
+     "value": 31601.59988,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Effective HP\"; SDE attrs 263/265/9 (HP), resonances 271-274, 267-270, 109/110/111/113; uniform profile",
+     "formula": "shield 3500/mean(0.875,0.4375,0.525,0.7) + armor 5400/mean(0.3315,0.60435,0.436475,0.442) + hull 5700/mean(0.402,0.402,0.402,0.402)"
+    },
+    "cap_capacity": {
+     "value": 3335.0,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
+     "formula": "attr 482 capacitorCapacity: base 2900; Capacitor Management +15% => 3335"
+    },
+    "cap_recharge_s": {
+     "value": 443.7,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
+     "formula": "attr 55 rechargeRate: base 725000; x0.8 Cap Recharger II; Capacitor Systems Operation -10%; Medium Capacitor Control Circuit I -15% => 443700 (ms)"
+    },
+    "cap_stable": {
+     "value": 0.0,
+     "tol": "exact",
+     "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
+     "formula": "use 53.922215 GJ/s (sum need/cycle), injection 33.333333 GJ/s, peak 2.5*3335/443.7 = 18.79085 GJ/s; stable iff peak + injection >= use",
+     "estimated": "cap booster charge count and reload (10 s) not modelled: injection taken as continuous charge/cycle"
+    },
+    "cap_seconds_to_empty": {
+     "value": 729.1230336,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
+     "formula": "RK4 integration (h = 0.05 s) of dc/dt = 10/T*(sqrt(c)-c) - net/Cmax from c = 1 to c = 0, net drain 20.588881 GJ/s",
+     "estimated": "cap booster charge count and reload (10 s) not modelled: injection taken as continuous charge/cycle",
+     "finding": "F2"
+    },
+    "speed": {
+     "value": 310.8898305,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Stacking penalties\" (page read 2026-11-09); propulsion boost = speedFactor(20)/100 x thrust(567)/total mass (SDE attr 567 description: \"Used to divide with mass\"); mass = hull mass + massAddition(796) of plates and the propulsion module",
+     "formula": "passive max velocity 145 x (1 + speedFactor/100 x thrust/mass) for each active propulsion module, mass 17700000; no propulsion module: passive value"
+    }
+   }
+  },
+  {
+   "id": "6:droner",
+   "ref": 6,
+   "hull": "Myrmidon",
+   "profile": "droner",
+   "numbers": {
+    "cpu_used": {
+     "value": 450.2,
+     "tol": "abs0.01",
+     "source": "EVE University \"Fitting\" (CPU, powergrid, calibration); SDE attrs 48/50 (CPU), 11/30 (PG), 1132/1153 (calibration); skill bonuses per skill description and its SDE bonus attribute",
+     "formula": "sum of module CPU: 2x Medium Armor Repairer II (attr 50 cpu: base 28 => 28) = 28 | 1x Reactive Armor Hardener (attr 50 cpu: base 24 => 24) = 24 | 1x Damage Control II (attr 50 cpu: base 30 => 30) = 30 | 1x Multispectrum Energized Membrane II (attr 50 cpu: base 36 => 36) = 36 | 1x Drone Damage Amplifier II (attr 50 cpu: base 30 => 30) = 30 | 1x 10MN Afterburner II (attr 50 cpu: base 25 => 25) = 25 | 1x Medium Capacitor Booster II (attr 50 cpu: base 25 => 25) = 25 | 1x Cap Recharger II (attr 50 cpu: base 15; Energy Grid Upgrades +0% => 15) = 15 | 1x Drone Navigation Computer II (attr 50 cpu: base 35 => 35) = 35 | 1x Warp Scrambler II (attr 50 cpu: base 36 => 36) = 36 | 4x Heavy Electron Blaster II (attr 50 cpu: base 26; Weapon Upgrades -20% => 20.8) = 20.8 | 1x Drone Link Augmentor II (attr 50 cpu: base 55 => 55) = 55 | 1x Medium Auxiliary Nano Pump I (attr 50 cpu: base 0 => 0) = 0 | 1x Medium Nanobot Accelerator I (attr 50 cpu: base 0 => 0) = 0 | 1x Medium Capacitor Control Circuit I (attr 50 cpu: base 0 => 0) = 0"
+    },
+    "cpu_cap": {
+     "value": 460.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Fitting\" (CPU, powergrid, calibration); SDE attrs 48/50 (CPU), 11/30 (PG), 1132/1153 (calibration); skill bonuses per skill description and its SDE bonus attribute",
+     "formula": "attr 48 cpuOutput: base 400; CPU Management +15% => 460"
+    },
+    "pg_used": {
+     "value": 929.96,
+     "tol": "abs0.01",
+     "source": "EVE University \"Fitting\" (CPU, powergrid, calibration); SDE attrs 48/50 (CPU), 11/30 (PG), 1132/1153 (calibration); skill bonuses per skill description and its SDE bonus attribute",
+     "formula": "sum of module PG: 2x Medium Armor Repairer II (attr 30 power: base 138; Medium Auxiliary Nano Pump I +10%; Medium Nanobot Accelerator I +10% => 166.98) = 166.98 | 1x Reactive Armor Hardener (attr 30 power: base 1 => 1) = 1 | 1x Damage Control II (attr 30 power: base 1 => 1) = 1 | 1x Multispectrum Energized Membrane II (attr 30 power: base 1 => 1) = 1 | 1x Drone Damage Amplifier II (attr 30 power: base 1 => 1) = 1 | 1x 10MN Afterburner II (attr 30 power: base 55 => 55) = 55 | 1x Medium Capacitor Booster II (attr 30 power: base 165 => 165) = 165 | 1x Cap Recharger II (attr 30 power: base 1 => 1) = 1 | 1x Drone Navigation Computer II (attr 30 power: base 1 => 1) = 1 | 1x Warp Scrambler II (attr 30 power: base 1 => 1) = 1 | 4x Heavy Electron Blaster II (attr 30 power: base 92; Advanced Weapon Upgrades +0% => 92) = 92 | 1x Drone Link Augmentor II (attr 30 power: base 1 => 1) = 1 | 1x Medium Auxiliary Nano Pump I (attr 30 power: base 0 => 0) = 0 | 1x Medium Nanobot Accelerator I (attr 30 power: base 0 => 0) = 0 | 1x Medium Capacitor Control Circuit I (attr 30 power: base 0 => 0) = 0"
+    },
+    "pg_cap": {
+     "value": 1207.5,
+     "tol": "abs0.01",
+     "source": "EVE University \"Fitting\" (CPU, powergrid, calibration); SDE attrs 48/50 (CPU), 11/30 (PG), 1132/1153 (calibration); skill bonuses per skill description and its SDE bonus attribute",
+     "formula": "attr 11 powerOutput: base 1050; Power Grid Management +15% => 1207.5"
+    },
+    "calib_used": {
+     "value": 300.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Fitting\" (CPU, powergrid, calibration); SDE attrs 48/50 (CPU), 11/30 (PG), 1132/1153 (calibration); skill bonuses per skill description and its SDE bonus attribute",
+     "formula": "sum of rig upgradeCost (attr 1153): 100 + 100 + 100"
+    },
+    "calib_cap": {
+     "value": 400.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Fitting\" (CPU, powergrid, calibration); SDE attrs 48/50 (CPU), 11/30 (PG), 1132/1153 (calibration); skill bonuses per skill description and its SDE bonus attribute",
+     "formula": "attr 1132 upgradeCapacity: base 400 => 400"
+    },
+    "drone_bw_cap": {
+     "value": 100.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Drones\"; SDE attrs 1271 (bandwidth), 1272 (bandwidth used), 283 (bay), 161 (volume), 352 (max active; Drones skill attr 353 per level)",
+     "formula": "attr 1271 droneBandwidth: base 100 => 100"
+    },
+    "drone_bw_used": {
+     "value": 40.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Drones\"; SDE attrs 1271 (bandwidth), 1272 (bandwidth used), 283 (bay), 161 (volume), 352 (max active; Drones skill attr 353 per level)",
+     "formula": "4 launched drones x attr 1272 (drones launch in fit order while bandwidth and the active cap allow)"
+    },
+    "drone_bay_cap": {
+     "value": 200.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Drones\"; SDE attrs 1271 (bandwidth), 1272 (bandwidth used), 283 (bay), 161 (volume), 352 (max active; Drones skill attr 353 per level)",
+     "formula": "attr 283 droneCapacity: base 200 => 200"
+    },
+    "drone_bay_used": {
+     "value": 175.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Drones\"; SDE attrs 1271 (bandwidth), 1272 (bandwidth used), 283 (bay), 161 (volume), 352 (max active; Drones skill attr 353 per level)",
+     "formula": "sum of drone volumes (invTypes.volume) of the 20 drones in the bay"
+    },
+    "drone_max_active": {
+     "value": 4.0,
+     "tol": "exact",
+     "source": "EVE University \"Drones\"; SDE attrs 1271 (bandwidth), 1272 (bandwidth used), 283 (bay), 161 (volume), 352 (max active; Drones skill attr 353 per level)",
+     "formula": "attr 352 maxActiveDrones: base 0; +4 Drones => 4 (pilot; Drones level x 1)"
+    },
+    "drone_active": {
+     "value": 4.0,
+     "tol": "exact",
+     "source": "EVE University \"Drones\"; SDE attrs 1271 (bandwidth), 1272 (bandwidth used), 283 (bay), 161 (volume), 352 (max active; Drones skill attr 353 per level)",
+     "formula": "min(max active 4, drones that fit in bandwidth 100)"
+    },
+    "max_locked": {
+     "value": 2.0,
+     "tol": "exact",
+     "source": "EVE University \"Targeting\"; locked targets = min(ship attr 192, pilot attr 192 = 2 + Target Management + Advanced Target Management, skill attr 311)",
+     "formula": "min(ship 7, pilot 2)"
+    },
+    "dps_weapons": {
+     "value": 67.375,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Turret mechanics\" and \"Missile mechanics\"; SDE attrs 114/116/117/118 (damage), 64 (multiplier), 51 (cycle ms), 212 (pilot missile damage multiplier, raised by Ballistic Control System attr 213)",
+     "formula": "Heavy Electron Blaster II: (Null M damage 22) x multiplier 2.205 / (cycle 2880 ms/1000) ; Medium Capacitor Booster II: (Navy Cap Booster 400 damage 0) x multiplier 1 / (cycle 0 ms/1000) ; summed over 5 weapons"
+    },
+    "dps_drones": {
+     "value": 115.494912,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Turret mechanics\" and \"Missile mechanics\"; SDE attrs 114/116/117/118 (damage), 64 (multiplier), 51 (cycle ms), 212 (pilot missile damage multiplier, raised by Ballistic Control System attr 213)",
+     "formula": "first bay drone, Hammerhead II: damage 32 x 3.609216 / (4000 ms/1000) ; summed over the 4 launched drones"
+    },
+    "dps_total": {
+     "value": 182.869912,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Turret mechanics\" and \"Missile mechanics\"; SDE attrs 114/116/117/118 (damage), 64 (multiplier), 51 (cycle ms), 212 (pilot missile damage multiplier, raised by Ballistic Control System attr 213)",
+     "formula": "weapons + drones"
+    },
+    "ehp": {
+     "value": 30380.05964,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Effective HP\"; SDE attrs 263/265/9 (HP), resonances 271-274, 267-270, 109/110/111/113; uniform profile",
+     "formula": "shield 3500/mean(0.875,0.4375,0.525,0.7) + armor 5175/mean(0.34,0.612,0.442,0.442) + hull 5462.5/mean(0.402,0.402,0.402,0.402)"
+    },
+    "cap_capacity": {
+     "value": 2900.0,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
+     "formula": "attr 482 capacitorCapacity: base 2900; Capacitor Management +0% => 2900"
+    },
+    "cap_recharge_s": {
+     "value": 493.0,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
+     "formula": "attr 55 rechargeRate: base 725000; x0.8 Cap Recharger II; Capacitor Systems Operation +0%; Medium Capacitor Control Circuit I -15% => 493000 (ms)"
+    },
+    "cap_stable": {
+     "value": 0.0,
+     "tol": "exact",
+     "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
+     "formula": "use 54.031103 GJ/s (sum need/cycle), injection 33.333333 GJ/s, peak 2.5*2900/493 = 14.705882 GJ/s; stable iff peak + injection >= use",
+     "estimated": "cap booster charge count and reload (10 s) not modelled: injection taken as continuous charge/cycle"
+    },
+    "cap_seconds_to_empty": {
+     "value": 309.7646547,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
+     "formula": "RK4 integration (h = 0.05 s) of dc/dt = 10/T*(sqrt(c)-c) - net/Cmax from c = 1 to c = 0, net drain 20.69777 GJ/s",
+     "estimated": "cap booster charge count and reload (10 s) not modelled: injection taken as continuous charge/cycle",
+     "finding": "F2"
+    },
+    "speed": {
+     "value": 310.8898305,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Stacking penalties\" (page read 2026-11-09); propulsion boost = speedFactor(20)/100 x thrust(567)/total mass (SDE attr 567 description: \"Used to divide with mass\"); mass = hull mass + massAddition(796) of plates and the propulsion module",
+     "formula": "passive max velocity 145 x (1 + speedFactor/100 x thrust/mass) for each active propulsion module, mass 17700000; no propulsion module: passive value"
+    }
+   }
+  },
+  {
+   "id": "3:allI",
+   "ref": 3,
+   "hull": "Cerberus",
+   "profile": "allI",
+   "numbers": {
+    "cpu_used": {
+     "value": 577.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Fitting\" (CPU, powergrid, calibration); SDE attrs 48/50 (CPU), 11/30 (PG), 1132/1153 (calibration); skill bonuses per skill description and its SDE bonus attribute",
+     "formula": "sum of module CPU: 2x Ballistic Control System II (attr 50 cpu: base 40 => 40) = 40 | 1x Damage Control II (attr 50 cpu: base 30 => 30) = 30 | 1x Power Diagnostic System II (attr 50 cpu: base 22; Energy Grid Upgrades -25% => 16.5) = 16.5 | 1x 10MN Afterburner II (attr 50 cpu: base 25 => 25) = 25 | 2x Large Shield Extender II (attr 50 cpu: base 45 => 45) = 45 | 1x Multispectrum Shield Hardener II (attr 50 cpu: base 44 => 44) = 44 | 1x Warp Disruptor II (attr 50 cpu: base 44 => 44) = 44 | 6x Heavy Missile Launcher II (attr 50 cpu: base 55; Weapon Upgrades -25% => 41.25) = 41.25 | 2x Medium Core Defense Field Extender I (attr 50 cpu: base 0 => 0) = 0"
+    },
+    "cpu_cap": {
+     "value": 668.75,
+     "tol": "abs0.01",
+     "source": "EVE University \"Fitting\" (CPU, powergrid, calibration); SDE attrs 48/50 (CPU), 11/30 (PG), 1132/1153 (calibration); skill bonuses per skill description and its SDE bonus attribute",
+     "formula": "attr 48 cpuOutput: base 535; CPU Management +25% => 668.75"
+    },
+    "pg_used": {
+     "value": 931.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Fitting\" (CPU, powergrid, calibration); SDE attrs 48/50 (CPU), 11/30 (PG), 1132/1153 (calibration); skill bonuses per skill description and its SDE bonus attribute",
+     "formula": "sum of module PG: 2x Ballistic Control System II (attr 30 power: base 1 => 1) = 1 | 1x Damage Control II (attr 30 power: base 1 => 1) = 1 | 1x Power Diagnostic System II (attr 30 power: base 0 => 0) = 0 | 1x 10MN Afterburner II (attr 30 power: base 55 => 55) = 55 | 2x Large Shield Extender II (attr 30 power: base 160; Shield Upgrades -5% => 152) = 152 | 1x Multispectrum Shield Hardener II (attr 30 power: base 1 => 1) = 1 | 1x Warp Disruptor II (attr 30 power: base 1 => 1) = 1 | 6x Heavy Missile Launcher II (attr 30 power: base 105; Advanced Weapon Upgrades -10% => 94.5) = 94.5 | 2x Medium Core Defense Field Extender I (attr 30 power: base 0 => 0) = 0"
+    },
+    "pg_cap": {
+     "value": 1086.5,
+     "tol": "abs0.01",
+     "source": "EVE University \"Fitting\" (CPU, powergrid, calibration); SDE attrs 48/50 (CPU), 11/30 (PG), 1132/1153 (calibration); skill bonuses per skill description and its SDE bonus attribute",
+     "formula": "attr 11 powerOutput: base 820; x1.06 Power Diagnostic System II; Power Grid Management +25% => 1086.5"
+    },
+    "calib_used": {
+     "value": 100.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Fitting\" (CPU, powergrid, calibration); SDE attrs 48/50 (CPU), 11/30 (PG), 1132/1153 (calibration); skill bonuses per skill description and its SDE bonus attribute",
+     "formula": "sum of rig upgradeCost (attr 1153): 50 + 50"
+    },
+    "calib_cap": {
+     "value": 400.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Fitting\" (CPU, powergrid, calibration); SDE attrs 48/50 (CPU), 11/30 (PG), 1132/1153 (calibration); skill bonuses per skill description and its SDE bonus attribute",
+     "formula": "attr 1132 upgradeCapacity: base 400 => 400"
+    },
+    "drone_bw_cap": {
+     "value": 15.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Drones\"; SDE attrs 1271 (bandwidth), 1272 (bandwidth used), 283 (bay), 161 (volume), 352 (max active; Drones skill attr 353 per level)",
+     "formula": "attr 1271 droneBandwidth: base 15 => 15"
+    },
+    "drone_bw_used": {
+     "value": 0.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Drones\"; SDE attrs 1271 (bandwidth), 1272 (bandwidth used), 283 (bay), 161 (volume), 352 (max active; Drones skill attr 353 per level)",
+     "formula": "0 launched drones x attr 1272 (drones launch in fit order while bandwidth and the active cap allow)"
+    },
+    "drone_bay_cap": {
+     "value": 15.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Drones\"; SDE attrs 1271 (bandwidth), 1272 (bandwidth used), 283 (bay), 161 (volume), 352 (max active; Drones skill attr 353 per level)",
+     "formula": "attr 283 droneCapacity: base 15 => 15"
+    },
+    "drone_bay_used": {
+     "value": 0.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Drones\"; SDE attrs 1271 (bandwidth), 1272 (bandwidth used), 283 (bay), 161 (volume), 352 (max active; Drones skill attr 353 per level)",
+     "formula": "sum of drone volumes (invTypes.volume) of the 0 drones in the bay"
+    },
+    "drone_max_active": {
+     "value": 5.0,
+     "tol": "exact",
+     "source": "EVE University \"Drones\"; SDE attrs 1271 (bandwidth), 1272 (bandwidth used), 283 (bay), 161 (volume), 352 (max active; Drones skill attr 353 per level)",
+     "formula": "attr 352 maxActiveDrones: base 0; +5 Drones => 5 (pilot; Drones level x 1)"
+    },
+    "drone_active": {
+     "value": 0.0,
+     "tol": "exact",
+     "source": "EVE University \"Drones\"; SDE attrs 1271 (bandwidth), 1272 (bandwidth used), 283 (bay), 161 (volume), 352 (max active; Drones skill attr 353 per level)",
+     "formula": "min(max active 5, drones that fit in bandwidth 15)"
+    },
+    "max_locked": {
+     "value": 6.0,
+     "tol": "exact",
+     "source": "EVE University \"Targeting\"; locked targets = min(ship attr 192, pilot attr 192 = 2 + Target Management + Advanced Target Management, skill attr 311)",
+     "formula": "min(ship 6, pilot 8)"
+    },
+    "dps_weapons": {
+     "value": 193.276163,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Turret mechanics\" and \"Missile mechanics\"; SDE attrs 114/116/117/118 (damage), 64 (multiplier), 51 (cycle ms), 212 (pilot missile damage multiplier, raised by Ballistic Control System attr 213)",
+     "formula": "Heavy Missile Launcher II: (Scourge Heavy Missile damage 213.721875) x multiplier 1.195603198 / (cycle 7932.480238 ms/1000) ; summed over 6 weapons"
+    },
+    "dps_drones": {
+     "value": 0.0,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Turret mechanics\" and \"Missile mechanics\"; SDE attrs 114/116/117/118 (damage), 64 (multiplier), 51 (cycle ms), 212 (pilot missile damage multiplier, raised by Ballistic Control System attr 213)",
+     "formula": "first bay drone,  ; summed over the 0 launched drones"
+    },
+    "dps_total": {
+     "value": 193.276163,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Turret mechanics\" and \"Missile mechanics\"; SDE attrs 114/116/117/118 (damage), 64 (multiplier), 51 (cycle ms), 212 (pilot missile damage multiplier, raised by Ballistic Control System attr 213)",
+     "formula": "weapons + drones"
+    },
+    "ehp": {
+     "value": 50364.12195,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Effective HP\"; SDE attrs 263/265/9 (HP), resonances 271-274, 267-270, 109/110/111/113; uniform profile",
+     "formula": "shield 12497.6/mean(0.590625,0.295313,0.177188,0.118125) + armor 1500/mean(0.425,0.765,0.31875,0.116875) + hull 1750/mean(0.402,0.402,0.402,0.402)"
+    },
+    "cap_capacity": {
+     "value": 1512.0,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
+     "formula": "attr 482 capacitorCapacity: base 1200; x1.05 Power Diagnostic System II; Capacitor Management +20% => 1512"
+    },
+    "cap_recharge_s": {
+     "value": 204.27375,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
+     "formula": "attr 55 rechargeRate: base 235000; x0.915 Power Diagnostic System II; Capacitor Systems Operation -5% => 204273.75 (ms)"
+    },
+    "cap_stable": {
+     "value": 1.0,
+     "tol": "exact",
+     "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
+     "formula": "use 14.370588 GJ/s (sum need/cycle), injection 0 GJ/s, peak 2.5*1512/204.27375 = 18.50458 GJ/s; stable iff peak + injection >= use"
+    },
+    "cap_stable_pct": {
+     "value": 54.21789415,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
+     "formula": "net drain 14.370588; k = net/peak = 0.77659628; pct = 100*((1+sqrt(1-k))/2)^2",
+     "finding": "F1"
+    },
+    "speed": {
+     "value": 604.9767212,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Stacking penalties\" (page read 2026-11-09); propulsion boost = speedFactor(20)/100 x thrust(567)/total mass (SDE attr 567 description: \"Used to divide with mass\"); mass = hull mass + massAddition(796) of plates and the propulsion module",
+     "formula": "passive max velocity 275 x (1 + speedFactor/100 x thrust/mass) for each active propulsion module, mass 17720000; no propulsion module: passive value"
+    }
+   }
+  },
+  {
+   "id": "5:allI",
+   "ref": 5,
+   "hull": "Megathron",
+   "profile": "allI",
+   "numbers": {
+    "cpu_used": {
+     "value": 723.5,
+     "tol": "abs0.01",
+     "source": "EVE University \"Fitting\" (CPU, powergrid, calibration); SDE attrs 48/50 (CPU), 11/30 (PG), 1132/1153 (calibration); skill bonuses per skill description and its SDE bonus attribute",
+     "formula": "sum of module CPU: 1x Damage Control II (attr 50 cpu: base 30 => 30) = 30 | 3x Magnetic Field Stabilizer II (attr 50 cpu: base 30 => 30) = 30 | 2x 1600mm Steel Plates II (attr 50 cpu: base 35 => 35) = 35 | 2x Multispectrum Energized Membrane II (attr 50 cpu: base 36 => 36) = 36 | 1x 500MN Microwarpdrive II (attr 50 cpu: base 75 => 75) = 75 | 1x Warp Scrambler II (attr 50 cpu: base 36 => 36) = 36 | 1x Stasis Webifier II (attr 50 cpu: base 30 => 30) = 30 | 1x Sensor Booster II (attr 50 cpu: base 16 => 16) = 16 | 7x Neutron Blaster Cannon II (attr 50 cpu: base 58; Weapon Upgrades -25% => 43.5) = 43.5 | 3x Large Trimark Armor Pump I (attr 50 cpu: base 0 => 0) = 0"
+    },
+    "cpu_cap": {
+     "value": 750.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Fitting\" (CPU, powergrid, calibration); SDE attrs 48/50 (CPU), 11/30 (PG), 1132/1153 (calibration); skill bonuses per skill description and its SDE bonus attribute",
+     "formula": "attr 48 cpuOutput: base 600; CPU Management +25% => 750"
+    },
+    "pg_used": {
+     "value": 15581.7,
+     "tol": "abs0.01",
+     "source": "EVE University \"Fitting\" (CPU, powergrid, calibration); SDE attrs 48/50 (CPU), 11/30 (PG), 1132/1153 (calibration); skill bonuses per skill description and its SDE bonus attribute",
+     "formula": "sum of module PG: 1x Damage Control II (attr 30 power: base 1 => 1) = 1 | 3x Magnetic Field Stabilizer II (attr 30 power: base 1 => 1) = 1 | 2x 1600mm Steel Plates II (attr 30 power: base 550 => 550) = 550 | 2x Multispectrum Energized Membrane II (attr 30 power: base 1 => 1) = 1 | 1x 500MN Microwarpdrive II (attr 30 power: base 1375 => 1375) = 1375 | 1x Warp Scrambler II (attr 30 power: base 1 => 1) = 1 | 1x Stasis Webifier II (attr 30 power: base 1 => 1) = 1 | 1x Sensor Booster II (attr 30 power: base 1 => 1) = 1 | 7x Neutron Blaster Cannon II (attr 30 power: base 2079; Advanced Weapon Upgrades -10% => 1871.1) = 1871.1 | 3x Large Trimark Armor Pump I (attr 30 power: base 0 => 0) = 0"
+    },
+    "pg_cap": {
+     "value": 19375.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Fitting\" (CPU, powergrid, calibration); SDE attrs 48/50 (CPU), 11/30 (PG), 1132/1153 (calibration); skill bonuses per skill description and its SDE bonus attribute",
+     "formula": "attr 11 powerOutput: base 15500; Power Grid Management +25% => 19375"
+    },
+    "calib_used": {
+     "value": 150.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Fitting\" (CPU, powergrid, calibration); SDE attrs 48/50 (CPU), 11/30 (PG), 1132/1153 (calibration); skill bonuses per skill description and its SDE bonus attribute",
+     "formula": "sum of rig upgradeCost (attr 1153): 50 + 50 + 50"
+    },
+    "calib_cap": {
+     "value": 400.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Fitting\" (CPU, powergrid, calibration); SDE attrs 48/50 (CPU), 11/30 (PG), 1132/1153 (calibration); skill bonuses per skill description and its SDE bonus attribute",
+     "formula": "attr 1132 upgradeCapacity: base 400 => 400"
+    },
+    "drone_bw_cap": {
+     "value": 75.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Drones\"; SDE attrs 1271 (bandwidth), 1272 (bandwidth used), 283 (bay), 161 (volume), 352 (max active; Drones skill attr 353 per level)",
+     "formula": "attr 1271 droneBandwidth: base 75 => 75"
+    },
+    "drone_bw_used": {
+     "value": 50.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Drones\"; SDE attrs 1271 (bandwidth), 1272 (bandwidth used), 283 (bay), 161 (volume), 352 (max active; Drones skill attr 353 per level)",
+     "formula": "5 launched drones x attr 1272 (drones launch in fit order while bandwidth and the active cap allow)"
+    },
+    "drone_bay_cap": {
+     "value": 75.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Drones\"; SDE attrs 1271 (bandwidth), 1272 (bandwidth used), 283 (bay), 161 (volume), 352 (max active; Drones skill attr 353 per level)",
+     "formula": "attr 283 droneCapacity: base 75 => 75"
+    },
+    "drone_bay_used": {
+     "value": 50.0,
+     "tol": "abs0.01",
+     "source": "EVE University \"Drones\"; SDE attrs 1271 (bandwidth), 1272 (bandwidth used), 283 (bay), 161 (volume), 352 (max active; Drones skill attr 353 per level)",
+     "formula": "sum of drone volumes (invTypes.volume) of the 5 drones in the bay"
+    },
+    "drone_max_active": {
+     "value": 5.0,
+     "tol": "exact",
+     "source": "EVE University \"Drones\"; SDE attrs 1271 (bandwidth), 1272 (bandwidth used), 283 (bay), 161 (volume), 352 (max active; Drones skill attr 353 per level)",
+     "formula": "attr 352 maxActiveDrones: base 0; +5 Drones => 5 (pilot; Drones level x 1)"
+    },
+    "drone_active": {
+     "value": 5.0,
+     "tol": "exact",
+     "source": "EVE University \"Drones\"; SDE attrs 1271 (bandwidth), 1272 (bandwidth used), 283 (bay), 161 (volume), 352 (max active; Drones skill attr 353 per level)",
+     "formula": "min(max active 5, drones that fit in bandwidth 75)"
+    },
+    "max_locked": {
+     "value": 7.0,
+     "tol": "exact",
+     "source": "EVE University \"Targeting\"; locked targets = min(ship attr 192, pilot attr 192 = 2 + Target Management + Advanced Target Management, skill attr 311)",
+     "formula": "min(ship 7, pilot 8)"
+    },
+    "dps_weapons": {
+     "value": 820.3277209,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Turret mechanics\" and \"Missile mechanics\"; SDE attrs 114/116/117/118 (damage), 64 (multiplier), 51 (cycle ms), 212 (pilot missile damage multiplier, raised by Ballistic Control System attr 213)",
+     "formula": "Neutron Blaster Cannon II: (Void L damage 70.8) x multiplier 7.319341548 / (cycle 4421.97134 ms/1000) ; Sensor Booster II: (Scan Resolution Script damage 0) x multiplier 1 / (cycle 0 ms/1000) ; summed over 8 weapons"
+    },
+    "dps_drones": {
+     "value": 123.3792,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Turret mechanics\" and \"Missile mechanics\"; SDE attrs 114/116/117/118 (damage), 64 (multiplier), 51 (cycle ms), 212 (pilot missile damage multiplier, raised by Ballistic Control System attr 213)",
+     "formula": "first bay drone, Hammerhead II: damage 32 x 3.08448 / (4000 ms/1000) ; summed over the 5 launched drones"
+    },
+    "dps_total": {
+     "value": 943.7069209,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Turret mechanics\" and \"Missile mechanics\"; SDE attrs 114/116/117/118 (damage), 64 (multiplier), 51 (cycle ms), 212 (pilot missile damage multiplier, raised by Ballistic Control System attr 213)",
+     "formula": "weapons + drones"
+    },
+    "ehp": {
+     "value": 149874.0893,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Effective HP\"; SDE attrs 263/265/9 (HP), resonances 271-274, 267-270, 109/110/111/113; uniform profile",
+     "formula": "shield 8662.5/mean(0.875,0.4375,0.525,0.7) + armor 40968.6/mean(0.274471,0.494047,0.356812,0.356812) + hull 10312.5/mean(0.402,0.402,0.402,0.402)"
+    },
+    "cap_capacity": {
+     "value": 5760.0,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
+     "formula": "attr 482 capacitorCapacity: base 6000; x0.8 500MN Microwarpdrive II; Capacitor Management +20% => 5760"
+    },
+    "cap_recharge_s": {
+     "value": 1092.5,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
+     "formula": "attr 55 rechargeRate: base 1.15e+06; Capacitor Systems Operation -5% => 1092500 (ms)"
+    },
+    "cap_stable": {
+     "value": 0.0,
+     "tol": "exact",
+     "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
+     "formula": "use 54.498878 GJ/s (sum need/cycle), injection 0 GJ/s, peak 2.5*5760/1092.5 = 13.180778 GJ/s; stable iff peak + injection >= use"
+    },
+    "cap_seconds_to_empty": {
+     "value": 126.900567,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
+     "formula": "RK4 integration (h = 0.05 s) of dc/dt = 10/T*(sqrt(c)-c) - net/Cmax from c = 1 to c = 0, net drain 54.498878 GJ/s",
+     "estimated": "continuous drain stands in for discrete module cycles",
+     "finding": "F2"
+    },
+    "speed": {
+     "value": 946.4825318,
+     "tol": "rel1e-6",
+     "source": "EVE University \"Stacking penalties\" (page read 2026-11-09); propulsion boost = speedFactor(20)/100 x thrust(567)/total mass (SDE attr 567 description: \"Used to divide with mass\"); mass = hull mass + massAddition(796) of plates and the propulsion module",
+     "formula": "passive max velocity 152.5 x (1 + speedFactor/100 x thrust/mass) for each active propulsion module, mass 154280000; no propulsion module: passive value"
+    }
+   }
+  }
+ ]
+}
