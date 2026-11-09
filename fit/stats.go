@@ -34,7 +34,10 @@ type StatsOpts struct {
 	// of two implants in one slot (attribute 331) the first wins, with a warning. An id the
 	// engine cannot apply is listed in FitStats.Unmodelled. nil and empty are no implants.
 	Implants []int
-	Target   TargetProfile
+	// DamagePattern is the id of the incoming damage split EHP is worked against (E8, see
+	// DamagePatterns). Empty is uniform, today's figure; an unknown id is an error.
+	DamagePattern string
+	Target        TargetProfile
 	// ActiveDroneTypeIDs, when non-nil, is the priority list of drone typeIDs the
 	// user has launched. The engine launches them in order within bandwidth + the
 	// max-in-space cap; the rest stay in the bay (no DPS). nil → auto (fit order).

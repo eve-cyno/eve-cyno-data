@@ -1,0 +1,4 @@
+{
+  "note": "FitDamagePatternId of plugin-api, in fixed order; must equal fit.DamagePatternIDs()",
+  "ids": ["uniform", "em", "thermal", "kinetic", "explosive"]
+}

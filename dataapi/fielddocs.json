@@ -38,6 +38,7 @@
   "fit.Resources.DroneBay": "used by every drone in the bay",
   "fit.Resources.Turrets": "hardpoints",
   "fit.StatsOpts.ActiveDroneTypeIDs": "ActiveDroneTypeIDs, when non-nil, is the priority list of drone typeIDs the user has launched. The engine launches them in order within bandwidth + the max-in-space cap; the rest stay in the bay (no DPS). nil → auto (fit order).",
+  "fit.StatsOpts.DamagePattern": "DamagePattern is the id of the incoming damage split EHP is worked against (E8, see DamagePatterns). Empty is uniform, today's figure; an unknown id is an error.",
   "fit.StatsOpts.Implants": "Implants are the pilot's implants, as type ids (decision O1: only this list applies; a fit's own implant lines never do). The engine builds an unpenalised item per implant; of two implants in one slot (attribute 331) the first wins, with a warning. An id the engine cannot apply is listed in FitStats.Unmodelled. nil and empty are no implants.",
   "fit.StatsOpts.MissingAsZero": "MissingAsZero makes a skill absent from Skills count level 0 (untrained), never V. A nil Skills map stays all V whatever this flag says (\"no profile given\"); an empty non-nil map with the flag set is all 0. Default false keeps the all-V reference-character model of every existing caller.",
   "fit.SuggestInput.Slot": "high|mid|low|rig",

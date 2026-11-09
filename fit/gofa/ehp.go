@@ -90,6 +90,24 @@ func resistProfile(em, therm, kin, exp float64) fit.ResistProfile {
 // Active rep per second is the sum over modules of
 // (boost/repair amount) / (duration_ms / 1000).
 func tank(ship *Item, items []*Item) fit.TankStats {
+	return tankWith(ship, items, fit.DamagePattern{ID: fit.DamagePatternUniform})
+}
+
+// patternEHP is layerEHP for a damage pattern. The uniform pattern takes the existing
+// path unchanged, so today's numbers stay byte-equal.
+func patternEHP(p fit.DamagePattern, hp, em, therm, kin, exp float64) float64 {
+	if p.ID == fit.DamagePatternUniform || p.ID == "" {
+		return layerEHP(hp, em, therm, kin, exp)
+	}
+	w := p.EM*em + p.Therm*therm + p.Kin*kin + p.Exp*exp
+	if w <= 0 {
+		return hp
+	}
+	return hp / w
+}
+
+// tankWith is tank with the EHP worked against a damage pattern (E8).
+func tankWith(ship *Item, items []*Item, p fit.DamagePattern) fit.TankStats {
 	// Layer HP.
 	shieldHP := ship.Attrs[attrShieldHP]
 	armorHP := ship.Attrs[attrArmorHP]
@@ -108,9 +126,9 @@ func tank(ship *Item, items []*Item) fit.TankStats {
 		attrHullResEM, attrHullResTherm, attrHullResKin, attrHullResExp)
 
 	// EHP per layer.
-	shieldEHP := layerEHP(shieldHP, sEM, sTherm, sKin, sExp)
-	armorEHP := layerEHP(armorHP, aEM, aTherm, aKin, aExp)
-	hullEHP := layerEHP(hullHP, hEM, hTherm, hKin, hExp)
+	shieldEHP := patternEHP(p, shieldHP, sEM, sTherm, sKin, sExp)
+	armorEHP := patternEHP(p, armorHP, aEM, aTherm, aKin, aExp)
+	hullEHP := patternEHP(p, hullHP, hEM, hTherm, hKin, hExp)
 
 	// Active rep per second: sum over modules where the module has either
 	// a shield boost amount or an armor repair amount AND a duration > 0.
