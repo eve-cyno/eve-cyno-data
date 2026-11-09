@@ -108,7 +108,7 @@ func (s *search) warnings(ctx context.Context, best *probe, res *Result) ([]Warn
 	case best.eval.CapStable:
 		w.Message = fmt.Sprintf("The capacitor is stable at %.0f %%, the flown fit at %.0f %%", best.eval.StablePct, s.b2.StablePct)
 	default:
-		w.Message = fmt.Sprintf("The capacitor is empty in %.0f s, the flown fit in %.0f s", best.eval.SecondsToEmpty, s.b2.SecondsToEmpty)
+		w.Message = capEmptyMessage(best.eval.SecondsToEmpty, s.b2.SecondsToEmpty)
 	}
 	f := s.buildFit(best.asg)
 	train, err := trainFor(ctx, s.cat, s.ev, s.req, res, Binding{Code: BindCap}, f)
@@ -125,4 +125,16 @@ func (s *search) warnings(ctx context.Context, best *probe, res *Result) ([]Warn
 	merged := dedupeTrain(append(extra, train...))
 	w.Train = merged[:min(trainLines, len(merged))]
 	return append(out, w), nil
+}
+
+// capEmptyMessage words two empty-in times. Below 20 s it prints one decimal, so two close
+// values never read as equal ("empty in 5 s, the flown fit in 5 s").
+func capEmptyMessage(chosen, flown float64) string {
+	sec := func(v float64) string {
+		if v < 20 {
+			return fmt.Sprintf("%.1f s", v)
+		}
+		return fmt.Sprintf("%.0f s", v)
+	}
+	return fmt.Sprintf("The capacitor is empty in %s, the flown fit in %s", sec(chosen), sec(flown))
 }
