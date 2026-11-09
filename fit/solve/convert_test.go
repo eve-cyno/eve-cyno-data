@@ -294,3 +294,21 @@ func TestConvert_DroneQuantityCap(t *testing.T) {
 	require.Equal(t, []Candidate{{}}, drones[1].cands)
 	require.Equal(t, []Candidate{{}}, drones[2].cands)
 }
+
+// M4: hardpoint violations are repaired before a slot overflow. Megathron (reference 5) onto
+// the Hyperion under all V: repairing the turret hardpoints first keeps the Mega's best
+// modules (objective 0.918493); repairing the slot overflow first dropped an MFS II
+// instead (0.872604).
+func TestConvert_HardpointsRepairedBeforeSlotOverflow(t *testing.T) {
+	c := realCatalog(t)
+	f := refFit(t, c, 5)
+	res := convertSolve(t, c, f, hullHyperion, nil)
+	require.Contains(t, []Status{StatusOK, StatusOKWithDowngrades}, res.Status)
+	base := res.Baseline.Designed
+	if res.Baseline.Used == "flown" {
+		base = res.Baseline.Flown
+	}
+	obj := Objective(Eval{DPS: base.DPS, EHP: base.EHP}, Eval{DPS: res.Result.DPS, EHP: res.Result.EHP})
+	t.Logf("objective %.6f", obj)
+	require.GreaterOrEqual(t, obj, 0.918493-1e-6)
+}

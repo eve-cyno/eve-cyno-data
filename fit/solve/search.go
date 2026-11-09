@@ -940,13 +940,15 @@ type bindKey struct {
 }
 
 // bindingOrder is the order in which repair takes the violations of a fit: what a single
-// line change cannot fix first (the search then stops), the fixed hull rules, then the
+// line change cannot fix first (the search then stops), the weapon hardpoints (which decide
+// which modules go before a slot overflow drops one), the fixed hull rules, then the
 // resources, the capacitor last.
 var bindingOrder = []fit.Code{
 	fit.CodeUnknownModule, fit.CodeNotFittable, fit.CodeFitTooLarge,
 	fit.CodeSkill, fit.CodeSubsystemMissing, fit.CodeSubsystemDuplicate,
+	fit.CodeTurretHardpointOver, fit.CodeLauncherHardpointOver,
 	fit.CodeSlotOverflow, fit.CodeHullRestriction, fit.CodeRigSize, fit.CodeGroupLimit,
-	fit.CodeTurretHardpointOver, fit.CodeLauncherHardpointOver, fit.CodeChargeIllegal,
+	fit.CodeChargeIllegal,
 	fit.CodeCalibrationOver, fit.CodeCPUOver, fit.CodePGOver,
 	CodeDroneBayOver, CodeDroneBandwidthOver,
 }
