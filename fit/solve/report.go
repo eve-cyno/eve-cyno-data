@@ -248,7 +248,7 @@ const maxPairLines = 12
 // unusable line the baseline needs to stay stable (the fit without it is unstable) gives the
 // skills that would open it; when no single line is needed, the lines of every pair whose joint removal
 // makes the fit unstable are named, and failing that all of them when removing all is unstable.
-// The note names the lines. It only says what the baseline rests on.
+// The note is one sentence, naming the lines. It only says what the baseline rests on.
 func capBaselineTrain(ctx context.Context, c *Catalog, ev Evaluator, r Request, res *Result) ([]TrainLine, string, error) {
 	if r.Skills == nil || !res.Baseline.Flown.CapStable {
 		return nil, "", nil
@@ -369,7 +369,7 @@ func capBaselineTrain(ctx context.Context, c *Catalog, ev Evaluator, r Request, 
 			out = append(out, l)
 		}
 	}
-	note := "the baseline is cap-stable only through " + strings.Join(names, ", ") + ", which the pilot cannot use"
+	note := "The original fit is cap-stable only through " + strings.Join(names, ", ") + ", which the pilot cannot use."
 	return dedupeTrain(out), note, nil
 }
 

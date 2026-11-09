@@ -522,7 +522,7 @@ func TestSolve_CapWorseIsAllowed(t *testing.T) {
 	w := res.Warnings[0]
 	require.Equal(t, WarnCapacitor, w.Code)
 	require.Equal(t, "", w.Group)
-	require.Contains(t, w.Message, "not stable")
+	require.Regexp(t, `^The capacitor runs empty in \d+ s\. The original fit is stable\.$`, w.Message)
 	require.Empty(t, w.Train)
 
 	// B2 unstable (the original uses 150): the same pick.
@@ -565,7 +565,7 @@ func TestSolve_OfficerWarnedAndAvoided(t *testing.T) {
 	require.Len(t, res.Warnings, 1)
 	w := res.Warnings[0]
 	require.Equal(t, Warning{Code: WarnOfficer, Group: SlotHigh, Index: 0, TypeID: 1003, Message: w.Message}, w)
-	require.Contains(t, w.Message, "Officer")
+	require.Equal(t, "tP is an Officer module. Officer modules cost far more than the other variants.", w.Message)
 
 	// An Officer line already in the written fit is kept and warned, one warning per line, in
 	// line order.

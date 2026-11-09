@@ -99,7 +99,7 @@
       ]
     },
     "downgrade/ref2/droner": {
-      "sha256": "305fd652a1843ea5f3b57bd144a5b5bdab4ebb3259cd31bfddcf9b7eae546b35",
+      "sha256": "9cccf288266d2fd72ef0c4e3de042bb3da89c80f08916ff04d2f3650078d7b63",
       "status": "ok_with_downgrades",
       "changes": 11,
       "to": [
@@ -391,7 +391,7 @@
       ]
     },
     "downgrade/ref6/droner": {
-      "sha256": "e7e9810614cd8189b6dc2020e5416b1faf8dd84f3411d2b09cef3390111cda7a",
+      "sha256": "c6b1bceb6283b2cff798e3c157f274e001931791683cd3a514d09604b6f46e8c",
       "status": "ok_with_downgrades",
       "changes": 18,
       "to": [
@@ -523,7 +523,7 @@
       ]
     },
     "refit/ref2/allIII": {
-      "sha256": "7d18ff5545cf6c29fcce595e9ccb378f1e06494f13c3f0ce8f47f69e18503b66",
+      "sha256": "64bd43d7178376634e9e7fc5c5561482bc4ed5c48fa328993033721478641d8d",
       "status": "ok_with_downgrades",
       "changes": 8,
       "to": [
@@ -552,7 +552,7 @@
       ]
     },
     "refit/ref2/droner": {
-      "sha256": "59e86a4b9b19845babc67d07b00caa365fc6bfea5edbf080d02c8294809f0acc",
+      "sha256": "6574d31bf3d5b467c7a6ae2aed98317f215e9db677f94b69d9d143b87e945e2a",
       "status": "ok_with_downgrades",
       "changes": 11,
       "to": [
@@ -801,7 +801,7 @@
       ]
     },
     "refit/ref6/allIII": {
-      "sha256": "348acbf292d61f302feead55b90923ffb0525e59c95f7fba021ab0284815f23b",
+      "sha256": "5d0d8af390099baadfee0853795005a5116f5e043e72c6575ab373ba4e51a41a",
       "status": "ok_with_downgrades",
       "changes": 9,
       "to": [

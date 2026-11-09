@@ -91,7 +91,7 @@ func (s *search) warnings(ctx context.Context, best *probe, res *Result) ([]Warn
 			continue
 		}
 		out = append(out, Warning{Code: WarnOfficer, Group: ln.ref.Slot, Index: ln.ref.Index, TypeID: c.TypeID,
-			Message: fmt.Sprintf("%s is an Officer module; Officer modules are far more expensive than the other variants",
+			Message: fmt.Sprintf("%s is an Officer module. Officer modules cost far more than the other variants.",
 				s.cat.typeName(c.TypeID))})
 	}
 	if !CapacitorWarn(s.b2, best.eval) {
@@ -100,13 +100,13 @@ func (s *search) warnings(ctx context.Context, best *probe, res *Result) ([]Warn
 	w := Warning{Code: WarnCapacitor, Train: []TrainLine{}}
 	switch {
 	case !best.eval.CapStable && s.b2.CapStable:
-		w.Message = "The capacitor is not stable"
 		if best.eval.SecondsToEmpty > 0 {
-			w.Message += fmt.Sprintf(" (empty in %.0f s)", best.eval.SecondsToEmpty)
+			w.Message = fmt.Sprintf("The capacitor runs empty in %.0f s. The original fit is stable.", best.eval.SecondsToEmpty)
+		} else {
+			w.Message = "The capacitor is not stable. The original fit is stable."
 		}
-		w.Message += ", the flown fit is stable"
 	case best.eval.CapStable:
-		w.Message = fmt.Sprintf("The capacitor is stable at %.0f %%, the flown fit at %.0f %%", best.eval.StablePct, s.b2.StablePct)
+		w.Message = fmt.Sprintf("The capacitor is stable at %.0f %%. The original fit is stable at %.0f %%.", best.eval.StablePct, s.b2.StablePct)
 	default:
 		w.Message = capEmptyMessage(best.eval.SecondsToEmpty, s.b2.SecondsToEmpty)
 	}
@@ -120,7 +120,7 @@ func (s *search) warnings(ctx context.Context, best *probe, res *Result) ([]Warn
 		return nil, err
 	}
 	if len(extra) > 0 {
-		w.Message += "; " + note
+		w.Message += " " + note
 	}
 	merged := dedupeTrain(append(extra, train...))
 	w.Train = merged[:min(trainLines, len(merged))]
@@ -128,7 +128,7 @@ func (s *search) warnings(ctx context.Context, best *probe, res *Result) ([]Warn
 }
 
 // capEmptyMessage words two empty-in times. Below 20 s it prints one decimal, so two close
-// values never read as equal ("empty in 5 s, the flown fit in 5 s").
+// values never read as equal ("empty in 5 s ... empty in 5 s").
 func capEmptyMessage(chosen, flown float64) string {
 	sec := func(v float64) string {
 		if v < 20 {
@@ -136,5 +136,5 @@ func capEmptyMessage(chosen, flown float64) string {
 		}
 		return fmt.Sprintf("%.0f s", v)
 	}
-	return fmt.Sprintf("The capacitor is empty in %s, the flown fit in %s", sec(chosen), sec(flown))
+	return fmt.Sprintf("The capacitor runs empty in %s. The original fit runs empty in %s.", sec(chosen), sec(flown))
 }

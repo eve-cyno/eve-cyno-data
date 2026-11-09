@@ -60,8 +60,9 @@ func TestCapBaselineTrain_TwoUnusableLinesTogether(t *testing.T) {
 	require.NoError(t, err)
 	require.NotEmpty(t, train)
 	require.Equal(t, skillRare, train[0].SkillID)
-	require.Contains(t, note, "cap-stable only through")
+	require.Contains(t, note, "The original fit is cap-stable only through")
 	require.Contains(t, note, "cannot use")
+	require.NotContains(t, note, ";")
 }
 
 // Vexor (reference 2) for the droner with the Afterburner replaced by a second Medium
@@ -110,7 +111,9 @@ func requireCapacitorWarning(t *testing.T, c *Catalog, res *Result) {
 		}
 	}
 	require.True(t, found, "train names Capacitor Systems Operation: %+v", w.Train)
-	require.Contains(t, w.Message, "not stable")
+	require.Contains(t, w.Message, "The capacitor runs empty in ")
+	require.Contains(t, w.Message, ". The original fit is stable.")
+	require.NotContains(t, w.Message, ";")
 }
 
 // Vexor, reference 2, droner, Downgrade as written: the pilot cannot use the Medium Capacitor
@@ -136,7 +139,7 @@ func TestCapBaselineTrain_AlwaysChecksFlownBaseline(t *testing.T) {
 	train, note, err := capBaselineTrain(context.Background(), c, capFake{minHigh: 2}, r, capResult(BaselineDesigned, false))
 	require.NoError(t, err)
 	require.NotEmpty(t, train)
-	require.Contains(t, note, "cap-stable only through")
+	require.Contains(t, note, "The original fit is cap-stable only through")
 }
 
 // L7: one train line per skill, with the highest target level, then at most 3 lines.

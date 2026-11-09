@@ -269,8 +269,7 @@ func TestSolve_CapacitorWarnsOnLowerStableLevel(t *testing.T) {
 	require.True(t, res.Result.CapStable)
 	require.Len(t, res.Warnings, 1)
 	require.Equal(t, WarnCapacitor, res.Warnings[0].Code)
-	require.Contains(t, res.Warnings[0].Message, "stable at 64 %")
-	require.Contains(t, res.Warnings[0].Message, "70 %")
+	require.Equal(t, "The capacitor is stable at 64 %. The original fit is stable at 70 %.", res.Warnings[0].Message)
 	res = run(10.3) // 30.9: 69.1 %, within a point of B2's 70 %
 	require.Empty(t, res.Warnings)
 }
@@ -288,8 +287,7 @@ func TestSolve_CapacitorWarnsOnSoonerEmpty(t *testing.T) {
 	res := run(50) // 150: empty in 20 s
 	require.False(t, res.Result.CapStable)
 	require.Len(t, res.Warnings, 1)
-	require.Contains(t, res.Warnings[0].Message, "empty in 20 s")
-	require.Contains(t, res.Warnings[0].Message, "in 50 s")
+	require.Equal(t, "The capacitor runs empty in 20 s. The original fit runs empty in 50 s.", res.Warnings[0].Message)
 	require.Empty(t, run(39).Warnings, "117 of 100: empty in 59 s, later than the flown 50 s")
 }
 
