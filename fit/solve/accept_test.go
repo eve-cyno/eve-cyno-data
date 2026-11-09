@@ -38,6 +38,12 @@ type vecFile struct {
 		Base float64 `json:"base"`
 		Text string  `json:"text"`
 	} `json:"percent"`
+	CapWarn []struct {
+		Name     string `json:"name"`
+		B2Stable bool   `json:"b2CapStable"`
+		Stable   bool   `json:"capStable"`
+		Warn     bool   `json:"warn"`
+	} `json:"capWarn"`
 	Rank []struct {
 		Name   string `json:"name"`
 		Kind   Kind   `json:"kind"`
@@ -74,6 +80,10 @@ func TestAccept_Vectors(t *testing.T) {
 		got, ok := SignedPercent(c.Cand, c.Base)
 		require.Equal(t, c.Text != "", ok, "%v/%v", c.Cand, c.Base)
 		require.Equal(t, c.Text, got, "%v/%v", c.Cand, c.Base)
+	}
+	require.Len(t, v.CapWarn, 4)
+	for _, c := range v.CapWarn {
+		require.Equal(t, c.Warn, CapacitorWarn(Eval{CapStable: c.B2Stable}, Eval{CapStable: c.Stable}), c.Name)
 	}
 	for _, c := range v.Rank {
 		require.Equal(t, c.ABette, Better(c.Kind, c.A, c.B), c.Name)

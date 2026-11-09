@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "note": "Language-neutral vectors of the acceptance rule (spec 13.2). The Go test fit/solve TestAccept_Vectors and the plugin's acceptance.test read the same bytes. Numbers compare after rounding to 10 significant digits (1e-9 relative). Percent texts use U+2212 for the minus sign. Rank vectors may carry an \"officers\" count (absent = 0); the order is changed, downgrades, officers, objective, price, type ids for a fix, and officers, objective, changed, downgrades, price, type ids otherwise. The capacitor is not a gate (owner ruling 2026-11-09).",
+  "note": "Language-neutral vectors of the acceptance rule (spec 13.2). The Go test fit/solve TestAccept_Vectors and the plugin's acceptance.test read the same bytes. Numbers compare after rounding to 10 significant digits (1e-9 relative). Percent texts use U+2212 for the minus sign. Rank vectors may carry an \"officers\" count (absent = 0); the order is changed, downgrades, officers, objective, price, type ids for a fix, and officers, objective, changed, downgrades, price, type ids otherwise. The capacitor is not a gate (owner ruling 2026-11-09); capWarn lists when the capacitor warning is raised.",
   "fallback": [
     {"kind": "refit", "policy": {"gates": [{"stat": "dps", "atLeast": 98}, {"stat": "ehp", "atLeast": 98}], "baseline": "flown", "allowT2toT1": true, "allowRigChanges": false, "from": "fallback"}},
     {"kind": "downgrade", "policy": {"gates": [], "baseline": "flown", "allowT2toT1": true, "allowRigChanges": false, "from": "fallback"}},
@@ -123,6 +123,12 @@
     {"cand": 250, "base": 100, "text": "+150.0 %"},
     {"cand": 0, "base": 100, "text": "−100.0 %"},
     {"cand": 5, "base": 0, "text": ""}
+  ],
+  "capWarn": [
+    {"name": "stable in B2, unstable in the chosen fit: warn", "b2CapStable": true, "capStable": false, "warn": true},
+    {"name": "stable in both: no warning", "b2CapStable": true, "capStable": true, "warn": false},
+    {"name": "unstable in both: no warning", "b2CapStable": false, "capStable": false, "warn": false},
+    {"name": "unstable in B2, stable in the chosen fit: no warning", "b2CapStable": false, "capStable": true, "warn": false}
   ],
   "rank": [
     {"name": "fix: fewer changed lines wins over a better objective", "kind": "refit",

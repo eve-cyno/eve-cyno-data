@@ -516,12 +516,73 @@ func TestSolve_CapWorseIsAllowed(t *testing.T) {
 	require.True(t, res.Baseline.Flown.CapStable)
 	require.Equal(t, []int{1002}, highTypes(res.Fit))
 	require.False(t, res.Result.CapStable)
+	// The worse capacitor is warned (the fake store has no skill that moves it: no train).
+	require.Len(t, res.Warnings, 1)
+	w := res.Warnings[0]
+	require.Equal(t, WarnCapacitor, w.Code)
+	require.Equal(t, "", w.Group)
+	require.Contains(t, w.Message, "not stable")
+	require.Empty(t, w.Train)
 
 	// B2 unstable (the original uses 150): the same pick.
 	types[1] = gun(1001, 2, 5, 50, rare(map[int]float64{attrFakeCap: 150}))
 	res = fakeSolve(t, fakeSubset(types...), r)
 	require.False(t, res.Baseline.Flown.CapStable)
 	require.Equal(t, []int{1002}, highTypes(res.Fit))
+	require.Empty(t, res.Warnings, "no warning when the flown fit was not stable either")
+
+	// The same variant with a stable capacitor draws no warning.
+	types[2] = gun(1002, 1, 4, 50, map[int]float64{attrFakeCap: 20})
+	types[1] = gun(1001, 2, 5, 50, rare(map[int]float64{attrFakeCap: 30}))
+	res = fakeSolve(t, fakeSubset(types...), r)
+	require.True(t, res.Result.CapStable)
+	require.Empty(t, res.Warnings)
+}
+
+// Owner ruling 2026-11-09 (4b): an Officer module is warned, per line, also when the written
+// line was already Officer; it is chosen only when viability or a gate needs it.
+func TestSolve_OfficerWarnedAndAvoided(t *testing.T) {
+	types := func(normalDPS float64) []dogma.SubsetType {
+		return []dogma.SubsetType{
+			gun(1000, 1, 0, 40, nil),
+			gun(1001, 2, 3, 50, rare(map[int]float64{})),  // the written line: the poor pilot cannot use it
+			gun(1002, 1, 4, normalDPS, nil),               // usable, level above the original: no downgrade
+			gun(1003, 5, 11, 60, nil),                     // Officer, best DPS
+			gun(1004, 5, 12, 70, rare(map[int]float64{})), // Officer the poor pilot cannot use
+		}
+	}
+	r := Request{Kind: KindRefit, Fit: highFit(1001), Skills: poor, Policy: fixPolicy(gateIs(StatDPS, 90))}
+
+	// The normal variant passes the gate (48 of 50): the Officer is not chosen, whatever its DPS.
+	res := fakeSolve(t, fakeSubset(types(48)...), r)
+	require.Equal(t, []int{1002}, highTypes(res.Fit))
+	require.Empty(t, res.Warnings)
+
+	// The normal variant fails the gate (40 of 50): the Officer is needed, and warned.
+	res = fakeSolve(t, fakeSubset(types(40)...), r)
+	require.Equal(t, []int{1003}, highTypes(res.Fit))
+	require.Len(t, res.Warnings, 1)
+	w := res.Warnings[0]
+	require.Equal(t, Warning{Code: WarnOfficer, Group: SlotHigh, Index: 0, TypeID: 1003, Message: w.Message}, w)
+	require.Contains(t, w.Message, "Officer")
+
+	// An Officer line already in the written fit is kept and warned, one warning per line, in
+	// line order.
+	r2 := Request{Kind: KindRefit, Fit: highFit(1003, 1000, 1003), Skills: poor, Policy: fixPolicy(gateIs(StatDPS, 90))}
+	res = fakeSolve(t, fakeSubset(types(48)...), r2)
+	require.Empty(t, res.Changes)
+	require.Len(t, res.Warnings, 2)
+	require.Equal(t, 0, res.Warnings[0].Index)
+	require.Equal(t, 2, res.Warnings[1].Index)
+	require.Equal(t, 1003, res.Warnings[1].TypeID)
+
+	// No candidate: an empty list, not null.
+	r3 := Request{Kind: KindRefit, Fit: highFit(1001), Skills: poor, Policy: fixPolicy(gateIs(StatDPS, 400))}
+	res = fakeSolve(t, fakeSubset(types(48)...), r3)
+	require.Equal(t, StatusNoCandidate, res.Status)
+	b, err := json.Marshal(res)
+	require.NoError(t, err)
+	require.Contains(t, string(b), `"warnings":[]`)
 }
 
 // When the cap ends the search, the result is capped and carries the best gate-passing fit

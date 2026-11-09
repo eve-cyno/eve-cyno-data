@@ -2,6 +2,7 @@ package solve
 
 import (
 	"context"
+	"encoding/json"
 	"strings"
 	"testing"
 
@@ -65,8 +66,9 @@ func TestCapBaselineTrain_TwoUnusableLinesTogether(t *testing.T) {
 
 // Vexor (reference 2) for the droner with the Afterburner replaced by a second Medium
 // Capacitor Booster II (Downgrade). Owner ruling 2026-11-09 (4a): the cap-booster lines the
-// pilot cannot use no longer end the solve with a capacitor binding; a result comes back.
-func TestSolve_VexorTwoUnusableBoostersReturnsResult(t *testing.T) {
+// pilot cannot use no longer end the solve with a capacitor binding; a result comes back with
+// a capacitor warning that names Capacitor Systems Operation, the skill of the boosters.
+func TestSolve_VexorTwoUnusableBoostersWarnsCapacitor(t *testing.T) {
 	c := realCatalog(t)
 	f := refFit(t, c, 2)
 	f.Mid = append([]fit.FitModule(nil), f.Mid...)
@@ -78,9 +80,52 @@ func TestSolve_VexorTwoUnusableBoostersReturnsResult(t *testing.T) {
 	r := Request{Kind: KindDowngrade, Fit: f, Skills: e3aProfiles(t)["droner"]}
 	res, err := Solve(context.Background(), c, NewEngineEvaluator(gofa.New(c.Store()), 4), r)
 	require.NoError(t, err)
-	require.NotEqual(t, StatusNoCandidate, res.Status)
+	requireCapacitorWarning(t, c, res)
+}
+
+// requireCapacitorWarning: the result is a fit (not no_candidate), the baseline is cap-stable,
+// the chosen fit is not, and the warning names Capacitor Systems Operation (3417).
+func requireCapacitorWarning(t *testing.T, c *Catalog, res *Result) {
+	t.Helper()
+	require.Contains(t, []Status{StatusOK, StatusOKWithDowngrades, StatusUncertain}, res.Status)
 	require.NotNil(t, res.Fit)
 	require.True(t, res.Result.Valid)
+	require.True(t, res.Baseline.Flown.CapStable)
+	require.False(t, res.Result.CapStable)
+	var w *Warning
+	for i := range res.Warnings {
+		if res.Warnings[i].Code == WarnCapacitor {
+			w = &res.Warnings[i]
+		}
+	}
+	require.NotNil(t, w, "capacitor warning: %+v", res.Warnings)
+	require.NotEmpty(t, w.Train)
+	require.LessOrEqual(t, len(w.Train), 3)
+	ces := skillID(t, c, "Capacitor Systems Operation") // 3417
+	found := false
+	for _, l := range w.Train {
+		if l.SkillID == ces {
+			found = true
+			require.Greater(t, l.To, l.From)
+		}
+	}
+	require.True(t, found, "train names Capacitor Systems Operation: %+v", w.Train)
+	require.Contains(t, w.Message, "not stable")
+}
+
+// Vexor, reference 2, droner, Downgrade as written: the pilot cannot use the Medium Capacitor
+// Booster II; the same warning.
+func TestSolve_VexorDronerDowngradeWarnsCapacitor(t *testing.T) {
+	c := realCatalog(t)
+	r := Request{Kind: KindDowngrade, Fit: refFit(t, c, 2), Skills: e3aProfiles(t)["droner"]}
+	res, err := Solve(context.Background(), c, NewEngineEvaluator(gofa.New(c.Store()), 4), r)
+	require.NoError(t, err)
+	t.Logf("%s, %d changes, warnings %+v", res.Status, len(res.Changes), res.Warnings)
+	requireCapacitorWarning(t, c, res)
+	b, _ := json.Marshal(res)
+	var again Result
+	require.NoError(t, json.Unmarshal(b, &again))
+	require.Equal(t, res.Warnings, again.Warnings)
 }
 
 // L6: the cap rule gates against B2, so the note appears even when the policy baseline is

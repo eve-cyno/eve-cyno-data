@@ -158,15 +158,18 @@ type NoCandidate struct {
 
 // Result is the outcome of a solve (FitSolveResult without the engine and wire fields).
 type Result struct {
-	Status      Status       `json:"status"`
-	Fit         *fit.Fit     `json:"fit,omitempty"`
-	Changes     []LineChange `json:"changes"`
-	Baseline    Baselines    `json:"baseline"`
-	Result      *Numbers     `json:"result,omitempty"`
-	Uncertain   []string     `json:"uncertain,omitempty"` // what is not modelled (status uncertain)
-	Capped      bool         `json:"capped"`
-	Evaluations int          `json:"evaluations"`
-	Policy      Policy       `json:"policy"`
+	Status    Status       `json:"status"`
+	Fit       *fit.Fit     `json:"fit,omitempty"`
+	Changes   []LineChange `json:"changes"`
+	Baseline  Baselines    `json:"baseline"`
+	Result    *Numbers     `json:"result,omitempty"`
+	Uncertain []string     `json:"uncertain,omitempty"` // what is not modelled (status uncertain)
+	// Warnings are notes on the chosen fit (warnings.go), in the order Officer lines (slot
+	// group, index), then the capacitor; empty when there are none and with no_candidate.
+	Warnings    []Warning `json:"warnings"`
+	Capped      bool      `json:"capped"`
+	Evaluations int       `json:"evaluations"`
+	Policy      Policy    `json:"policy"`
 	// NoCandidate is set with status no_candidate.
 	NoCandidate *NoCandidate `json:"noCandidate,omitempty"`
 }
@@ -353,7 +356,7 @@ func solve(ctx context.Context, c *Catalog, ev Evaluator, r Request, h *hooks) (
 	if err := s.setup(); err != nil {
 		return nil, err
 	}
-	res := &Result{Changes: []LineChange{}, Policy: s.pol}
+	res := &Result{Changes: []LineChange{}, Warnings: []Warning{}, Policy: s.pol}
 
 	// Baselines: B1 under all V without implants, B2 under the pilot on the fit's own hull.
 	b1opts := fit.StatsOpts{DamagePattern: r.DamagePattern}
@@ -437,6 +440,9 @@ func solve(ctx context.Context, c *Catalog, ev Evaluator, r Request, h *hooks) (
 	n := numbersOf(best.eval)
 	res.Result = &n
 	res.Uncertain = best.uncertain
+	if res.Warnings, err = s.warnings(ctx, best, res); err != nil {
+		return nil, err
+	}
 	switch {
 	case len(best.uncertain) > 0:
 		res.Status = StatusUncertain
