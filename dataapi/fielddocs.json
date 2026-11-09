@@ -41,6 +41,7 @@
   "fit.StatsOpts.Implants": "Implants are the pilot's implants, as type ids (decision O1: only this list applies; a fit's own implant lines never do). The engine builds an unpenalised item per implant; of two implants in one slot (attribute 331) the first wins, with a warning. An id the engine cannot apply is listed in FitStats.Unmodelled. nil and empty are no implants.",
   "fit.StatsOpts.MissingAsZero": "MissingAsZero makes a skill absent from Skills count level 0 (untrained), never V. A nil Skills map stays all V whatever this flag says (\"no profile given\"); an empty non-nil map with the flag set is all 0. Default false keeps the all-V reference-character model of every existing caller.",
   "fit.SuggestInput.Slot": "high|mid|low|rig",
+  "fit.TankStats.Repair": "Repair is the per-layer repair summary (E10). Not part of the public JSON shape until the wire task (T7.3) adds it; in-process callers read the field.",
   "fit.TargetProfile.RangeM": "distance to target in metres",
   "fit.TargetProfile.SigRadius": "signature radius in metres",
   "fit.TargetProfile.Velocity": "velocity in m/s",

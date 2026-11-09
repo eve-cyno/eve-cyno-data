@@ -94,37 +94,7 @@ func capacitor(ship *Item, items []*Item) fit.CapStats {
 	// charges as KindCharge items whose attrCapacitorBonus > 0, paired with their
 	// parent module via the items slice order: a KindCharge always immediately
 	// follows its parent KindModule in the resolveForStats item list.
-	var totalUsage float64
-	var totalInjection float64
-	for i, it := range items {
-		if it.Kind != KindModule {
-			continue
-		}
-		need := it.Attrs[attrCapNeed]
-		// Cycle time: prefer attr 73 (duration, used by active modules such as repairers,
-		// hardeners, cap boosters, afterburners). Turrets and launchers store their cycle
-		// time in attr 51 (speed) and carry no attr 73, so fall back to attr 51 when
-		// attr 73 is absent or zero. This mirrors the DPS calculator's turretCycleMs logic.
-		dur := it.Attrs[attrModuleDuration] // attr 73, ms
-		if dur <= 0 {
-			dur = it.Attrs[attrCapCycleSpeed] // attr 51, ms — turret/launcher fallback
-		}
-		if dur <= 0 {
-			continue
-		}
-		durSec := dur / 1000.0
-		if need > 0 {
-			totalUsage += need / durSec
-		}
-		// Check if the next item is a KindCharge loaded into this module.
-		if i+1 < len(items) && items[i+1].Kind == KindCharge {
-			charge := items[i+1]
-			if bonus := charge.Attrs[attrCapacitorBonus]; bonus > 0 {
-				// Injection rate: capacitorBonus GJ per cycle of the booster module.
-				totalInjection += bonus / durSec
-			}
-		}
-	}
+	totalUsage, totalInjection := capDraw(items)
 
 	stable := peakRecharge+totalInjection >= totalUsage
 
@@ -165,4 +135,40 @@ func capacitor(ship *Item, items []*Item) fit.CapStats {
 		StablePct:      stablePct,
 		SecondsToEmpty: secsToEmpty,
 	}
+}
+
+// capDraw sums the capacitor use (GJ/s) of the active modules and the injection
+// income (GJ/s) of loaded cap-booster charges. It is the loop capacitor() used to
+// hold inline; the repair summary (E10) reads the same figures.
+func capDraw(items []*Item) (totalUsage, totalInjection float64) {
+	for i, it := range items {
+		if it.Kind != KindModule {
+			continue
+		}
+		need := it.Attrs[attrCapNeed]
+		// Cycle time: prefer attr 73 (duration, used by active modules such as repairers,
+		// hardeners, cap boosters, afterburners). Turrets and launchers store their cycle
+		// time in attr 51 (speed) and carry no attr 73, so fall back to attr 51 when
+		// attr 73 is absent or zero. This mirrors the DPS calculator's turretCycleMs logic.
+		dur := it.Attrs[attrModuleDuration] // attr 73, ms
+		if dur <= 0 {
+			dur = it.Attrs[attrCapCycleSpeed] // attr 51, ms — turret/launcher fallback
+		}
+		if dur <= 0 {
+			continue
+		}
+		durSec := dur / 1000.0
+		if need > 0 {
+			totalUsage += need / durSec
+		}
+		// Check if the next item is a KindCharge loaded into this module.
+		if i+1 < len(items) && items[i+1].Kind == KindCharge {
+			charge := items[i+1]
+			if bonus := charge.Attrs[attrCapacitorBonus]; bonus > 0 {
+				// Injection rate: capacitorBonus GJ per cycle of the booster module.
+				totalInjection += bonus / durSec
+			}
+		}
+	}
+	return totalUsage, totalInjection
 }

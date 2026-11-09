@@ -670,10 +670,13 @@ func (e *Engine) Stats(ctx context.Context, f fit.Fit, opts fit.StatsOpts) (fit.
 		unmodelled = append(unmodelled, UnmodelledChargeFedCap)
 	}
 	unmodelled = append(unmodelled, notes.unmodelled...)
+	tankStats := tank(ship, items)
+	groupSDE := e.reader()
+	tankStats.Repair = repairSummary(ship, items, groupSDE.GetGroupID)
 	return fit.FitStats{
 		Navigation: navigation(ship),
 		Capacitor:  capacitor(ship, items),
-		Tank:       tank(ship, items),
+		Tank:       tankStats,
 		DPS:        dpsStats,
 		Volley:     totalVolley,
 		Drones:     droneStats(ship, droneItems, launched, droneDPS, maxActiveDrones(char)),

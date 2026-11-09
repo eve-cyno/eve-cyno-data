@@ -143,6 +143,39 @@ type TankStats struct {
 	HullResists     ResistProfile
 	TotalEHP        float64
 	ActiveRepPerSec float64
+	// Repair is the per-layer repair summary (E10). Not part of the public JSON shape
+	// until the wire task (T7.3) adds it; in-process callers read the field.
+	Repair RepairStats `json:"-"`
+}
+
+// RepairByLayer is one number per tank layer (hit points per second).
+type RepairByLayer struct {
+	Shield float64
+	Armor  float64
+	Hull   float64
+}
+
+// RemoteRepair is the outgoing remote repair per second, by what it repairs
+// (Capacitor in GJ per second, the rest in hit points per second).
+type RemoteRepair struct {
+	Shield    float64
+	Armor     float64
+	Hull      float64
+	Capacitor float64
+}
+
+// RepairStats is the E10 summary. Local is the peak local repair per second of the
+// fitted modules (hull repairers included; an ancillary armor repairer with Nanite
+// Repair Paste loaded counts its charged multiplier). Sustained is Local scaled by
+// min(1, capacitor supply / capacitor use) and is an estimate: SustainedEstimated is
+// true and SustainedReason says why. Remote lists what the fit repairs on others per
+// second; it is never part of Local or of the ship's own tank.
+type RepairStats struct {
+	Local              RepairByLayer
+	Sustained          RepairByLayer
+	SustainedEstimated bool
+	SustainedReason    string
+	Remote             RemoteRepair
 }
 
 // CapStats describes capacitor capacity, recharge, and stability.
