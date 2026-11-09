@@ -322,10 +322,53 @@ func (c *Catalog) prefilter(hull int, orig, cand *typeInfo) bool {
 	return true
 }
 
+// capOrder orders the variants of a line for the cap of MaxCandidates, which cuts from the
+// end: Tech II (meta level from high to low), then the Tech I base type of the family (the
+// lowest-level type of meta group 1 among the original and its variants, the cheap one that
+// fits the smallest hulls; skipped when it is the original), then the other meta group 1 types, then the
+// remaining non-Officer types (Faction, Storyline, Deadspace and the like) by meta level from
+// high to low, then Officer types; type id breaks every tie. So the cheap, low-fitting Tech I
+// variants survive a family with many Faction and Deadspace types.
+func (c *Catalog) capOrder(origID int, variants []int) []int {
+	base := 0
+	for _, id := range append([]int{origID}, variants...) {
+		if c.MetaGroup(id) != MetaTech1 {
+			continue
+		}
+		if base == 0 || c.MetaLevel(id) < c.MetaLevel(base) || c.MetaLevel(id) == c.MetaLevel(base) && id < base {
+			base = id
+		}
+	}
+	tier := func(id int) int {
+		switch mg := c.MetaGroup(id); {
+		case mg == MetaTech2:
+			return 0
+		case id == base:
+			return 1
+		case mg == MetaTech1:
+			return 2
+		case mg == MetaOfficer:
+			return 4
+		}
+		return 3
+	}
+	sort.Slice(variants, func(i, j int) bool {
+		a, b := variants[i], variants[j]
+		if ta, tb := tier(a), tier(b); ta != tb {
+			return ta < tb
+		}
+		if la, lb := c.MetaLevel(a), c.MetaLevel(b); la != lb {
+			return la > lb
+		}
+		return a < b
+	})
+	return variants
+}
+
 // Candidates returns the ordered candidates of one line. The original comes first, then its
-// variants in the order Tech II, then by meta level from high to low, then type id, Officer
-// types after all others; the empty slot comes last. At most MaxCandidates. A line that does
-// not exist gives nil.
+// variants in the order of capOrder (Tech II, the Tech I base type, other Tech I, the rest
+// by meta level, Officer last); the empty slot comes last. At most MaxCandidates. A line that
+// does not exist gives nil.
 //
 // Refit and Downgrade: the original's variants of any meta level and meta group but Abyssal (same parent
 // family, same slot, published, in the subset, usable by the pilot, allowed on the hull).
@@ -382,7 +425,7 @@ func (c *Catalog) Candidates(f fit.Fit, ref LineRef, o Options) []Candidate {
 		variants = append(variants, id)
 		anyUsable = true
 	}
-	sort.Slice(variants, func(i, j int) bool { return c.metaBefore(variants[i], variants[j]) })
+	variants = c.capOrder(orig.id, variants)
 	out := []Candidate{keep}
 	for _, id := range variants {
 		out = append(out, mk(id))

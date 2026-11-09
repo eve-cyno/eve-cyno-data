@@ -166,9 +166,10 @@ func TestCandidates_OrderStable(t *testing.T) {
 	c := NewCatalog(testSubset())
 	f := oneHigh(100, 0)
 	first := c.Candidates(f, hi0, refit(full))
-	// Original, Tech II by meta level (101 level 5, 108 4, 112 3; 111 is not for the hull), then
-	// Faction (102, 103 at level 8, by id), Storyline (104), Tech I (106), Officer (105) last; empty last.
-	require.Equal(t, []int{100, 101, 108, 112, 102, 103, 104, 106, 105, 0}, ids(first))
+	// Original, Tech II by meta level (101 level 5, 108 4, 112 3; 111 is not for the hull), the
+	// other Tech I (106; the original 100 is the Tech I base), then Faction (102, 103 at level 8,
+	// by id), Storyline (104), Officer (105) last; empty last.
+	require.Equal(t, []int{100, 101, 108, 112, 106, 102, 103, 104, 105, 0}, ids(first))
 	for i := 0; i < 20; i++ {
 		require.Equal(t, first, c.Candidates(f, hi0, refit(full)))
 	}
@@ -291,16 +292,18 @@ func TestCandidates_ConvertFamilyRanking(t *testing.T) {
 }
 
 // Owner ruling 2026-11-09 (4b): a replacement comes from any meta level and meta group. Order:
-// the original, Tech II, the rest by meta level (high to low), Officer last, the empty slot.
+// the original, Tech II, the Tech I base type, the other Tech I, the Faction/Storyline types by
+// meta level (high to low), Officer last, the empty slot.
 func TestCandidates_AnyMetaGroup(t *testing.T) {
 	c := NewCatalog(testSubset())
 	// A Tech II line now holds Faction (102, 103), Storyline (104), Tech I (106, 100) and
-	// Officer (105) types too: the other Tech II (108, 112) first, Officer after every other.
+	// Officer (105) types too: the other Tech II (108, 112) first, then the Tech I base type
+	// (100, level 0) and the other Tech I (106), then Faction and Storyline, Officer last.
 	got := ids(c.Candidates(oneHigh(101, 0), hi0, refit(full)))
-	require.Equal(t, []int{101, 108, 112, 102, 103, 104, 106, 100, 105, 0}, got)
+	require.Equal(t, []int{101, 108, 112, 100, 106, 102, 103, 104, 105, 0}, got)
 	// A Faction line sees the same family, its own type first.
 	got = ids(c.Candidates(oneHigh(102, 0), hi0, refit(full)))
-	require.Equal(t, []int{102, 101, 108, 112, 103, 104, 106, 100, 105, 0}, got)
+	require.Equal(t, []int{102, 101, 108, 112, 100, 106, 103, 104, 105, 0}, got)
 	// An Officer original stays first and is not moved to the end.
 	got = ids(c.Candidates(oneHigh(105, 0), hi0, refit(full)))
 	require.Equal(t, 105, got[0])
@@ -317,9 +320,9 @@ func TestCandidates_AnyMetaGroup(t *testing.T) {
 	// allowT2toT1 is ignored: a Tech II line takes Tech I types either way.
 	o := refit(full)
 	o.Policy.AllowT2toT1 = false
-	require.Equal(t, []int{121, 122, 123, 120, 0}, ids(c.Candidates(oneHigh(121, 0), hi0, o)))
+	require.Equal(t, []int{121, 122, 120, 123, 0}, ids(c.Candidates(oneHigh(121, 0), hi0, o)))
 	o.Policy.AllowT2toT1 = true
-	require.Equal(t, []int{121, 122, 123, 120, 0}, ids(c.Candidates(oneHigh(121, 0), hi0, o)))
+	require.Equal(t, []int{121, 122, 120, 123, 0}, ids(c.Candidates(oneHigh(121, 0), hi0, o)))
 }
 
 // Abyssal types (meta group 15) are mutation placeholders: never a candidate.
@@ -400,7 +403,7 @@ func TestCandidates_DowngradeOffersAnyMeta(t *testing.T) {
 		return Options{Kind: KindDowngrade, Skills: sk, Policy: Fallback(KindDowngrade)}
 	}
 	// A usable Tech I line sees the Tech II, Faction, Storyline and Officer siblings; no empty slot.
-	require.Equal(t, []int{100, 101, 108, 112, 102, 103, 104, 106, 105}, ids(c.Candidates(oneHigh(100, 0), hi0, dg(full))))
+	require.Equal(t, []int{100, 101, 108, 112, 106, 102, 103, 104, 105}, ids(c.Candidates(oneHigh(100, 0), hi0, dg(full))))
 	// An unusable original (108 needs the rare skill): the repair takes usable ones, no empty slot.
 	got := ids(c.Candidates(oneHigh(108, 0), hi0, dg(poor)))
 	require.Contains(t, got, 101)
@@ -498,4 +501,34 @@ func TestCandidates_RigSizeAndHullFilters(t *testing.T) {
 	got := ids(c.Candidates(rf, rig0, cv))
 	require.Contains(t, got, 401)
 	require.NotContains(t, got, 405, "restricted to another hull group")
+}
+
+// The cap keeps the cheap Tech I variants: a Tech II line whose family holds 6 Tech II and 14
+// Deadspace/Faction types still offers the Tech I base type and the other Tech I types, and the
+// Deadspace types of the highest meta level are cut first among the non-Officer ones. The
+// original stays first, the empty slot last, Officer after every other type.
+func TestCandidates_CapKeepsTechIBeforeFactionAndDeadspace(t *testing.T) {
+	sub := testSubset()
+	sub.Types = append(sub.Types, ty(700, 800, 7, []int{12}, map[int]float64{}))
+	add := func(id, mg int, level float64) {
+		sub.Types = append(sub.Types, withMeta(ty(id, 800, 7, []int{12}, map[int]float64{attrMetaLevel: level}), mg, 700))
+	}
+	for i := 0; i < 6; i++ { // Tech II 701..706, the original is 701
+		add(701+i, 2, float64(5+i))
+	}
+	for i := 0; i < 14; i++ { // Deadspace and Faction, meta level above every Tech II
+		add(720+i, 6-2*(i%2), float64(10+i))
+	}
+	add(750, 5, 40) // Officer
+	add(751, 1, 2)  // Tech I
+	add(752, 1, 1)  // Tech I
+	c := NewCatalog(sub)
+	f := fit.Fit{HullID: hullSmall, High: []fit.FitModule{{TypeID: 701, Qty: 1}}}
+	got := ids(c.Candidates(f, hi0, refit(full)))
+	require.Len(t, got, MaxCandidates)
+	require.Equal(t, 701, got[0], "original first")
+	require.Equal(t, 0, got[len(got)-1], "empty slot last")
+	// Tech II: 706..702 by level; base 700 (level 0), then 751, 752 by level; then Faction/Deadspace from the top.
+	require.Equal(t, []int{701, 706, 705, 704, 703, 702, 700, 751, 752, 733, 732, 0}, got)
+	require.NotContains(t, got, 750, "Officer cut before any Faction or Deadspace type")
 }
