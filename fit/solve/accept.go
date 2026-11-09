@@ -79,6 +79,9 @@ type Eval struct {
 	DPS, EHP  float64
 	Valid     bool
 	CapStable bool
+	// StablePct (the level a stable capacitor settles at, in percent) and SecondsToEmpty (an
+	// unstable one) carry no rule of Accept; CapacitorWarn reads them.
+	StablePct, SecondsToEmpty float64
 }
 
 // Verdict is the result of Accept.

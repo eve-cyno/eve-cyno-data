@@ -227,3 +227,67 @@ func TestCandidates_ConvertOfficerLastAndAbyssalExcluded(t *testing.T) {
 	o.Policy.AllowRigChanges = true
 	require.NotContains(t, ids(c.Candidates(rf, LineRef{Slot: SlotRig}, o)), 404, "Abyssal rig on Convert")
 }
+
+// capPctEngine is a fakeEngine that reports where a stable capacitor settles: 100 less the
+// modules' capacitor use, in percent.
+type capPctEngine struct{ fakeEngine }
+
+func (e *capPctEngine) EvaluateBatch(ctx context.Context, reqs []gofa.Request) ([]Evaluation, error) {
+	out, err := e.fakeEngine.EvaluateBatch(ctx, reqs)
+	for i, r := range reqs {
+		use := 0.0
+		for _, m := range r.Fit.High {
+			use += e.store.GetDogma(m.TypeID)[attrFakeCap]
+		}
+		if out[i].Stats.Capacitor.Stable {
+			out[i].Stats.Capacitor.StablePct = 100 - use
+		}
+	}
+	return out, err
+}
+
+// The capacitor warning also fires when the chosen fit is stable but settles clearly lower
+// than the flown baseline (here 70 % against 64 %), and not when it settles within a point.
+func TestSolve_CapacitorWarnsOnLowerStableLevel(t *testing.T) {
+	cap := func(v float64) map[int]float64 { return map[int]float64{attrFakeCap: v} }
+	sub := func(use float64) *dogma.Subset {
+		return fakeSubset(
+			gun(1000, 1, 0, 10, rare(cap(10))),
+			gun(1001, 2, 5, 50, rare(cap(10))), // unusable: the flown fit
+			gun(1002, 1, 4, 45, cap(use)),
+		)
+	}
+	run := func(use float64) *Result {
+		c := NewCatalog(sub(use))
+		res, err := Solve(context.Background(), c, &capPctEngine{fakeEngine{store: c.Store(), workers: 1}},
+			Request{Kind: KindDowngrade, Fit: highFit(1001, 1001, 1001), Skills: poor, Policy: fixPolicy(nil)})
+		require.NoError(t, err)
+		return res
+	}
+	res := run(12) // 36 of 100: 64 %, B2 at 70 %
+	require.True(t, res.Result.CapStable)
+	require.Len(t, res.Warnings, 1)
+	require.Equal(t, WarnCapacitor, res.Warnings[0].Code)
+	require.Contains(t, res.Warnings[0].Message, "stable at 64 %")
+	require.Contains(t, res.Warnings[0].Message, "70 %")
+	res = run(10.3) // 30.9: 69.1 %, within a point of B2's 70 %
+	require.Empty(t, res.Warnings)
+}
+
+// Unstable in both: the warning fires when the chosen fit empties more than 5 % sooner.
+func TestSolve_CapacitorWarnsOnSoonerEmpty(t *testing.T) {
+	cap := func(v float64) map[int]float64 { return map[int]float64{attrFakeCap: v} }
+	run := func(use float64) *Result {
+		return fakeSolve(t, fakeSubset(
+			gun(1000, 1, 0, 10, rare(cap(40))),
+			gun(1001, 2, 5, 50, rare(cap(40))), // flown: 120 of 100, empty in 50 s
+			gun(1002, 1, 4, 45, cap(use)),
+		), Request{Kind: KindDowngrade, Fit: highFit(1001, 1001, 1001), Skills: poor, Policy: fixPolicy(nil)})
+	}
+	res := run(50) // 150: empty in 20 s
+	require.False(t, res.Result.CapStable)
+	require.Len(t, res.Warnings, 1)
+	require.Contains(t, res.Warnings[0].Message, "empty in 20 s")
+	require.Contains(t, res.Warnings[0].Message, "in 50 s")
+	require.Empty(t, run(39).Warnings, "117 of 100: empty in 59 s, later than the flown 50 s")
+}

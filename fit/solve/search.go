@@ -303,7 +303,6 @@ type probe struct {
 	verdict   Verdict
 	rank      Rank
 	viols     []fit.Violation
-	capSecs   float64 // seconds to empty when the capacitor is not stable
 	uncertain []string
 	err       error
 }
@@ -509,7 +508,8 @@ func (s *search) setup() error {
 // baseline judges a baseline evaluation of the request's fit.
 func (s *search) baseline(f fit.Fit, ev Evaluation, opts fit.StatsOpts) (Eval, Numbers) {
 	viols := s.violations(f, ev.Resources, opts)
-	e := Eval{DPS: ev.Stats.DPS.Theoretical, EHP: ev.Stats.Tank.TotalEHP, Valid: len(viols) == 0, CapStable: ev.Stats.Capacitor.Stable}
+	e := Eval{DPS: ev.Stats.DPS.Theoretical, EHP: ev.Stats.Tank.TotalEHP, Valid: len(viols) == 0, CapStable: ev.Stats.Capacitor.Stable,
+		StablePct: ev.Stats.Capacitor.StablePct, SecondsToEmpty: ev.Stats.Capacitor.SecondsToEmpty}
 	return e, numbersOf(e)
 }
 
@@ -717,8 +717,8 @@ func (s *search) judge(asg []Candidate, f fit.Fit, ev Evaluation) *probe {
 	p := &probe{asg: asg, key: asgKey(asg), err: ev.Err}
 	if ev.Err == nil {
 		p.viols = s.violations(f, ev.Resources, s.pilot)
-		p.eval = Eval{DPS: ev.Stats.DPS.Theoretical, EHP: ev.Stats.Tank.TotalEHP, Valid: len(p.viols) == 0, CapStable: ev.Stats.Capacitor.Stable}
-		p.capSecs = ev.Stats.Capacitor.SecondsToEmpty
+		p.eval = Eval{DPS: ev.Stats.DPS.Theoretical, EHP: ev.Stats.Tank.TotalEHP, Valid: len(p.viols) == 0, CapStable: ev.Stats.Capacitor.Stable,
+			StablePct: ev.Stats.Capacitor.StablePct, SecondsToEmpty: ev.Stats.Capacitor.SecondsToEmpty}
 		p.uncertain = uncertainOf(ev.Stats)
 	}
 	p.verdict = Accept(s.pol, s.b1, s.b2, p.eval)

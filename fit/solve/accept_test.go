@@ -43,6 +43,11 @@ type vecFile struct {
 		B2Stable bool   `json:"b2CapStable"`
 		Stable   bool   `json:"capStable"`
 		Warn     bool   `json:"warn"`
+		// Optional (absent = 0): the stable level in percent, the seconds to empty.
+		B2StablePct      float64 `json:"b2StablePct"`
+		StablePct        float64 `json:"stablePct"`
+		B2SecondsToEmpty float64 `json:"b2SecondsToEmpty"`
+		SecondsToEmpty   float64 `json:"secondsToEmpty"`
 	} `json:"capWarn"`
 	Rank []struct {
 		Name   string `json:"name"`
@@ -81,9 +86,11 @@ func TestAccept_Vectors(t *testing.T) {
 		require.Equal(t, c.Text != "", ok, "%v/%v", c.Cand, c.Base)
 		require.Equal(t, c.Text, got, "%v/%v", c.Cand, c.Base)
 	}
-	require.Len(t, v.CapWarn, 4)
+	require.Len(t, v.CapWarn, 12)
 	for _, c := range v.CapWarn {
-		require.Equal(t, c.Warn, CapacitorWarn(Eval{CapStable: c.B2Stable}, Eval{CapStable: c.Stable}), c.Name)
+		b2 := Eval{CapStable: c.B2Stable, StablePct: c.B2StablePct, SecondsToEmpty: c.B2SecondsToEmpty}
+		got := Eval{CapStable: c.Stable, StablePct: c.StablePct, SecondsToEmpty: c.SecondsToEmpty}
+		require.Equal(t, c.Warn, CapacitorWarn(b2, got), c.Name)
 	}
 	for _, c := range v.Rank {
 		require.Equal(t, c.ABette, Better(c.Kind, c.A, c.B), c.Name)
