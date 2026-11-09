@@ -10,7 +10,8 @@ type StatsProvider interface {
 }
 
 // SkillProfile maps skillTypeID → trained level (0–5).
-// A nil map or a missing entry means "assume V (5)".
+// A nil map or a missing entry means "assume V (5)", unless StatsOpts.MissingAsZero
+// is set: then a missing entry means level 0 (untrained).
 type SkillProfile map[int]int
 
 // TargetProfile describes the target used for applied-DPS calculations.
@@ -23,7 +24,12 @@ type TargetProfile struct {
 // StatsOpts carries optional per-request parameters.
 type StatsOpts struct {
 	Skills SkillProfile
-	Target TargetProfile
+	// MissingAsZero makes a skill absent from Skills count level 0 (untrained),
+	// never V. A nil Skills map stays all V whatever this flag says ("no profile
+	// given"); an empty non-nil map with the flag set is all 0. Default false keeps
+	// the all-V reference-character model of every existing caller.
+	MissingAsZero bool
+	Target        TargetProfile
 	// ActiveDroneTypeIDs, when non-nil, is the priority list of drone typeIDs the
 	// user has launched. The engine launches them in order within bandwidth + the
 	// max-in-space cap; the rest stay in the bay (no DPS). nil → auto (fit order).
@@ -31,13 +37,17 @@ type StatsOpts struct {
 }
 
 // skillLevel returns the trained level for skillTypeID.
-// A nil Skills map, or a missing entry, returns 5 (assume V).
+// A nil Skills map returns 5 (assume V). A missing entry returns 0 when
+// MissingAsZero is set, else 5.
 func (o StatsOpts) skillLevel(skillTypeID int) int {
 	if o.Skills == nil {
 		return 5
 	}
 	if lvl, ok := o.Skills[skillTypeID]; ok {
 		return lvl
+	}
+	if o.MissingAsZero {
+		return 0
 	}
 	return 5
 }

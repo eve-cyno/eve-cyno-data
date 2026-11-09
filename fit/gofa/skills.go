@@ -5,14 +5,18 @@ import (
 )
 
 // skillLevelFor returns the trained level for skillTypeID from a raw skill map.
-// A nil map or a missing entry returns 5 (all-V default), the all-skills-at-V
-// reference character the oracle values use.
-func skillLevelFor(skills map[int]int, skillTypeID int) int {
+// A nil map returns 5 (all-V default), the all-skills-at-V reference character
+// the oracle values use. A missing entry returns 0 when missingAsZero is set
+// (StatsOpts.MissingAsZero: an untrained skill), else 5.
+func skillLevelFor(skills map[int]int, skillTypeID int, missingAsZero bool) int {
 	if skills == nil {
 		return 5
 	}
 	if lvl, ok := skills[skillTypeID]; ok {
 		return lvl
+	}
+	if missingAsZero {
+		return 0
 	}
 	return 5
 }

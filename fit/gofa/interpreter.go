@@ -96,7 +96,7 @@ func resolveModifiers(s SDE, ship *Item, items []*Item, skills map[int]int) {
 	// effects (e.g. eff 453, 163) scale per-level bonuses. nil/missing ⇒ level 5.
 	for _, it := range items {
 		if it.Kind == KindSkill {
-			it.Attrs[280] = float64(skillLevelFor(skills, it.TypeID))
+			it.Attrs[280] = float64(skillLevelFor(skills, it.TypeID, false))
 		}
 	}
 

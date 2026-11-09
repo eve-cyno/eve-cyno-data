@@ -180,7 +180,7 @@ func (e *Engine) resolveForStats(ctx context.Context, f fit.Fit, opts fit.StatsO
 	// Build the merged skill map: all-V defaults first, caller opts win.
 	skillsMap := make(map[int]int, len(allSkillTypeIDs)+len(opts.Skills))
 	for _, id := range allSkillTypeIDs {
-		skillsMap[id] = skillLevelFor(opts.Skills, id) // nil opts.Skills ⇒ 5
+		skillsMap[id] = skillLevelFor(opts.Skills, id, opts.MissingAsZero) // nil opts.Skills ⇒ 5; MissingAsZero ⇒ absent = 0
 	}
 	for id, lvl := range opts.Skills {
 		skillsMap[id] = lvl
@@ -198,6 +198,9 @@ func (e *Engine) resolveForStats(ctx context.Context, f fit.Fit, opts fit.StatsO
 		}())
 		for id, lvl := range defaultProfile {
 			if _, ok := skillsMap[id]; !ok {
+				if opts.MissingAsZero && opts.Skills != nil {
+					lvl = 0 // untrained unless the caller set it (below)
+				}
 				skillsMap[id] = lvl
 			}
 		}
