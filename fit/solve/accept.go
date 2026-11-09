@@ -51,15 +51,18 @@ type Gate struct {
 
 // Policy is the rule of one request (spec 13.2). An empty Gates only reports.
 type Policy struct {
-	Gates           []Gate `json:"gates"`
-	Baseline        string `json:"baseline"`
+	Gates    []Gate `json:"gates"`
+	Baseline string `json:"baseline"`
+	// AllowT2toT1 is kept in the wire policy for compatibility and is ignored: since the
+	// 2026-11-09 rulings a replacement may come from any meta level and meta group.
 	AllowT2toT1     bool   `json:"allowT2toT1"`
 	AllowRigChanges bool   `json:"allowRigChanges"`
 	From            string `json:"from"`
 }
 
 // Fallback is the rule used when a request leaves it open: Fix keeps DPS and EHP at 98 % of
-// B2; Downgrade and Convert gate on validity only. Both allow T2 to T1 and forbid rig changes.
+// B2; Downgrade and Convert gate on validity only. Rig changes are forbidden. AllowT2toT1 is
+// set true for compatibility; the solver ignores it.
 func Fallback(k Kind) Policy {
 	p := Policy{Gates: []Gate{}, Baseline: BaselineFlown, AllowT2toT1: true, From: FromFallback}
 	if k == KindRefit {
@@ -70,7 +73,8 @@ func Fallback(k Kind) Policy {
 
 // Eval is what the rule needs of one evaluation: the two ranked stats, whether the fit is
 // valid under the pilot (hard rule: slots, resources, hull, skills; a soft resource violation
-// is invalid), and the capacitor-stable flag.
+// is invalid), and the capacitor-stable flag (not a gate: a worse capacitor is allowed and
+// warned, see Warning).
 type Eval struct {
 	DPS, EHP  float64
 	Valid     bool
@@ -79,9 +83,8 @@ type Eval struct {
 
 // Verdict is the result of Accept.
 type Verdict struct {
-	Accepted  bool    // valid, capacitor not worse than B2, every gate met
+	Accepted  bool    // valid and every gate met
 	GatesMet  bool    // every gate met (true with no gates)
-	CapOK     bool    // capacitor-stable flag not worse than B2's
 	Objective float64 // min(DPS ratio, EHP ratio) against the chosen baseline, rounded
 }
 
@@ -156,16 +159,16 @@ func GatesMet(p Policy, base, cand Eval) bool {
 	return true
 }
 
-// Accept applies the acceptance rule to one candidate: valid under the pilot, capacitor
-// stable flag not worse than B2's, and every gate met against the policy's baseline.
+// Accept applies the acceptance rule to one candidate: valid under the pilot and every gate
+// met against the policy's baseline. The capacitor is not a gate (owner ruling 2026-11-09:
+// a worse capacitor is allowed and warned, see CapacitorWarn).
 func Accept(p Policy, b1, b2, cand Eval) Verdict {
 	base := chosen(p, b1, b2)
 	v := Verdict{
 		GatesMet:  GatesMet(p, base, cand),
-		CapOK:     cand.CapStable || !b2.CapStable,
 		Objective: Objective(base, cand),
 	}
-	v.Accepted = cand.Valid && v.CapOK && v.GatesMet
+	v.Accepted = cand.Valid && v.GatesMet
 	return v
 }
 

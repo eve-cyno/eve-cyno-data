@@ -501,9 +501,9 @@ func TestSolve_UncertainWhenNotModelled(t *testing.T) {
 	require.Contains(t, res.Uncertain, gofa.UnmodelledChargeFedCap)
 }
 
-// A candidate that makes a cap-stable fit unstable is never chosen, whatever its objective.
-// When B2 is already unstable, it may be.
-func TestSolve_CapStableNotWorse(t *testing.T) {
+// Owner ruling 2026-11-09 (4a): a replacement may make the capacitor worse than the flown fit.
+// The cap-unstable variant with the best objective wins over the stable one.
+func TestSolve_CapWorseIsAllowed(t *testing.T) {
 	types := []dogma.SubsetType{
 		gun(1000, 1, 0, 40, nil),
 		gun(1001, 2, 5, 50, rare(map[int]float64{attrFakeCap: 30})),
@@ -514,10 +514,10 @@ func TestSolve_CapStableNotWorse(t *testing.T) {
 	r := Request{Kind: KindRefit, Fit: f, Skills: poor, Policy: fixPolicy(gateIs(StatDPS, 90))}
 	res := fakeSolve(t, fakeSubset(types...), r)
 	require.True(t, res.Baseline.Flown.CapStable)
-	require.Equal(t, []int{1003}, highTypes(res.Fit))
-	require.True(t, res.Result.CapStable)
+	require.Equal(t, []int{1002}, highTypes(res.Fit))
+	require.False(t, res.Result.CapStable)
 
-	// B2 unstable (the original uses 150): the unstable variant is no worse, and wins.
+	// B2 unstable (the original uses 150): the same pick.
 	types[1] = gun(1001, 2, 5, 50, rare(map[int]float64{attrFakeCap: 150}))
 	res = fakeSolve(t, fakeSubset(types...), r)
 	require.False(t, res.Baseline.Flown.CapStable)

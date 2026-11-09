@@ -65,10 +65,10 @@ func TestCapBaselineTrain_TwoUnusableLinesTogether(t *testing.T) {
 	require.Contains(t, note, "cannot use")
 }
 
-// M2 on the real SDE: Vexor (reference 2) for the droner with the Afterburner replaced by a
-// second Medium Capacitor Booster II. Both boosters keep the fit cap-stable, either alone does
-// too, and without both it is unstable: the cap binding names the skill of the boosters.
-func TestNoCandidate_CapBindingTwoUnusableBoosters(t *testing.T) {
+// Vexor (reference 2) for the droner with the Afterburner replaced by a second Medium
+// Capacitor Booster II (Downgrade). Owner ruling 2026-11-09 (4a): the cap-booster lines the
+// pilot cannot use no longer end the solve with a capacitor binding; a result comes back.
+func TestSolve_VexorTwoUnusableBoostersReturnsResult(t *testing.T) {
 	c := realCatalog(t)
 	f := refFit(t, c, 2)
 	f.Mid = append([]fit.FitModule(nil), f.Mid...)
@@ -78,15 +78,11 @@ func TestNoCandidate_CapBindingTwoUnusableBoosters(t *testing.T) {
 		}
 	}
 	r := Request{Kind: KindDowngrade, Fit: f, Skills: e3aProfiles(t)["droner"]}
-	_, rep := reportFor(t, c, r)
-	require.Equal(t, BindCap, rep.Binding.Code)
-	ces := skillID(t, c, "Capacitor Systems Operation")
-	found := false
-	for _, l := range rep.Train {
-		found = found || l.SkillID == ces
-	}
-	require.True(t, found, "train names Capacitor Systems Operation: %+v", rep.Train)
-	require.Contains(t, rep.Note, "cap-stable only through")
+	res, err := Solve(context.Background(), c, NewEngineEvaluator(gofa.New(c.Store()), 4), r)
+	require.NoError(t, err)
+	require.NotEqual(t, StatusNoCandidate, res.Status)
+	require.NotNil(t, res.Fit)
+	require.True(t, res.Result.Valid)
 }
 
 // L6: the cap rule gates against B2, so the note appears even when the policy baseline is

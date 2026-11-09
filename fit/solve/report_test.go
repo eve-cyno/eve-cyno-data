@@ -215,30 +215,3 @@ func TestNoCandidate_SkillBindingTrains(t *testing.T) {
 	}
 	require.Contains(t, rep.Binding.Text, first.Names[0])
 }
-
-// M3 (safe part): the cap-not-worse rule is unchanged. When the report's binding is the
-// capacitor and the written fit was cap-stable only through a line the pilot cannot use
-// (Vexor, reference 2: the Medium Capacitor Booster II), the train names the skill that
-// opens that line and the Note says what the baseline rests on.
-func TestNoCandidate_CapBindingNamesUnusableCapItem(t *testing.T) {
-	c := realCatalog(t)
-	f := refFit(t, c, 2)
-	r := Request{Kind: KindDowngrade, Fit: f, Skills: e3aProfiles(t)["droner"]}
-	res, rep := reportFor(t, c, r)
-	require.Equal(t, BindCap, rep.Binding.Code)
-	require.True(t, res.Baseline.Flown.CapStable)
-	ces := skillID(t, c, "Capacitor Systems Operation") // 3417
-	found := false
-	for _, l := range rep.Train {
-		if l.SkillID == ces {
-			found = true
-			require.Equal(t, 4, l.To)
-			require.Contains(t, l.For, "Capacitor Booster")
-		}
-	}
-	require.True(t, found, "train names Capacitor Systems Operation (3417): %+v", rep.Train)
-	require.Contains(t, rep.Note, TrainNote)
-	require.Contains(t, rep.Note, "cap-stable only through")
-	require.Contains(t, rep.Note, "Medium Capacitor Booster II")
-	require.Contains(t, rep.Note, "cannot use")
-}

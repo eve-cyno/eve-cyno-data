@@ -60,7 +60,7 @@ const (
 )
 
 // Violation codes the solver adds to the fit package's: the drone bay and bandwidth of
-// fit.Resources, which fit.ValidateWith does not check, and the capacitor rule.
+// fit.Resources, which fit.ValidateWith does not check.
 const (
 	CodeDroneBayOver fit.Code = "drone_bay_over"
 	// CodeDroneBandwidthOver cannot fire from gofa.Engine.Resources: its DroneBandwidth.Used
@@ -68,9 +68,6 @@ const (
 	// (TestResources_DroneBandwidthUsedIsLaunched). The code stays as a guard for a provider
 	// that counts every written drone; convert.go caps the lines by bandwidth itself.
 	CodeDroneBandwidthOver fit.Code = "drone_bandwidth_over"
-	// CodeCapUnstable: the fit is not capacitor stable while B2 is (the hard rule). It is the
-	// last repair binding and appears in Option.Violations; Load is the seconds to empty.
-	CodeCapUnstable fit.Code = "cap_unstable"
 )
 
 // Request is one solve.
@@ -300,8 +297,8 @@ type probe struct {
 
 func (p *probe) accepted() bool { return p.err == nil && p.verdict.Accepted }
 
-// hardOK: valid under the pilot and the capacitor flag not worse than B2's (the hard rule).
-func (p *probe) hardOK() bool { return p.err == nil && p.eval.Valid && p.verdict.CapOK }
+// hardOK: valid under the pilot (the hard rule). The capacitor is not part of it.
+func (p *probe) hardOK() bool { return p.err == nil && p.eval.Valid }
 
 // nonSkillOK: no violation but missing skills (the single changes of the forced phase leave
 // the other unusable lines in place).
@@ -810,10 +807,9 @@ func (s *search) better(a, b *probe) bool {
 }
 
 // forcedTier orders the single changes of the forced phase: no violation but the other
-// lines' missing skills, capacitor not worse and gates met; then the first two; then gates
-// met; then the rest.
+// lines' missing skills and gates met; then the first; then gates met; then the rest.
 func forcedTier(p *probe) int {
-	ok := p.nonSkillOK() && p.verdict.CapOK
+	ok := p.nonSkillOK()
 	switch {
 	case ok && p.verdict.GatesMet:
 		return 0
@@ -982,7 +978,7 @@ type bindKey struct {
 // bindingOrder is the order in which repair takes the violations of a fit: what a single
 // line change cannot fix first (the search then stops), the weapon hardpoints (which decide
 // which modules go before a slot overflow drops one), the fixed hull rules, then the
-// resources, the capacitor last.
+// resources.
 var bindingOrder = []fit.Code{
 	fit.CodeUnknownModule, fit.CodeNotFittable, fit.CodeFitTooLarge,
 	fit.CodeSkill, fit.CodeSubsystemMissing, fit.CodeSubsystemDuplicate,
@@ -1013,21 +1009,12 @@ func (s *search) binding(p *probe) (bindKey, bool) {
 		sort.Strings(other)
 		return bindKey{code: fit.Code(other[0])}, true
 	}
-	if !p.verdict.CapOK {
-		return bindKey{code: CodeCapUnstable}, true
-	}
 	return bindKey{}, false
 }
 
 // measure is how far a fit is from clearing the binding: the overage of a resource, the
-// modules over a count, 1 per item otherwise; for the capacitor, 1 / (1 + seconds to empty).
+// modules over a count, 1 per item otherwise.
 func (s *search) measure(p *probe, b bindKey) float64 {
-	if b.code == CodeCapUnstable {
-		if p.verdict.CapOK {
-			return 0
-		}
-		return 1 / (1 + max(0, p.capSecs))
-	}
 	sum := 0.0
 	for _, v := range p.viols {
 		if v.Code != b.code || (b.code == fit.CodeSlotOverflow && v.Slot != b.slot) {
@@ -1249,10 +1236,6 @@ func (s *search) changes(asg []Candidate) []LineChange {
 
 func (s *search) option(p *probe) Option {
 	v := append([]fit.Violation(nil), p.viols...)
-	if !p.verdict.CapOK {
-		v = append(v, fit.Violation{Severity: fit.Hard, Code: CodeCapUnstable, Load: p.capSecs,
-			Message: fmt.Sprintf("capacitor not stable (empty in %.0f s); the original is stable", p.capSecs)})
-	}
 	return Option{Fit: s.buildFit(p.asg), Changes: s.changes(p.asg), Result: numbersOf(p.eval), Violations: v}
 }
 

@@ -28,7 +28,9 @@ const (
 	BindHardpoint   = "hardpoint"
 	BindDroneBay    = "drone_bay"
 	BindDroneBW     = "drone_bandwidth"
-	BindCap         = "cap" // capacitor not stable while the original is
+	// BindCap is no solve binding since the 2026-11-09 rulings (a worse capacitor is allowed);
+	// it names the capacitor attributes trainFor ranks skills by for the capacitor warning.
+	BindCap         = "cap"
 	BindGate        = "gate"
 	BindSubsystems  = "subsystems" // a Convert onto a T3 hull: no subsystems to offer
 	BindOther       = "other"      // any other hard rule; Violation holds the fit code
@@ -99,9 +101,7 @@ type Report struct {
 }
 
 // BuildReport builds the report of a solve that ended no_candidate. r is the request that was
-// solved and res its result; ev evaluates the training what-ifs (at most 10 skills x 5 levels;
-// a cap binding adds one evaluation per unusable line, one with all of them removed, and one
-// per pair of them when there are at most maxPairLines).
+// solved and res its result; ev evaluates the training what-ifs (at most 10 skills x 5 levels).
 func BuildReport(ctx context.Context, c *Catalog, ev Evaluator, r Request, res *Result) (*Report, error) {
 	if res == nil || res.Status != StatusNoCandidate || res.NoCandidate == nil {
 		return nil, fmt.Errorf("solve: report needs a no_candidate result")
@@ -152,17 +152,6 @@ func BuildReport(ctx context.Context, c *Catalog, ev Evaluator, r Request, res *
 			return nil, err
 		}
 		rep.Train = t
-		if b.Code == BindCap {
-			extra, note, err := capBaselineTrain(ctx, c, ev, r, res)
-			if err != nil {
-				return nil, err
-			}
-			if len(extra) > 0 {
-				merged := dedupeTrain(append(extra, rep.Train...))
-				rep.Train = merged[:min(trainLines, len(merged))]
-				rep.Note = TrainNote + "; " + note
-			}
-		}
 		return rep, nil
 	}
 
@@ -249,16 +238,17 @@ func (c *Catalog) trainLine(skill, from, to int) TrainLine {
 		Text: fmt.Sprintf("%s %s to %s", n, roman(from), roman(to))}
 }
 
-// maxPairLines bounds the unusable lines for which capBaselineTrain tries every pair.
+// maxPairLines bounds the unusable lines for which capBaselineTrain tries every pair
+// (one evaluation per unusable line, one with all of them removed, one per pair).
 const maxPairLines = 12
 
-// capBaselineTrain explains a capacitor binding whose baseline was stable only through lines
-// the pilot cannot use. The cap rule always gates against B2 (the original under the pilot's
-// skills, accept.go), whatever baseline the policy ranks against, so B2 is checked here. Each
+// capBaselineTrain explains a capacitor warning whose baseline was stable only through lines
+// the pilot cannot use. The warning compares against B2 (the original under the pilot's
+// skills), whatever baseline the policy ranks against, so B2 is checked here. Each
 // unusable line the baseline needs to stay stable (the fit without it is unstable) gives the
 // skills that would open it; when no single line is needed, the lines of every pair whose joint removal
-// makes the fit unstable are named, and failing that all of them when removing all is unstable. The note names the lines.
-// The cap rule itself is not changed; this only says what the baseline rests on.
+// makes the fit unstable are named, and failing that all of them when removing all is unstable.
+// The note names the lines. It only says what the baseline rests on.
 func capBaselineTrain(ctx context.Context, c *Catalog, ev Evaluator, r Request, res *Result) ([]TrainLine, string, error) {
 	if r.Skills == nil || !res.Baseline.Flown.CapStable {
 		return nil, "", nil
@@ -479,9 +469,6 @@ func violationBinding(v fit.Violation) (b Binding, size float64) {
 		count(BindHardpoint, unitHardpoints)
 	case fit.CodeGroupLimit:
 		count(BindOther, unitModules)
-	case CodeCapUnstable:
-		b.Code, b.Unit, b.Use = BindCap, unitSeconds, v.Load
-		size = 1 / (1 + math.Max(v.Load, 0))
 	case fit.CodeSkill:
 		b.Code = BindSkill
 		b.Skill = v.Skill
@@ -528,8 +515,6 @@ func bindingText(b Binding) string {
 		return fmt.Sprintf("%.0f line(s) over the slots", b.Over)
 	case BindHardpoint:
 		return fmt.Sprintf("%.0f weapon(s) over the hardpoints", b.Over)
-	case BindCap:
-		return fmt.Sprintf("Capacitor not stable (empty in %.0f %s), the original is stable", b.Use, b.Unit)
 	case BindSkill:
 		return "A line needs a skill the pilot lacks"
 	}
