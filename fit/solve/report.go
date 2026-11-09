@@ -318,6 +318,13 @@ func capBaselineTrain(ctx context.Context, c *Catalog, ev Evaluator, r Request, 
 func (c *Catalog) skillBinding(b Binding, opt Option) (string, []TrainLine) {
 	text := bindingText(b)
 	train := []TrainLine{}
+	// The highest level required per skill, so one line trains far enough for every item.
+	top := map[int]int{}
+	for _, v := range opt.Violations {
+		if v.Code == fit.CodeSkill && v.Skill != nil && v.Skill.Needs > top[v.Skill.TypeID] {
+			top[v.Skill.TypeID] = v.Skill.Needs
+		}
+	}
 	seen := map[int]bool{}
 	for _, v := range opt.Violations {
 		if v.Code != fit.CodeSkill || v.Skill == nil || seen[v.Skill.TypeID] {
@@ -331,13 +338,13 @@ func (c *Catalog) skillBinding(b Binding, opt Option) (string, []TrainLine) {
 			line = c.nameOf(v.ItemTypeID)
 		}
 		if len(train) == 0 {
-			text = fmt.Sprintf("%s needs %s %s, the pilot has %s", line, c.nameOf(v.Skill.TypeID), roman(v.Skill.Needs), roman(v.Skill.Has))
+			text = fmt.Sprintf("%s needs %s %s, the pilot has %s", line, c.nameOf(v.Skill.TypeID), roman(top[v.Skill.TypeID]), roman(v.Skill.Has))
 		}
 		if len(train) == trainLines {
 			break
 		}
 		seen[v.Skill.TypeID] = true
-		l := c.trainLine(v.Skill.TypeID, v.Skill.Has, v.Skill.Needs)
+		l := c.trainLine(v.Skill.TypeID, v.Skill.Has, top[v.Skill.TypeID])
 		l.For = line
 		l.Text += " (" + line + ")"
 		train = append(train, l)

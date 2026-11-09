@@ -6,6 +6,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"eve-cyno.dev/go/data/fit"
 	"eve-cyno.dev/go/data/fit/gofa"
 )
 
@@ -27,4 +28,18 @@ func TestSolve_RifterFitIIIDowngradeSameMetaGroup(t *testing.T) {
 		require.LessOrEqual(t, c.MetaGroup(ch.To), c.MetaGroup(ch.From),
 			"%s -> %s moves to a higher meta group", c.nameOf(ch.From), c.nameOf(ch.To))
 	}
+}
+
+// L5: the skill binding trains to the highest level any line needs.
+func TestSkillBinding_KeepsHighestLevel(t *testing.T) {
+	c := NewCatalog(testSubset())
+	opt := Option{Violations: []fit.Violation{
+		{Code: fit.CodeSkill, Names: []string{"A"}, Skill: &fit.MissingSkill{TypeID: skillRare, Has: 1, Needs: 2}},
+		{Code: fit.CodeSkill, Names: []string{"B"}, Skill: &fit.MissingSkill{TypeID: skillRare, Has: 1, Needs: 4}},
+	}}
+	text, train := c.skillBinding(Binding{Code: BindSkill}, opt)
+	require.Len(t, train, 1)
+	require.Equal(t, 4, train[0].To)
+	require.Equal(t, 1, train[0].From)
+	require.Contains(t, text, "IV")
 }
