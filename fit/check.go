@@ -205,6 +205,12 @@ type checkSpec struct {
 	// lg + alpha: skill-based Alpha legality of every module and the hull.
 	lg    *Legality
 	alpha bool
+
+	// res, when set, replaces the all-V constant model of CPU and powergrid (ValidateWith):
+	// the caps and each module unit's draw come from the engine's resolved attributes.
+	res *Resources
+	// noImplantBand: an overage is Hard even within 5 % (the fit already counts its implants).
+	noImplantBand bool
 }
 
 // check is the single fit validator. Violations come out in this order: per slot
@@ -377,6 +383,10 @@ func check(s ValidateSDE, sp checkSpec) Report {
 	// the capacity modifiers and the tie order of the top consumers all follow it.
 	var capMods, capRigs []map[int]float64
 	var cpuLoads, pgLoads []Consumer
+	var cursor *moduleCursor
+	if sp.res != nil {
+		cursor = newModuleCursor(sp.res)
+	}
 	groupNames := map[int][]string{}
 	groupLimit := map[int]int{}
 	var unknown, unfittable []string
@@ -395,6 +405,11 @@ func check(s ValidateSDE, sp checkSpec) Report {
 		}
 		if e.kind == kindModule {
 			cpu, pg := ModuleLoad(gid, d)
+			if cursor != nil {
+				if m, ok := cursor.take(e.slot); ok {
+					cpu, pg = m.CPU, m.PG
+				}
+			}
 
 			// An offline module is still charged its load but must not boost the
 			// ship: an offline RCU adds no powergrid.
@@ -445,6 +460,9 @@ func check(s ValidateSDE, sp checkSpec) Report {
 
 	// CPU / PG capacity with the fitting-modifier modules and rigs applied.
 	rep.CPUCap, rep.PGCap = OutputCapacity(ship, capMods, capRigs)
+	if sp.res != nil {
+		rep.CPUCap, rep.PGCap = sp.res.CPU.Cap, sp.res.PG.Cap
+	}
 
 	// CPU / PG — severity by overage. The cap already assumes all-V skills, so the
 	// only thing left that can close a gap is a +5 % output implant (EE-605 CPU,
@@ -457,7 +475,7 @@ func check(s ValidateSDE, sp checkSpec) Report {
 		over := used/cap - 1
 		msg := fmt.Sprintf("%s over: %.1f/%.1f (+%.1f %%)", unit, used, cap, over*100)
 		v := Violation{Code: code, Load: used, Capacity: cap, Consumers: topConsumers(loads, topConsumersShown)}
-		if used <= cap*(1+ImplantOutputBonus) {
+		if used <= cap*(1+ImplantOutputBonus) && !sp.noImplantBand {
 			v.Severity, v.Message = Soft, msg+", "+implantNote
 		} else {
 			v.Severity, v.Message = Hard, msg

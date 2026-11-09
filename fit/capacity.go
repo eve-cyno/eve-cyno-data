@@ -103,7 +103,8 @@ var powercoreGroups = map[int]bool{
 	766: true, 767: true, 768: true, 769: true, 770: true,
 }
 
-// ModuleLoad returns the CPU and PG one module draws at the all-V skill profile.
+// ModuleLoad returns the CPU and PG one module draws at the all-V skill profile (the
+// all-V constant model; fit.ValidateWith reads the engine's resolved loads instead).
 // groupID is the module's invGroups ID (nil when unknown: the raw load is
 // returned); dogma is the module's dgmTypeAttributes map.
 func ModuleLoad(groupID *int, dogma map[int]float64) (cpu, pg float64) {
@@ -125,7 +126,8 @@ func ModuleLoad(groupID *int, dogma map[int]float64) (cpu, pg float64) {
 	return cpu, pg
 }
 
-// OutputCapacity returns the ship's effective CPU and powergrid output at the
+// OutputCapacity (the all-V constant model; fit.ValidateWith reads the engine's resolved
+// output instead) returns the ship's effective CPU and powergrid output at the
 // all-V skill profile, with the fitting-modifier modules and rigs applied.
 //
 //	CPU = shipCPU                  x Π cpuMultiplier        x 1.25 (CPU Management V) x Π (1 + cpuOutputBonus2/100)

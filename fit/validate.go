@@ -111,7 +111,7 @@ const (
 	attrMaxGroupFitted = 1544
 )
 
-// Validate runs the full deterministic fit check against slot counts, CPU, PG,
+// Validate (the all-V constant model; see ValidateWith for the engine-backed reading) runs the full deterministic fit check against slot counts, CPU, PG,
 // calibration, turret and launcher hardpoints, the charge each module may load,
 // maxGroupFitted, and (when lg != nil and alpha == true) Alpha legality.
 // Returns a Report with zero or more Violations at Soft or Hard severity, each with

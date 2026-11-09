@@ -44,6 +44,9 @@ type Item struct {
 	// skill and hull modifiers, so its CPU / PG load is final) but none of its effects
 	// act. An offline module is still charged its load but must not boost the ship.
 	Inert bool
+	// Slot is the fit slot group of a module unit ("hi", "mid", "low", "rig", "subsystem");
+	// empty for every other item.
+	Slot string
 }
 
 // attrKey identifies a single (item, attribute) slot targeted by modifiers.

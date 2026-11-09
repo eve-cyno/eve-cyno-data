@@ -168,7 +168,7 @@ func (e *Engine) resolveCore(ctx context.Context, f fit.Fit, opts fit.StatsOpts,
 				// Each instance gets its OWN copy of the dogma map so that
 				// resolveModifiers can mutate each independently.
 				attrs := sdeView.GetDogma(fm.TypeID)
-				modItem := &Item{TypeID: fm.TypeID, Kind: g.kind, Attrs: attrs, Overheat: fm.State == "overheat", Inert: offline}
+				modItem := &Item{TypeID: fm.TypeID, Kind: g.kind, Attrs: attrs, Overheat: fm.State == "overheat", Inert: offline, Slot: itemSlot(g.name)}
 				items = append(items, modItem)
 
 				// For weapon modules with a loaded charge, build a KindCharge
@@ -828,4 +828,15 @@ func blockFlags(defaultAmmo, chargeFedReps bool) fit.BlockFlags {
 		})
 	}
 	return fl
+}
+
+// itemSlot maps a slot group name of resolveCore to the key of the fit slot groups.
+func itemSlot(group string) string {
+	if group == "high" {
+		return "hi"
+	}
+	if group == "drone" {
+		return ""
+	}
+	return group
 }
