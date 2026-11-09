@@ -15,7 +15,8 @@ package fit_test
 // A number marked "finding" is a confirmed engine deviation (see cases.json): the test then
 // requires the engine to still differ and logs both values, so the suite stays green while
 // the deviation is open, and goes red the day the engine is fixed (drop the flag then).
-// Open: F3, the cap need raised by a loaded charge's capNeedBonus (Void) is not applied.
+// No finding is open: F3 (a loaded charge's capNeedBonus, Void, raising the weapon cap need
+// through an otherID modifier) is fixed in the interpreter, so the Megathron pairs check normally.
 
 import (
 	"context"

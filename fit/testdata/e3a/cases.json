@@ -1543,8 +1543,7 @@
      "tol": "rel1e-6",
      "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
      "formula": "closed form of dt = dC/(net - recharge(C)) from full to empty, s = sqrt(c): t = (2/a) atan(1/(2w))/w, a = 10/T, w = sqrt(net/C/a - 1/4); net drain 51.025938 GJ/s",
-     "estimated": "continuous drain stands in for discrete module cycles",
-     "finding": "F3"
+     "estimated": "continuous drain stands in for discrete module cycles"
     },
     "speed": {
      "value": 1023.454784,
@@ -1685,8 +1684,7 @@
      "tol": "rel1e-6",
      "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
      "formula": "closed form of dt = dC/(net - recharge(C)) from full to empty, s = sqrt(c): t = (2/a) atan(1/(2w))/w, a = 10/T, w = sqrt(net/C/a - 1/4); net drain 52.259078 GJ/s",
-     "estimated": "continuous drain stands in for discrete module cycles",
-     "finding": "F3"
+     "estimated": "continuous drain stands in for discrete module cycles"
     },
     "speed": {
      "value": 974.5330976,
@@ -2251,8 +2249,7 @@
      "tol": "rel1e-6",
      "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
      "formula": "closed form of dt = dC/(net - recharge(C)) from full to empty, s = sqrt(c): t = (2/a) atan(1/(2w))/w, a = 10/T, w = sqrt(net/C/a - 1/4); net drain 54.498878 GJ/s",
-     "estimated": "continuous drain stands in for discrete module cycles",
-     "finding": "F3"
+     "estimated": "continuous drain stands in for discrete module cycles"
     },
     "speed": {
      "value": 946.4825318,

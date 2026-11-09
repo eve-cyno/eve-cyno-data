@@ -50,6 +50,9 @@ type Item struct {
 	// Slot is the fit slot group of a module unit ("hi", "mid", "low", "rig", "subsystem");
 	// empty for every other item.
 	Slot string
+	// Other is the paired item an otherID modifier reaches: the loaded charge for a module,
+	// the host module for a charge. nil when nothing is paired.
+	Other *Item
 }
 
 // attrKey identifies a single (item, attribute) slot targeted by modifiers.
@@ -291,7 +294,15 @@ func resolveTargets(s SDE, m dogma.Modifier, ship, char, source *Item, items []*
 		location = ship
 	case "itemID":
 		location = source
-	case "targetID", "otherID", "structureID":
+	case "otherID":
+		// The module <-> loaded charge pairing (ammo and script effects). Only an
+		// ItemModifier is defined for it in the SDE except effect 1943 (a
+		// LocationModifier on the module's contents, which a module has none of).
+		if m.Func != "ItemModifier" || source.Other == nil {
+			return nil
+		}
+		return []*Item{source.Other}
+	case "targetID", "structureID":
 		return nil // offensive / irrelevant to fit stats
 	default:
 		return nil
@@ -434,7 +445,7 @@ func fractionalBonus(op int, magnitude float64) float64 {
 }
 
 // modifierSupported reports whether the interpreter can apply a modifier of this domain and
-// function. The offensive domains (targetID, otherID, structureID) are supported in the sense
+// function. The offensive domains (targetID, structureID) are supported in the sense
 // that ignoring them is right for fit statistics; any other domain or function is unknown to
 // resolveTargets and its modifier would be silently dropped.
 func modifierSupported(m dogma.Modifier) bool {

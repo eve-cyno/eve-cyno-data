@@ -340,3 +340,40 @@ func TestResolveModifiers_LocationModifier(t *testing.T) {
 	_, ok := ship.Attrs[300]
 	require.False(t, ok)
 }
+
+// TestResolveModifiers_OtherID: an otherID ItemModifier acts on the item the source is paired
+// with, the loaded charge for a module and the host module for a charge (the SDE's ammo and
+// script effects, e.g. effect 804 ammoInfluenceCapNeed: charge attr 317 PostPercent on the
+// module's capacitorNeed 6). The pairing is by Item.Other; an unpaired source changes nothing.
+func TestResolveModifiers_OtherID(t *testing.T) {
+	s := &fakeSDE{
+		dogma: map[int]map[int]float64{
+			1: {},
+			2: {6: 100},            // module: capacitorNeed 100
+			3: {317: 25, 54: 1000}, // charge: capNeedBonus +25 %
+			4: {6: 100},            // unpaired module
+			5: {900: 50, 901: 10},  // module whose own effect reaches its charge
+			6: {900: 7},            // charge target
+		},
+		effects: map[int][]int{3: {804}, 5: {805}},
+		modifiers: map[int][]sde.Modifier{
+			804: {{Domain: "otherID", Func: "ItemModifier", ModifiedAttr: 6, ModifyingAttr: 317, Operation: opPostPercent}},
+			805: {{Domain: "otherID", Func: "ItemModifier", ModifiedAttr: 900, ModifyingAttr: 901, Operation: opPostPercent}},
+		},
+		attrMeta: map[int]sde.AttrMeta{},
+	}
+	ship := newItem(s, 1, KindShip)
+	mod := newItem(s, 2, KindModule)
+	ch := newItem(s, 3, KindCharge)
+	mod.Other, ch.Other = ch, mod
+	lone := newItem(s, 4, KindModule)
+	src := newItem(s, 5, KindModule)
+	tgt := newItem(s, 6, KindCharge)
+	src.Other, tgt.Other = tgt, src
+
+	resolveModifiers(s, ship, []*Item{ship, mod, ch, lone, src, tgt}, nil)
+
+	require.InDelta(t, 125.0, mod.Attrs[6], 1e-9, "charge capNeedBonus raises the module's cap need")
+	require.InDelta(t, 100.0, lone.Attrs[6], 1e-9, "no pairing, no effect")
+	require.InDelta(t, 7.7, tgt.Attrs[900], 1e-9, "module to charge direction")
+}

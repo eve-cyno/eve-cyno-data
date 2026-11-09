@@ -179,6 +179,7 @@ func (e *Engine) resolveCore(ctx context.Context, f fit.Fit, opts fit.StatsOpts,
 					chargeItem := &Item{TypeID: fm.ChargeID, Kind: KindCharge, Attrs: cAttrs, Inert: offline}
 					items = append(items, chargeItem)
 					chargeByModule[modItem] = chargeItem
+					modItem.Other, chargeItem.Other = chargeItem, modItem
 				}
 			}
 			seenTypeID[fm.TypeID] = struct{}{}

@@ -387,12 +387,10 @@ def build_case(ref, pid):
     cf = 'use %.8g GJ/s (sum need/cycle), injection %.8g GJ/s, peak 2.5*%.8g/%.8g = %.8g GJ/s; stable iff peak + injection >= use' % (n['cap_use'], n['cap_inject'], n['cap_capacity'], n['cap_recharge_s'], n['cap_peak'])
     add('cap_stable', n['cap_stable'], EX, SRC['cap'], cf, est)
     net = n['cap_use'] - n['cap_inject']
-    # F3: a loaded charge with capNeedBonus (attr 317, e.g. Void) raises the launcher/turret cap need through a charge-to-module (otherID) modifier the engine does not apply
-    f3 = 'F3' if any(m.charge is not None and f.val(m.charge, 317) and not f.val(m.charge, 67) for m in mods) else None
     if n['cap_stable']:
         add('cap_stable_pct', n['cap_stable_pct'], REL, SRC['cap'], 'net drain %.8g; k = net/peak = %.8g; pct = 100*((1+sqrt(1-k))/2)^2' % (net, net / n['cap_peak'] if net > 0 else 0), est)
     else:
-        add('cap_seconds_to_empty', n['cap_seconds_to_empty'], REL, SRC['cap'], 'closed form of dt = dC/(net - recharge(C)) from full to empty, s = sqrt(c): t = (2/a) atan(1/(2w))/w, a = 10/T, w = sqrt(net/C/a - 1/4); net drain %.8g GJ/s' % net, est or 'continuous drain stands in for discrete module cycles', f3)
+        add('cap_seconds_to_empty', n['cap_seconds_to_empty'], REL, SRC['cap'], 'closed form of dt = dC/(net - recharge(C)) from full to empty, s = sqrt(c): t = (2/a) atan(1/(2w))/w, a = 10/T, w = sqrt(net/C/a - 1/4); net drain %.8g GJ/s' % net, est or 'continuous drain stands in for discrete module cycles')
     add('speed', n['speed'], REL, SRC['speed'], 'passive max velocity %.10g x (1 + speedFactor/100 x thrust/mass) for each active propulsion module, mass %.10g; no propulsion module: passive value' % (n['speed_passive'], n['mass_total']))
     return cases, doc
 

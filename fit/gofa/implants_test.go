@@ -124,8 +124,9 @@ func TestImplants_SlotDedupe(t *testing.T) {
 // the capacitor stable level and time to empty were corrected (EVE University "Capacitor"):
 // with StablePct and SecondsToEmpty zeroed the old and the new engine hash the same
 // (5393eb63390c675fb22cc4050cd3aa9c5a5b910c3b759d7da1debbb5bac9d456), so only those two
-// fields moved; TestCapacitor_AllV27Table pins them per fit.
-const statsAllV27Hash = "fd3b38253435e797763c4aad67bf188df8ff242e5021d16894b0412af1838e81"
+// fields moved; TestCapacitor_AllV27Table pins them per fit. Re-pinned again when a loaded charge
+// reached its module (otherID): only Range[0] of five fits moved, TestAmmoRangeModifiers pins them.
+const statsAllV27Hash = "80e9adc76a6d6d7ddba87e9b075d2ff689e07def661c50357415d8d3d247160b"
 
 // No implants changes nothing: nil and an empty list give today's bytes on the 27 fits.
 func TestImplants_NoneEqualsToday(t *testing.T) {
