@@ -172,7 +172,7 @@ func TestEngine_ResolveRejectsHugeQty(t *testing.T) {
 		start := time.Now()
 		_, _, err := New(s).resolve(c.f, fit.StatsOpts{})
 		require.Error(t, err, c.name)
-		require.Less(t, time.Since(start), 2*time.Second, c.name)
+		require.Less(t, time.Since(start), wallBound(2*time.Second), c.name)
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()

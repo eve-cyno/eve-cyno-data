@@ -102,7 +102,7 @@ jobs:
           PKGS=$(go list ./...)
           RACE=$(printf '%s\n' "$PKGS" | grep -Ev "$NORACE" || true)
           # shellcheck disable=SC2086
-          go test -race -timeout 600s $RACE
+          go test -race -timeout 900s $RACE
 
       - name: go test (the SQLite-bound packages, no -race)
         run: |
@@ -139,7 +139,7 @@ jobs:
           fail-on-cache-miss: true
 
       - name: go test (fit/solve corpus tests, no -race)
-        run: go test -count=1 -timeout 1200s -run '^(TestConvert_TwoPassNeverWorseThanClassic|TestFixDowngrade_UnchangedByTwoPass|TestSolve_TiesReproducible|TestOwnerExample_ConvertDoctrineCollection)$' ./fit/solve/
+        run: go test -count=1 -timeout 1200s -run '^(TestConvert_TwoPassNeverWorseThanClassic|TestFixDowngrade_UnchangedByTwoPass|TestSolve_TiesReproducible|TestOwnerExample_ConvertDoctrineCollection|TestSolve_NeverOutsideSubset|TestConvert_HardpointsCap|TestDowngrade_MinimalChanges|TestSolve_TwinSkippingKeepsSuccessfulResults|TestConvert_OwnHullNoChange|TestCandidates_AnyMetaGroup_RealSDE|TestConvert_HardpointsRepairedBeforeSlotOverflow|TestConvert_RigSizeFamily|TestDowngrade_AnyMetaGroupButNoOfficerIntroduced)$' ./fit/solve/
 
       - name: go test (fit/gofa corpus tests, no -race)
         run: go test -count=1 -timeout 1200s -run '^(TestProperty_HigherSkillNeverLowers|TestProperty_Deterministic|TestEHP_UniformUnchanged|TestProperty_ModuleOrderIrrelevant|TestPrune_EqualsFull|TestPrune_LevelZeroEqualsAbsent|TestStats_DeterministicAcrossCallsAndEngines|TestResources_DifferentialAllV|TestStats_MissingAsZeroEqualsCompleteMap|TestGolden_MaxLockedTargetsAllV|TestEvaluateMany_EqualsSingle|TestResources_SkillProfiles|TestSubset_EngineMatchesSQLite|TestImplants_NoneEqualsToday|TestCapacitor_AllV27Table|TestSubset_StartAndStatsTime|TestAmmoRangeModifiers|TestSubset_StoreSurvivesWriteJSON|TestApplyDefaultAmmo_TableBySizeAndFamily|TestImplants_HandFormula|TestImplants_FitLinesNeverApply)$' ./fit/gofa/

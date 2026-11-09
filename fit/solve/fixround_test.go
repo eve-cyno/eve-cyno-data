@@ -338,6 +338,7 @@ func twinScenario(rng *rand.Rand) (*dogma.Subset, Request) {
 // A no_candidate report may differ: it lists the evaluated candidates, and a skipped twin is
 // not evaluated.
 func TestSolve_TwinSkippingKeepsSuccessfulResults(t *testing.T) {
+	skipHeavyRace(t)
 	rng := rand.New(rand.NewSource(7))
 	checked := 0
 	for it := 0; it < 1000; it++ {

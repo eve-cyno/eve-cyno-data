@@ -278,6 +278,7 @@ func TestCapBaselineTrain_TwoLinesNoDuplicateEvaluation(t *testing.T) {
 // lines the pilot cannot use (or that repair moved); a usable line is never upgraded for the
 // objective. maxChanges are the ceilings of the minimal result.
 func TestDowngrade_MinimalChanges(t *testing.T) {
+	skipHeavyRace(t)
 	c := realCatalog(t)
 	ev := NewEngineEvaluator(gofa.New(c.Store()), 4)
 	profs := e3aProfiles(t)

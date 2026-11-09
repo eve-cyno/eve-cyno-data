@@ -370,6 +370,7 @@ func TestSolve_TiesReproducible(t *testing.T) {
 // No candidate fit holds a type outside the subset or an unpublished one, unless it is the
 // original line's own type.
 func TestSolve_NeverOutsideSubset(t *testing.T) {
+	skipHeavyRace(t)
 	// Synthetic: a line whose type the subset does not hold is dropped, a charge it does not
 	// hold is unloaded.
 	sub := fakeSubset(

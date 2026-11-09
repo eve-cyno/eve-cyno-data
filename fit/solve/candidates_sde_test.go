@@ -13,6 +13,7 @@ import (
 // Owner ruling 2026-11-09 on the pinned build: the candidates of HML II hold Faction,
 // Storyline and Officer launchers too, Officer last of the launchers, and the cap holds.
 func TestCandidates_AnyMetaGroup_RealSDE(t *testing.T) {
+	skipHeavyRace(t)
 	s, err := realsde.Open(sdetest.Path(t))
 	if err != nil || !s.Available() {
 		sdetest.Skip(t, "data/sde/sde.sqlite not available; skipping real-SDE test")

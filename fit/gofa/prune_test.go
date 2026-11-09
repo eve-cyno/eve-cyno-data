@@ -152,7 +152,7 @@ func TestPrune_EqualsFull(t *testing.T) {
 	if shrinkUnderRace() {
 		n = 40
 		if raceEnabled {
-			n = 12
+			n = 5
 		}
 	}
 	rng := rand.New(rand.NewSource(20261109))

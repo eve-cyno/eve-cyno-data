@@ -122,7 +122,7 @@ func TestEvaluateMany_Cancel(t *testing.T) {
 	got, err = e.EvaluateMany(ctx, reqs, ManyOpts{Workers: 2})
 	took := time.Since(start)
 	require.ErrorIs(t, err, context.Canceled)
-	require.Less(t, took, 3*time.Second)
+	require.Less(t, took, wallBound(3*time.Second))
 	done, cancelled := 0, 0
 	for _, r := range got {
 		switch {

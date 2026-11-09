@@ -1,6 +1,9 @@
 package gofa
 
-import "testing"
+import (
+	"testing"
+	"time"
+)
 
 // Heavy real-SDE corpus tests are slow under the race detector (6-30x) and add no signal there:
 // they are sequential arithmetic over the SDE. Two helpers mark them, and the CI test
@@ -19,3 +22,12 @@ func skipHeavyRace(t *testing.T) {
 }
 
 func shrinkUnderRace() bool { return testing.Short() || raceEnabled }
+
+// wallBound scales a wall-clock bound for the race detector (5-30x slower, shared runners): the
+// bound still catches runaway work, but flakes no more on a slow machine.
+func wallBound(d time.Duration) time.Duration {
+	if raceEnabled {
+		return 10 * d
+	}
+	return d
+}

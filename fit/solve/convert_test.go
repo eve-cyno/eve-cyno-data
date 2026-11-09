@@ -48,6 +48,7 @@ func countEffect(c *Catalog, mods []fit.FitModule, effect int) int {
 
 // Converting a fit to its own hull under all V gives the original with 0 changes.
 func TestConvert_OwnHullNoChange(t *testing.T) {
+	skipHeavyRace(t)
 	c := realCatalog(t)
 	for ref := 1; ref <= 6; ref++ {
 		f := refFit(t, c, ref)
@@ -90,6 +91,7 @@ func TestConvert_OwnHullRepairs(t *testing.T) {
 // Weapons are capped by the target's hardpoints and lines by its slots; the search drops
 // the line whose loss is least.
 func TestConvert_HardpointsCap(t *testing.T) {
+	skipHeavyRace(t)
 	c := realCatalog(t)
 	for _, pc := range []struct {
 		ref, target       int
@@ -144,6 +146,7 @@ func TestConvert_UnloadedChargeHasNoName(t *testing.T) {
 
 // Rigs map to the member of their family whose rig size equals the target's.
 func TestConvert_RigSizeFamily(t *testing.T) {
+	skipHeavyRace(t)
 	c := realCatalog(t)
 	f := refFit(t, c, 1) // two Small Projectile Burst Aerator I
 	src := c.types[f.Rig[0].TypeID]
@@ -300,6 +303,7 @@ func TestConvert_DroneQuantityCap(t *testing.T) {
 // modules (objective 0.918493); repairing the slot overflow first dropped an MFS II
 // instead (0.872604).
 func TestConvert_HardpointsRepairedBeforeSlotOverflow(t *testing.T) {
+	skipHeavyRace(t)
 	c := realCatalog(t)
 	f := refFit(t, c, 5)
 	res := convertSolve(t, c, f, hullHyperion, nil)

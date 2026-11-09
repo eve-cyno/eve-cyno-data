@@ -200,6 +200,7 @@ func validUnder(ctx context.Context, st *dogma.Store, f fit.Fit, skills fit.Skil
 // dropped). It always returns a valid fit for the reference fits under fitIII, and it
 // introduces no Officer module (an Officer line is ranked after every other choice).
 func TestDowngrade_AnyMetaGroupButNoOfficerIntroduced(t *testing.T) {
+	skipHeavyRace(t)
 	c := realCatalog(t)
 	sk := e3aProfiles(t)["fitIII"]
 	for _, n := range []int{1, 2, 3, 5, 6} {
