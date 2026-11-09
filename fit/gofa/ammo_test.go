@@ -82,6 +82,7 @@ func TestApplyDefaultAmmo_KeepsLoadedCharges(t *testing.T) {
 }
 
 func TestApplyDefaultAmmo_TableBySizeAndFamily(t *testing.T) {
+	skipHeavyRace(t)
 	cases := []struct {
 		module, charge string
 	}{

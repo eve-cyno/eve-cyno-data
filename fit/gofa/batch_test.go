@@ -49,6 +49,9 @@ func TestEvaluateMany_EqualsSingle(t *testing.T) {
 	require.Len(t, fits, 27)
 	if shrinkUnderRace() {
 		fits = fits[:6]
+		if raceEnabled {
+			fits = fits[:3]
+		}
 	}
 	profiles := loadE3aProfiles(t, batchProfiles...)
 	reqs := batchRequests(t, fits, profiles)

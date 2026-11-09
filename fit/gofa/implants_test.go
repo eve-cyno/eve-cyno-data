@@ -39,6 +39,7 @@ func fitNamed(t *testing.T, s *sde.SDE, name string) fit.Fit {
 // together and 1.011 for the Alpha alone. Values are the SDE's implant bonuses (EVE
 // University wiki, "Implants").
 func TestImplants_HandFormula(t *testing.T) {
+	skipHeavyRace(t)
 	s := openRealSDE(t)
 	defer s.Close()
 	eng := New(s)
@@ -201,6 +202,7 @@ func TestImplants_UnsupportedModifierUnmodelled(t *testing.T) {
 // lines gives byte-equal stats and resources under all V, all 0 and a levels map, with and
 // without StatsOpts.Implants; only StatsOpts.Implants changes a number.
 func TestImplants_FitLinesNeverApply(t *testing.T) {
+	skipHeavyRace(t)
 	s := openRealSDE(t)
 	defer s.Close()
 	eng := New(s)

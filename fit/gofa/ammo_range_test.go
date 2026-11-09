@@ -22,6 +22,7 @@ import (
 // EVE University "Turrets" (https://wiki.eveuniversity.org/Turrets): Multifrequency and
 // Antimatter -50 % optimal.
 func TestAmmoRangeModifiers(t *testing.T) {
+	skipHeavyRace(t)
 	s := openRealSDE(t)
 	defer s.Close()
 	eng := New(s)

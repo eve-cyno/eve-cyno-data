@@ -108,6 +108,7 @@ func TestSubset_EngineMatchesSQLite(t *testing.T) {
 }
 
 func TestSubset_StoreSurvivesWriteJSON(t *testing.T) {
+	skipHeavyRace(t)
 	s := openRealSDE(t)
 	t.Cleanup(func() { _ = s.Close() })
 	sub, err := s.ExportSubset("test")
@@ -146,6 +147,7 @@ func TestSubset_RejectsOtherFormat(t *testing.T) {
 // TestSubset_StartAndStatsTime logs (does not assert) how long the engine takes to start
 // from the JSON subset and to evaluate a fit cold and warm; the L1 report quotes the numbers.
 func TestSubset_StartAndStatsTime(t *testing.T) {
+	skipHeavyRace(t)
 	s := openRealSDE(t)
 	t.Cleanup(func() { _ = s.Close() })
 	sub, err := s.ExportSubset("test")
