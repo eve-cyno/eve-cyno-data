@@ -60,7 +60,7 @@ func TestCapBaselineTrain_TwoUnusableLinesTogether(t *testing.T) {
 	require.NoError(t, err)
 	require.NotEmpty(t, train)
 	require.Equal(t, skillRare, train[0].SkillID)
-	require.Contains(t, note, "The original fit is cap-stable only through")
+	require.Contains(t, note, "The original fit is stable only with")
 	require.Contains(t, note, "cannot use")
 	require.NotContains(t, note, ";")
 }
@@ -139,7 +139,7 @@ func TestCapBaselineTrain_AlwaysChecksFlownBaseline(t *testing.T) {
 	train, note, err := capBaselineTrain(context.Background(), c, capFake{minHigh: 2}, r, capResult(BaselineDesigned, false))
 	require.NoError(t, err)
 	require.NotEmpty(t, train)
-	require.Contains(t, note, "The original fit is cap-stable only through")
+	require.Contains(t, note, "The original fit is stable only with")
 }
 
 // L7: one train line per skill, with the highest target level, then at most 3 lines.

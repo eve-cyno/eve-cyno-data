@@ -369,7 +369,7 @@ func capBaselineTrain(ctx context.Context, c *Catalog, ev Evaluator, r Request, 
 			out = append(out, l)
 		}
 	}
-	note := "The original fit is cap-stable only through " + strings.Join(names, ", ") + ", which the pilot cannot use."
+	note := "The original fit is stable only with " + strings.Join(names, ", ") + ", which the pilot cannot use."
 	return dedupeTrain(out), note, nil
 }
 
