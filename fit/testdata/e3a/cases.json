@@ -129,12 +129,11 @@
      "formula": "use 10.666667 GJ/s (sum need/cycle), injection 0 GJ/s, peak 2.5*250/125 = 5 GJ/s; stable iff peak + injection >= use"
     },
     "cap_seconds_to_empty": {
-     "value": 35.41850075,
+     "value": 35.4189852,
      "tol": "rel1e-6",
      "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
-     "formula": "RK4 integration (h = 0.05 s) of dc/dt = 10/T*(sqrt(c)-c) - net/Cmax from c = 1 to c = 0, net drain 10.666667 GJ/s",
-     "estimated": "continuous drain stands in for discrete module cycles",
-     "finding": "F2"
+     "formula": "closed form of dt = dC/(net - recharge(C)) from full to empty, s = sqrt(c): t = (2/a) atan(1/(2w))/w, a = 10/T, w = sqrt(net/C/a - 1/4); net drain 10.666667 GJ/s",
+     "estimated": "continuous drain stands in for discrete module cycles"
     },
     "speed": {
      "value": 733.8488576,
@@ -271,12 +270,11 @@
      "formula": "use 11.871242 GJ/s (sum need/cycle), injection 0 GJ/s, peak 2.5*300/118.75 = 6.3157895 GJ/s; stable iff peak + injection >= use"
     },
     "cap_seconds_to_empty": {
-     "value": 41.40047062,
+     "value": 41.40053531,
      "tol": "rel1e-6",
      "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
-     "formula": "RK4 integration (h = 0.05 s) of dc/dt = 10/T*(sqrt(c)-c) - net/Cmax from c = 1 to c = 0, net drain 11.871242 GJ/s",
-     "estimated": "continuous drain stands in for discrete module cycles",
-     "finding": "F2"
+     "formula": "closed form of dt = dC/(net - recharge(C)) from full to empty, s = sqrt(c): t = (2/a) atan(1/(2w))/w, a = 10/T, w = sqrt(net/C/a - 1/4); net drain 11.871242 GJ/s",
+     "estimated": "continuous drain stands in for discrete module cycles"
     },
     "speed": {
      "value": 949.0950181,
@@ -413,12 +411,11 @@
      "formula": "use 11.54183 GJ/s (sum need/cycle), injection 0 GJ/s, peak 2.5*300/106.25 = 7.0588235 GJ/s; stable iff peak + injection >= use"
     },
     "cap_seconds_to_empty": {
-     "value": 47.88617594,
+     "value": 47.8865835,
      "tol": "rel1e-6",
      "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
-     "formula": "RK4 integration (h = 0.05 s) of dc/dt = 10/T*(sqrt(c)-c) - net/Cmax from c = 1 to c = 0, net drain 11.54183 GJ/s",
-     "estimated": "continuous drain stands in for discrete module cycles",
-     "finding": "F2"
+     "formula": "closed form of dt = dC/(net - recharge(C)) from full to empty, s = sqrt(c): t = (2/a) atan(1/(2w))/w, a = 10/T, w = sqrt(net/C/a - 1/4); net drain 11.54183 GJ/s",
+     "estimated": "continuous drain stands in for discrete module cycles"
     },
     "speed": {
      "value": 997.4787042,
@@ -555,12 +552,11 @@
      "formula": "use 12.135948 GJ/s (sum need/cycle), injection 0 GJ/s, peak 2.5*300/106.25 = 7.0588235 GJ/s; stable iff peak + injection >= use"
     },
     "cap_seconds_to_empty": {
-     "value": 43.46761292,
+     "value": 43.4681601,
      "tol": "rel1e-6",
      "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
-     "formula": "RK4 integration (h = 0.05 s) of dc/dt = 10/T*(sqrt(c)-c) - net/Cmax from c = 1 to c = 0, net drain 12.135948 GJ/s",
-     "estimated": "continuous drain stands in for discrete module cycles",
-     "finding": "F2"
+     "formula": "closed form of dt = dC/(net - recharge(C)) from full to empty, s = sqrt(c): t = (2/a) atan(1/(2w))/w, a = 10/T, w = sqrt(net/C/a - 1/4); net drain 12.135948 GJ/s",
+     "estimated": "continuous drain stands in for discrete module cycles"
     },
     "speed": {
      "value": 949.1073529,
@@ -1126,8 +1122,7 @@
      "value": 76.51924185,
      "tol": "rel1e-6",
      "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
-     "formula": "net drain 10.7; k = net/peak = 0.43824143; pct = 100*((1+sqrt(1-k))/2)^2",
-     "finding": "F1"
+     "formula": "net drain 10.7; k = net/peak = 0.43824143; pct = 100*((1+sqrt(1-k))/2)^2"
     },
     "speed": {
      "value": 667.82943,
@@ -1267,8 +1262,7 @@
      "value": 76.51924185,
      "tol": "rel1e-6",
      "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
-     "formula": "net drain 10.7; k = net/peak = 0.43824143; pct = 100*((1+sqrt(1-k))/2)^2",
-     "finding": "F1"
+     "formula": "net drain 10.7; k = net/peak = 0.43824143; pct = 100*((1+sqrt(1-k))/2)^2"
     },
     "speed": {
      "value": 667.82943,
@@ -1545,12 +1539,12 @@
      "formula": "use 51.025938 GJ/s (sum need/cycle), injection 0 GJ/s, peak 2.5*5760/977.5 = 14.731458 GJ/s; stable iff peak + injection >= use"
     },
     "cap_seconds_to_empty": {
-     "value": 141.3032608,
+     "value": 141.3032775,
      "tol": "rel1e-6",
      "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
-     "formula": "RK4 integration (h = 0.05 s) of dc/dt = 10/T*(sqrt(c)-c) - net/Cmax from c = 1 to c = 0, net drain 51.025938 GJ/s",
+     "formula": "closed form of dt = dC/(net - recharge(C)) from full to empty, s = sqrt(c): t = (2/a) atan(1/(2w))/w, a = 10/T, w = sqrt(net/C/a - 1/4); net drain 51.025938 GJ/s",
      "estimated": "continuous drain stands in for discrete module cycles",
-     "finding": "F2"
+     "finding": "F3"
     },
     "speed": {
      "value": 1023.454784,
@@ -1687,12 +1681,12 @@
      "formula": "use 52.259078 GJ/s (sum need/cycle), injection 0 GJ/s, peak 2.5*5760/977.5 = 14.731458 GJ/s; stable iff peak + injection >= use"
     },
     "cap_seconds_to_empty": {
-     "value": 137.1142494,
+     "value": 137.1143403,
      "tol": "rel1e-6",
      "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
-     "formula": "RK4 integration (h = 0.05 s) of dc/dt = 10/T*(sqrt(c)-c) - net/Cmax from c = 1 to c = 0, net drain 52.259078 GJ/s",
+     "formula": "closed form of dt = dC/(net - recharge(C)) from full to empty, s = sqrt(c): t = (2/a) atan(1/(2w))/w, a = 10/T, w = sqrt(net/C/a - 1/4); net drain 52.259078 GJ/s",
      "estimated": "continuous drain stands in for discrete module cycles",
-     "finding": "F2"
+     "finding": "F3"
     },
     "speed": {
      "value": 974.5330976,
@@ -1830,12 +1824,11 @@
      "estimated": "cap booster charge count and reload (10 s) not modelled: injection taken as continuous charge/cycle"
     },
     "cap_seconds_to_empty": {
-     "value": 729.1230336,
+     "value": 729.1235448,
      "tol": "rel1e-6",
      "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
-     "formula": "RK4 integration (h = 0.05 s) of dc/dt = 10/T*(sqrt(c)-c) - net/Cmax from c = 1 to c = 0, net drain 20.588881 GJ/s",
-     "estimated": "cap booster charge count and reload (10 s) not modelled: injection taken as continuous charge/cycle",
-     "finding": "F2"
+     "formula": "closed form of dt = dC/(net - recharge(C)) from full to empty, s = sqrt(c): t = (2/a) atan(1/(2w))/w, a = 10/T, w = sqrt(net/C/a - 1/4); net drain 20.588881 GJ/s",
+     "estimated": "cap booster charge count and reload (10 s) not modelled: injection taken as continuous charge/cycle"
     },
     "speed": {
      "value": 310.8898305,
@@ -1973,12 +1966,11 @@
      "estimated": "cap booster charge count and reload (10 s) not modelled: injection taken as continuous charge/cycle"
     },
     "cap_seconds_to_empty": {
-     "value": 309.7646547,
+     "value": 309.7648695,
      "tol": "rel1e-6",
      "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
-     "formula": "RK4 integration (h = 0.05 s) of dc/dt = 10/T*(sqrt(c)-c) - net/Cmax from c = 1 to c = 0, net drain 20.69777 GJ/s",
-     "estimated": "cap booster charge count and reload (10 s) not modelled: injection taken as continuous charge/cycle",
-     "finding": "F2"
+     "formula": "closed form of dt = dC/(net - recharge(C)) from full to empty, s = sqrt(c): t = (2/a) atan(1/(2w))/w, a = 10/T, w = sqrt(net/C/a - 1/4); net drain 20.69777 GJ/s",
+     "estimated": "cap booster charge count and reload (10 s) not modelled: injection taken as continuous charge/cycle"
     },
     "speed": {
      "value": 310.8898305,
@@ -2118,8 +2110,7 @@
      "value": 54.21789415,
      "tol": "rel1e-6",
      "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
-     "formula": "net drain 14.370588; k = net/peak = 0.77659628; pct = 100*((1+sqrt(1-k))/2)^2",
-     "finding": "F1"
+     "formula": "net drain 14.370588; k = net/peak = 0.77659628; pct = 100*((1+sqrt(1-k))/2)^2"
     },
     "speed": {
      "value": 604.9767212,
@@ -2256,12 +2247,12 @@
      "formula": "use 54.498878 GJ/s (sum need/cycle), injection 0 GJ/s, peak 2.5*5760/1092.5 = 13.180778 GJ/s; stable iff peak + injection >= use"
     },
     "cap_seconds_to_empty": {
-     "value": 126.900567,
+     "value": 126.9005829,
      "tol": "rel1e-6",
      "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
-     "formula": "RK4 integration (h = 0.05 s) of dc/dt = 10/T*(sqrt(c)-c) - net/Cmax from c = 1 to c = 0, net drain 54.498878 GJ/s",
+     "formula": "closed form of dt = dC/(net - recharge(C)) from full to empty, s = sqrt(c): t = (2/a) atan(1/(2w))/w, a = 10/T, w = sqrt(net/C/a - 1/4); net drain 54.498878 GJ/s",
      "estimated": "continuous drain stands in for discrete module cycles",
-     "finding": "F2"
+     "finding": "F3"
     },
     "speed": {
      "value": 946.4825318,

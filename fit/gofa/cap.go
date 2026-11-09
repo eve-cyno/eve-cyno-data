@@ -48,27 +48,33 @@ const (
 //
 //	Stable = peakRecharge >= totalUsage
 //
-// If stable: SecondsToEmpty = 0, StablePct is the equilibrium cap%.
-// The equilibrium is the cap level x at which the recharge rate equals usage.
-// The recharge curve is published (EVE University wiki "Capacitor", from
-// community measurements of the in-game behaviour), with c = C / Capacity:
+// If stable: SecondsToEmpty = 0 and StablePct is the equilibrium level. With
+// x = C / Capacity and the recharge curve of the EVE University wiki page "Capacitor"
+// (https://wiki.eveuniversity.org/Capacitor, community-measured in-game behaviour)
 //
-//	rechargeRate(c) = 10 * Capacity / RechargeSec * (sqrt(c) - c)
+//	rechargeRate(x) = 10 * Capacity / RechargeSec * (sqrt(x) - x)
 //
-// which peaks at c = 25% with 2.5 * Capacity / RechargeSec. Gofa does not
-// integrate this curve over time; it uses a closed-form approximation:
+// which peaks at x = 25% with 2.5 * Capacity / RechargeSec, the stable level under a
+// net drain D solves rechargeRate(x) = D. With k = D / peakRecharge (k <= 1 when stable)
+// the page gives the upper (stable) root
 //
-//	If stable and totalUsage == 0: StablePct = 100 (no drain, cap stays full).
-//	Otherwise, use the quadratic inversion of the peak-rate formula as an
-//	approximation: StablePct ≈ 100 * u where u satisfies
-//	  peakRate * 2 * sqrt(u) * (1 - sqrt(u)) = totalUsage  [EVE exact: not used]
-//	Simpler closed form from spec (good enough for oracle validation):
-//	  StablePct ≈ 100 * (1 - sqrt(1 - totalUsage/peakRecharge)) * 100 (clamped)
+//	x = ((1 + sqrt(1 - k)) / 2)^2        (fraction of capacity; the fitting window shows it)
 //
-// For this task the key oracle-validated outputs are Capacity (exact) and
-// Stable (bool). StablePct is a best-effort approximation.
+// StablePct = 100 * x: 100 when there is no net drain, 25 at k = 1.
 //
-// If unstable: SecondsToEmpty = Capacity / (totalUsage - peakRecharge) (rough).
+// If unstable (k > 1): SecondsToEmpty is the exact time the capacitor takes to go from
+// full to empty under constant net drain, the integral of dt = dC / (D - rechargeRate(C)).
+// With a = 10 / RechargeSec, d = D / Capacity and s = sqrt(x) the ODE dx/dt = a(s - s^2) - d
+// becomes dt = 2 s ds / (d - a s + a s^2). The quadratic has no real root for k > 1
+// (q = d/a = k/4 > 1/4), so with w = sqrt(q - 1/4) the logarithm terms of the
+// antiderivative cancel between s = 1 and s = 0 and
+//
+//	SecondsToEmpty = (2 / a) * atan(1 / (2 w)) / w.
+//
+// It is a closed form, not a numeric scheme: no step size, no worker or ordering
+// dependence. It is evaluated with float64 conversions that stop fused multiply-add, and
+// both results are rounded to 1e-6 (capRound), so an equality test on any machine sees the
+// same bits.
 func capacitor(ship *Item, items []*Item) fit.CapStats {
 	capacity := ship.Attrs[attrCapCapacity]
 	rechargeMs := ship.Attrs[attrCapRechargeMs]
@@ -101,7 +107,7 @@ func capacitor(ship *Item, items []*Item) fit.CapStats {
 	// Net drain = module activation cost − cap-booster injection income.
 	// A negative netDrain means pure surplus (cap stays full); the stability
 	// check above already handled the boolean.  The equilibrium StablePct
-	// approximation uses netDrain against peakRecharge.
+	// uses netDrain against peakRecharge.
 	netDrain := totalUsage - totalInjection
 
 	var stablePct, secsToEmpty float64
@@ -111,20 +117,15 @@ func capacitor(ship *Item, items []*Item) fit.CapStats {
 			// No net drain — cap stays at 100%.
 			stablePct = 100
 		} else {
-			// Approximate equilibrium: solve 2.5*C/T * sqrt(x)*(1-sqrt(x)) = netDrain
-			// where x is cap fraction. Closed-form approximation:
-			//   stablePct ≈ (1 - sqrt(max(0, 1 - netDrain/peakRecharge))) × 100
-			ratio := netDrain / peakRecharge
-			if ratio >= 1 {
-				stablePct = 0
-			} else {
-				stablePct = (1 - math.Sqrt(math.Max(0, 1-ratio))) * 100
-			}
+			// k = net / peak is <= 1 here (stable). Upper root of recharge(x) = net.
+			k := netDrain / peakRecharge
+			r := (1 + math.Sqrt(math.Max(0, 1-k))) / 2
+			stablePct = capRound(float64(r*r) * 100)
 		}
 	} else {
 		stablePct = 0
 		if netDrain > peakRecharge {
-			secsToEmpty = capacity / (netDrain - peakRecharge)
+			secsToEmpty = capEmptySeconds(capacity, rechargeSec, netDrain)
 		}
 	}
 
@@ -135,6 +136,18 @@ func capacitor(ship *Item, items []*Item) fit.CapStats {
 		StablePct:      stablePct,
 		SecondsToEmpty: secsToEmpty,
 	}
+}
+
+// capRound rounds to 1e-6, the documented precision of the capacitor figures.
+func capRound(x float64) float64 { return math.Round(x*1e6) / 1e6 }
+
+// capEmptySeconds is the exact full-to-empty time under constant net drain (GJ/s) for
+// net > 2.5*capacity/rechargeSec; see the derivation on capacitor.
+func capEmptySeconds(capacity, rechargeSec, net float64) float64 {
+	a := 10 / rechargeSec
+	q := float64(net / capacity / a)
+	w := math.Sqrt(q - 0.25)
+	return capRound(float64(2/a*math.Atan(1/(2*w))) / w)
 }
 
 // capDraw sums the capacitor use (GJ/s) of the active modules and the injection

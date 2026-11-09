@@ -9,9 +9,13 @@ package fit_test
 // at the tolerance stored with the number: 0.01 absolute for resources, exact for counts
 // and flags, 1e-6 relative for the rest (stricter than the plan's 0.1 %).
 //
+// The capacitor numbers use the EVE University "Capacitor" page: stable level
+// ((1+sqrt(1-k))/2)^2 and the closed-form time to empty (see worksheet.md).
+//
 // A number marked "finding" is a confirmed engine deviation (see cases.json): the test then
 // requires the engine to still differ and logs both values, so the suite stays green while
 // the deviation is open, and goes red the day the engine is fixed (drop the flag then).
+// Open: F3, the cap need raised by a loaded charge's capNeedBonus (Void) is not applied.
 
 import (
 	"context"
@@ -114,13 +118,12 @@ func TestE3a_ReferenceNumbers(t *testing.T) {
 				g, ok := got[key]
 				require.True(t, ok, "engine side has no %q", key)
 				ok = e3aWithin(want.Tol, want.Value, g)
-				switch {
-				case want.Finding != "":
+				if want.Finding != "" {
 					require.False(t, ok, "%s %s: finding %s looks fixed (reference %.10g, engine %.10g): drop the flag", pr.ID, key, want.Finding, want.Value, g)
 					t.Logf("finding %s %s: reference %.10g, engine %.10g", want.Finding, key, want.Value, g)
-				default:
-					require.True(t, ok, "%s %s: reference %.10g, engine %.10g (tol %s)\nformula: %s", pr.ID, key, want.Value, g, want.Tol, want.Formula)
+					continue
 				}
+				require.True(t, ok, "%s %s: reference %.10g, engine %.10g (tol %s)\nformula: %s", pr.ID, key, want.Value, g, want.Tol, want.Formula)
 			}
 		})
 	}

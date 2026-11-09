@@ -218,15 +218,23 @@ def cap_equilibrium(C, T, use, inj):
     if net <= peak:
         k = net / peak
         return True, ((1 + math.sqrt(1 - k)) / 2) ** 2 * 100.0, 0.0
-    # unstable: integrate dc/dt = 10/T*(sqrt(c)-c) - net/C, from c=1 (RK4) until c=0
-    def f(c): return 10.0 / T * (math.sqrt(max(c, 0)) - c) - net / C
-    c0 = 1.0; t = 0.0; h = 0.05
-    while c0 > 0 and t < 1e5:
+    # unstable (k > 1): dc/dt = a*(sqrt(c)-c) - d with a = 10/T, d = net/C. Substitute s = sqrt(c):
+    #   dt = 2 s ds / (d - a s + a s^2), t = (2/a) * int_0^1 s/(s^2 - s + q) ds, q = d/a = k/4 > 1/4.
+    # With w = sqrt(q - 1/4) the log terms of the antiderivative cancel between s=1 and s=0:
+    #   t = (2/a) * atan(1/(2w)) / w.
+    a = 10.0 / T; q = net / C / a; w = math.sqrt(q - 0.25)
+    t = 2.0 / a * math.atan(1.0 / (2.0 * w)) / w
+    # cross-check by numeric integration (RK4, h = 0.05 s) of the same ODE: must agree to 1e-4 relative
+    def f(c): return a * (math.sqrt(max(c, 0)) - c) - d_
+    d_ = net / C
+    c0 = 1.0; tn = 0.0; h = 0.05
+    while c0 > 0 and tn < 1e5:
         k1 = f(c0); k2 = f(c0 + h / 2 * k1); k3 = f(c0 + h / 2 * k2); k4 = f(c0 + h * k3)
         n = c0 + h / 6 * (k1 + 2 * k2 + 2 * k3 + k4)
         if n <= 0:
-            t += h * c0 / (c0 - n); c0 = 0; break
-        c0 = n; t += h
+            tn += h * c0 / (c0 - n); c0 = 0; break
+        c0 = n; tn += h
+    assert abs(tn - t) <= 1e-4 * t, (tn, t)
     return False, 0.0, t
 
 def numbers(f):
@@ -379,11 +387,12 @@ def build_case(ref, pid):
     cf = 'use %.8g GJ/s (sum need/cycle), injection %.8g GJ/s, peak 2.5*%.8g/%.8g = %.8g GJ/s; stable iff peak + injection >= use' % (n['cap_use'], n['cap_inject'], n['cap_capacity'], n['cap_recharge_s'], n['cap_peak'])
     add('cap_stable', n['cap_stable'], EX, SRC['cap'], cf, est)
     net = n['cap_use'] - n['cap_inject']
+    # F3: a loaded charge with capNeedBonus (attr 317, e.g. Void) raises the launcher/turret cap need through a charge-to-module (otherID) modifier the engine does not apply
+    f3 = 'F3' if any(m.charge is not None and f.val(m.charge, 317) and not f.val(m.charge, 67) for m in mods) else None
     if n['cap_stable']:
-        fnd = 'F1' if net > 0 else None
-        add('cap_stable_pct', n['cap_stable_pct'], REL, SRC['cap'], 'net drain %.8g; k = net/peak = %.8g; pct = 100*((1+sqrt(1-k))/2)^2' % (net, net / n['cap_peak'] if net > 0 else 0), est, fnd)
+        add('cap_stable_pct', n['cap_stable_pct'], REL, SRC['cap'], 'net drain %.8g; k = net/peak = %.8g; pct = 100*((1+sqrt(1-k))/2)^2' % (net, net / n['cap_peak'] if net > 0 else 0), est)
     else:
-        add('cap_seconds_to_empty', n['cap_seconds_to_empty'], REL, SRC['cap'], 'RK4 integration (h = 0.05 s) of dc/dt = 10/T*(sqrt(c)-c) - net/Cmax from c = 1 to c = 0, net drain %.8g GJ/s' % net, est or 'continuous drain stands in for discrete module cycles', 'F2')
+        add('cap_seconds_to_empty', n['cap_seconds_to_empty'], REL, SRC['cap'], 'closed form of dt = dC/(net - recharge(C)) from full to empty, s = sqrt(c): t = (2/a) atan(1/(2w))/w, a = 10/T, w = sqrt(net/C/a - 1/4); net drain %.8g GJ/s' % net, est or 'continuous drain stands in for discrete module cycles', f3)
     add('speed', n['speed'], REL, SRC['speed'], 'passive max velocity %.10g x (1 + speedFactor/100 x thrust/mass) for each active propulsion module, mass %.10g; no propulsion module: passive value' % (n['speed_passive'], n['mass_total']))
     return cases, doc
 
@@ -397,7 +406,7 @@ if __name__ == '__main__':
           '- Effects the SDE carries no modifier data for are applied by hand from the skill descriptions: `droneDmgBonus` (drone damage, attr 292 per level for drones requiring the skill), `missile*DmgBonus` (missile damage, same attribute), `selfRof` (rate of fire, attr 293). Propulsion modules (effects 6730/6731): speed x (1 + speedFactor/100 x thrust/mass).',
           '- States: every module active (EFT default). Skills not named in a profile are the profile level; a unusable module is still evaluated.',
           '- Missile damage: sum of the four damage attributes x pilot missileDamageMultiplier (attr 212, raised by Ballistic Control System attr 213, stacking penalised) / launcher cycle.',
-          '- Capacitor: see the formulas in `cases.json` sources. Stable percent is the stable equilibrium root; time to empty integrates the recharge curve under constant drain (RK4, step 0.05 s).',
+          '- Capacitor: see the formulas in `cases.json` sources. Stable percent is the stable equilibrium root; time to empty is the closed-form integral of the recharge curve under constant drain (substitution s = sqrt(c); an RK4 run, step 0.05 s, is asserted to agree to 1e-4).',
           '- Hand check of the method (done on paper, not by the script): Rifter allIII, 200mm AutoCannon I cycle = 3750 ms x (1 - 7.5% x Minmatar Frigate) x (1 - 2% x Gunnery) x (1 - 4% x Rapid Firing) x Gyrostabilizer 0.92 (SDE attr 204) x Burst Aerator 0.9 (stack-penalised, second one); see the hand check below.',
           '  Rifter allIII (Minmatar Frigate III, Gunnery V, Rapid Firing III, Surgical Strike III, Small Projectile Turret V): skill factors 0.775 x 0.90 x 0.88 = 0.6138; penalised chain 0.90, 0.91309, 0.95434 (0.9 and 0.9 aerators, 0.92 gyrostabilizer) = 0.78425; cycle 3750 x 0.6138 x 0.78425 = 1805.1 ms. Damage multiplier 2.8875 x 1.25 (SPT V) x 1.09 (SS III) x 1.07 (gyro, alone) = 4.2095. DPS per gun 12 x 4.2095 / 1.8051 = 27.98; three guns 83.95, the figure of the Rifter allIII section.',
           '']

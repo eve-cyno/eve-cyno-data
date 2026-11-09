@@ -120,8 +120,12 @@ func TestImplants_SlotDedupe(t *testing.T) {
 	require.Len(t, st.Warnings, 1)
 }
 
-// "today": the 27 fits' Stats JSON at all V, hashed on data 9811665 (before E9).
-const statsAllV27Hash = "ac966ddea47ad175f99773e6ad2e7c28d746884cfc30f7c50c7590244020e808"
+// "today": the 27 fits' Stats JSON at all V, hashed on data 9811665 (before E9). Re-pinned when
+// the capacitor stable level and time to empty were corrected (EVE University "Capacitor"):
+// with StablePct and SecondsToEmpty zeroed the old and the new engine hash the same
+// (5393eb63390c675fb22cc4050cd3aa9c5a5b910c3b759d7da1debbb5bac9d456), so only those two
+// fields moved; TestCapacitor_AllV27Table pins them per fit.
+const statsAllV27Hash = "fd3b38253435e797763c4aad67bf188df8ff242e5021d16894b0412af1838e81"
 
 // No implants changes nothing: nil and an empty list give today's bytes on the 27 fits.
 func TestImplants_NoneEqualsToday(t *testing.T) {
