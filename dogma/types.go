@@ -21,4 +21,13 @@ type AttrMeta struct {
 	Stackable  bool
 	HighIsGood bool
 	Name       string
+	// Default is dgmAttributeTypes.defaultValue. The engine seeds it on an item that
+	// lacks the attribute but is the target of a charID ItemModifier (the character
+	// type has no maxActiveDrones row; the Drones skill adds to the default).
+	Default float64
 }
+
+// CharacterTypeID is invTypes 1373 "Character", the item a charID ItemModifier
+// targets. Its category (1) is outside the fit categories, so the subset carries it
+// as a full type on its own.
+const CharacterTypeID = 1373

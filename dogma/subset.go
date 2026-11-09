@@ -9,7 +9,10 @@ import (
 )
 
 // SubsetFormat is the version of the Subset JSON layout. A loader refuses another value.
-const SubsetFormat = 1
+//
+// Format 2 (plan 2026-11-07-dp2-fit-l4-l6, section 4) adds the character type 1373 as a
+// full type, the meta group and the Tech I parent of a type, and the attribute default.
+const SubsetFormat = 2
 
 // Subset is the slice of the SDE the fit engine needs, as plain data: ships, modules,
 // charges, drones, skills, implants and subsystems (types of categories 6, 7, 8, 16, 18,
@@ -39,6 +42,11 @@ type SubsetType struct {
 	// Unpublished marks a type the SDE does not publish. Name resolution prefers a
 	// published type; skills count published types only.
 	Unpublished bool `json:"unpublished,omitempty"`
+	// MetaGroup is invMetaTypes.metaGroupID; left out when 1 (Tech I) or when the type has
+	// no row (the SDE reads both as Tech I). Parent is invMetaTypes.parentTypeID; left out
+	// when the type has none.
+	MetaGroup int `json:"metaGroup,omitempty"`
+	Parent    int `json:"parent,omitempty"`
 }
 
 // SubsetEffect is the effect category and modifiers of one effect.
@@ -54,6 +62,8 @@ type SubsetAttr struct {
 	Name       string `json:"name"`
 	Stackable  bool   `json:"stackable,omitempty"`
 	HighIsGood bool   `json:"highIsGood,omitempty"`
+	// Default is dgmAttributeTypes.defaultValue; left out when 0.
+	Default float64 `json:"default,omitempty"`
 }
 
 // WriteJSON writes the subset as compact JSON with a stable order (types, effects and
@@ -170,7 +180,7 @@ func (st *Store) GetEffectCategory(id int) int {
 
 func (st *Store) GetAttributeMeta(id int) AttrMeta {
 	a := st.attrs[id]
-	return AttrMeta{Stackable: a.Stackable, HighIsGood: a.HighIsGood, Name: a.Name}
+	return AttrMeta{Stackable: a.Stackable, HighIsGood: a.HighIsGood, Name: a.Name, Default: a.Default}
 }
 
 // GetTypeName returns the name of a type, or nil.
@@ -180,6 +190,23 @@ func (st *Store) GetTypeName(id int) *string {
 		return &n
 	}
 	return nil
+}
+
+// GetMetaGroupID returns the meta group of a type; 1 (Tech I) when the subset holds none,
+// as the SQLite SDE reads a type without an invMetaTypes row.
+func (st *Store) GetMetaGroupID(id int) int {
+	if t := st.types[id]; t != nil && t.MetaGroup > 0 {
+		return t.MetaGroup
+	}
+	return 1
+}
+
+// GetParentTypeID returns the Tech I parent of a type (invMetaTypes.parentTypeID).
+func (st *Store) GetParentTypeID(id int) (int, bool) {
+	if t := st.types[id]; t != nil && t.Parent > 0 {
+		return t.Parent, true
+	}
+	return 0, false
 }
 
 func (st *Store) GetSkillTypeIDs() []int { return append([]int(nil), st.skills...) }

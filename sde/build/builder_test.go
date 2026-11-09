@@ -302,7 +302,7 @@ func TestBuildSQLite_ReaderColumns(t *testing.T) {
 	require.NotNil(t, mods[0].SkillTypeID)
 	require.Equal(t, 3300, *mods[0].SkillTypeID)
 
-	require.Equal(t, coresde.AttrMeta{Stackable: true, HighIsGood: false, Name: "agility"}, s.GetAttributeMeta(70))
+	require.Equal(t, coresde.AttrMeta{Stackable: true, HighIsGood: false, Name: "agility", Default: 3.5}, s.GetAttributeMeta(70))
 	require.Equal(t, coresde.AttrMeta{Stackable: false, HighIsGood: false, Name: "speed"}, s.GetAttributeMeta(51))
 
 	dogma := s.GetDogma(587)

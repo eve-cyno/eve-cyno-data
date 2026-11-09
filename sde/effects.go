@@ -81,9 +81,10 @@ type AttrMeta = dogma.AttrMeta
 func (s *SDE) GetAttributeMeta(attrID int) AttrMeta {
 	var stackable, highIsGood sql.NullInt64
 	var name sql.NullString
+	var def sql.NullFloat64
 	err := s.db.QueryRow(
-		"SELECT stackable, highIsGood, attributeName FROM dgmAttributeTypes WHERE attributeID = ?", attrID,
-	).Scan(&stackable, &highIsGood, &name)
+		"SELECT stackable, highIsGood, attributeName, defaultValue FROM dgmAttributeTypes WHERE attributeID = ?", attrID,
+	).Scan(&stackable, &highIsGood, &name, &def)
 	if err != nil {
 		return AttrMeta{}
 	}
@@ -91,6 +92,7 @@ func (s *SDE) GetAttributeMeta(attrID int) AttrMeta {
 		Stackable:  stackable.Int64 != 0,
 		HighIsGood: highIsGood.Int64 != 0,
 		Name:       name.String,
+		Default:    def.Float64,
 	}
 }
 
