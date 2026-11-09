@@ -1,6 +1,7 @@
 # CI for eve-cyno-data. Needs no secrets, so it is safe for pull requests from forks.
 #
-# Jobs: sde (build + cache the real SDE), test (build, vet, race tests), lint, govulncheck,
+# Jobs: sde (build + cache the real SDE), test (build, vet, race tests), fit-corpus (heavy fit
+# corpus tests without -race), lint, govulncheck,
 # gitleaks, licenses, generate (go generate drift), docker-build (no push). `ci-pass` is the
 # single check to require in the branch ruleset.
 #
@@ -114,16 +115,34 @@ jobs:
             go test -race -timeout 300s -run 'Concurrent|Shared|Race|Parallel' $PLAIN
           fi
 
-      # The heavy fit/solve corpus tests skip (or shrink) themselves under -race (minutes there);
-      # they run here, once, in full and without it. TestCI_NonRaceStepRunsEveryHeavyTest guards the list.
+  # The heavy fit/solve and fit/gofa corpus tests skip (or shrink) themselves under -race, where
+  # they cost 6-30x; they run here, once, in full and without it, in parallel with `test`.
+  # TestCI_NonRaceStepRunsEveryHeavyTest (both packages) keeps the -run lists in step with the code.
+  fit-corpus:
+    needs: sde
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      EVE_REQUIRE_SDE: '1'
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: ./.github/actions/go
+
+      - run: go mod download
+
+      - name: restore SDE (built by the sde job)
+        uses: actions/cache/restore@v6
+        with:
+          path: data/sde/sde.sqlite
+          key: ${{ needs.sde.outputs.key }}
+          fail-on-cache-miss: true
+
       - name: go test (fit/solve corpus tests, no -race)
         run: go test -count=1 -timeout 1200s -run '^(TestConvert_TwoPassNeverWorseThanClassic|TestFixDowngrade_UnchangedByTwoPass|TestSolve_TiesReproducible|TestOwnerExample_ConvertDoctrineCollection)$' ./fit/solve/
 
-      # The heavy fit/gofa corpus tests skip (or shrink) themselves under -race, where they cost
-      # 6-30x (the package hit the 600 s limit on a runner); they run here, once, in full and
-      # without it. TestCI_NonRaceStepRunsEveryHeavyTest keeps this list in step with the code.
       - name: go test (fit/gofa corpus tests, no -race)
-        run: go test -count=1 -timeout 1200s -run '^(TestProperty_HigherSkillNeverLowers|TestProperty_Deterministic|TestEHP_UniformUnchanged|TestProperty_ModuleOrderIrrelevant|TestPrune_EqualsFull|TestPrune_LevelZeroEqualsAbsent|TestStats_DeterministicAcrossCallsAndEngines|TestResources_DifferentialAllV|TestStats_MissingAsZeroEqualsCompleteMap|TestGolden_MaxLockedTargetsAllV|TestEvaluateMany_EqualsSingle|TestResources_SkillProfiles|TestSubset_EngineMatchesSQLite|TestImplants_NoneEqualsToday|TestCapacitor_AllV27Table)$' ./fit/gofa/
+        run: go test -count=1 -timeout 1200s -run '^(TestProperty_HigherSkillNeverLowers|TestProperty_Deterministic|TestEHP_UniformUnchanged|TestProperty_ModuleOrderIrrelevant|TestPrune_EqualsFull|TestPrune_LevelZeroEqualsAbsent|TestStats_DeterministicAcrossCallsAndEngines|TestResources_DifferentialAllV|TestStats_MissingAsZeroEqualsCompleteMap|TestGolden_MaxLockedTargetsAllV|TestEvaluateMany_EqualsSingle|TestResources_SkillProfiles|TestSubset_EngineMatchesSQLite|TestImplants_NoneEqualsToday|TestCapacitor_AllV27Table|TestSubset_StartAndStatsTime|TestAmmoRangeModifiers|TestSubset_StoreSurvivesWriteJSON|TestApplyDefaultAmmo_TableBySizeAndFamily|TestImplants_HandFormula|TestImplants_FitLinesNeverApply)$' ./fit/gofa/
 
   # golangci-lint, config in .golangci.yml. Built with `go install` at a pinned version so the
   # binary is compiled by the job's Go. `|` (not `,`): fall back to the origin on ANY proxy error.
@@ -239,7 +258,7 @@ jobs:
   # Single required check for the branch ruleset.
   ci-pass:
     if: always()
-    needs: [sde, test, lint, govulncheck, gitleaks, licenses, generate, docker-build]
+    needs: [sde, test, fit-corpus, lint, govulncheck, gitleaks, licenses, generate, docker-build]
     runs-on: ubuntu-latest
     steps:
       - name: all jobs succeeded
