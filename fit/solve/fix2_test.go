@@ -160,6 +160,7 @@ func TestSolve_OutsideSubsetTypeNeverRanksBest(t *testing.T) {
 		}
 	}
 }
+
 // L4: a charge outside the subset does not ride along in the forced phase of a line with
 // several candidates.
 func TestSolve_OutsideSubsetChargeNeverRidesAlong(t *testing.T) {

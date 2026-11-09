@@ -907,8 +907,8 @@ func (s *search) run(start []Candidate) error {
 }
 
 // forced replaces every line whose written choice is not a usable candidate by its best
-// usable candidate, each by single-change evaluation against start, then evaluates the
-// fit with all of them. A line with one candidate takes it unevaluated; a line with none
+// usable candidate, each by single-change evaluation against the base (start with the
+// one-candidate lines already replaced), then evaluates the fit with all of them. A line with one candidate takes it unevaluated; a line with none
 // stays as written (the fit then stays invalid). nil when the cap ends the phase.
 func (s *search) forced(start []Candidate) (*probe, error) {
 	pick := append([]Candidate(nil), start...)

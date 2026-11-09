@@ -99,7 +99,9 @@ type Report struct {
 }
 
 // BuildReport builds the report of a solve that ended no_candidate. r is the request that was
-// solved and res its result; ev evaluates the training what-ifs (at most 10 skills x 5 levels).
+// solved and res its result; ev evaluates the training what-ifs (at most 10 skills x 5 levels;
+// a cap binding adds one evaluation per unusable line, one with all of them removed, and one
+// per pair of them when there are at most maxPairLines).
 func BuildReport(ctx context.Context, c *Catalog, ev Evaluator, r Request, res *Result) (*Report, error) {
 	if res == nil || res.Status != StatusNoCandidate || res.NoCandidate == nil {
 		return nil, fmt.Errorf("solve: report needs a no_candidate result")
