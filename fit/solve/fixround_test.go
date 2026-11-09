@@ -364,3 +364,24 @@ func TestSolve_TwinSkippingKeepsSuccessfulResults(t *testing.T) {
 	}
 	require.Greater(t, checked, 100)
 }
+
+// An Officer warning carries its line (Index 0 included); a capacitor warning names no line.
+func TestWarning_JSONFieldsPerCode(t *testing.T) {
+	b, err := json.Marshal(Warning{Code: WarnOfficer, Group: SlotHigh, Index: 0, TypeID: 1003, Message: "m"})
+	require.NoError(t, err)
+	require.JSONEq(t, `{"code":"officer","group":"high","index":0,"typeId":1003,"message":"m"}`, string(b))
+
+	b, err = json.Marshal(Warning{Code: WarnCapacitor, Message: "c", Train: []TrainLine{{SkillID: 3417, Name: "n", From: 3, To: 4, Text: "t"}}})
+	require.NoError(t, err)
+	var m map[string]any
+	require.NoError(t, json.Unmarshal(b, &m))
+	require.NotContains(t, m, "group")
+	require.NotContains(t, m, "index")
+	require.NotContains(t, m, "typeId")
+	require.Equal(t, "capacitor", m["code"])
+	require.Contains(t, m, "train")
+
+	b, err = json.Marshal(Warning{Code: WarnCapacitor, Message: "c"})
+	require.NoError(t, err)
+	require.JSONEq(t, `{"code":"capacitor","message":"c"}`, string(b))
+}

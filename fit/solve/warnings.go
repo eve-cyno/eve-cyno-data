@@ -2,6 +2,7 @@ package solve
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 )
 
@@ -18,6 +19,10 @@ const (
 // (CapacitorWarn); Train names at most 3 skills that would improve the capacitor (the skills
 // that open the baseline's unusable cap lines first, then the skills whose level makes the fit
 // stable, as the no_candidate report ranks them).
+//
+// Fields per code. Officer: Code, Message, Group, Index, TypeID (Index 0 is a real line).
+// Capacitor: Code, Message and Train only; Group, Index and TypeID are zero and MarshalJSON
+// leaves them out, so the wire carries no line for a capacitor warning.
 type Warning struct {
 	Code    string      `json:"code"`
 	Group   string      `json:"group"`
@@ -34,6 +39,24 @@ const (
 	// CapSecondsDrop: the share of B2's seconds-to-empty an unstable capacitor may lose.
 	CapSecondsDrop = 0.05
 )
+
+// MarshalJSON writes group, index and typeId for an Officer warning only (a capacitor
+// warning names no line; omitempty would drop Index 0 of an Officer line).
+func (w Warning) MarshalJSON() ([]byte, error) {
+	type wire struct {
+		Code    string      `json:"code"`
+		Group   *string     `json:"group,omitempty"`
+		Index   *int        `json:"index,omitempty"`
+		TypeID  *int        `json:"typeId,omitempty"`
+		Message string      `json:"message"`
+		Train   []TrainLine `json:"train,omitempty"`
+	}
+	out := wire{Code: w.Code, Message: w.Message, Train: w.Train}
+	if w.Code == WarnOfficer {
+		out.Group, out.Index, out.TypeID = &w.Group, &w.Index, &w.TypeID
+	}
+	return json.Marshal(out)
+}
 
 // CapacitorWarn is the capacitor warning rule: the chosen fit's capacitor is clearly worse
 // than B2's (the flown original), by one of
