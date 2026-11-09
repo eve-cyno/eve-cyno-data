@@ -397,15 +397,21 @@ func (c *Catalog) skillBinding(b Binding, opt Option) (string, []TrainLine) {
 	train := []TrainLine{}
 	// The highest level required per skill, so one line trains far enough for every item.
 	top := map[int]int{}
+	topViol := map[int]fit.Violation{}
 	for _, v := range opt.Violations {
 		if v.Code == fit.CodeSkill && v.Skill != nil && v.Skill.Needs > top[v.Skill.TypeID] {
 			top[v.Skill.TypeID] = v.Skill.Needs
+			topViol[v.Skill.TypeID] = v
 		}
 	}
 	seen := map[int]bool{}
 	for _, v := range opt.Violations {
 		if v.Code != fit.CodeSkill || v.Skill == nil || seen[v.Skill.TypeID] {
 			continue
+		}
+		// The line whose violation has the top level (the first on ties).
+		if tv, ok := topViol[v.Skill.TypeID]; ok {
+			v = tv
 		}
 		line := ""
 		if len(v.Names) > 0 {

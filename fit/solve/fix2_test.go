@@ -2,6 +2,7 @@ package solve
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -173,4 +174,19 @@ func TestSolve_OutsideSubsetChargeNeverRidesAlong(t *testing.T) {
 	for _, m := range res.Fit.High {
 		require.NotEqual(t, 8888, m.ChargeID)
 	}
+}
+
+// R3 L1: the text and the train line name the line whose violation has the top level.
+func TestSkillBinding_NamesTopLevelLine(t *testing.T) {
+	c := NewCatalog(testSubset())
+	opt := Option{Violations: []fit.Violation{
+		{Code: fit.CodeSkill, Names: []string{"A"}, Skill: &fit.MissingSkill{TypeID: skillRare, Has: 1, Needs: 2}},
+		{Code: fit.CodeSkill, Names: []string{"B"}, Skill: &fit.MissingSkill{TypeID: skillRare, Has: 1, Needs: 4}},
+		{Code: fit.CodeSkill, Names: []string{"C"}, Skill: &fit.MissingSkill{TypeID: skillRare, Has: 1, Needs: 4}},
+	}}
+	text, train := c.skillBinding(Binding{Code: BindSkill}, opt)
+	require.Len(t, train, 1)
+	require.Equal(t, "B", train[0].For, "first line among ties")
+	require.Contains(t, train[0].Text, "(B)")
+	require.True(t, strings.HasPrefix(text, "B needs"), text)
 }
