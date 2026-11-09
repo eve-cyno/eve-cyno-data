@@ -148,7 +148,8 @@ func BuildReport(ctx context.Context, c *Catalog, ev Evaluator, r Request, res *
 				return nil, err
 			}
 			if len(extra) > 0 {
-				rep.Train = append(extra, rep.Train...)[:min(trainLines, len(extra)+len(rep.Train))]
+				merged := dedupeTrain(append(extra, rep.Train...))
+				rep.Train = merged[:min(trainLines, len(merged))]
 				rep.Note = TrainNote + "; " + note
 			}
 		}
@@ -364,7 +365,25 @@ func capBaselineTrain(ctx context.Context, c *Catalog, ev Evaluator, r Request, 
 		}
 	}
 	note := "the baseline is cap-stable only through " + strings.Join(names, ", ") + ", which the pilot cannot use"
-	return out, note, nil
+	return dedupeTrain(out), note, nil
+}
+
+// dedupeTrain keeps one line per skill, at the first position, with the highest target level.
+func dedupeTrain(lines []TrainLine) []TrainLine {
+	var out []TrainLine
+	at := map[int]int{}
+	for _, l := range lines {
+		i, ok := at[l.SkillID]
+		if !ok {
+			at[l.SkillID] = len(out)
+			out = append(out, l)
+			continue
+		}
+		if l.To > out[i].To {
+			out[i] = l
+		}
+	}
+	return out
 }
 
 // skillBinding is the text and the train of a skill binding: the skills the option's lines

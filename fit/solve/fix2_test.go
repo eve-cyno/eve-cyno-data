@@ -99,6 +99,23 @@ func TestCapBaselineTrain_AlwaysChecksFlownBaseline(t *testing.T) {
 	require.Contains(t, note, "cap-stable only through")
 }
 
+// L7: one train line per skill, with the highest target level, then at most 3 lines.
+func TestCapBaselineTrain_DedupesBySkill(t *testing.T) {
+	c := NewCatalog(testSubset())
+	r := Request{Kind: KindDowngrade, Fit: highFit(108, 108, 100), Skills: poor}
+	train, _, err := capBaselineTrain(context.Background(), c, capFake{minHigh: 2}, r, capResult(BaselineFlown, true))
+	require.NoError(t, err)
+	require.Len(t, train, 1, "two items needing the same skill give one line: %+v", train)
+
+	got := dedupeTrain([]TrainLine{
+		{SkillID: 1, From: 0, To: 2, Text: "a"}, {SkillID: 2, To: 3}, {SkillID: 1, From: 0, To: 4, Text: "b"}, {SkillID: 3, To: 1},
+	})
+	require.Len(t, got, 3)
+	require.Equal(t, 1, got[0].SkillID)
+	require.Equal(t, 4, got[0].To, "highest level kept, at the first position")
+	require.Equal(t, 2, got[1].SkillID)
+}
+
 // L5: the skill binding trains to the highest level any line needs.
 func TestSkillBinding_KeepsHighestLevel(t *testing.T) {
 	c := NewCatalog(testSubset())
