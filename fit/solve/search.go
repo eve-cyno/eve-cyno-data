@@ -1207,6 +1207,8 @@ func (s *search) hasEffect(c Candidate, e int) bool {
 // Reactor Control Unit or Power Diagnostic System has PG need 0 and raises the PG output). No
 // cheaper exact rule keeps them: the output is an effect of the whole fit, not an attribute
 // of the line.
+// Only CPU and PG keep it; calibration, drone bay and drone bandwidth need a strictly lower
+// base load, because nothing raises their output.
 func (s *search) repairCands(i int, cur *probe, b bindKey) []Candidate {
 	ln := &s.lines[i]
 	now := cur.asg[i]
@@ -1222,11 +1224,11 @@ func (s *search) repairCands(i int, cur *probe, b bindKey) []Candidate {
 		case fit.CodePGOver:
 			keep = ln.ref.Slot != SlotDrone && s.baseAttr(c, attrPGNeed) <= s.baseAttr(now, attrPGNeed)
 		case fit.CodeCalibrationOver:
-			keep = ln.ref.Slot == SlotRig && s.baseAttr(c, attrCalibrationCost) <= s.baseAttr(now, attrCalibrationCost)
+			keep = ln.ref.Slot == SlotRig && s.baseAttr(c, attrCalibrationCost) < s.baseAttr(now, attrCalibrationCost)
 		case CodeDroneBayOver:
-			keep = ln.ref.Slot == SlotDrone && s.baseAttr(c, attrVolume) <= s.baseAttr(now, attrVolume)
+			keep = ln.ref.Slot == SlotDrone && s.baseAttr(c, attrVolume) < s.baseAttr(now, attrVolume)
 		case CodeDroneBandwidthOver:
-			keep = ln.ref.Slot == SlotDrone && s.baseAttr(c, attrDroneBandwidth) <= s.baseAttr(now, attrDroneBandwidth)
+			keep = ln.ref.Slot == SlotDrone && s.baseAttr(c, attrDroneBandwidth) < s.baseAttr(now, attrDroneBandwidth)
 		case fit.CodeSlotOverflow:
 			keep = c.Empty() && slotKeyOf(ln.ref.Slot) == b.slot
 		case fit.CodeTurretHardpointOver:
