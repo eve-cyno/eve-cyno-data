@@ -383,3 +383,23 @@ func TestChange_DowngradeFlag(t *testing.T) {
 	require.False(t, c.IsDowngrade(Change{From: 108, To: 0}, full))
 	require.False(t, c.IsDowngrade(Change{From: 0, To: 101}, full))
 }
+
+// H1: Downgrade goes from a Tech II type to the best usable variant, never up. A line the
+// pilot can use gets no variant of a higher meta level; an unusable one may be repaired upward.
+func TestCandidates_DowngradeNeverOffersHigherMeta(t *testing.T) {
+	c := NewCatalog(testSubset())
+	dg := func(sk fit.SkillProfile) Options {
+		return Options{Kind: KindDowngrade, Skills: sk, Policy: Fallback(KindDowngrade)}
+	}
+	// 100 is level 0 and usable: every sibling is higher, so only the original stays.
+	require.Equal(t, []int{100}, ids(c.Candidates(oneHigh(100, 0), hi0, dg(full))))
+	// 106 is level 2: only the level-0 sibling is not higher.
+	require.Equal(t, []int{106, 100}, ids(c.Candidates(oneHigh(106, 0), hi0, dg(full))))
+	// 101 is level 5: the lower variants follow, none above.
+	require.Equal(t, []int{101, 108, 112, 106, 100}, ids(c.Candidates(oneHigh(101, 0), hi0, dg(full))))
+	// Unusable original (108 needs the rare skill, level 4): the repair may go up.
+	got := ids(c.Candidates(oneHigh(108, 0), hi0, dg(poor)))
+	require.Contains(t, got, 101)
+	// Refit still offers the higher variants.
+	require.Contains(t, ids(c.Candidates(oneHigh(100, 0), hi0, refit(full))), 101)
+}

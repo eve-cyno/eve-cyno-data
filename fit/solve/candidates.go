@@ -355,7 +355,8 @@ func (c *Catalog) Candidates(f fit.Fit, ref LineRef, o Options) []Candidate {
 		root = orig.parent
 	}
 	var variants []int
-	anyUsable := c.CanUse(o.Skills, orig.id)
+	origUsable := c.CanUse(o.Skills, orig.id)
+	anyUsable := origUsable
 	for _, id := range c.families[root] {
 		t := c.types[id]
 		if id == orig.id || !t.published || t.slot != orig.slot {
@@ -365,6 +366,10 @@ func (c *Catalog) Candidates(f fit.Fit, ref LineRef, o Options) []Candidate {
 			continue
 		}
 		if !c.CanUse(o.Skills, id) || !c.prefilter(f.HullID, orig, t) {
+			continue
+		}
+		// Downgrade goes down: a line the pilot can use takes no higher meta level.
+		if o.Kind == KindDowngrade && origUsable && c.MetaLevel(id) > c.MetaLevel(orig.id) {
 			continue
 		}
 		variants = append(variants, id)

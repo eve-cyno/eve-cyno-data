@@ -884,6 +884,14 @@ func (s *search) run(start []Candidate) error {
 // stays as written (the fit then stays invalid). nil when the cap ends the phase.
 func (s *search) forced(start []Candidate) (*probe, error) {
 	pick := append([]Candidate(nil), start...)
+	// A line with one candidate takes it before the single changes run, so a type outside the
+	// subset never rides along in a probe that could rank best.
+	base := append([]Candidate(nil), start...)
+	for i := range s.lines {
+		if ln := &s.lines[i]; !ln.has(ln.orig) && len(ln.cands) == 1 {
+			base[i] = ln.cands[0]
+		}
+	}
 	var batch [][]Candidate
 	var owner []int
 	any := false
@@ -901,7 +909,7 @@ func (s *search) forced(start []Candidate) (*probe, error) {
 			continue
 		}
 		for _, c := range ln.cands {
-			batch = append(batch, with(start, i, c))
+			batch = append(batch, with(base, i, c))
 			owner = append(owner, i)
 		}
 	}

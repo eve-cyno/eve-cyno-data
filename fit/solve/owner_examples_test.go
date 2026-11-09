@@ -153,3 +153,26 @@ func validUnder(ctx context.Context, st *dogma.Store, f fit.Fit, skills fit.Skil
 	}
 	return out, nil
 }
+
+// H1 on the real SDE: Downgrade never moves a line the pilot can use to a higher meta level
+// (Rifter AutoCannon I to AutoCannon II was the defect). Rifter (reference 1) under fitIII is
+// valid except for 9.8 CPU over, which only a higher-meta swap or a dropped module would
+// clear: Downgrade has neither, so it reports no_candidate.
+func TestDowngrade_NeverUpgradesUsableLines(t *testing.T) {
+	c := realCatalog(t)
+	sk := e3aProfiles(t)["fitIII"]
+	for _, n := range []int{1, 2, 3, 5, 6} {
+		f := refFit(t, c, n)
+		res, err := Solve(context.Background(), c, NewEngineEvaluator(gofa.New(c.Store()), 4),
+			Request{Kind: KindDowngrade, Fit: f, Skills: sk})
+		require.NoError(t, err)
+		if n == 1 {
+			require.Equal(t, StatusNoCandidate, res.Status)
+		}
+		for _, ch := range res.Changes {
+			if ch.To != 0 && c.CanUse(sk, ch.From) {
+				require.LessOrEqual(t, c.MetaLevel(ch.To), c.MetaLevel(ch.From), "ref %d: %+v goes up", n, ch)
+			}
+		}
+	}
+}
