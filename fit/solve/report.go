@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"sort"
+	"strings"
 
 	"eve-cyno.dev/go/data/dogma"
 	"eve-cyno.dev/go/data/fit"
@@ -141,6 +142,16 @@ func BuildReport(ctx context.Context, c *Catalog, ev Evaluator, r Request, res *
 			return nil, err
 		}
 		rep.Train = t
+		if b.Code == BindCap {
+			extra, note, err := capBaselineTrain(ctx, c, ev, r, res)
+			if err != nil {
+				return nil, err
+			}
+			if len(extra) > 0 {
+				rep.Train = append(extra, rep.Train...)[:min(trainLines, len(extra)+len(rep.Train))]
+				rep.Note = TrainNote + "; " + note
+			}
+		}
 		return rep, nil
 	}
 
@@ -225,6 +236,79 @@ func (c *Catalog) trainLine(skill, from, to int) TrainLine {
 	n := c.nameOf(skill)
 	return TrainLine{SkillID: skill, Name: n, From: from, To: to,
 		Text: fmt.Sprintf("%s %s to %s", n, roman(from), roman(to))}
+}
+
+// capBaselineTrain explains a capacitor binding whose baseline was stable only through a line
+// the pilot cannot use: each such line the baseline needs to stay stable (the fit without it
+// is unstable) gives the skills that would open it, and the note names it. The cap rule itself
+// is not changed; this only says what the baseline rests on.
+func capBaselineTrain(ctx context.Context, c *Catalog, ev Evaluator, r Request, res *Result) ([]TrainLine, string, error) {
+	base := res.Baseline.Flown
+	if res.Baseline.Used == BaselineDesigned {
+		base = res.Baseline.Designed
+	}
+	if r.Skills == nil || !base.CapStable {
+		return nil, "", nil
+	}
+	type cand struct {
+		ref  LineRef
+		name string
+		miss []fit.MissingSkill
+	}
+	var cands []cand
+	var reqs []gofa.Request
+	opts := fit.StatsOpts{Skills: r.Skills, MissingAsZero: true, Implants: r.Implants, DamagePattern: r.DamagePattern}
+	f := r.Fit
+	for _, g := range slotGroups {
+		if g.slot == SlotDrone {
+			continue
+		}
+		for i, m := range *g.mods(&f) {
+			cu := fit.CanUse(ctx, c.Store(), r.Skills, m.TypeID)
+			if cu.OK {
+				continue
+			}
+			without := f
+			for _, h := range slotGroups {
+				if h.slot == g.slot {
+					mods := append([]fit.FitModule(nil), (*h.mods(&f))[:i]...)
+					mods = append(mods, (*h.mods(&f))[i+1:]...)
+					*h.mods(&without) = mods
+				}
+			}
+			cands = append(cands, cand{LineRef{Slot: g.slot, Index: i}, c.nameOf(m.TypeID), cu.Missing})
+			reqs = append(reqs, gofa.Request{Fit: without, Opts: opts})
+		}
+	}
+	if len(reqs) == 0 {
+		return nil, "", nil
+	}
+	evs, err := ev.EvaluateBatch(ctx, reqs)
+	if err != nil {
+		return nil, "", err
+	}
+	if len(evs) != len(reqs) {
+		return nil, "", fmt.Errorf("solve: evaluator returned %d results for %d requests", len(evs), len(reqs))
+	}
+	var out []TrainLine
+	var names []string
+	for i, cd := range cands {
+		if evs[i].Err != nil || evs[i].Stats.Capacitor.Stable {
+			continue
+		}
+		names = append(names, cd.name)
+		for _, m := range cd.miss {
+			l := c.trainLine(m.TypeID, m.Has, m.Needs)
+			l.For = cd.name
+			l.Text += " (" + cd.name + ")"
+			out = append(out, l)
+		}
+	}
+	if len(names) == 0 {
+		return nil, "", nil
+	}
+	note := "the baseline is cap-stable only through " + strings.Join(names, ", ") + ", which the pilot cannot use"
+	return out, note, nil
 }
 
 // skillBinding is the text and the train of a skill binding: the skills the option's lines
