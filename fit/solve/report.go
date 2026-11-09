@@ -238,10 +238,16 @@ func (c *Catalog) trainLine(skill, from, to int) TrainLine {
 		Text: fmt.Sprintf("%s %s to %s", n, roman(from), roman(to))}
 }
 
-// capBaselineTrain explains a capacitor binding whose baseline was stable only through a line
-// the pilot cannot use: each such line the baseline needs to stay stable (the fit without it
-// is unstable) gives the skills that would open it, and the note names it. The cap rule itself
-// is not changed; this only says what the baseline rests on.
+// maxPairLines bounds the unusable lines for which capBaselineTrain tries every pair.
+const maxPairLines = 12
+
+// capBaselineTrain explains a capacitor binding whose baseline was stable only through lines
+// the pilot cannot use. The cap rule always gates against B2 (the original under the pilot's
+// skills, accept.go), whatever baseline the policy ranks against, so B2 is checked here. Each
+// unusable line the baseline needs to stay stable (the fit without it is unstable) gives the
+// skills that would open it; when no single line is needed, the lines of every pair whose joint removal
+// makes the fit unstable are named, and failing that all of them when removing all is unstable. The note names the lines.
+// The cap rule itself is not changed; this only says what the baseline rests on.
 func capBaselineTrain(ctx context.Context, c *Catalog, ev Evaluator, r Request, res *Result) ([]TrainLine, string, error) {
 	base := res.Baseline.Flown
 	if res.Baseline.Used == BaselineDesigned {
@@ -256,7 +262,6 @@ func capBaselineTrain(ctx context.Context, c *Catalog, ev Evaluator, r Request, 
 		miss []fit.MissingSkill
 	}
 	var cands []cand
-	var reqs []gofa.Request
 	opts := fit.StatsOpts{Skills: r.Skills, MissingAsZero: true, Implants: r.Implants, DamagePattern: r.DamagePattern}
 	f := r.Fit
 	for _, g := range slotGroups {
@@ -268,20 +273,53 @@ func capBaselineTrain(ctx context.Context, c *Catalog, ev Evaluator, r Request, 
 			if cu.OK {
 				continue
 			}
-			without := f
-			for _, h := range slotGroups {
-				if h.slot == g.slot {
-					mods := append([]fit.FitModule(nil), (*h.mods(&f))[:i]...)
-					mods = append(mods, (*h.mods(&f))[i+1:]...)
-					*h.mods(&without) = mods
-				}
-			}
 			cands = append(cands, cand{LineRef{Slot: g.slot, Index: i}, c.nameOf(m.TypeID), cu.Missing})
-			reqs = append(reqs, gofa.Request{Fit: without, Opts: opts})
 		}
 	}
-	if len(reqs) == 0 {
+	if len(cands) == 0 {
 		return nil, "", nil
+	}
+	without := func(skip []int) fit.Fit {
+		w := f
+		for _, h := range slotGroups {
+			if h.slot == SlotDrone {
+				continue
+			}
+			var mods []fit.FitModule
+			for i, m := range *h.mods(&f) {
+				drop := false
+				for _, k := range skip {
+					if cands[k].ref.Slot == h.slot && cands[k].ref.Index == i {
+						drop = true
+					}
+				}
+				if !drop {
+					mods = append(mods, m)
+				}
+			}
+			*h.mods(&w) = mods
+		}
+		return w
+	}
+	var reqs []gofa.Request
+	all := make([]int, len(cands))
+	for i := range cands {
+		all[i] = i
+		reqs = append(reqs, gofa.Request{Fit: without([]int{i}), Opts: opts})
+	}
+	// Stability may rest on several lines together: one more evaluation with every unusable
+	// line removed, and one per pair of them (bounded to a dozen unusable lines).
+	var pairs [][2]int
+	if len(cands) > 1 {
+		reqs = append(reqs, gofa.Request{Fit: without(all), Opts: opts})
+		if len(cands) <= maxPairLines {
+			for i := range cands {
+				for j := i + 1; j < len(cands); j++ {
+					pairs = append(pairs, [2]int{i, j})
+					reqs = append(reqs, gofa.Request{Fit: without([]int{i, j}), Opts: opts})
+				}
+			}
+		}
 	}
 	evs, err := ev.EvaluateBatch(ctx, reqs)
 	if err != nil {
@@ -290,12 +328,37 @@ func capBaselineTrain(ctx context.Context, c *Catalog, ev Evaluator, r Request, 
 	if len(evs) != len(reqs) {
 		return nil, "", fmt.Errorf("solve: evaluator returned %d results for %d requests", len(evs), len(reqs))
 	}
+	unstable := func(i int) bool { return evs[i].Err == nil && !evs[i].Stats.Capacitor.Stable }
+	var needed []int
+	for i := range cands {
+		if unstable(i) {
+			needed = append(needed, i)
+		}
+	}
+	if len(needed) == 0 {
+		// No single line carries the stability: the lines of every unstable pair do.
+		in := map[int]bool{}
+		for k, p := range pairs {
+			if unstable(len(cands) + 1 + k) {
+				in[p[0]], in[p[1]] = true, true
+			}
+		}
+		for i := range cands {
+			if in[i] {
+				needed = append(needed, i)
+			}
+		}
+	}
+	if len(needed) == 0 && len(cands) > 1 && unstable(len(cands)) {
+		needed = all
+	}
+	if len(needed) == 0 {
+		return nil, "", nil
+	}
 	var out []TrainLine
 	var names []string
-	for i, cd := range cands {
-		if evs[i].Err != nil || evs[i].Stats.Capacitor.Stable {
-			continue
-		}
+	for _, i := range needed {
+		cd := cands[i]
 		names = append(names, cd.name)
 		for _, m := range cd.miss {
 			l := c.trainLine(m.TypeID, m.Has, m.Needs)
@@ -303,9 +366,6 @@ func capBaselineTrain(ctx context.Context, c *Catalog, ev Evaluator, r Request, 
 			l.Text += " (" + cd.name + ")"
 			out = append(out, l)
 		}
-	}
-	if len(names) == 0 {
-		return nil, "", nil
 	}
 	note := "the baseline is cap-stable only through " + strings.Join(names, ", ") + ", which the pilot cannot use"
 	return out, note, nil

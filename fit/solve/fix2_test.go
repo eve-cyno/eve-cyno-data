@@ -30,6 +30,64 @@ func TestSolve_RifterFitIIIDowngradeSameMetaGroup(t *testing.T) {
 	}
 }
 
+// capFake is an Evaluator whose capacitor is stable when the fit has at least minHigh high
+// modules. Everything else is zero.
+type capFake struct{ minHigh int }
+
+func (e capFake) EvaluateBatch(_ context.Context, reqs []gofa.Request) ([]Evaluation, error) {
+	out := make([]Evaluation, len(reqs))
+	for i, r := range reqs {
+		out[i].Stats.Capacitor.Stable = len(r.Fit.High) >= e.minHigh
+	}
+	return out, nil
+}
+
+func capResult(used string, designedStable bool) *Result {
+	return &Result{Baseline: Baselines{
+		Designed: Numbers{CapStable: designedStable},
+		Flown:    Numbers{CapStable: true},
+		Used:     used,
+	}}
+}
+
+// M2: stability carried by two unusable lines together is found by the all-removed fit.
+func TestCapBaselineTrain_TwoUnusableLinesTogether(t *testing.T) {
+	c := NewCatalog(testSubset())
+	f := highFit(108, 108, 100)
+	r := Request{Kind: KindDowngrade, Fit: f, Skills: poor}
+	// One line removed leaves 2 high modules (stable), both removed leave 1 (unstable).
+	train, note, err := capBaselineTrain(context.Background(), c, capFake{minHigh: 2}, r, capResult(BaselineFlown, true))
+	require.NoError(t, err)
+	require.NotEmpty(t, train)
+	require.Equal(t, skillRare, train[0].SkillID)
+	require.Contains(t, note, "cap-stable only through")
+	require.Contains(t, note, "cannot use")
+}
+
+// M2 on the real SDE: Vexor (reference 2) for the droner with the Afterburner replaced by a
+// second Medium Capacitor Booster II. Both boosters keep the fit cap-stable, either alone does
+// too, and without both it is unstable: the cap binding names the skill of the boosters.
+func TestNoCandidate_CapBindingTwoUnusableBoosters(t *testing.T) {
+	c := realCatalog(t)
+	f := refFit(t, c, 2)
+	f.Mid = append([]fit.FitModule(nil), f.Mid...)
+	for i, m := range f.Mid {
+		if m.Name == "10MN Afterburner II" {
+			f.Mid[i] = f.Mid[1]
+		}
+	}
+	r := Request{Kind: KindDowngrade, Fit: f, Skills: e3aProfiles(t)["droner"]}
+	_, rep := reportFor(t, c, r)
+	require.Equal(t, BindCap, rep.Binding.Code)
+	ces := skillID(t, c, "Capacitor Systems Operation")
+	found := false
+	for _, l := range rep.Train {
+		found = found || l.SkillID == ces
+	}
+	require.True(t, found, "train names Capacitor Systems Operation: %+v", rep.Train)
+	require.Contains(t, rep.Note, "cap-stable only through")
+}
+
 // L5: the skill binding trains to the highest level any line needs.
 func TestSkillBinding_KeepsHighestLevel(t *testing.T) {
 	c := NewCatalog(testSubset())
