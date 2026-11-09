@@ -336,7 +336,7 @@ func TestSolve_TiesReproducible(t *testing.T) {
 	rc := realCatalog(t)
 	eng := gofa.New(rc.Store())
 	runs := 20
-	if testing.Short() {
+	if shrinkUnderRace() {
 		runs = 2
 	}
 	profiles := e3aProfiles(t)

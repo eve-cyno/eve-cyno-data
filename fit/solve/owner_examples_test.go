@@ -117,6 +117,7 @@ func countType(mods []fit.FitModule, id int) int {
 // Convert a doctrine collection: references 1, 2, 5, 6 onto four Gallente hulls for the
 // droner pilot.
 func TestOwnerExample_ConvertDoctrineCollection(t *testing.T) {
+	skipHeavyRace(t)
 	c := realCatalog(t)
 	droner := e3aProfiles(t)["droner"]
 	hulls := []int{hullVexor, hullThoraxID, hullMyrmidon, hullBrutix}
