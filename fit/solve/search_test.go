@@ -700,7 +700,7 @@ var (
 )
 
 // realCatalog is the catalog over the subset of the pinned SDE, built once per test binary.
-func realCatalog(t *testing.T) *Catalog {
+func realCatalog(t testing.TB) *Catalog {
 	t.Helper()
 	p := sdetest.Path(t)
 	realOnce.Do(func() {
@@ -728,7 +728,7 @@ func realCatalog(t *testing.T) *Catalog {
 }
 
 // refFit parses reference fit n (fit/testdata/e3a/refN.eft) over the catalog's store.
-func refFit(t *testing.T, c *Catalog, n int) fit.Fit {
+func refFit(t testing.TB, c *Catalog, n int) fit.Fit {
 	t.Helper()
 	raw, err := os.ReadFile(filepath.Join("..", "testdata", "e3a", "ref"+strconv.Itoa(n)+".eft"))
 	require.NoError(t, err)
@@ -738,7 +738,7 @@ func refFit(t *testing.T, c *Catalog, n int) fit.Fit {
 }
 
 // e3aProfiles reads the E3a skill profiles (fit/testdata/e3a/profiles.json).
-func e3aProfiles(t *testing.T) map[string]fit.SkillProfile {
+func e3aProfiles(t testing.TB) map[string]fit.SkillProfile {
 	t.Helper()
 	raw, err := os.ReadFile(filepath.Join("..", "testdata", "e3a", "profiles.json"))
 	require.NoError(t, err)
