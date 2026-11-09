@@ -210,7 +210,7 @@ type checkSpec struct {
 // check is the single fit validator. Violations come out in this order: per slot
 // group (overflow, then each module's Alpha legality), hull Alpha legality, group
 // limits (by group ID), CPU, PG, calibration, turret and launcher hardpoints, charge
-// legality (hardpoints.go), unknown modules, unfittable items.
+// legality (hardpoints.go), hull restriction and rig size (hullrules.go), unknown modules, unfittable items.
 // Callers that present them in another order sort on Violation.Code.
 func check(s ValidateSDE, sp checkSpec) Report {
 	rep := Report{Ship: sp.hullName}
@@ -474,6 +474,7 @@ func check(s ValidateSDE, sp checkSpec) Report {
 			subs = append(subs, bySubGroup[gid][0])
 		}
 		checkE18(s, sp.entries, ship, subs, &rep)
+		checkE6(s, sp.hullID, sp.hullName, sp.entries, ship, &rep)
 	}
 
 	// Names that are not modules.
