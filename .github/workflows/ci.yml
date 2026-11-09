@@ -114,10 +114,16 @@ jobs:
             go test -race -timeout 300s -run 'Concurrent|Shared|Race|Parallel' $PLAIN
           fi
 
-      # The two heavy fit/solve corpus tests skip themselves under -race (minutes there); they
-      # run here, once, without it.
+      # The heavy fit/solve corpus tests skip (or shrink) themselves under -race (minutes there);
+      # they run here, once, in full and without it. TestCI_NonRaceStepRunsEveryHeavyTest guards the list.
       - name: go test (fit/solve corpus tests, no -race)
-        run: go test -count=1 -timeout 900s -run 'TestConvert_TwoPassNeverWorseThanClassic|TestFixDowngrade_UnchangedByTwoPass' ./fit/solve/
+        run: go test -count=1 -timeout 1200s -run '^(TestConvert_TwoPassNeverWorseThanClassic|TestFixDowngrade_UnchangedByTwoPass|TestSolve_TiesReproducible|TestOwnerExample_ConvertDoctrineCollection)$' ./fit/solve/
+
+      # The heavy fit/gofa corpus tests skip (or shrink) themselves under -race, where they cost
+      # 6-30x (the package hit the 600 s limit on a runner); they run here, once, in full and
+      # without it. TestCI_NonRaceStepRunsEveryHeavyTest keeps this list in step with the code.
+      - name: go test (fit/gofa corpus tests, no -race)
+        run: go test -count=1 -timeout 1200s -run '^(TestProperty_HigherSkillNeverLowers|TestProperty_Deterministic|TestEHP_UniformUnchanged|TestProperty_ModuleOrderIrrelevant|TestPrune_EqualsFull|TestPrune_LevelZeroEqualsAbsent|TestStats_DeterministicAcrossCallsAndEngines|TestResources_DifferentialAllV|TestStats_MissingAsZeroEqualsCompleteMap|TestGolden_MaxLockedTargetsAllV|TestEvaluateMany_EqualsSingle|TestResources_SkillProfiles|TestSubset_EngineMatchesSQLite|TestImplants_NoneEqualsToday|TestCapacitor_AllV27Table)$' ./fit/gofa/
 
   # golangci-lint, config in .golangci.yml. Built with `go install` at a pinned version so the
   # binary is compiled by the job's Go. `|` (not `,`): fall back to the origin on ANY proxy error.
