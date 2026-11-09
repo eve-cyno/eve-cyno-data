@@ -223,8 +223,14 @@ func TestPrune_LevelZeroEqualsAbsent(t *testing.T) {
 		}
 	}
 	require.NotEmpty(t, hullSkill)
+	// The exclusion set (skills whose level 0 differs from absent) is computed from the SDE
+	// above and must be a subset of the always-kept skills, so pruning never makes it absent.
+	always := map[int]bool{}
+	for _, id := range ix.always {
+		always[id] = true
+	}
 	for id := range hullSkill {
-		require.Contains(t, ix.always, id, "hull skill %d must never be pruned", id)
+		require.True(t, always[id], "hull skill %d must never be pruned", id)
 	}
 
 	n := 30
@@ -239,10 +245,16 @@ func TestPrune_LevelZeroEqualsAbsent(t *testing.T) {
 	for i := range cases {
 		f := randomFit(rng, bases[rng.Intn(len(bases))].fit, choices)
 		// Zero the skills this fit needs (the kept ones), a random 12 of them plus 12 unrelated.
+		// Every item kind of the fit: hull, pilot, modules, rigs, subsystems, drones and charges.
 		var types []int
 		types = append(types, f.HullID, dogma.CharacterTypeID)
-		for _, m := range append(append(append([]fit.FitModule{}, f.High...), f.Mid...), f.Low...) {
-			types = append(types, m.TypeID)
+		for _, g := range [][]fit.FitModule{f.High, f.Mid, f.Low, f.Rig, f.Subsystem, f.Drones} {
+			for _, m := range g {
+				types = append(types, m.TypeID)
+				if m.ChargeID != 0 {
+					types = append(types, m.ChargeID)
+				}
+			}
 		}
 		kept := skillIndexFor(full.reader()).keep(full.reader(), types)
 		var pool []int
