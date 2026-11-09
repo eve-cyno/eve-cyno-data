@@ -222,16 +222,19 @@ func cmpFloat(a, b float64) int {
 
 // Better reports whether a ranks strictly before b.
 //
-// Fix (refit): fewest changed lines, fewest downgrades, fewest Officer lines, highest
+// Fix (refit): fewest changed lines, fewest Officer lines, fewest downgrades, highest
 // objective, lowest price, type ids in line order. Downgrade and Convert: fewest Officer lines,
 // highest objective, then fewest changed lines, fewest downgrades, lowest price, type ids.
-// (An Officer module is avoided unless viability or the gates need it.) A result with a known price ranks before one without; two priced results rank by
-// price.
+// An Officer module is avoided unless viability or the gates need it, and in a Fix it is
+// avoided before a downgrade flag: a downgrade costs the pilot a little, an Officer module
+// costs far more ISK (decision 2026-11-10; before it, a Fix took an Officer module to avoid a
+// "downgrade" flag). A result with a known price ranks before one without; two priced results
+// rank by price.
 func Better(k Kind, a, b Rank) bool {
 	steps := []func() int{
 		func() int { return cmpInt(a.Changed, b.Changed) },
-		func() int { return cmpInt(a.Downgrades, b.Downgrades) },
 		func() int { return cmpInt(a.Officers, b.Officers) },
+		func() int { return cmpInt(a.Downgrades, b.Downgrades) },
 		func() int { return -cmpFloat(a.Objective, b.Objective) },
 		func() int {
 			// A total order: a priced result before an unpriced one, then the lower price.
@@ -258,7 +261,7 @@ func Better(k Kind, a, b Rank) bool {
 	}
 	if k != KindRefit {
 		// officers, objective, then changed, downgrades, price, type ids
-		steps = append([]func() int{steps[2], steps[3]}, append(steps[:2:2], steps[4:]...)...)
+		steps = []func() int{steps[1], steps[3], steps[0], steps[2], steps[4], steps[5]}
 	}
 	for _, s := range steps {
 		if c := s(); c != 0 {

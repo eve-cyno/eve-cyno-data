@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "note": "Language-neutral vectors of the acceptance rule (spec 13.2). The Go test fit/solve TestAccept_Vectors and the plugin's acceptance.test read the same bytes. Numbers compare after rounding to 10 significant digits (1e-9 relative). Percent texts use U+2212 for the minus sign. Rank vectors may carry an \"officers\" count (absent = 0); the order is changed, downgrades, officers, objective, price, type ids for a fix, and officers, objective, changed, downgrades, price, type ids otherwise. The capacitor is not a gate (owner ruling 2026-11-09); capWarn lists when the capacitor warning is raised.",
+  "note": "Language-neutral vectors of the acceptance rule (spec 13.2). The Go test fit/solve TestAccept_Vectors and the plugin's acceptance.test read the same bytes. Numbers compare after rounding to 10 significant digits (1e-9 relative). Percent texts use U+2212 for the minus sign. Rank vectors may carry an \"officers\" count (absent = 0); the order is changed, officers, downgrades, objective, price, type ids for a fix, and officers, objective, changed, downgrades, price, type ids otherwise. The capacitor is not a gate (owner ruling 2026-11-09); capWarn lists when the capacitor warning is raised.",
   "fallback": [
     {"kind": "refit", "policy": {"gates": [{"stat": "dps", "atLeast": 98}, {"stat": "ehp", "atLeast": 98}], "baseline": "flown", "allowT2toT1": true, "allowRigChanges": false, "from": "fallback"}},
     {"kind": "downgrade", "policy": {"gates": [], "baseline": "flown", "allowT2toT1": true, "allowRigChanges": false, "from": "fallback"}},
@@ -170,9 +170,12 @@
     {"name": "fix: fewer changed lines wins over fewer Officer lines", "kind": "refit",
      "a": {"changed": 1, "downgrades": 0, "officers": 1, "objective": 0.9, "price": 9, "hasPrice": true, "typeIds": [2]},
      "b": {"changed": 2, "downgrades": 0, "officers": 0, "objective": 1.5, "price": 1, "hasPrice": true, "typeIds": [1]}, "aBetter": true},
-    {"name": "fix: fewer downgrades wins over fewer Officer lines", "kind": "refit",
-     "a": {"changed": 2, "downgrades": 0, "officers": 2, "objective": 0.9, "price": 9, "hasPrice": true, "typeIds": [2]},
-     "b": {"changed": 2, "downgrades": 1, "officers": 0, "objective": 1.5, "price": 1, "hasPrice": true, "typeIds": [1]}, "aBetter": true},
+    {"name": "fix: fewer Officer lines wins over fewer downgrades", "kind": "refit",
+     "a": {"changed": 2, "downgrades": 1, "officers": 0, "objective": 0.9, "price": 9, "hasPrice": true, "typeIds": [2]},
+     "b": {"changed": 2, "downgrades": 0, "officers": 2, "objective": 1.5, "price": 1, "hasPrice": true, "typeIds": [1]}, "aBetter": true},
+    {"name": "fix: more downgrades loses to fewer downgrades at equal changes and Officer lines", "kind": "refit",
+     "a": {"changed": 2, "downgrades": 1, "officers": 1, "objective": 1.5, "price": 1, "hasPrice": true, "typeIds": [1]},
+     "b": {"changed": 2, "downgrades": 0, "officers": 1, "objective": 0.9, "price": 9, "hasPrice": true, "typeIds": [2]}, "aBetter": false},
     {"name": "fix: fewer Officer lines wins over a better objective", "kind": "refit",
      "a": {"changed": 2, "downgrades": 0, "officers": 0, "objective": 0.9, "price": 9, "hasPrice": true, "typeIds": [2]},
      "b": {"changed": 2, "downgrades": 0, "officers": 1, "objective": 1.5, "price": 1, "hasPrice": true, "typeIds": [1]}, "aBetter": true},
