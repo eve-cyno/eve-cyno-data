@@ -32,10 +32,16 @@ import (
 // Every round's evaluations go to the Evaluator as one batch and are reduced in input order
 // with total orders (the kind's ranking, then the choices themselves), so neither the worker
 // count nor the order of a line's candidates changes the result. Evaluations are counted, not
-// timed: CapInteractive per interactive solve, CapJob per job pair. The result is the best
+// timed: CapInteractive per interactive solve, CapJob per job pair. One evaluation is one
+// Evaluator request; the default EngineEvaluator answers it with two engine resolves (Stats
+// for dps, tank and capacitor, Resources for the load of every module, which resolves offline
+// modules as inert items where Stats leaves them out). So a cap of N evaluations bounds the
+// engine at 2N resolves. The result is the best
 // accepted fit seen; with none, no_candidate with the data the report needs (report.go).
 
-// Evaluation caps (section 6, "Evaluation cap"). The two baselines count.
+// Evaluation caps (section 6, "Evaluation cap"). The two baselines count. The unit is an
+// Evaluator request, not an engine resolve (see the package comment above: two resolves each
+// with EngineEvaluator).
 const (
 	CapInteractive = 1500
 	CapJob         = 3000
