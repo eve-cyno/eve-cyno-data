@@ -25,15 +25,31 @@ var gate27 = []string{
 
 // The 8 load readings where the constant model has a known residual (plan section 2). The
 // reference column is the QC2 reading committed in fit/validate_qc2_test.go (hull role bonus,
-// rig drawbacks, Bastion Module I), the committed corpus oracle JSON (numbers only), or the
-// hand formula with the drawback attribute named in QC2.
+// rig drawbacks, Bastion Module I), the hand arithmetic below (Tengu), or the hand formula
+// with the drawback attribute named in QC2.
+//
+// tengu-t3, all V, from SDE attributes (SDE build 3670638_20261104). The fit: 5x Heavy
+// Missile Launcher II (cpu 55, pg 105), 2x Large Shield Extender II (cpu 45, pg 160), 3x Cap
+// Recharger II (cpu 15, pg 1), 2x Ballistic Control System II (cpu 40, pg 1), and the
+// subsystems, whose own load is 0. These unpenalized percent reductions apply to the base
+// loads: Weapon Upgrades V (attribute 310, -5 per level, -25 %) on launcher cpu, Advanced
+// Weapon Upgrades V (323, -2 per level, -10 %) on launcher pg, Energy Grid Upgrades V (310,
+// -5 per level, -25 %) on Cap Recharger cpu, Shield Upgrades V (323, -5 per level, -25 %) on
+// shield extender pg, and the Tengu Offensive - Accelerated Ejection Bay (attribute 2669,
+// -25 %) on the cpu and pg of the launchers, which the constant model leaves out.
+//
+//	launcher cpu 55 x 0.75 x 0.75        = 30.9375   pg 105 x 0.90 x 0.75 = 70.875
+//	CPU  5 x 30.9375 + 2 x 45 + 3 x 11.25 (15 x 0.75) + 2 x 40
+//	   = 154.6875 + 90 + 33.75 + 80      = 358.4375
+//	PG   5 x 70.875 + 2 x 120 (160 x 0.75) + 3 x 1 + 2 x 1
+//	   = 354.375 + 240 + 3 + 2           = 599.375
 var gateResiduals = map[string]struct{ cpu, pg float64 }{
 	"qc2/q131_viator.eft":   {cpu: 178.0},
 	"qc2/q182_vargur.eft":   {cpu: 710.25},
 	"qc2/q217_vargur.eft":   {cpu: 734.5},
 	"qc2/q200_cerberus.eft": {cpu: 601.6},
 	"qc2/q64_thorax.eft":    {pg: 1117.9},
-	"tengu-t3":              {cpu: 358.45, pg: 599.4},
+	"tengu-t3":              {cpu: 358.4375, pg: 599.375},
 	"qc2/q65_rifter.eft":    {pg: 51.19},
 	"qc2/q69_cormorant.eft": {pg: 78.44},
 }
