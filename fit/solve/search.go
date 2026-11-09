@@ -784,10 +784,10 @@ func uncertainOf(st fit.FitStats) []string {
 // line keeps a module rather than going empty (a usable Tech I scrambler beats an empty mid).
 const emptyRank = math.MaxInt32
 
-// rankOf is the tie-order view of an assignment: changed lines (type, charge or quantity)
-// against the written fit, downgrades, Officer lines, the objective, the price and the type
-// ids in line order (an empty line as emptyRank). The price counts module and drone lines (type x
-// quantity); charges are left out.
+// rankOf is the tie-order view of an assignment (the fields Better reads): changed lines
+// (type, charge or quantity) against the written fit, downgrades, the Officer lines the solver
+// introduces, the objective, the price and the type ids in line order (an empty line as
+// emptyRank). The price counts module and drone lines (type x quantity); charges are left out.
 func (s *search) rankOf(asg []Candidate, obj float64) Rank {
 	r := Rank{Objective: obj, TypeIDs: make([]int, len(asg)), HasPrice: len(s.req.Prices) > 0}
 	for i, c := range asg {
@@ -795,7 +795,9 @@ func (s *search) rankOf(asg []Candidate, obj float64) Rank {
 		if c.Empty() {
 			r.TypeIDs[i] = emptyRank
 		}
-		if s.cat.IsOfficer(c.TypeID) {
+		// Only an Officer module the solver introduces counts: one the written line already
+		// holds is the pilot's own and is neither traded away nor ranked against.
+		if s.cat.IsOfficer(c.TypeID) && c.TypeID != s.lines[i].orig.TypeID {
 			r.Officers++
 		}
 		if c != s.lines[i].orig {

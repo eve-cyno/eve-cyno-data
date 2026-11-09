@@ -3,11 +3,13 @@ package solve
 import (
 	"context"
 	"encoding/json"
+	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
 	"eve-cyno.dev/go/data/dogma"
+	"eve-cyno.dev/go/data/fit"
 	"eve-cyno.dev/go/data/fit/gofa"
 )
 
@@ -151,4 +153,77 @@ func TestSolve_DowngradeRetriesWhenTheGreedyRunEndsUnaccepted(t *testing.T) {
 	res := run(nil)
 	require.NotEqual(t, StatusNoCandidate, res.Status)
 	require.True(t, res.Result.Valid)
+}
+
+// An Officer line already in the written fit is the pilot's own: the rank counts only the
+// Officer lines the solver introduces, so a Downgrade or Convert does not trade the owned
+// module away to lower the count. The warning still names every Officer line of the result.
+func TestSolve_RankCountsIntroducedOfficersOnly(t *testing.T) {
+	sub := fakeSubset(
+		gun(1000, 1, 0, 40, nil),
+		gun(1001, 2, 3, 50, rare(map[int]float64{})), // unusable for the poor pilot
+		gun(1002, 1, 4, 45, nil),
+		gun(1003, 5, 11, 60, nil), // Officer
+	)
+	c := NewCatalog(sub)
+	seenOwned, seenIntroduced := false, false
+	var probes []*probe
+	h := &hooks{probe: func(p *probe) { probes = append(probes, p) }}
+	for _, kind := range []Kind{KindRefit, KindDowngrade} {
+		probes = nil
+		r := Request{Kind: kind, Fit: highFit(1003, 1001, 1001), Skills: poor, Policy: fixPolicy(nil)}
+		res, err := solve(context.Background(), c, &fakeEngine{store: c.Store(), workers: 1}, r, h)
+		require.NoError(t, err)
+		require.Equal(t, 1003, highTypes(res.Fit)[0], "%s keeps the owned Officer line", kind)
+		for _, p := range probes {
+			want := 0
+			for i, cand := range p.asg {
+				if cand.TypeID == 1003 && i != 0 {
+					want++
+				}
+			}
+			require.Equal(t, want, p.rank.Officers, "%s %v", kind, p.asg)
+			if p.asg[0].TypeID == 1003 {
+				seenOwned = true
+			}
+			if want > 0 {
+				seenIntroduced = true
+			}
+		}
+		// The warning covers the owned Officer line (index 0) whatever the rank counted.
+		require.NotEmpty(t, res.Warnings, kind)
+		require.Equal(t, WarnOfficer, res.Warnings[0].Code)
+		require.Equal(t, 0, res.Warnings[0].Index)
+	}
+	require.True(t, seenOwned && seenIntroduced)
+}
+
+// Convert candidates: Officer types sort after every other type, whatever their powergrid
+// distance, but an Officer original is an ordinary candidate (it ranks by distance). Abyssal
+// types are never offered, among weapons or rigs.
+func TestCandidates_ConvertOfficerLastAndAbyssalExcluded(t *testing.T) {
+	sub := testSubset()
+	sub.Types = append(sub.Types,
+		withMeta(ty(310, groupSized, 7, []int{12, 42}, map[int]float64{attrPGNeed: 40, attrMetaLevel: 20}), 5, 301), // Officer at distance 0
+		withMeta(ty(311, groupSized, 7, []int{12, 42}, map[int]float64{attrPGNeed: 40, attrMetaLevel: 9}), 15, 301), // Abyssal at distance 0
+		withMeta(ty(404, groupRig, 7, []int{2663}, map[int]float64{attrRigSize: 2, attrMetaLevel: 9}), 15, 400),     // Abyssal rig of the target size
+	)
+	c := NewCatalog(sub)
+	o := Options{Kind: KindConvert, TargetHull: hullBig, Skills: full, Policy: Fallback(KindConvert)}
+	f := fit.Fit{HullID: hullSmall, High: []fit.FitModule{{TypeID: 300, Qty: 1}}}
+	got := ids(c.Candidates(f, hi0, o))
+	require.NotContains(t, got, 311, "Abyssal")
+	require.Contains(t, got, 310)
+	require.Equal(t, 310, got[len(got)-2], "Officer after every other type, the empty slot last")
+	require.Equal(t, 0, got[len(got)-1])
+
+	// An Officer original is not demoted: it wants 160 MW on the target, 310 draws 40, so it
+	// ranks by distance, before the 10 MW type 300 and not after every other type.
+	f.High[0].TypeID = 310
+	got = ids(c.Candidates(f, hi0, o))
+	require.Less(t, slices.Index(got, 310), slices.Index(got, 300), "%v", got)
+
+	rf := fit.Fit{HullID: hullSmall, Rig: []fit.FitModule{{TypeID: 400, Qty: 1}}}
+	o.Policy.AllowRigChanges = true
+	require.NotContains(t, ids(c.Candidates(rf, LineRef{Slot: SlotRig}, o)), 404, "Abyssal rig on Convert")
 }

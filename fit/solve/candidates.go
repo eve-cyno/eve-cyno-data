@@ -504,9 +504,12 @@ func (c *Catalog) convertCandidates(src fit.Fit, ref LineRef, orig *typeInfo, ke
 	for _, id := range ids {
 		ds[id] = dist(id)
 	}
+	// Officer types last, except the original: a Convert keeps an Officer module the pilot
+	// already owns as an ordinary candidate, so the cap cannot drop it for being Officer.
+	officer := func(id int) bool { return id != orig.id && c.IsOfficer(id) }
 	sort.Slice(ids, func(i, j int) bool {
-		if oi, oj := c.IsOfficer(ids[i]), c.IsOfficer(ids[j]); oi != oj {
-			return oj // Officer types last
+		if oi, oj := officer(ids[i]), officer(ids[j]); oi != oj {
+			return oj
 		}
 		if ds[ids[i]] != ds[ids[j]] {
 			return ds[ids[i]] < ds[ids[j]]
