@@ -160,3 +160,16 @@ func TestSolve_OutsideSubsetTypeNeverRanksBest(t *testing.T) {
 		}
 	}
 }
+// L4: a charge outside the subset does not ride along in the forced phase of a line with
+// several candidates.
+func TestSolve_OutsideSubsetChargeNeverRidesAlong(t *testing.T) {
+	sub := fakeSubset(gun(1000, 1, 0, 40, nil), gun(1001, 2, 5, 50, rare(map[int]float64{})), gun(1002, 1, 3, 49.5, nil))
+	f := highFit(1001, 1000)
+	f.High[1].ChargeID = 8888
+	res := fakeSolve(t, sub, Request{Kind: KindRefit, Fit: f, Skills: poor})
+	require.NotEqual(t, StatusNoCandidate, res.Status)
+	require.NotNil(t, res.Fit)
+	for _, m := range res.Fit.High {
+		require.NotEqual(t, 8888, m.ChargeID)
+	}
+}

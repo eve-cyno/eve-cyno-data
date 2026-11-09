@@ -711,11 +711,11 @@ func (s *search) judge(asg []Candidate, f fit.Fit, ev Evaluation) *probe {
 	return p
 }
 
-// outsideSubset reports whether the fit holds a module or drone type the catalog lacks.
+// outsideSubset reports whether the fit holds a module, drone or charge type the catalog lacks.
 func (s *search) outsideSubset(f fit.Fit) bool {
 	for _, g := range slotGroups {
 		for _, m := range *g.mods(&f) {
-			if m.TypeID != 0 && !s.cat.Has(m.TypeID) {
+			if (m.TypeID != 0 && !s.cat.Has(m.TypeID)) || (m.ChargeID != 0 && !s.cat.Has(m.ChargeID)) {
 				return true
 			}
 		}
