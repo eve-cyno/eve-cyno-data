@@ -23,11 +23,23 @@ import (
 //     that has no place on the hull, takes its best usable candidate by the kind's ranking,
 //     each found by single-change evaluation against the starting fit.
 //  2. Repair: while the fit breaks the hard rule, take the single change that lowers the
-//     binding violation: the violation cleared first, then the least objective loss per unit
-//     saved, then the tie order. At most 2 x lines rounds.
+//     binding violation: the violation cleared first, then (Downgrade, and a Convert onto
+//     the fit's own hull, without gates) the most of the binding saved by one change, then
+//     the least objective loss per unit saved, then the tie order. With gates the saved
+//     rule is left out, and a run without gates that ends unaccepted is run again without
+//     it (run). At most 2 x lines rounds. A candidate needs a base need not above the
+//     current line's, so a change that cannot lower the binding is not evaluated.
 //  3. Improve: line by line in the fixed line order, try every other candidate of the line
 //     (and the revert to the original); accept the best change that is valid, passes the
 //     gates and ranks better than the current fit. Repeat until a full round accepts nothing.
+//     A Fix, a Downgrade and a Convert onto its own hull (fixLike) try only the lines the
+//     current accepted fit has changed.
+//
+// Twin lines: lines of one sym (slot group, state, written choice, candidate list) that hold
+// the same choice evaluate alike, so a round evaluates a change on one of them only. A
+// successful result is byte-identical with and without the skipping. A no_candidate report
+// (Closest, GatePassingInvalid) may differ, because it lists the evaluated candidates and the
+// skipped twins are not evaluated (TestSolve_InterchangeableLinesEvaluatedOnce).
 //
 // Every round's evaluations go to the Evaluator as one batch and are reduced in input order
 // with total orders (the kind's ranking, then the choices themselves), so neither the worker
@@ -35,13 +47,15 @@ import (
 // timed: CapInteractive per interactive solve, CapJob per job pair. One evaluation is one
 // Evaluator request; the default EngineEvaluator answers it with two engine resolves (Stats
 // for dps, tank and capacitor, Resources for the load of every module, which resolves offline
-// modules as inert items where Stats leaves them out). So a cap of N evaluations bounds the
-// engine at 2N resolves. The result is the best
+// modules as inert items where Stats leaves them out). So the search is bounded at 2N resolves
+// for a cap of N. The evaluations of the warning (trainFor, at most 50, and capBaselineTrain,
+// at most 79) and of the no_candidate report come on top: they are not counted in
+// Result.Evaluations and not against the cap. The result is the best
 // accepted fit seen; with none, no_candidate with the data the report needs (report.go).
 
 // Evaluation caps (section 6, "Evaluation cap"). The two baselines count. The unit is an
 // Evaluator request, not an engine resolve (see the package comment above: two resolves each
-// with EngineEvaluator).
+// with EngineEvaluator). The warnings' and the report's own evaluations are outside the cap.
 const (
 	CapInteractive = 1500
 	CapJob         = 3000
@@ -166,10 +180,13 @@ type Result struct {
 	Uncertain []string     `json:"uncertain,omitempty"` // what is not modelled (status uncertain)
 	// Warnings are notes on the chosen fit (warnings.go), in the order Officer lines (slot
 	// group, index), then the capacitor; empty when there are none and with no_candidate.
-	Warnings    []Warning `json:"warnings"`
-	Capped      bool      `json:"capped"`
-	Evaluations int       `json:"evaluations"`
-	Policy      Policy    `json:"policy"`
+	Warnings []Warning `json:"warnings"`
+	Capped   bool      `json:"capped"`
+	// Evaluations counts the search's evaluations (the baselines included), the number the cap
+	// bounds. The evaluations of the warnings (the capacitor warning's training what-ifs, at
+	// most 50 and 79) and of the no_candidate report are not in it.
+	Evaluations int    `json:"evaluations"`
+	Policy      Policy `json:"policy"`
 	// NoCandidate is set with status no_candidate.
 	NoCandidate *NoCandidate `json:"noCandidate,omitempty"`
 }
@@ -551,7 +568,8 @@ func (s *search) refitLines() {
 
 // addLine adds a line with its candidates: charges outside the subset unloaded, unusable
 // candidates dropped, duplicates merged, the canonical order (the original first, then
-// Tech II, then meta level from high to low, then type id; the empty slot last).
+// Tech II, then meta level from high to low, then type id, Officer types after all others;
+// the empty slot last).
 func (s *search) addLine(ref LineRef, m fit.FitModule, cs []Candidate) {
 	ln := line{ref: ref, mod: m, orig: Candidate{TypeID: m.TypeID, ChargeID: m.ChargeID, Qty: m.Qty}}
 	seen := map[Candidate]bool{}
@@ -1249,7 +1267,8 @@ func (s *search) repair(cur *probe) (*probe, error) {
 	return cur, nil
 }
 
-// repairBetter: the binding cleared first, then the least objective loss per unit saved,
+// repairBetter: the binding cleared first; then, when savedFirst is set (a minimal kind
+// without gates), the most of the binding saved; then the least objective loss per unit saved,
 // then the tie order.
 func (s *search) repairBetter(cur *probe, m0 float64, a *probe, ma float64, b *probe, mb float64) bool {
 	ca, cb := Round9(ma) <= 0, Round9(mb) <= 0
@@ -1273,10 +1292,6 @@ func (s *search) repairBetter(cur *probe, m0 float64, a *probe, ma float64, b *p
 	return s.better(a, b)
 }
 
-// improve tries, line by line, every other candidate of the line; the best accepted change
-// that ranks better than the current fit is taken. It repeats until a full round takes
-// nothing or the cap ends it. A Fix ranks fewest changed lines first, so with an accepted
-// current fit it only tries lines it already changes.
 // fixLike: a Fix, a Downgrade, or a Convert onto the fit's own hull. Once the current fit is
 // accepted, improve tries only the lines it has changed (a Downgrade repairs what the pilot
 // cannot use; it does not upgrade lines the pilot can use, decision 2026-11-09).
@@ -1284,6 +1299,10 @@ func (s *search) fixLike() bool {
 	return s.kind == KindRefit || s.kind == KindDowngrade || (s.kind == KindConvert && s.hull == s.req.Fit.HullID)
 }
 
+// improve tries, line by line, every other candidate of the line; the best accepted change
+// that ranks better than the current fit is taken. It repeats until a full round takes
+// nothing or the cap ends it. A fixLike kind ranks fewest changed lines early, so with an
+// accepted current fit it only tries the lines it already changes.
 func (s *search) improve(cur *probe) error {
 	for !s.capped {
 		took := false

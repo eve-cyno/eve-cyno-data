@@ -3,6 +3,7 @@ package solve
 import (
 	"context"
 	"encoding/json"
+	"math/rand"
 	"slices"
 	"testing"
 
@@ -290,4 +291,76 @@ func TestSolve_CapacitorWarnsOnSoonerEmpty(t *testing.T) {
 	require.Contains(t, res.Warnings[0].Message, "empty in 20 s")
 	require.Contains(t, res.Warnings[0].Message, "in 50 s")
 	require.Empty(t, run(39).Warnings, "117 of 100: empty in 59 s, later than the flown 50 s")
+}
+
+func rareOrUsable(rng *rand.Rand) int { return []int{1002, 1003, 1004}[rng.Intn(3)] }
+
+// twinScenario is one random universe of guns and plates over the fake hull: a written fit of
+// three guns (some lines equal, some not) and two plates, a DPS and EHP gate.
+func twinScenario(rng *rand.Rand) (*dogma.Subset, Request) {
+	rnd := func(lo, hi int) float64 { return float64(lo + rng.Intn(hi-lo+1)) }
+	ex := func() map[int]float64 {
+		return map[int]float64{attrPGNeed: rnd(5, 50), attrCPUNeed: rnd(5, 50)}
+	}
+	types := []dogma.SubsetType{
+		gun(1000, 1, 0, rnd(10, 40), rare(ex())),
+		gun(1001, 2, 5, rnd(30, 60), rare(ex())),
+		gun(1002, 1, 4, rnd(10, 60), ex()),
+		gun(1003, 1, 3, rnd(10, 60), ex()),
+		gun(1004, 1, 2, rnd(10, 60), ex()),
+		gun(1005, 1, 1, rnd(10, 60), ex()),
+		plate(2000, 1, 0, rnd(10, 100), rare(ex())),
+		plate(2001, 2, 5, rnd(50, 150), rare(ex())),
+		plate(2002, 1, 3, rnd(10, 150), ex()),
+		plate(2003, 1, 2, rnd(10, 150), ex()),
+	}
+	f := highFit(1001, 1001, 1001)
+	switch rng.Intn(3) {
+	case 1:
+		f.High[2].TypeID, f.High[2].Name = 1002, "x"
+	case 2: // the twins around a different line
+		f.High[1].TypeID, f.High[1].Name = rareOrUsable(rng), "x"
+	}
+	f.Low = []fit.FitModule{{TypeID: 2001, Qty: 1, Name: "p"}, {TypeID: 2001, Qty: 1, Name: "p"}}
+	var gates []Gate
+	switch rng.Intn(3) {
+	case 1:
+		gates = []Gate{{Stat: StatDPS, AtLeast: rnd(50, 98)}}
+	case 2:
+		gates = []Gate{{Stat: StatDPS, AtLeast: rnd(50, 98)}, {Stat: StatEHP, AtLeast: rnd(50, 98)}}
+	}
+	return fakeSubset(types...), Request{Fit: f, Skills: poor, Policy: fixPolicy(gates)}
+}
+
+// Skipping interchangeable lines never changes a successful result, whatever the lines hold
+// (sym is the slot group, the state, the written choice and the candidate list, not the slot
+// alone) and whatever was taken before (the tried set resets when the current fit changes).
+// A no_candidate report may differ: it lists the evaluated candidates, and a skipped twin is
+// not evaluated.
+func TestSolve_TwinSkippingKeepsSuccessfulResults(t *testing.T) {
+	rng := rand.New(rand.NewSource(7))
+	checked := 0
+	for it := 0; it < 1000; it++ {
+		sub, r := twinScenario(rng)
+		c := NewCatalog(sub)
+		for _, kind := range []Kind{KindRefit, KindDowngrade} {
+			r.Kind = kind
+			run := func(h *hooks) *Result {
+				res, err := solve(context.Background(), c, &fakeEngine{store: c.Store(), workers: 1}, r, h)
+				require.NoError(t, err)
+				return res
+			}
+			with, without := run(nil), run(&hooks{noSym: true})
+			require.Equal(t, with.Status, without.Status, "it %d %s", it, kind)
+			if with.Status == StatusNoCandidate {
+				continue
+			}
+			checked++
+			with.Evaluations, without.Evaluations = 0, 0
+			a, _ := json.Marshal(with)
+			b, _ := json.Marshal(without)
+			require.Equal(t, string(b), string(a), "it %d %s", it, kind)
+		}
+	}
+	require.Greater(t, checked, 100)
 }

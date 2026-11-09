@@ -21,9 +21,9 @@ func TestCandidates_AnyMetaGroup_RealSDE(t *testing.T) {
 	sub, err := s.ExportSubset("test")
 	require.NoError(t, err)
 	c := NewCatalog(sub)
-	r := c.Store().ResolveNames([]string{"Heavy Missile Launcher II", "Caldari Navy Heavy Missile Launcher", "Dread Guristas Heavy Missile Launcher"})
+	r := c.Store().ResolveNames([]string{"Heavy Missile Launcher II", "Caldari Navy Heavy Missile Launcher", "Heavy Missile Launcher I"})
 	require.Len(t, r, 3)
-	t2, navy, dread := r["Heavy Missile Launcher II"], r["Caldari Navy Heavy Missile Launcher"], r["Dread Guristas Heavy Missile Launcher"]
+	t2, navy, t1 := r["Heavy Missile Launcher II"], r["Caldari Navy Heavy Missile Launcher"], r["Heavy Missile Launcher I"]
 
 	o := Options{Kind: KindRefit, Skills: nil, Policy: Fallback(KindRefit)}
 	f := fit.Fit{HullID: 24690, High: []fit.FitModule{{TypeID: t2, Qty: 1}}} // Drake
@@ -48,6 +48,8 @@ func TestCandidates_AnyMetaGroup_RealSDE(t *testing.T) {
 	t.Logf("HML II candidates: %d, meta groups %v, officer %v", len(got), groups, seenOfficer)
 	require.True(t, groups[4] || groups[3] || groups[6], "Faction, Storyline or Deadspace launchers are offered: %v", groups)
 	require.Equal(t, 0, got[len(got)-1].TypeID, "empty slot last")
+	// The cap keeps the Tech I base type: the cheap launcher is not cut for a Deadspace one.
+	require.Contains(t, ids(got), t1, "HML I survives the cap")
 
 	f.High[0].TypeID = navy
 	got = c.Candidates(f, hi0, o)
@@ -57,5 +59,4 @@ func TestCandidates_AnyMetaGroup_RealSDE(t *testing.T) {
 		all = append(all, cd.TypeID)
 	}
 	require.Contains(t, all, t2, "Tech II is offered to a Faction line")
-	_ = dread
 }

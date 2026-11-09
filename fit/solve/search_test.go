@@ -860,6 +860,10 @@ func techCatalog(t testing.TB) *Catalog {
 // Interchangeable lines (same group, written module and candidates) are evaluated once per
 // round of repair and improve. The result equals the one with every line evaluated, and the
 // evaluations fall.
+// The twin rule skips evaluations, never a successful result: the results are byte-identical
+// with and without it (TestSolve_TwinSkippingKeepsSuccessfulResults runs random universes). A
+// no_candidate report (Closest, GatePassingInvalid) may differ, because it lists the evaluated
+// candidates and a skipped twin is not evaluated; this test therefore compares successes only.
 func TestSolve_InterchangeableLinesEvaluatedOnce(t *testing.T) {
 	cpu := func(v float64) map[int]float64 { return map[int]float64{attrCPUNeed: v} }
 	sub := fakeSubset(

@@ -13,7 +13,8 @@ import (
 )
 
 // The owner's two examples (plan 2026-11-07-dp2-fit-l4-l6, T5.8), real SDE. An expectation
-// that fails on real behaviour goes to review; it is never re-expected here.
+// that fails on real behaviour goes to review. It is re-expected only for an owner ruling,
+// and the comment of the test names the ruling and the date (the Cerberus example, 2026-11-09).
 
 const (
 	typeArbalestHML   = 8105  // 'Arbalest' Heavy Missile Launcher: Tech I, meta level 4
@@ -60,7 +61,12 @@ func TestOwnerExample_FixForCharacter(t *testing.T) {
 	require.True(t, res.Result.CapStable)
 	require.Empty(t, res.Uncertain)
 	require.Empty(t, res.Warnings)
-	require.Equal(t, 79, res.Evaluations)
+	// The evaluation count follows the candidate lists and the search reductions (twin lines,
+	// the repair filter); it is bounded here and logged, not frozen. Measured 79 on 2026-11-09.
+	t.Logf("%d evaluations", res.Evaluations)
+	require.Greater(t, res.Evaluations, 6, "more than the baselines and one change per line")
+	require.Less(t, res.Evaluations, 150, "far below the cap of %d", CapInteractive)
+	require.False(t, res.Capped)
 
 	// The rest of the fit is unchanged.
 	want := f
