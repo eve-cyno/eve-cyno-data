@@ -191,7 +191,7 @@ type Rank struct {
 	Downgrades int     `json:"downgrades"` // changes that are downgrades
 	Objective  float64 `json:"objective"`
 	Price      float64 `json:"price"`
-	HasPrice   bool    `json:"hasPrice"` // false: no price known, a price tie
+	HasPrice   bool    `json:"hasPrice"` // false: no price known; ranks after any priced result
 	TypeIDs    []int   `json:"typeIds"`  // type ids in line order
 }
 
@@ -220,14 +220,23 @@ func cmpFloat(a, b float64) int {
 //
 // Fix (refit): fewest changed lines, fewest downgrades, highest objective, lowest price,
 // type ids in line order. Downgrade and Convert: highest objective first, then the same
-// list. A price counts only when both sides have one.
+// list. A result with a known price ranks before one without; two priced results rank by
+// price.
 func Better(k Kind, a, b Rank) bool {
 	steps := []func() int{
 		func() int { return cmpInt(a.Changed, b.Changed) },
 		func() int { return cmpInt(a.Downgrades, b.Downgrades) },
 		func() int { return -cmpFloat(a.Objective, b.Objective) },
 		func() int {
-			if !a.HasPrice || !b.HasPrice {
+			// A total order: a priced result before an unpriced one, then the lower price.
+			// (Ties on "both have a price" alone were intransitive across three results.)
+			if a.HasPrice != b.HasPrice {
+				if a.HasPrice {
+					return -1
+				}
+				return 1
+			}
+			if !a.HasPrice {
 				return 0
 			}
 			return cmpFloat(a.Price, b.Price)

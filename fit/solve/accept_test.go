@@ -88,3 +88,33 @@ func TestAccept_Round9(t *testing.T) {
 	require.NotEqual(t, Round9(0.98), Round9(0.98001))
 	require.Equal(t, 0.0, Round9(0))
 }
+
+// M5: the tie order is total. Three results that differ only in price and type ids (priced
+// 100, unpriced, priced 50) pick the same winner whatever the order they arrive in. With the
+// price compared only when both sides have one, the three formed a cycle.
+func TestBetter_PriceOrderIsTotal(t *testing.T) {
+	mk := func(price float64, has bool, id int) Rank {
+		return Rank{Changed: 2, Objective: 1, Price: price, HasPrice: has, TypeIDs: []int{id}}
+	}
+	all := []Rank{mk(100, true, 1), mk(0, false, 2), mk(50, true, 3)}
+	for _, k := range []Kind{KindRefit, KindDowngrade, KindConvert} {
+		var winners []int
+		perms := [][]int{{0, 1, 2}, {0, 2, 1}, {1, 0, 2}, {1, 2, 0}, {2, 0, 1}, {2, 1, 0}}
+		for _, perm := range perms {
+			best := all[perm[0]]
+			for _, i := range perm[1:] {
+				if Better(k, all[i], best) {
+					best = all[i]
+				}
+			}
+			winners = append(winners, best.TypeIDs[0])
+		}
+		for _, w := range winners {
+			require.Equal(t, 3, w, "%s: priced 50 wins in every arrival order", k)
+		}
+		// Transitivity of the three pairs.
+		require.True(t, Better(k, all[2], all[0]))
+		require.True(t, Better(k, all[0], all[1]))
+		require.True(t, Better(k, all[2], all[1]))
+	}
+}
