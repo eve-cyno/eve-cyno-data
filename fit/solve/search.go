@@ -181,7 +181,7 @@ type Result struct {
 	// Warnings are notes on the chosen fit (warnings.go), in the order Officer lines (slot
 	// group, index), then the capacitor; empty when there are none and with no_candidate.
 	Warnings []Warning `json:"warnings"`
-	Capped   bool      `json:"capped"`
+	Capped   bool      `json:"capped"` // the cap cut the search, or a Convert skipped pass B because pass A used more than half of it
 	// Evaluations counts the search's evaluations (the baselines included), the number the cap
 	// bounds. The evaluations of the warnings (the capacitor warning's training what-ifs, at
 	// most 50 and 79) and of the no_candidate report are not in it.
@@ -189,6 +189,11 @@ type Result struct {
 	Policy      Policy `json:"policy"`
 	// NoCandidate is set with status no_candidate.
 	NoCandidate *NoCandidate `json:"noCandidate,omitempty"`
+
+	// rank is the chosen fit's rank, bWon whether a Convert's pass B (the wide universe)
+	// beat pass A (tests and benchmarks read them; neither is on the wire).
+	rank Rank
+	bWon bool
 }
 
 // Evaluation is one evaluated fit: its stats and its fitting resources, both under the
@@ -288,6 +293,9 @@ type hooks struct {
 	noSym bool
 	// noRetry skips the second run of a Downgrade whose greedy run ended unaccepted.
 	noRetry bool
+	// classicOnly stops a Convert after pass A (the classic universe): the reference of the
+	// two-pass tests.
+	classicOnly bool
 }
 
 // line is one line of the fit the search changes.
@@ -364,6 +372,11 @@ type search struct {
 	capped    bool
 	memo      map[string]*probe
 	order     []*probe // every evaluated candidate fit, in evaluation order
+	// pass lists the probes the current pass reached, in order: its new evaluations and the
+	// memo hits it met first; seen marks them. Convert runs two passes over one memo.
+	pass    []*probe
+	seen    map[*probe]bool
+	classic bool // pass A of a Convert: the classic candidate universe (Options.Classic)
 
 	canUse map[int]bool
 	down   map[[2]int]bool
@@ -375,7 +388,7 @@ type search struct {
 
 func solve(ctx context.Context, c *Catalog, ev Evaluator, r Request, h *hooks) (*Result, error) {
 	s := &search{ctx: ctx, cat: c, ev: ev, req: r, kind: r.Kind, hooks: h,
-		memo: map[string]*probe{}, canUse: map[int]bool{}, down: map[[2]int]bool{}}
+		memo: map[string]*probe{}, seen: map[*probe]bool{}, canUse: map[int]bool{}, down: map[[2]int]bool{}}
 	if err := s.setup(); err != nil {
 		return nil, err
 	}
@@ -416,6 +429,12 @@ func solve(ctx context.Context, c *Catalog, ev Evaluator, r Request, h *hooks) (
 	}
 
 	var nc *NoCandidate
+	// A Convert searches twice over one memo: pass A on the classic universe (Tech I, Tech II
+	// and the original's own meta group), pass B on the wide one (any meta group but
+	// Abyssal). One greedy search over the wide universe is path dependent and can end
+	// worse than the classic one, so the better result by the kind's order wins and a tie
+	// goes to pass A.
+	s.classic = s.kind == KindConvert
 	if s.kind == KindConvert {
 		nc, err = s.convertLines()
 		if err != nil {
@@ -437,26 +456,46 @@ func solve(ctx context.Context, c *Catalog, ev Evaluator, r Request, h *hooks) (
 	}
 	if s.hull == r.Fit.HullID {
 		// The starting fit is the original on its own hull: B2 is its evaluation.
-		p := s.judge(start, s.buildFit(start), b2ev)
-		s.remember(p)
+		s.startProbe(start, b2ev)
 	}
 
 	if err := s.run(start); err != nil {
 		return nil, err
 	}
-	res.Evaluations, res.Capped = s.used, s.capped
-
-	var best *probe
-	for _, p := range s.order {
-		if p.accepted() && (best == nil || s.better(p, best)) {
-			best = p
+	best := s.bestOfPass()
+	bWon := false
+	if s.classic && !(s.hooks != nil && s.hooks.classicOnly) {
+		// Pass B is skipped when pass A used up more than half the cap or hit it: the
+		// remaining room would not let it finish, and the result says so (Capped).
+		if s.capped || s.used > s.cap/2 {
+			s.capped = true
+		} else {
+			s.classic, s.lines, s.pass, s.seen = false, nil, nil, map[*probe]bool{}
+			if _, err = s.convertLines(); err != nil {
+				return nil, err
+			}
+			start = make([]Candidate, len(s.lines))
+			for i := range s.lines {
+				start[i] = s.lines[i].orig
+			}
+			if s.hull == r.Fit.HullID {
+				s.startProbe(start, b2ev)
+			}
+			if err := s.run(start); err != nil {
+				return nil, err
+			}
+			if b := s.bestOfPass(); b != nil && (best == nil || Better(s.kind, b.rank, best.rank)) {
+				best, bWon = b, true
+			}
 		}
 	}
+	res.Evaluations, res.Capped = s.used, s.capped
 	if best == nil {
 		res.Status = StatusNoCandidate
 		res.NoCandidate = s.noCandidate()
 		return res, nil
 	}
+	res.rank, res.bWon = best.rank, bWon
 	f := s.buildFit(best.asg)
 	res.Fit = &f
 	res.Changes = s.changes(best.asg)
@@ -475,6 +514,35 @@ func solve(ctx context.Context, c *Catalog, ev Evaluator, r Request, h *hooks) (
 		res.Status = StatusOK
 	}
 	return res, nil
+}
+
+// startProbe judges the starting fit of an own-hull search (B2 is its evaluation) unless the
+// memo holds it already.
+func (s *search) startProbe(start []Candidate, b2ev Evaluation) {
+	if p, ok := s.memo[asgKey(start)]; ok {
+		s.see(p)
+		return
+	}
+	s.remember(s.judge(start, s.buildFit(start), b2ev))
+}
+
+// bestOfPass is the best accepted probe the current pass reached, nil when there is none.
+func (s *search) bestOfPass() *probe {
+	var best *probe
+	for _, p := range s.pass {
+		if p.accepted() && (best == nil || s.better(p, best)) {
+			best = p
+		}
+	}
+	return best
+}
+
+// see records a probe in the current pass once.
+func (s *search) see(p *probe) {
+	if !s.seen[p] {
+		s.seen[p] = true
+		s.pass = append(s.pass, p)
+	}
 }
 
 // setup checks the request and fills the policy, the pilot's options and the cap.
@@ -604,6 +672,9 @@ func (s *search) candLess(orig, a, b Candidate) bool {
 		return b.Empty()
 	}
 	if a.TypeID != b.TypeID {
+		if s.classic {
+			return s.cat.classicMetaBefore(a.TypeID, b.TypeID)
+		}
 		return s.cat.metaBefore(a.TypeID, b.TypeID)
 	}
 	if a.ChargeID != b.ChargeID {
@@ -878,6 +949,7 @@ func (s *search) forcedBetter(a, b *probe) bool {
 func (s *search) remember(p *probe) {
 	s.memo[p.key] = p
 	s.order = append(s.order, p)
+	s.see(p)
 	if s.hooks != nil && s.hooks.probe != nil {
 		s.hooks.probe(p)
 	}
@@ -898,6 +970,7 @@ func (s *search) evalBatch(asgs [][]Candidate) ([]*probe, error) {
 	for i, a := range asgs {
 		k := asgKey(a)
 		if p, ok := s.memo[k]; ok {
+			s.see(p)
 			out[i] = p
 			continue
 		}
@@ -970,7 +1043,7 @@ func (s *search) minimalKind() bool {
 }
 
 func (s *search) anyAccepted() bool {
-	for _, p := range s.order {
+	for _, p := range s.pass {
 		if p.accepted() {
 			return true
 		}

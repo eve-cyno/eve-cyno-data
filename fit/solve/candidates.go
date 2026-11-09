@@ -84,6 +84,11 @@ type Options struct {
 	Policy Policy
 	// TargetHull is the hull of a Convert (0 otherwise).
 	TargetHull int
+	// Classic offers the candidate universe of the rule before the "any meta group" ruling
+	// (4b8ebe5): Tech I, Tech II and the original line's own meta group, ordered Tech II
+	// first, then by meta level (no Officer tier, no capOrder). The Convert search runs it
+	// as pass A (see solve).
+	Classic bool
 }
 
 type typeInfo struct {
@@ -234,6 +239,35 @@ func lineModule(f fit.Fit, ref LineRef) (fit.FitModule, bool) {
 		return fit.FitModule{}, false
 	}
 	return g[ref.Index], true
+}
+
+// AllowedMeta reports whether the classic rule (Options.Classic) admits a type of meta group m
+// on a line whose original has meta group orig: Tech I, Tech II, or the original's own.
+func AllowedMeta(m, orig int) bool { return m == MetaTech1 || m == MetaTech2 || m == orig }
+
+// classicOK is the classic variant filter: AllowedMeta and allowT2toT1 = false (a Tech II
+// line never takes a Tech I type).
+func classicOK(orig, cand *typeInfo, p Policy) bool {
+	return AllowedMeta(cand.meta, orig.meta) && (p.AllowT2toT1 || orig.meta != MetaTech2 || cand.meta != MetaTech1)
+}
+
+// classicMetaBefore is the classic candidate order after "keep": Tech II first, then the rest
+// by meta level from high to low, then type id.
+func (c *Catalog) classicMetaBefore(a, b int) bool {
+	ta, tb := 1, 1
+	if c.MetaGroup(a) == MetaTech2 {
+		ta = 0
+	}
+	if c.MetaGroup(b) == MetaTech2 {
+		tb = 0
+	}
+	if ta != tb {
+		return ta < tb
+	}
+	if la, lb := c.MetaLevel(a), c.MetaLevel(b); la != lb {
+		return la > lb
+	}
+	return a < b
 }
 
 // IsOfficer reports whether the type is an Officer module (meta group 5).
@@ -419,13 +453,20 @@ func (c *Catalog) Candidates(f fit.Fit, ref LineRef, o Options) []Candidate {
 		if id == orig.id || !t.published || t.slot != orig.slot || t.meta == MetaAbyssal {
 			continue
 		}
+		if o.Classic && !classicOK(orig, t, o.Policy) {
+			continue
+		}
 		if !c.CanUse(o.Skills, id) || !c.prefilter(f.HullID, orig, t) {
 			continue
 		}
 		variants = append(variants, id)
 		anyUsable = true
 	}
-	variants = c.capOrder(orig.id, variants)
+	if o.Classic {
+		sort.Slice(variants, func(i, j int) bool { return c.classicMetaBefore(variants[i], variants[j]) })
+	} else {
+		variants = c.capOrder(orig.id, variants)
+	}
 	out := []Candidate{keep}
 	for _, id := range variants {
 		out = append(out, mk(id))
@@ -484,7 +525,7 @@ func (c *Catalog) convertCandidates(src fit.Fit, ref LineRef, orig *typeInfo, ke
 			if !t.published && id != orig.id {
 				continue
 			}
-			if id != orig.id && (t.meta == MetaAbyssal || !c.CanUse(o.Skills, id)) {
+			if id != orig.id && (t.meta == MetaAbyssal || !c.CanUse(o.Skills, id) || o.Classic && !classicOK(orig, t, o.Policy)) {
 				continue
 			}
 			got, has := t.attrs[attrRigSize]
@@ -496,7 +537,12 @@ func (c *Catalog) convertCandidates(src fit.Fit, ref LineRef, orig *typeInfo, ke
 			}
 			ids = append(ids, id)
 		}
-		sort.Slice(ids, func(i, j int) bool { return c.metaBefore(ids[i], ids[j]) })
+		sort.Slice(ids, func(i, j int) bool {
+			if o.Classic {
+				return c.classicMetaBefore(ids[i], ids[j])
+			}
+			return c.metaBefore(ids[i], ids[j])
+		})
 		out := []Candidate{}
 		// The original first when its size already fits; its variants only with allowRigChanges.
 		if hasID(ids, orig.id) {
@@ -534,7 +580,7 @@ func (c *Catalog) convertCandidates(src fit.Fit, ref LineRef, orig *typeInfo, ke
 	for _, id := range c.shapes[shapeKey(orig)] {
 		t := c.types[id]
 		if id != orig.id {
-			if !t.published || t.meta == MetaAbyssal || !c.CanUse(o.Skills, id) {
+			if !t.published || t.meta == MetaAbyssal || !c.CanUse(o.Skills, id) || o.Classic && !classicOK(orig, t, o.Policy) {
 				continue
 			}
 		}
@@ -549,13 +595,16 @@ func (c *Catalog) convertCandidates(src fit.Fit, ref LineRef, orig *typeInfo, ke
 	}
 	// Officer types last, except the original: a Convert keeps an Officer module the pilot
 	// already owns as an ordinary candidate, so the cap cannot drop it for being Officer.
-	officer := func(id int) bool { return id != orig.id && c.IsOfficer(id) }
+	officer := func(id int) bool { return !o.Classic && id != orig.id && c.IsOfficer(id) }
 	sort.Slice(ids, func(i, j int) bool {
 		if oi, oj := officer(ids[i]), officer(ids[j]); oi != oj {
 			return oj
 		}
 		if ds[ids[i]] != ds[ids[j]] {
 			return ds[ids[i]] < ds[ids[j]]
+		}
+		if o.Classic {
+			return c.classicMetaBefore(ids[i], ids[j])
 		}
 		return c.metaBefore(ids[i], ids[j])
 	})

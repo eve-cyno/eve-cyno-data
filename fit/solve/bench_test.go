@@ -2,7 +2,9 @@ package solve
 
 import (
 	"context"
+	"os"
 	"sort"
+	"strconv"
 	"testing"
 	"time"
 
@@ -63,10 +65,17 @@ func summarize(v []float64) (mean, p95, mx float64) {
 	return sum / float64(len(s)), s[min(len(s)-1, (len(s)*95+99)/100-1)], s[len(s)-1]
 }
 
-func benchRequests(b *testing.B, kind Kind) []Request {
+func benchRequests(b *testing.B, kind Kind) (out []Request) {
 	c := realCatalog(b)
 	profs := e3aProfiles(b)
-	var out []Request
+	defer func() {
+		// EVE_BENCH_CAP sets the evaluation cap (default CapInteractive; jobs run with CapJob).
+		if n, err := strconv.Atoi(os.Getenv("EVE_BENCH_CAP")); err == nil {
+			for i := range out {
+				out[i].MaxEvaluations = n
+			}
+		}
+	}()
 	for ref := 1; ref <= 6; ref++ {
 		f := refFit(b, c, ref)
 		if kind == KindConvert {

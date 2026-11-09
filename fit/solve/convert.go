@@ -52,7 +52,7 @@ func (s *search) convertLines() (*NoCandidate, error) {
 	if target.attrs[attrSubsystemSlots] > 0 {
 		return &NoCandidate{NeedsSubsystems: true}, nil
 	}
-	o := Options{Kind: KindConvert, Skills: s.req.Skills, Policy: s.pol, TargetHull: s.hull}
+	o := Options{Kind: KindConvert, Skills: s.req.Skills, Policy: s.pol, TargetHull: s.hull, Classic: s.classic}
 
 	// What the written fit needs of the target: units per slot group, turrets, launchers.
 	slotAttr := map[string]int{SlotHigh: attrHiSlots, SlotMid: attrMedSlots, SlotLow: attrLowSlots, SlotRig: attrRigSlots}
@@ -112,7 +112,7 @@ func (s *search) convertLines() (*NoCandidate, error) {
 // does not changes only the lines repair moves.
 func (s *search) ownHullLines() {
 	f := s.req.Fit
-	o := Options{Kind: KindConvert, Skills: s.req.Skills, Policy: s.pol, TargetHull: f.HullID}
+	o := Options{Kind: KindConvert, Skills: s.req.Skills, Policy: s.pol, TargetHull: f.HullID, Classic: s.classic}
 	for _, g := range slotGroups {
 		for i, m := range *g.mods(&f) {
 			ref := LineRef{Slot: g.slot, Index: i}
