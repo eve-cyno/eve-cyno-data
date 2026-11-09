@@ -159,3 +159,22 @@ func TestNoCandidate_ClosestAtMostTwo(t *testing.T) {
 	_, err = BuildReport(context.Background(), c, nil, Request{}, &Result{Status: StatusOK})
 	require.Error(t, err)
 }
+
+// M1: the training candidates are ranked by relevance before the cap of ten, not cut to the
+// ten lowest skill ids. Cerberus (reference 3) under allIII with a DPS gate at 101 % of Flown:
+// the train names a skill that lifts the missile damage (Warhead Upgrades or Rapid Launch).
+func TestNoCandidate_TrainRanksRelevantSkills(t *testing.T) {
+	c := realCatalog(t)
+	f := refFit(t, c, 3)
+	r := Request{Kind: KindRefit, Fit: f, Skills: e3aProfiles(t)["allIII"],
+		Policy: Policy{Gates: []Gate{{Stat: StatDPS, AtLeast: 101}}, Baseline: BaselineFlown, AllowT2toT1: true, From: FromRequest}}
+	_, rep := reportFor(t, c, r)
+	wu, rl := skillID(t, c, "Warhead Upgrades"), skillID(t, c, "Rapid Launch")
+	named := false
+	for _, l := range rep.Train {
+		if l.SkillID == wu || l.SkillID == rl {
+			named = true
+		}
+	}
+	require.True(t, named, "train names Warhead Upgrades or Rapid Launch: %+v", rep.Train)
+}

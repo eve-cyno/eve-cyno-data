@@ -341,19 +341,63 @@ func bindingAttrs(b Binding) map[int]bool {
 	return nil // slots, hardpoints and other rules: no skill moves them
 }
 
-// modifiesAny reports whether a skill has a (non-offensive) effect modifier on one of attrs.
-func modifiesAny(st *dogma.Store, skill int, attrs map[int]bool) bool {
-	for _, e := range st.GetTypeEffectIDs(skill) {
-		for _, m := range st.GetEffectModifiers(e) {
-			if m.Domain == "targetID" || m.Domain == "structureID" {
-				continue
-			}
-			if attrs[m.ModifiedAttr] {
-				return true
+// fitTypeIDs are the types of a fit: hull, modules, rigs, subsystems, drones and their charges.
+func fitTypeIDs(f fit.Fit) []int {
+	ids := []int{f.HullID}
+	for _, g := range [][]fit.FitModule{f.High, f.Mid, f.Low, f.Rig, f.Subsystem, f.Drones} {
+		for _, m := range g {
+			ids = append(ids, m.TypeID)
+			if m.ChargeID != 0 {
+				ids = append(ids, m.ChargeID)
 			}
 		}
 	}
-	return false
+	return ids
+}
+
+// fitReach is what the items of a fit expose to a skill modifier: their groups and the skills
+// they require.
+type fitReach struct {
+	groups, required map[int]bool
+}
+
+func reachOf(st *dogma.Store, f fit.Fit) fitReach {
+	r := fitReach{groups: map[int]bool{}, required: map[int]bool{}}
+	for _, id := range fitTypeIDs(f) {
+		if g := st.GetGroupID(id); g != nil {
+			r.groups[*g] = true
+		}
+		attrs := st.GetDogma(id)
+		for _, a := range []int{182, 183, 184, 1285, 1289, 1290} {
+			if v, ok := attrs[a]; ok && v != 0 {
+				r.required[int(v)] = true
+			}
+		}
+	}
+	return r
+}
+
+// relevance scores how directly a skill moves one of attrs on the fit: 2 for a modifier on a
+// group or a required skill of a fit item, 1 for a ship, character or location modifier (it
+// reaches every item). 0 when it touches none.
+func relevance(st *dogma.Store, skill int, attrs map[int]bool, reach fitReach) int {
+	score := 0
+	for _, e := range st.GetTypeEffectIDs(skill) {
+		for _, m := range st.GetEffectModifiers(e) {
+			if m.Domain == "targetID" || m.Domain == "structureID" || !attrs[m.ModifiedAttr] {
+				continue
+			}
+			switch {
+			case m.GroupID != nil && reach.groups[*m.GroupID]:
+				score += 2
+			case m.SkillTypeID != nil && reach.required[*m.SkillTypeID]:
+				score += 2
+			case m.GroupID == nil && m.SkillTypeID == nil:
+				score++
+			}
+		}
+	}
+	return score
 }
 
 // lifted reports whether an evaluation of the option's fit no longer meets the binding.
@@ -393,13 +437,25 @@ func trainFor(ctx context.Context, c *Catalog, ev Evaluator, r Request, res *Res
 		return out, nil
 	}
 	st := c.Store()
+	// The candidates that reach the fit, the most relevant first, then by skill id, cut to ten.
+	reach := reachOf(st, f)
+	score := map[int]int{}
 	var skills []int
 	for _, id := range st.GetSkillTypeIDs() {
-		if r.Skills[id] < 5 && modifiesAny(st, id, attrs) {
+		if r.Skills[id] >= 5 {
+			continue
+		}
+		if sc := relevance(st, id, attrs, reach); sc > 0 {
+			score[id] = sc
 			skills = append(skills, id)
 		}
 	}
-	sort.Ints(skills)
+	sort.Slice(skills, func(i, j int) bool {
+		if score[skills[i]] != score[skills[j]] {
+			return score[skills[i]] > score[skills[j]]
+		}
+		return skills[i] < skills[j]
+	})
 	skills = skills[:min(trainSkillsMax, len(skills))]
 
 	type probeKey struct{ skill, level int }
