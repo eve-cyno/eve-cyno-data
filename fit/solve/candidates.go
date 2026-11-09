@@ -84,8 +84,8 @@ type Options struct {
 	Policy Policy
 	// TargetHull is the hull of a Convert (0 otherwise).
 	TargetHull int
-	// Classic offers the candidate universe of the rule before the "any meta group" ruling
-	// (4b8ebe5): Tech I, Tech II and the original line's own meta group, ordered Tech II
+	// Classic is a Convert-only universe (the 4b8ebe5 rule), dead for the other kinds: it offers
+	// the candidate universe of the rule before the "any meta group" ruling: Tech I, Tech II and the original line's own meta group, ordered Tech II
 	// first, then by meta level (no Officer tier, no capOrder). The Convert search runs it
 	// as pass A (see solve).
 	Classic bool
@@ -406,7 +406,7 @@ func (c *Catalog) capOrder(origID int, variants []int) []int {
 //
 // Refit and Downgrade: the original's variants of any meta level and meta group but Abyssal (same parent
 // family, same slot, published, in the subset, usable by the pilot, allowed on the hull).
-// Policy.AllowT2toT1 is ignored. Convert: the family rule (group and effect list, any size)
+// Policy.AllowT2toT1 is ignored there (it only affects the classic pass A of Convert). Convert: the family rule (group and effect list, any size)
 // ranked by powergrid against the target hull, with rigs mapped by rig size. Rigs stay as
 // they are unless Policy.AllowRigChanges; subsystems never change.
 //

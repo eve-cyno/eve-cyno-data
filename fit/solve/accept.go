@@ -53,8 +53,10 @@ type Gate struct {
 type Policy struct {
 	Gates    []Gate `json:"gates"`
 	Baseline string `json:"baseline"`
-	// AllowT2toT1 is kept in the wire policy for compatibility and is ignored: since the
-	// 2026-11-09 rulings a replacement may come from any meta level and meta group.
+	// AllowT2toT1 is kept in the wire policy for compatibility. It only affects the classic
+	// pass A of Convert (Options.Classic); the final Convert result can still go from Tech II
+	// to Tech I through pass B. Fix and Downgrade ignore it: since the 2026-11-09 rulings a
+	// replacement may come from any meta level and meta group.
 	AllowT2toT1     bool   `json:"allowT2toT1"`
 	AllowRigChanges bool   `json:"allowRigChanges"`
 	From            string `json:"from"`
@@ -62,7 +64,8 @@ type Policy struct {
 
 // Fallback is the rule used when a request leaves it open: Fix keeps DPS and EHP at 98 % of
 // B2; Downgrade and Convert gate on validity only. Rig changes are forbidden. AllowT2toT1 is
-// set true for compatibility; the solver ignores it.
+// set true for compatibility; it only affects Convert's classic pass A and is ignored by Fix
+// and Downgrade.
 func Fallback(k Kind) Policy {
 	p := Policy{Gates: []Gate{}, Baseline: BaselineFlown, AllowT2toT1: true, From: FromFallback}
 	if k == KindRefit {
@@ -195,7 +198,7 @@ func SignedPercent(cand, base float64) (string, bool) {
 type Rank struct {
 	Changed    int     `json:"changed"`    // changed module lines
 	Downgrades int     `json:"downgrades"` // changes that are downgrades
-	Officers   int     `json:"officers"`   // lines holding an Officer module (meta group 5)
+	Officers   int     `json:"officers"`   // Officer lines the solver introduces (a line that was an Officer module in the original is not counted)
 	Objective  float64 `json:"objective"`
 	Price      float64 `json:"price"`
 	HasPrice   bool    `json:"hasPrice"` // false: no price known; ranks after any priced result
