@@ -62,7 +62,11 @@ const (
 // Violation codes the solver adds to the fit package's: the drone bay and bandwidth of
 // fit.Resources, which fit.ValidateWith does not check, and the capacitor rule.
 const (
-	CodeDroneBayOver       fit.Code = "drone_bay_over"
+	CodeDroneBayOver fit.Code = "drone_bay_over"
+	// CodeDroneBandwidthOver cannot fire from gofa.Engine.Resources: its DroneBandwidth.Used
+	// counts the drones the pilot can launch, which the bandwidth always admits
+	// (TestResources_DroneBandwidthUsedIsLaunched). The code stays as a guard for a provider
+	// that counts every written drone; convert.go caps the lines by bandwidth itself.
 	CodeDroneBandwidthOver fit.Code = "drone_bandwidth_over"
 	// CodeCapUnstable: the fit is not capacitor stable while B2 is (the hard rule). It is the
 	// last repair binding and appears in Option.Violations; Load is the seconds to empty.

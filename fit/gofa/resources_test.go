@@ -259,3 +259,25 @@ func TestResources_DroneBandwidthFollowsLaunched(t *testing.T) {
 	require.Greater(t, all.DroneBandwidth.Used, iii.DroneBandwidth.Used)
 	require.InDelta(t, all.DroneBay.Used, iii.DroneBay.Used, 1e-9, "the bay holds every drone")
 }
+
+// L5: DroneBandwidth.Used counts the drones the pilot can launch (Stats' rule), so it never
+// exceeds the capacity and the solver's drone_bandwidth_over code cannot fire from an
+// engine reading. It is kept as a guard for a provider that counts every written drone.
+// Changing Used to the written total would turn an in-game legal fit (more drones in the
+// bay than the bandwidth launches) into a violation; that is a policy call, not made here.
+func TestResources_DroneBandwidthUsedIsLaunched(t *testing.T) {
+	s := openRealSDE(t)
+	defer s.Close()
+	f := loadPerfFits(t, s, "vexor-drone")[0].fit
+	require.NotEmpty(t, f.Drones)
+	f.Drones[0].Qty = 40
+	res, err := New(s).Resources(context.Background(), f, fit.StatsOpts{})
+	require.NoError(t, err)
+	written := 0.0
+	for _, d := range f.Drones {
+		written += s.GetDogma(d.TypeID)[attrDroneBWUsed] * float64(d.Qty)
+	}
+	require.Greater(t, written, res.DroneBandwidth.Cap, "the written drones need more than the hull offers")
+	require.LessOrEqual(t, res.DroneBandwidth.Used, res.DroneBandwidth.Cap+1e-6, "Used is what launches")
+	require.Positive(t, res.DroneBandwidth.Used)
+}
