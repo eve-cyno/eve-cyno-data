@@ -76,13 +76,16 @@ func (c *countingSDE) GetAttributeMeta(id int) sde.AttrMeta {
 }
 func (c *countingSDE) GetSkillTypeIDs() []int { c.hit("GetSkillTypeIDs"); return []int{900, 901, 902} }
 
-// cacheTestSDE: hull 100, one module 200 boosting hull attr 40, three skills.
+// cacheTestSDE: hull 100, one module 200 boosting hull attr 40, three skills, and the
+// character type 1373 (T3.2: every resolve reads it; the cache does not memoize an empty
+// result, so a fake without the type would re-read it on every warm call).
 func cacheTestSDE() *countingSDE {
 	return newCountingSDE(&fakeSDE{
 		dogma: map[int]map[int]float64{
 			100: {40: 1000},
 			200: {50: 10},
 			900: {1: 1}, 901: {1: 2}, 902: {1: 3},
+			1373: {192: 2},
 		},
 		groupID: map[int]int{200: 55},
 		effects: map[int][]int{200: {99}},

@@ -3,8 +3,10 @@ package gofa
 import (
 	"context"
 	"fmt"
+	"math"
 	"sort"
 
+	"eve-cyno.dev/go/data/dogma"
 	"eve-cyno.dev/go/data/fit"
 )
 
@@ -62,6 +64,13 @@ func (e *Engine) resolve(f fit.Fit, opts fit.StatsOpts) (ship *Item, items []*It
 // module paired with its charge Item) and the expanded drone Items for DPS
 // calculation. Convergence tests use resolve(); Stats uses resolveForStats().
 func (e *Engine) resolveForStats(ctx context.Context, f fit.Fit, opts fit.StatsOpts) (ship *Item, items []*Item, weapons []weaponInstance, drones []*Item, err error) {
+	return e.resolveCore(ctx, f, opts, false)
+}
+
+// resolveCore is resolveForStats with one switch: offlineInert keeps an offline module as an
+// inert item (resolved, never a source) so a resource reader sees its final CPU / PG load.
+// Stats leaves offline modules out entirely.
+func (e *Engine) resolveCore(ctx context.Context, f fit.Fit, opts fit.StatsOpts, offlineInert bool) (ship *Item, items []*Item, weapons []weaponInstance, drones []*Item, err error) {
 	// One SDE view for the whole resolve: memoized reads of the current SDE
 	// generation (the dogma lookups below and the interpreter repeat per item).
 	sdeView := e.reader()
@@ -73,6 +82,12 @@ func (e *Engine) resolveForStats(ctx context.Context, f fit.Fit, opts fit.StatsO
 	}
 	ship = &Item{TypeID: f.HullID, Kind: KindShip, Attrs: hullAttrs}
 	items = append(items, ship)
+
+	// The pilot (type 1373): a charID ItemModifier targets it. A synthetic SDE without the
+	// type has no character item and the modifier falls back to the ship (see resolveTargets).
+	if charAttrs := sdeView.GetDogma(dogma.CharacterTypeID); len(charAttrs) > 0 {
+		items = append(items, &Item{TypeID: dogma.CharacterTypeID, Kind: KindCharacter, Attrs: charAttrs})
+	}
 
 	// --- 2. Build module / rig / drone Items from the fit slots ------------
 	//
@@ -126,7 +141,8 @@ func (e *Engine) resolveForStats(ctx context.Context, f fit.Fit, opts fit.StatsO
 				return nil, nil, nil, nil, err
 			}
 			// Offline modules contribute nothing to stats — skip them entirely.
-			if fm.State == "offline" {
+			offline := fm.State == "offline"
+			if offline && !offlineInert {
 				seenTypeID[fm.TypeID] = struct{}{}
 				continue
 			}
@@ -152,14 +168,14 @@ func (e *Engine) resolveForStats(ctx context.Context, f fit.Fit, opts fit.StatsO
 				// Each instance gets its OWN copy of the dogma map so that
 				// resolveModifiers can mutate each independently.
 				attrs := sdeView.GetDogma(fm.TypeID)
-				modItem := &Item{TypeID: fm.TypeID, Kind: g.kind, Attrs: attrs, Overheat: fm.State == "overheat"}
+				modItem := &Item{TypeID: fm.TypeID, Kind: g.kind, Attrs: attrs, Overheat: fm.State == "overheat", Inert: offline}
 				items = append(items, modItem)
 
 				// For weapon modules with a loaded charge, build a KindCharge
 				// Item and add it to items so skills/BCS modifiers reach it.
 				if g.kind == KindModule && fm.ChargeID != 0 {
 					cAttrs := sdeView.GetDogma(fm.ChargeID)
-					chargeItem := &Item{TypeID: fm.ChargeID, Kind: KindCharge, Attrs: cAttrs}
+					chargeItem := &Item{TypeID: fm.ChargeID, Kind: KindCharge, Attrs: cAttrs, Inert: offline}
 					items = append(items, chargeItem)
 					chargeByModule[modItem] = chargeItem
 				}
@@ -636,7 +652,8 @@ func (e *Engine) Stats(ctx context.Context, f fit.Fit, opts fit.StatsOpts) (fit.
 		return fit.FitStats{}, err
 	}
 	// Only launched drones (bandwidth + max-in-space limited) contribute DPS.
-	launched := launchedDrones(ship, droneItems, opts.ActiveDroneTypeIDs)
+	char := characterOf(items)
+	launched := launchedDrones(ship, droneItems, opts.ActiveDroneTypeIDs, maxActiveDrones(char))
 	dpsStats, totalVolley, droneDPS := computeDPS(weaponItems, launched, e.weaponNamer())
 	var unmodelled []string
 	chargeFedReps := e.hasChargeFedReps(items)
@@ -649,8 +666,8 @@ func (e *Engine) Stats(ctx context.Context, f fit.Fit, opts fit.StatsOpts) (fit.
 		Tank:       tank(ship, items),
 		DPS:        dpsStats,
 		Volley:     totalVolley,
-		Drones:     droneStats(ship, droneItems, launched, droneDPS),
-		Targeting:  targeting(ship),
+		Drones:     droneStats(ship, droneItems, launched, droneDPS, maxActiveDrones(char)),
+		Targeting:  targeting(ship, char),
 		Range:      weaponRange(weaponItems),
 		Estimated:  estimated,
 		Unmodelled: unmodelled,
@@ -675,7 +692,20 @@ func (e *Engine) weaponNamer() func(module, charge int) string {
 	return func(module, charge int) string { return WeaponLabel(name(module), name(charge)) }
 }
 
-const maxActiveDrones = 5
+// legacyMaxActiveDrones is the cap of an engine that has no character item (a synthetic test
+// SDE without type 1373): the all-V Drones skill gives 5.
+const legacyMaxActiveDrones = 5
+
+// maxActiveDrones is how many drones the pilot may launch: the character's maxActiveDrones
+// (352). The Drones skill (effect 316) adds one per level to the default 0, and a hull bonus
+// (Guardian-Vexor, effect 918) adds to it too. Sources: the SDE effects named, EVE University
+// wiki, "Drones" (a pilot controls one drone per Drones level, up to five at level V).
+func maxActiveDrones(char *Item) int {
+	if char == nil {
+		return legacyMaxActiveDrones
+	}
+	return max(int(math.Round(char.Attrs[attrMaxActiveDrones])), 0)
+}
 
 // Engine limits on what one resolve expands per unit. The interpreter's collect pass costs
 // sources x targets, so the caps bound CPU as well as memory. A hull has at most 8 slots per
@@ -694,7 +724,7 @@ var maxExpandedItems = 700
 // launchedDrones picks the drones in space. When a priority list is given it is
 // the EXCLUSIVE selection (only those typeIDs launch, in that order); otherwise
 // all drones launch in fit order. Either way, bandwidth and the 5-drone cap apply.
-func launchedDrones(ship *Item, drones []*Item, priority []int) []*Item {
+func launchedDrones(ship *Item, drones []*Item, priority []int, maxActive int) []*Item {
 	bwAvail := ship.Attrs[attrShipDroneBW]
 	ordered := drones
 	if len(priority) > 0 {
@@ -715,7 +745,7 @@ func launchedDrones(ship *Item, drones []*Item, priority []int) []*Item {
 	used := 0.0
 	for _, d := range ordered {
 		bw := d.Attrs[attrDroneBWUsed]
-		if len(out) < maxActiveDrones && used+bw <= bwAvail+1e-6 {
+		if len(out) < maxActive && used+bw <= bwAvail+1e-6 {
 			used += bw
 			out = append(out, d)
 		}
@@ -725,25 +755,26 @@ func launchedDrones(ship *Item, drones []*Item, priority []int) []*Item {
 
 // drone/targeting dogma attribute IDs.
 const (
-	attrDroneVolume    = 161  // per-drone volume (m³)
-	attrDroneBWUsed    = 1272 // per-drone bandwidth use (Mbit/s)
-	attrShipDroneCap   = 283  // ship drone bay (m³)
-	attrShipDroneBW    = 1271 // ship drone bandwidth (Mbit/s)
-	attrLockRange      = 76   // maxTargetRange (m)
-	attrScanResolution = 564  // scanResolution (mm)
-	attrMaxTargets     = 192  // maxLockedTargets
+	attrDroneVolume     = 161  // per-drone volume (m³)
+	attrDroneBWUsed     = 1272 // per-drone bandwidth use (Mbit/s)
+	attrShipDroneCap    = 283  // ship drone bay (m³)
+	attrShipDroneBW     = 1271 // ship drone bandwidth (Mbit/s)
+	attrLockRange       = 76   // maxTargetRange (m)
+	attrScanResolution  = 564  // scanResolution (mm)
+	attrMaxTargets      = 192  // maxLockedTargets
+	attrMaxActiveDrones = 352  // maxActiveDrones (the character's; the Drones skill adds to it)
 )
 
 // droneStats fills the Drones panel: bay/bandwidth from the hull, bay use from
 // all drones, bandwidth use + active count from the launched set.
-func droneStats(ship *Item, all, launched []*Item, droneDPS float64) fit.DroneStats {
+func droneStats(ship *Item, all, launched []*Item, droneDPS float64, maxActive int) fit.DroneStats {
 	ds := fit.DroneStats{
 		DPS:            droneDPS,
 		BandwidthAvail: ship.Attrs[attrShipDroneBW],
 		BayAvail:       ship.Attrs[attrShipDroneCap],
 		InBay:          len(all),
 		Active:         len(launched),
-		MaxActive:      maxActiveDrones,
+		MaxActive:      maxActive,
 	}
 	for _, d := range all {
 		ds.BayUsed += d.Attrs[attrDroneVolume]
@@ -759,12 +790,21 @@ func droneStats(ship *Item, all, launched []*Item, droneDPS float64) fit.DroneSt
 	return ds
 }
 
-// targeting fills the Targeting panel from hull attributes.
-func targeting(ship *Item) fit.TargetStats {
+// targeting fills the Targeting panel from hull attributes. Max locked targets is the
+// smaller of the ship's and the pilot's maxLockedTargets (192): the pilot has 2 and Target
+// Management and Advanced Target Management add one per level each (EVE University wiki,
+// "Targeting"). With no character item it is the ship's value alone.
+func targeting(ship, char *Item) fit.TargetStats {
+	maxT := ship.Attrs[attrMaxTargets]
+	if char != nil {
+		if c, ok := char.Attrs[attrMaxTargets]; ok {
+			maxT = math.Min(maxT, c)
+		}
+	}
 	return fit.TargetStats{
 		LockRangeM:       ship.Attrs[attrLockRange],
 		ScanResolution:   ship.Attrs[attrScanResolution],
-		MaxLockedTargets: int(ship.Attrs[attrMaxTargets]),
+		MaxLockedTargets: int(maxT),
 	}
 }
 

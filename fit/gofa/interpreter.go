@@ -27,6 +27,9 @@ const (
 	KindCharge
 	KindSkill
 	KindSubsystem // T3 strategic cruiser subsystem slot — unpenalized role bonuses
+	// KindCharacter is the pilot: invTypes 1373 "Character". A charID ItemModifier targets
+	// it, not the ship (maxLockedTargets 192 and maxActiveDrones 352 live here).
+	KindCharacter
 )
 
 // Item is one entry in a fit: the hull, a fitted module/rig/drone/charge, or a
@@ -37,6 +40,10 @@ type Item struct {
 	Kind     ItemKind
 	Attrs    map[int]float64
 	Overheat bool // when true, overload-category (effectCategory 5) effects apply
+	// Inert makes the item a target only: it is resolved (its own attributes get the
+	// skill and hull modifiers, so its CPU / PG load is final) but none of its effects
+	// act. An offline module is still charged its load but must not boost the ship.
+	Inert bool
 }
 
 // attrKey identifies a single (item, attribute) slot targeted by modifiers.
@@ -100,6 +107,11 @@ func resolveModifiers(s SDE, ship *Item, items []*Item, skills map[int]int) {
 		}
 	}
 
+	// The pilot, when the caller built one (type 1373). A charID ItemModifier targets it;
+	// with none (a synthetic test SDE) it falls back to the ship, as it did before.
+	char := characterOf(items)
+	seedCharacterDefaults(s, char, items)
+
 	// Snapshot the immutable base attributes; every pass rebuilds from this.
 	base := make(map[*Item]map[int]float64, len(items))
 	for _, it := range items {
@@ -142,6 +154,9 @@ func resolveModifiers(s SDE, ship *Item, items []*Item, skills map[int]int) {
 
 		// --- Collect pass ---
 		for _, source := range items {
+			if source.Inert {
+				continue
+			}
 			for _, effectID := range s.GetTypeEffectIDs(source.TypeID) {
 				// Overload-category effects (effectCategory 5) only apply when the
 				// module is overheated. Include them only for items flagged Overheat;
@@ -151,7 +166,7 @@ func resolveModifiers(s SDE, ship *Item, items []*Item, skills map[int]int) {
 					continue
 				}
 				for _, m := range s.GetEffectModifiers(effectID) {
-					targets := resolveTargets(s, m, ship, source, items)
+					targets := resolveTargets(s, m, ship, char, source, items)
 					if len(targets) == 0 {
 						continue
 					}
@@ -261,7 +276,7 @@ func resolveModifiers(s SDE, ship *Item, items []*Item, skills map[int]int) {
 
 // resolveTargets returns the set of items a modifier applies to, per its Domain
 // and Func. Offensive/irrelevant domains return no targets (caller skips them).
-func resolveTargets(s SDE, m dogma.Modifier, ship, source *Item, items []*Item) []*Item {
+func resolveTargets(s SDE, m dogma.Modifier, ship, char, source *Item, items []*Item) []*Item {
 	// Domain selects the "location": the ship, the source item itself, or an
 	// out-of-fit target we ignore for fit statistics.
 	var location *Item
@@ -278,6 +293,12 @@ func resolveTargets(s SDE, m dogma.Modifier, ship, source *Item, items []*Item) 
 
 	switch m.Func {
 	case "ItemModifier":
+		// A charID ItemModifier targets the pilot (invTypes 1373), not the ship: the
+		// Drones skill adds to the character's maxActiveDrones (352), Target Management to its
+		// maxLockedTargets (192). The other charID functions keep the ship as their scope.
+		if m.Domain == "charID" && char != nil {
+			return []*Item{char}
+		}
 		return []*Item{location}
 	case "LocationModifier":
 		// Whole-ship scope; only meaningful when the location is the ship.
@@ -338,6 +359,41 @@ func resolveTargets(s SDE, m dogma.Modifier, ship, source *Item, items []*Item) 
 		return out
 	default:
 		return nil
+	}
+}
+
+// characterOf returns the pilot item (KindCharacter) of an item list, or nil.
+func characterOf(items []*Item) *Item {
+	for _, it := range items {
+		if it.Kind == KindCharacter {
+			return it
+		}
+	}
+	return nil
+}
+
+// seedCharacterDefaults gives the pilot every attribute a charID ItemModifier targets but the
+// type lacks, at its dgmAttributeTypes default. Without it ModAdd on an absent attribute is
+// void: type 1373 has no maxActiveDrones (352) row, so the Drones skill would add to nothing
+// and active drones would fall to 0.
+func seedCharacterDefaults(s SDE, char *Item, items []*Item) {
+	if char == nil {
+		return
+	}
+	for _, src := range items {
+		if src.Inert {
+			continue
+		}
+		for _, effectID := range s.GetTypeEffectIDs(src.TypeID) {
+			for _, m := range s.GetEffectModifiers(effectID) {
+				if m.Domain != "charID" || m.Func != "ItemModifier" {
+					continue
+				}
+				if _, ok := char.Attrs[m.ModifiedAttr]; !ok {
+					char.Attrs[m.ModifiedAttr] = s.GetAttributeMeta(m.ModifiedAttr).Default
+				}
+			}
+		}
 	}
 }
 
