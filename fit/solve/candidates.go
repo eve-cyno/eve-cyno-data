@@ -368,8 +368,9 @@ func (c *Catalog) Candidates(f fit.Fit, ref LineRef, o Options) []Candidate {
 		if !c.CanUse(o.Skills, id) || !c.prefilter(f.HullID, orig, t) {
 			continue
 		}
-		// Downgrade goes down: a line the pilot can use takes no higher meta level.
-		if o.Kind == KindDowngrade && origUsable && c.MetaLevel(id) > c.MetaLevel(orig.id) {
+		// Downgrade goes down: a line the pilot can use takes a variant of its own meta
+		// group or a lower one, never a higher group (Tech I to Tech II and so on).
+		if o.Kind == KindDowngrade && origUsable && metaRank(t.meta) > metaRank(orig.meta) {
 			continue
 		}
 		variants = append(variants, id)
@@ -384,6 +385,15 @@ func (c *Catalog) Candidates(f fit.Fit, ref LineRef, o Options) []Candidate {
 		return capWithEmpty(out, true)
 	}
 	return capWithEmpty(out, false)
+}
+
+// metaRank orders meta groups for the Downgrade rule: Tech I lowest, then Tech II, then the
+// rarer groups by their invMetaGroups id (Tech III, 14, ranks with Tech II).
+func metaRank(m int) int {
+	if m == 14 {
+		return MetaTech2
+	}
+	return m
 }
 
 // eligibleT2T1 applies allowT2toT1 = false: a Tech II line never takes a Tech I type.

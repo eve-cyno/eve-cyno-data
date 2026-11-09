@@ -385,15 +385,16 @@ func TestChange_DowngradeFlag(t *testing.T) {
 }
 
 // H1: Downgrade goes from a Tech II type to the best usable variant, never up. A line the
-// pilot can use gets no variant of a higher meta level; an unusable one may be repaired upward.
+// pilot can use gets no variant of a higher meta group; an unusable one may be repaired upward.
 func TestCandidates_DowngradeNeverOffersHigherMeta(t *testing.T) {
 	c := NewCatalog(testSubset())
 	dg := func(sk fit.SkillProfile) Options {
 		return Options{Kind: KindDowngrade, Skills: sk, Policy: Fallback(KindDowngrade)}
 	}
-	// 100 is level 0 and usable: every sibling is higher, so only the original stays.
-	require.Equal(t, []int{100}, ids(c.Candidates(oneHigh(100, 0), hi0, dg(full))))
-	// 106 is level 2: only the level-0 sibling is not higher.
+	// 100 is Tech I level 0 and usable: the Tech II and higher siblings are a higher meta
+	// group; 106 is Tech I too (a higher level of the same group, allowed).
+	require.Equal(t, []int{100, 106}, ids(c.Candidates(oneHigh(100, 0), hi0, dg(full))))
+	// 106 is Tech I level 2: the Tech I sibling 100 stays, nothing of a higher group.
 	require.Equal(t, []int{106, 100}, ids(c.Candidates(oneHigh(106, 0), hi0, dg(full))))
 	// 101 is level 5: the lower variants follow, none above.
 	require.Equal(t, []int{101, 108, 112, 106, 100}, ids(c.Candidates(oneHigh(101, 0), hi0, dg(full))))

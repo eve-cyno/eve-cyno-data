@@ -154,10 +154,11 @@ func validUnder(ctx context.Context, st *dogma.Store, f fit.Fit, skills fit.Skil
 	return out, nil
 }
 
-// H1 on the real SDE: Downgrade never moves a line the pilot can use to a higher meta level
+// H1 on the real SDE: Downgrade never moves a line the pilot can use to a higher meta group
 // (Rifter AutoCannon I to AutoCannon II was the defect). Rifter (reference 1) under fitIII is
-// valid except for 9.8 CPU over, which only a higher-meta swap or a dropped module would
-// clear: Downgrade has neither, so it reports no_candidate.
+// valid except for about 10.1 tf of CPU over (159.6 used of 149.5), which Tech I variants of
+// the same families clear without a higher meta group (see
+// TestSolve_RifterFitIIIDowngradeSameMetaGroup).
 func TestDowngrade_NeverUpgradesUsableLines(t *testing.T) {
 	c := realCatalog(t)
 	sk := e3aProfiles(t)["fitIII"]
@@ -166,12 +167,9 @@ func TestDowngrade_NeverUpgradesUsableLines(t *testing.T) {
 		res, err := Solve(context.Background(), c, NewEngineEvaluator(gofa.New(c.Store()), 4),
 			Request{Kind: KindDowngrade, Fit: f, Skills: sk})
 		require.NoError(t, err)
-		if n == 1 {
-			require.Equal(t, StatusNoCandidate, res.Status)
-		}
 		for _, ch := range res.Changes {
 			if ch.To != 0 && c.CanUse(sk, ch.From) {
-				require.LessOrEqual(t, c.MetaLevel(ch.To), c.MetaLevel(ch.From), "ref %d: %+v goes up", n, ch)
+				require.LessOrEqual(t, metaRank(c.MetaGroup(ch.To)), metaRank(c.MetaGroup(ch.From)), "ref %d: %+v goes up", n, ch)
 			}
 		}
 	}
