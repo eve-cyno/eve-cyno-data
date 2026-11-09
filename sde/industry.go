@@ -199,3 +199,53 @@ func (s *SDE) AlphaCloneSkills() (map[int]int, error) {
 	}
 	return out, nil
 }
+
+// ManufacturingProduct is what one manufacturing run of a blueprint makes. The JSON keys are
+// short because the desktop pack carries one entry per blueprint.
+type ManufacturingProduct struct {
+	TypeID   int `json:"t"` // product type id
+	Quantity int `json:"q"` // units per run, at least 1
+}
+
+// ManufacturingProducts returns blueprint type id -> product and quantity per run for every
+// manufacturing (activityID=1) row of industryActivityProducts. A blueprint with several
+// products keeps the lowest product type id. A missing or null quantity, or one below 1, reads
+// as 1, as BlueprintOutputPerRun does. It errors, rather than returning an empty map, when the
+// table is missing or holds no manufacturing row: a builder that writes the result into a pack
+// must not ship an empty one.
+func (s *SDE) ManufacturingProducts() (map[int]ManufacturingProduct, error) {
+	if !s.HasTable("industryActivityProducts") {
+		return nil, fmt.Errorf("sde: table industryActivityProducts is missing - rebuild the SDE (go run ./cmd/sde -force)")
+	}
+	rows, err := s.db.Query(
+		"SELECT CAST(blueprint_typeID AS INTEGER), CAST(product_typeID AS INTEGER), CAST(quantity AS INTEGER) "+
+			"FROM industryActivityProducts WHERE CAST(activityID AS INTEGER) = ? "+
+			"ORDER BY 1, 2", ActivityManufacturing)
+	if err != nil {
+		return nil, fmt.Errorf("sde: read industryActivityProducts: %w", err)
+	}
+	defer rows.Close()
+	out := map[int]ManufacturingProduct{}
+	for rows.Next() {
+		var bp, product int
+		var qty sql.NullInt64
+		if err := rows.Scan(&bp, &product, &qty); err != nil {
+			return nil, fmt.Errorf("sde: read industryActivityProducts: %w", err)
+		}
+		if _, dup := out[bp]; dup {
+			continue // rows are ordered by product id: the first one is the lowest
+		}
+		q := 1
+		if qty.Valid && qty.Int64 > 1 {
+			q = int(qty.Int64)
+		}
+		out[bp] = ManufacturingProduct{TypeID: product, Quantity: q}
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("sde: read industryActivityProducts: %w", err)
+	}
+	if len(out) == 0 {
+		return nil, fmt.Errorf("sde: industryActivityProducts has no manufacturing rows")
+	}
+	return out, nil
+}
