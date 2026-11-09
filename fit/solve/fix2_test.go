@@ -212,3 +212,25 @@ func TestSolve_OutsideSubsetRejectionHasViolation(t *testing.T) {
 		require.NotContains(t, rep.Binding.Text, "baseline", k)
 	}
 }
+
+// countFake counts the requests it is given; the capacitor is stable with at least minHigh high modules.
+type countFake struct {
+	minHigh int
+	n       *int
+}
+
+func (e countFake) EvaluateBatch(_ context.Context, reqs []gofa.Request) ([]Evaluation, error) {
+	*e.n += len(reqs)
+	return capFake{minHigh: e.minHigh}.EvaluateBatch(context.Background(), reqs)
+}
+
+// R3 L3: with two unusable lines, "all removed" is the single pair: n singles + 1 pair.
+func TestCapBaselineTrain_TwoLinesNoDuplicateEvaluation(t *testing.T) {
+	c := NewCatalog(testSubset())
+	r := Request{Kind: KindDowngrade, Fit: highFit(108, 108, 100), Skills: poor}
+	n := 0
+	train, _, err := capBaselineTrain(context.Background(), c, countFake{minHigh: 2, n: &n}, r, capResult(BaselineFlown, true))
+	require.NoError(t, err)
+	require.NotEmpty(t, train)
+	require.Equal(t, 3, n, "2 singles + 1 pair")
+}

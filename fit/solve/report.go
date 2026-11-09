@@ -316,9 +316,14 @@ func capBaselineTrain(ctx context.Context, c *Catalog, ev Evaluator, r Request, 
 	}
 	// Stability may rest on several lines together: one more evaluation with every unusable
 	// line removed, and one per pair of them (bounded to a dozen unusable lines).
+	// With exactly two lines the all-removed fit is the one pair: it is evaluated once.
 	var pairs [][2]int
+	pairBase, hasAll := len(cands), false
 	if len(cands) > 1 {
-		reqs = append(reqs, gofa.Request{Fit: without(all), Opts: opts})
+		if len(cands) > 2 {
+			reqs = append(reqs, gofa.Request{Fit: without(all), Opts: opts})
+			pairBase, hasAll = len(cands)+1, true
+		}
 		if len(cands) <= maxPairLines {
 			for i := range cands {
 				for j := i + 1; j < len(cands); j++ {
@@ -346,7 +351,7 @@ func capBaselineTrain(ctx context.Context, c *Catalog, ev Evaluator, r Request, 
 		// No single line carries the stability: the lines of every unstable pair do.
 		in := map[int]bool{}
 		for k, p := range pairs {
-			if unstable(len(cands) + 1 + k) {
+			if unstable(pairBase + k) {
 				in[p[0]], in[p[1]] = true, true
 			}
 		}
@@ -356,7 +361,7 @@ func capBaselineTrain(ctx context.Context, c *Catalog, ev Evaluator, r Request, 
 			}
 		}
 	}
-	if len(needed) == 0 && len(cands) > 1 && unstable(len(cands)) {
+	if len(needed) == 0 && hasAll && unstable(len(cands)) {
 		needed = all
 	}
 	if len(needed) == 0 {
