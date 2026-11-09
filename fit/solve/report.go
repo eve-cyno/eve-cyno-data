@@ -134,6 +134,14 @@ func BuildReport(ctx context.Context, c *Catalog, ev Evaluator, r Request, res *
 
 	if b, opt, ok := smallestViolation(nc.GatePassingInvalid); ok {
 		b.Text = bindingText(b)
+		if b.Violation == string(fit.CodeUnknownModule) {
+			for _, v := range opt.Violations {
+				if v.Code == fit.CodeUnknownModule && v.Message != "" {
+					b.Text = v.Message
+					break
+				}
+			}
+		}
 		rep.Binding = b
 		if b.Code == BindSkill {
 			rep.Binding.Text, rep.Train = c.skillBinding(b, opt)

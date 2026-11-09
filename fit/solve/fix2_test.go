@@ -190,3 +190,25 @@ func TestSkillBinding_NamesTopLevelLine(t *testing.T) {
 	require.Contains(t, train[0].Text, "(B)")
 	require.True(t, strings.HasPrefix(text, "B needs"), text)
 }
+
+// R3 L2: a probe rejected for a type outside the subset carries a hard violation, so it never
+// reaches the gate-passing-invalid list without one and the report names the item.
+func TestSolve_OutsideSubsetRejectionHasViolation(t *testing.T) {
+	sub := fakeSubset(gun(1000, 1, 0, 40, nil), gun(1002, 1, 3, 49.5, nil))
+	c := NewCatalog(sub)
+	ev := &fakeEngine{store: c.Store(), workers: 1}
+	for _, k := range []Kind{KindRefit, KindDowngrade} {
+		r := Request{Kind: k, Fit: highFit(1000, 7777), Skills: poor, MaxEvaluations: 2}
+		res, err := Solve(context.Background(), c, ev, r)
+		require.NoError(t, err)
+		require.NotNil(t, res.NoCandidate, k)
+		for _, o := range res.NoCandidate.GatePassingInvalid {
+			require.NotEmpty(t, o.Violations, "%s: invalid option without a violation", k)
+		}
+		rep, err := BuildReport(context.Background(), c, ev, r, res)
+		require.NoError(t, err)
+		require.Equal(t, BindOther, rep.Binding.Code, k)
+		require.Contains(t, rep.Binding.Text, "t7777", k)
+		require.NotContains(t, rep.Binding.Text, "baseline", k)
+	}
+}

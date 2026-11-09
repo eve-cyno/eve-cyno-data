@@ -701,26 +701,38 @@ func (s *search) judge(asg []Candidate, f fit.Fit, ev Evaluation) *probe {
 		p.uncertain = uncertainOf(ev.Stats)
 	}
 	p.verdict = Accept(s.pol, s.b1, s.b2, p.eval)
-	if s.outsideSubset(f) {
+	if out := s.outsideSubset(f); len(out) > 0 {
 		// Never accepted, never ranked best: ValidateWith treats every written line as a
 		// module, so a start with a type the subset lacks would otherwise pass as valid.
+		// A hard violation names the lines, so the rejection is visible in the report.
 		p.eval.Valid = false
 		p.verdict.Accepted = false
+		p.viols = append(p.viols, fit.Violation{Severity: fit.Hard, Code: fit.CodeUnknownModule,
+			Message: "item(s) outside the candidate catalog: " + strings.Join(out, ", "), Names: out})
 	}
 	p.rank = s.rankOf(asg, p.verdict.Objective)
 	return p
 }
 
-// outsideSubset reports whether the fit holds a module, drone or charge type the catalog lacks.
-func (s *search) outsideSubset(f fit.Fit) bool {
+// outsideSubset lists the modules, drones and charges of the fit whose type the catalog lacks
+// (the written name, or the type id when unnamed).
+func (s *search) outsideSubset(f fit.Fit) []string {
+	var out []string
 	for _, g := range slotGroups {
 		for _, m := range *g.mods(&f) {
-			if (m.TypeID != 0 && !s.cat.Has(m.TypeID)) || (m.ChargeID != 0 && !s.cat.Has(m.ChargeID)) {
-				return true
+			for _, id := range []int{m.TypeID, m.ChargeID} {
+				if id == 0 || s.cat.Has(id) {
+					continue
+				}
+				n := m.Name
+				if id != m.TypeID || n == "" {
+					n = "type " + strconv.Itoa(id)
+				}
+				out = append(out, n)
 			}
 		}
 	}
-	return false
+	return out
 }
 
 // uncertainOf lists what the engine did not model that affects dps, tank or capacitor. An
