@@ -1,6 +1,9 @@
 package fit
 
-import "context"
+import (
+	"context"
+	"fmt"
+)
 
 // Required-skill queries (E5): which skills a type needs, directly and through the
 // prerequisites of those skills, and whether a character can use it.
@@ -139,16 +142,76 @@ func CanUse(ctx context.Context, s RequiredSDE, skills SkillProfile, id int) Can
 	if skills == nil {
 		return res
 	}
+	return canUseAt(ctx, s, func(skill int) int { return skills[skill] }, id)
+}
+
+// canUseAt is CanUse with the level lookup supplied by the caller.
+func canUseAt(ctx context.Context, s RequiredSDE, level func(skillTypeID int) int, id int) CanUseResult {
+	res := CanUseResult{TypeID: id, OK: true}
 	reqs := RequiredSkills(ctx, s, []int{id})
 	if len(reqs) == 0 {
 		return res
 	}
 	for _, q := range reqs[0].All {
-		has := skills[q.SkillTypeID] // missing is 0
+		has := level(q.SkillTypeID)
 		if has < q.Level {
 			res.Missing = append(res.Missing, MissingSkill{TypeID: q.SkillTypeID, Needs: q.Level, Has: has})
 		}
 	}
 	res.OK = len(res.Missing) == 0
 	return res
+}
+
+// CodeSkill: the pilot lacks a skill the hull, module, charge, drone or subsystem
+// needs (directly or through a prerequisite). Hard. Violation.Skill is the missing
+// skill {typeId, needs, has}, ItemTypeID and Names the item.
+const CodeSkill Code = "skill"
+
+// SkillViolations checks the hull and every module, charge, drone and subsystem of f
+// (not cargo, not implants) against the skills in opts, using the same level rule as
+// StatsOpts: a nil opts.Skills is all V (no violations), a missing skill is 0 when
+// opts.MissingAsZero is set and V otherwise. Each item type is checked once; each
+// unmet requirement is one hard Violation, in the order hull, slots (hi, mid, low,
+// rig, subsystem) with each module's charge after it, drones.
+func SkillViolations(ctx context.Context, s RequiredSDE, f Fit, opts StatsOpts) []Violation {
+	if opts.Skills == nil {
+		return nil
+	}
+	type item struct {
+		id   int
+		name string
+	}
+	var items []item
+	items = append(items, item{f.HullID, f.HullName})
+	for _, group := range [][]FitModule{f.High, f.Mid, f.Low, f.Rig, f.Subsystem} {
+		for _, m := range group {
+			items = append(items, item{m.TypeID, m.Name})
+			if m.ChargeID != 0 {
+				items = append(items, item{m.ChargeID, m.Charge})
+			}
+		}
+	}
+	for _, m := range f.Drones {
+		items = append(items, item{m.TypeID, m.Name})
+	}
+	var out []Violation
+	seen := map[int]bool{}
+	for _, it := range items {
+		if it.id == 0 || seen[it.id] {
+			continue
+		}
+		seen[it.id] = true
+		res := canUseAt(ctx, s, opts.skillLevel, it.id)
+		for _, m := range res.Missing {
+			m := m
+			out = append(out, Violation{
+				Severity: Hard, Code: CodeSkill,
+				Message:    fmt.Sprintf("%s needs skill %d at level %d, pilot has %d", it.name, m.TypeID, m.Needs, m.Has),
+				Names:      []string{it.name},
+				ItemTypeID: it.id,
+				Skill:      &m,
+			})
+		}
+	}
+	return out
 }

@@ -39,6 +39,10 @@ type Violation struct {
 	Load, Capacity float64
 	// Consumers are the heaviest modules of a CodeCPUOver / CodePGOver, heaviest first.
 	Consumers []Consumer
+	// Skill / ItemTypeID: the missing skill {typeId, needs, has} and the item that
+	// needs it, of a CodeSkill.
+	Skill      *MissingSkill
+	ItemTypeID int
 }
 
 // Report is the output of Validate: aggregate resource usage and all violations.
