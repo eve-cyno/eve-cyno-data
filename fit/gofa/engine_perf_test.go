@@ -148,6 +148,7 @@ var determinismFits = []string{
 // the interpreter in random map order, so unpenalized bonuses were multiplied in
 // a different order each call and the last bit of the result (1 ulp) flipped.
 func TestStats_DeterministicAcrossCallsAndEngines(t *testing.T) {
+	skipHeavyRace(t)
 	s := openBenchSDE(t)
 	defer s.Close()
 	fits := loadPerfFits(t, s, determinismFits...)

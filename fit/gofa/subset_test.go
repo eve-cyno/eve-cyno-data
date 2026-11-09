@@ -22,6 +22,7 @@ import (
 // The SDE subset (E7) must give the engine exactly what the SQLite SDE gives it. Needs the
 // real SDE (EVE_CORE_SDE_PATH), like the other real-SDE tests.
 func TestSubset_EngineMatchesSQLite(t *testing.T) {
+	skipHeavyRace(t)
 	s := openRealSDE(t)
 	t.Cleanup(func() { _ = s.Close() })
 

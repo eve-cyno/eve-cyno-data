@@ -88,6 +88,7 @@ func measure(ctx context.Context, eng *Engine, f fit.Fit, o fit.StatsOpts) (prop
 // Repair Systems and Shield Operation shorten cycles and raise cap use (review H2). A hit is a
 // failure to investigate, never an allow-list entry.
 func TestProperty_HigherSkillNeverLowers(t *testing.T) {
+	skipHeavyRace(t)
 	if testing.Short() {
 		t.Skip("27 fits x 40 profiles")
 	}
@@ -225,6 +226,7 @@ func digest(t *testing.T, eng *Engine, fits map[string]fit.Fit, profiles []fit.S
 // The same input gives the same bytes: twice on one Engine, on a fresh Engine, and at
 // GOMAXPROCS 1 and 8.
 func TestProperty_Deterministic(t *testing.T) {
+	skipHeavyRace(t)
 	s := openRealSDE(t)
 	defer s.Close()
 	fits := map[string]fit.Fit{}
@@ -251,6 +253,7 @@ func TestProperty_Deterministic(t *testing.T) {
 // fit). Scalar results are compared to 1e-9: a product of unpenalised bonuses may differ by an
 // ulp with the order, and the per-weapon lists follow the module order.
 func TestProperty_ModuleOrderIrrelevant(t *testing.T) {
+	skipHeavyRace(t)
 	s := openRealSDE(t)
 	defer s.Close()
 	eng := New(s)

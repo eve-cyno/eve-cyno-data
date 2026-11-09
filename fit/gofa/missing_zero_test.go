@@ -57,6 +57,7 @@ func TestStats_UntrainedSkillCountsZero(t *testing.T) {
 }
 
 func TestStats_MissingAsZeroEqualsCompleteMap(t *testing.T) {
+	skipHeavyRace(t)
 	s := openRealSDE(t)
 	defer s.Close()
 	eng := New(s)

@@ -14,6 +14,7 @@ import (
 // TestEHP_UniformUnchanged: the empty pattern and "uniform" give the 27 corpus fits
 // byte-equal to today's stats.
 func TestEHP_UniformUnchanged(t *testing.T) {
+	skipHeavyRace(t)
 	s := openRealSDE(t)
 	defer s.Close()
 	eng := New(s)

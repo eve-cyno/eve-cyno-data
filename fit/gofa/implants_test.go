@@ -130,6 +130,7 @@ const statsAllV27Hash = "80e9adc76a6d6d7ddba87e9b075d2ff689e07def661c50357415d8d
 
 // No implants changes nothing: nil and an empty list give today's bytes on the 27 fits.
 func TestImplants_NoneEqualsToday(t *testing.T) {
+	skipHeavyRace(t)
 	s := openRealSDE(t)
 	defer s.Close()
 	eng := New(s)

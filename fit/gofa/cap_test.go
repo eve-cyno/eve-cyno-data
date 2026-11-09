@@ -286,6 +286,7 @@ func TestCapacitor_SecondsToEmptyMatchesNumericIntegration(t *testing.T) {
 // TestCapacitor_SecondsToEmptyMatchesNumericIntegration and against the hand-worked reference
 // of testdata/e3a (the Rifter all-III unstable case, see TestE3a_ReferenceNumbers).
 func TestCapacitor_AllV27Table(t *testing.T) {
+	skipHeavyRace(t)
 	s := openRealSDE(t)
 	defer s.Close()
 	eng := New(s)

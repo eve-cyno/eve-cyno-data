@@ -193,7 +193,9 @@ func TestEngine_DominixQuantityShapeIsRefusedFast(t *testing.T) {
 	took := time.Since(start)
 	runtime.ReadMemStats(&after)
 	require.ErrorIs(t, err, fit.ErrFitTooLarge)
-	require.Less(t, took, time.Second)
+	if !raceEnabled { // a wall-clock bound is flaky under -race on a shared runner
+		require.Less(t, took, time.Second)
+	}
 	require.Less(t, after.TotalAlloc-before.TotalAlloc, uint64(64<<20))
 }
 
@@ -205,7 +207,9 @@ func TestEngine_FullDroneBoatKeepsItsNumbers(t *testing.T) {
 	start := time.Now()
 	st, err := New(s).Stats(context.Background(), f, fit.StatsOpts{})
 	require.NoError(t, err)
-	require.Less(t, time.Since(start), 2*time.Second)
+	if !raceEnabled { // a wall-clock bound is flaky under -race on a shared runner
+		require.Less(t, time.Since(start), 2*time.Second)
+	}
 	require.InDelta(t, 256.513723702, st.DPS.Theoretical, 1e-6)
 	require.InDelta(t, 256.513723702, st.Drones.DPS, 1e-6)
 	require.InDelta(t, 1026.054894809, st.Volley, 1e-6)

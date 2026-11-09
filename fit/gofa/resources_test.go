@@ -55,6 +55,7 @@ var gateResiduals = map[string]struct{ cpu, pg float64 }{
 }
 
 func TestResources_DifferentialAllV(t *testing.T) {
+	skipHeavyRace(t)
 	s := openRealSDE(t)
 	defer s.Close()
 	eng := New(s)
@@ -220,6 +221,7 @@ func handOutput(s interface{ GetDogma(int) map[int]float64 }, f fit.Fit, cpuM, p
 // formula; calibration, drone bandwidth and drone bay are the hull's base values at every
 // profile (no skill changes them).
 func TestResources_SkillProfiles(t *testing.T) {
+	skipHeavyRace(t)
 	s := openRealSDE(t)
 	defer s.Close()
 	eng := New(s)

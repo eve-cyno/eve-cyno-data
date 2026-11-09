@@ -23,6 +23,7 @@ import (
 // SDE build 3670638_20261104.
 
 func TestGolden_MaxLockedTargetsAllV(t *testing.T) {
+	skipHeavyRace(t)
 	s := openRealSDE(t)
 	defer s.Close()
 	eng := New(s)

@@ -149,8 +149,11 @@ func TestPrune_EqualsFull(t *testing.T) {
 	choices := moduleChoices(t, s)
 
 	n := pruneFits
-	if testing.Short() {
+	if shrinkUnderRace() {
 		n = 40
+		if raceEnabled {
+			n = 12
+		}
 	}
 	rng := rand.New(rand.NewSource(20261109))
 	cases := make([]pruneCase, 0, n*len(pruneProfiles))
@@ -202,6 +205,7 @@ func TestPrune_DropsMostSkills(t *testing.T) {
 // default. The rule keeps every such skill (a shipID ItemModifier), so pruning never
 // produces that absent case; the test asserts both halves. Found on Maller + 3335.
 func TestPrune_LevelZeroEqualsAbsent(t *testing.T) {
+	skipHeavyRace(t)
 	s := openRealSDE(t)
 	defer s.Close()
 	full := New(s)

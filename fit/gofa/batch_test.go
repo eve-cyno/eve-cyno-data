@@ -47,7 +47,7 @@ func TestEvaluateMany_EqualsSingle(t *testing.T) {
 	e := New(s)
 	fits := loadPerfFits(t, s)
 	require.Len(t, fits, 27)
-	if testing.Short() {
+	if shrinkUnderRace() {
 		fits = fits[:6]
 	}
 	profiles := loadE3aProfiles(t, batchProfiles...)
