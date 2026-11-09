@@ -54,3 +54,66 @@ func TestDomainFor(t *testing.T) {
 		require.Equal(t, want, DomainFor(url), "url=%s", url)
 	}
 }
+
+func TestThrottleAcquireCancelDuringIntervalWait(t *testing.T) {
+	th := NewThrottle()
+	const url = "https://zkillboard.com/api/x"
+
+	release, err := th.Acquire(context.Background(), url)
+	require.NoError(t, err)
+	release()
+	lastBefore := th.lastReq["zkill"]
+
+	ctx, cancel := context.WithCancel(context.Background())
+	go func() {
+		time.Sleep(50 * time.Millisecond)
+		cancel()
+	}()
+	start := time.Now()
+	rel, err := th.Acquire(ctx, url)
+	elapsed := time.Since(start)
+
+	require.ErrorIs(t, err, context.Canceled)
+	require.Nil(t, rel)
+	require.Less(t, elapsed, 300*time.Millisecond)
+	require.Equal(t, lastBefore, th.lastReq["zkill"], "cancelled wait must not advance lastReq")
+
+	// Slot and mutex are free again: a live call succeeds (after the normal interval).
+	th.lastReq["zkill"] = time.Time{}
+	ctx2, cancel2 := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel2()
+	rel2, err := th.Acquire(ctx2, url)
+	require.NoError(t, err)
+	rel2()
+}
+
+func TestThrottleAcquireCancelWhileWaitingForLock(t *testing.T) {
+	th := NewThrottle()
+	// janice allows 2 concurrent, so a second caller reaches the lock queue.
+	const url = "https://janice.e-351.com/api"
+	th.lastLock["janice"] <- struct{}{} // hold the lock
+	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+	defer cancel()
+	start := time.Now()
+	_, err := th.Acquire(ctx, url)
+	require.ErrorIs(t, err, context.DeadlineExceeded)
+	require.Less(t, time.Since(start), 300*time.Millisecond)
+	<-th.lastLock["janice"]
+	// The sem slot taken before the lock wait must be released again.
+	require.True(t, th.sems["janice"].TryAcquire(2), "sem slots leaked after cancelled lock wait")
+	th.sems["janice"].Release(2)
+}
+
+func TestThrottleAcquirePreCancelledNeverSucceeds(t *testing.T) {
+	th := NewThrottle()
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	for i := 0; i < 200; i++ {
+		rel, err := th.Acquire(ctx, "https://janice.e-351.com/api")
+		require.ErrorIs(t, err, context.Canceled)
+		require.Nil(t, rel)
+	}
+	require.True(t, th.sems["janice"].TryAcquire(2))
+	th.sems["janice"].Release(2)
+	require.Equal(t, 0, len(th.lastLock["janice"]), "lock must be free")
+}

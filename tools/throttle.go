@@ -3,7 +3,6 @@ package tools
 import (
 	"context"
 	"strings"
-	"sync"
 	"time"
 
 	"golang.org/x/sync/semaphore"
@@ -31,9 +30,10 @@ var domainConfigs = map[string]domainConfig{
 
 // Throttle is a per-domain rate limiter (semaphore + min-spacing).
 type Throttle struct {
-	sems     map[string]*semaphore.Weighted
-	lastReq  map[string]time.Time
-	lastLock map[string]*sync.Mutex
+	sems    map[string]*semaphore.Weighted
+	lastReq map[string]time.Time
+	// lastLock is a 1-slot channel used as a context-aware mutex.
+	lastLock map[string]chan struct{}
 }
 
 // NewThrottle creates a Throttle matching the Python singleton.
@@ -41,11 +41,11 @@ func NewThrottle() *Throttle {
 	t := &Throttle{
 		sems:     make(map[string]*semaphore.Weighted, len(domainConfigs)),
 		lastReq:  make(map[string]time.Time, len(domainConfigs)),
-		lastLock: make(map[string]*sync.Mutex, len(domainConfigs)),
+		lastLock: make(map[string]chan struct{}, len(domainConfigs)),
 	}
 	for k, cfg := range domainConfigs {
 		t.sems[k] = semaphore.NewWeighted(cfg.maxConcurrent)
-		t.lastLock[k] = &sync.Mutex{}
+		t.lastLock[k] = make(chan struct{}, 1)
 	}
 	return t
 }
@@ -65,14 +65,32 @@ func (t *Throttle) Acquire(ctx context.Context, url string) (release func(), err
 	cfg := domainConfigs[domain]
 	if cfg.minInterval > 0 {
 		mu := t.lastLock[domain]
-		mu.Lock()
-		now := time.Now()
-		gap := now.Sub(t.lastReq[domain])
+		select {
+		case mu <- struct{}{}:
+		case <-ctx.Done():
+			sem.Release(1)
+			return nil, ctx.Err()
+		}
+		// select picks randomly when both cases are ready: an already-cancelled ctx must never succeed.
+		if err := ctx.Err(); err != nil {
+			<-mu
+			sem.Release(1)
+			return nil, err
+		}
+		gap := time.Since(t.lastReq[domain])
 		if gap < cfg.minInterval {
-			time.Sleep(cfg.minInterval - gap)
+			timer := time.NewTimer(cfg.minInterval - gap)
+			select {
+			case <-timer.C:
+			case <-ctx.Done():
+				timer.Stop()
+				<-mu
+				sem.Release(1)
+				return nil, ctx.Err()
+			}
 		}
 		t.lastReq[domain] = time.Now()
-		mu.Unlock()
+		<-mu
 	}
 	return func() { sem.Release(1) }, nil
 }
