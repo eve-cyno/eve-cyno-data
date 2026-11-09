@@ -2,8 +2,6 @@ package solve
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -104,39 +102,24 @@ func TestConvert_PassAOverHalfTheCapSkipsPassB(t *testing.T) {
 }
 
 // Fix and Downgrade results of the 48 + 48 corpus pairs are byte-equal to the results before
-// the two-pass change (sha256 of the JSON, testdata/fixdown-golden.json, written at 1d01273).
-// EVE_UPDATE_GOLDEN=1 rewrites the file.
+// the two-pass change (sha256 of the JSON plus a readable summary, testdata/fixdown-golden.json,
+// written at 1d01273 for the SDE build named in the file; another build skips the test).
+// EVE_UPDATE_GOLDEN=1 rewrites the file and fails the run: regenerate it from the code at
+// 1d01273, never from the current code.
 func TestFixDowngrade_UnchangedByTwoPass(t *testing.T) {
 	skipHeavyCorpus(t)
-	c := realCatalog(t)
-	ev := NewEngineEvaluator(gofa.New(c.Store()), 4)
-	ctx := context.Background()
-	profs := e3aProfiles(t)
-	got := map[string]string{}
-	for _, kind := range []Kind{KindRefit, KindDowngrade} {
-		for ref := 1; ref <= 6; ref++ {
-			f := refFit(t, c, ref)
-			for _, p := range benchProfiles {
-				res, err := Solve(ctx, c, ev, Request{Kind: kind, Fit: f, Skills: profs[p]})
-				require.NoError(t, err)
-				raw, err := json.Marshal(res)
-				require.NoError(t, err)
-				sum := sha256.Sum256(raw)
-				got[string(kind)+"/ref"+string(rune('0'+ref))+"/"+p] = hex.EncodeToString(sum[:])
-			}
-		}
-	}
-	require.Len(t, got, 96)
-	path := filepath.Join("testdata", "fixdown-golden.json")
-	if os.Getenv("EVE_UPDATE_GOLDEN") == "1" {
-		raw, err := json.MarshalIndent(got, "", "  ")
+	build := sdeBuildID(t)
+	if os.Getenv("EVE_UPDATE_GOLDEN") != "1" {
+		raw, err := os.ReadFile(filepath.FromSlash(goldenPath))
 		require.NoError(t, err)
-		require.NoError(t, os.WriteFile(path, append(raw, '\n'), 0o644))
+		var want goldenFile
+		require.NoError(t, json.Unmarshal(raw, &want))
+		if want.SDEBuild != build {
+			t.Skipf("golden was generated with SDE build %s, this SDE is build %s; regenerate it from 1d01273 (EVE_UPDATE_GOLDEN=1)", want.SDEBuild, build)
+		}
+		require.Equal(t, want.Entries, computeFixDown(t))
 		return
 	}
-	raw, err := os.ReadFile(path)
-	require.NoError(t, err)
-	var want map[string]string
-	require.NoError(t, json.Unmarshal(raw, &want))
-	require.Equal(t, want, got)
+	writeGolden(t, goldenFile{SDEBuild: build, Entries: computeFixDown(t)})
+	t.Fatalf("golden rewritten; rerun without EVE_UPDATE_GOLDEN")
 }

@@ -1,98 +1,859 @@
 {
-  "downgrade/ref1/all0": "c8af6f0a1136e6081fe34a9ac72349dec736759f4f05ac2ab8a13c353aa643a0",
-  "downgrade/ref1/allI": "779c6350cde83eae2d526db5ff9718c8ba50243511faae7670e10c7c8b2ba682",
-  "downgrade/ref1/allIII": "26c53b68e95a63c6f34ea37f8cb757e5f47904928f98c17a6d327a35b65a6c3f",
-  "downgrade/ref1/alpha": "fc74bdeb4be04d334dce68fd371aad3cf6bb385b8af14663954bda4589b9931d",
-  "downgrade/ref1/droner": "1e58596202fb9ee567e2229346ed34d77d8a7181de5eb2f2fa388009ea095e13",
-  "downgrade/ref1/fitIII": "170d2c137a53eefa8dc0d19cbeefa398a17c1ca89adb3dc1ea3407eebddcfdcc",
-  "downgrade/ref1/missiler": "56c98b40efb8992fa8a3324d6173f97e5d24c640e1511681cbaa8e2ff1767aa2",
-  "downgrade/ref1/tanker": "c14b805e3f9eccb5815a299cecaa15a8208a0f554d6a8289be40baf0ca32356e",
-  "downgrade/ref2/all0": "ca684b445ad1a7605d496a17be6ba8e7d00765b227b16e8cc26dd1336c61363a",
-  "downgrade/ref2/allI": "bffb811ea6891be766d571cf7ca9f26f36791c1de98be2931721a4498fbda011",
-  "downgrade/ref2/allIII": "30b43fb0e0f37712843bfa48c02e9d46af159636606e2398ee2e770de2e34a77",
-  "downgrade/ref2/alpha": "6c09b0a92392da108370c6148418265bd2b19f56c0333c6b3702ae0ded155364",
-  "downgrade/ref2/droner": "305fd652a1843ea5f3b57bd144a5b5bdab4ebb3259cd31bfddcf9b7eae546b35",
-  "downgrade/ref2/fitIII": "2b448f486b507728687349b9e4cf0d416dc1ce13591410d48ae8d057beb27665",
-  "downgrade/ref2/missiler": "2b448f486b507728687349b9e4cf0d416dc1ce13591410d48ae8d057beb27665",
-  "downgrade/ref2/tanker": "b9997fd303e57211b500f2ff6adef0ac2ad90d02e0861d7b2de01c7a5945d4f7",
-  "downgrade/ref3/all0": "febf3a8330dbbc62de4bd360eda9db0e68dba51bf98be49cbfda89aa5675fde3",
-  "downgrade/ref3/allI": "efa9d1625d72b44edb8978ba3f9ff1caf7a88af948a04e888fd14b107119c154",
-  "downgrade/ref3/allIII": "9642f49b63537dd0f5700f12e358840352ad4e8547c337e44c54c9e436a79817",
-  "downgrade/ref3/alpha": "95548d2e1ce5e2afbbdd0b351ddff997b595d282220eea6d3a50fd5800eb6607",
-  "downgrade/ref3/droner": "859b68cba2ab0f3d8b8ddcfa4ddb8963816082eee9cdcbc47e7e633c60e4a280",
-  "downgrade/ref3/fitIII": "b50cc49a48516ed6058160e3f32ec8665acdfffb0bc1ac56bf38ab28c82056bc",
-  "downgrade/ref3/missiler": "46cdd206a66ac1da21e12ba4898497638e3aec4142bc4aa278116ad92d930cd0",
-  "downgrade/ref3/tanker": "f9936380ab0b57aed1f7e7e2004d4ccea528208625f78d8c2b7332859b98b5bc",
-  "downgrade/ref4/all0": "62db88dbab6a76d1fc2f9cb1d405d452ea8ea380c569cb84e68ba605ddd0be20",
-  "downgrade/ref4/allI": "29c95286c951a29596a3de6deb74d73aa5ede29d6112934ab622e075e77a8583",
-  "downgrade/ref4/allIII": "69c83fa129b232f41a449776c4d1ce15c2baa13e6f97762e21e7ce2bc90a5829",
-  "downgrade/ref4/alpha": "037ae07f194558905ddf838d311e9bb9a06547e64d9bdb6106a5bf116cc2d7c8",
-  "downgrade/ref4/droner": "2255f179be0df05e2c8f458ba6e3b7a687abebe379c2447f727631a494b8a7dd",
-  "downgrade/ref4/fitIII": "c4c28fedb03f0000beef1ddedde76f78f140a8f556fa90a5d84a12f2b1c63357",
-  "downgrade/ref4/missiler": "979c4d75675edbbefdb258de10f1545f10885ddda98e961de0eb0c47ec5984ce",
-  "downgrade/ref4/tanker": "af790c7011f37e034c1985f2842f56a6ddb83ea2e89d9f203273a189dde89a1d",
-  "downgrade/ref5/all0": "792719bcf9fcb5b732b84a47226a2418ffb2ea70ffed47e64f23a167d5b16715",
-  "downgrade/ref5/allI": "94e09be47346503dd4620aba9c676b525922ec3899670687adedac0650ed8878",
-  "downgrade/ref5/allIII": "bd13b07fce1268471a91a4d1427a688f62273d0c40a4d5dc85648d42e1e73a95",
-  "downgrade/ref5/alpha": "cd98e941c4dd6bddaf85b9c45e1d5c13f1b1878cae032bd0d9ceb492033edae1",
-  "downgrade/ref5/droner": "99440c7df5e7c7589abd7bafd6fa9157f4511690f8ac37ea5de58d2143a9c280",
-  "downgrade/ref5/fitIII": "e9cdb7d0bb5cac7eb651e87b982587b011a9d8d28dc5ca5d896bf42f82a20099",
-  "downgrade/ref5/missiler": "267496c2d3e9d31ffdc38f5668dedc1dc5139f37ca22d11bd1f2c18e1911e04b",
-  "downgrade/ref5/tanker": "24ca4d4031c0064403389ee8e5efc81d5c29c9e86c3a8a8c2020b9f8b5d54918",
-  "downgrade/ref6/all0": "1fd92dae8f0368a0f06f936790fe88b0e9ba739d214dd2ee612d0c986334eb14",
-  "downgrade/ref6/allI": "2b757bb7c2e4dff79b65a222bd860657a887e5d5be68d27c9cb7882c0a675bf4",
-  "downgrade/ref6/allIII": "aa535d739adbbbd660a0b62c1014335fdef7ce80ed7abad3c630821e44de8f8d",
-  "downgrade/ref6/alpha": "78f6804c0303330329512543f3afd2777757c2fc12ed9959a24bd2e75dcd9570",
-  "downgrade/ref6/droner": "e7e9810614cd8189b6dc2020e5416b1faf8dd84f3411d2b09cef3390111cda7a",
-  "downgrade/ref6/fitIII": "94d57c32b4878918ef4999f8763e367330e5ffbf710484272ae16572d4d0a8dd",
-  "downgrade/ref6/missiler": "94d57c32b4878918ef4999f8763e367330e5ffbf710484272ae16572d4d0a8dd",
-  "downgrade/ref6/tanker": "434c6d8e5f8abcd549b207a8096007bbb1cc18e9db76c8f17ade4d3faa9bb861",
-  "refit/ref1/all0": "94e3545086ea5d53dd39b274f95024c6a6aaf79f1630391551842142e5189a73",
-  "refit/ref1/allI": "b0af8f6f2b9541e3ab001ce4ffac2929e529980b15c95f8cdc87cf1dfb979bf6",
-  "refit/ref1/allIII": "1fb3e509ae8eb70792278c2ef0d6231db900965c7294b791cf16bd674733255e",
-  "refit/ref1/alpha": "cbe0abcbd61254a56c3baa6edeca4cd5a65124ce2dd8081d24fb0af9433060e0",
-  "refit/ref1/droner": "b4654276dc3b794c9fc156094280c5d826a7a37e91cdc306bebba333b22aebc6",
-  "refit/ref1/fitIII": "ce7d1eacf579f7661e6172d50b0bb6e305e6e1d32376fca602117d804652eb1c",
-  "refit/ref1/missiler": "e26e1568b1b1b5f2da66e31da9d3aa1f1a2f23033cd5c581470cdae2278d6c3e",
-  "refit/ref1/tanker": "69f0b14166f5bdd3784e9421910236d606fcc8c634d3c7bc781126a42095a516",
-  "refit/ref2/all0": "fd09fc45e21ef27ecf1d8a7b39ab71b93301182779f1e8e469d0654d25e2858e",
-  "refit/ref2/allI": "193f2d067787bb6430b449d4a9d2bdf4a41ffdb152a36d5f3490643a27a421f0",
-  "refit/ref2/allIII": "7d18ff5545cf6c29fcce595e9ccb378f1e06494f13c3f0ce8f47f69e18503b66",
-  "refit/ref2/alpha": "f7a85f515ae4a56e0405ac038c689fd804b013c6c73f821431a4380663fd90e6",
-  "refit/ref2/droner": "59e86a4b9b19845babc67d07b00caa365fc6bfea5edbf080d02c8294809f0acc",
-  "refit/ref2/fitIII": "328ed926d3127fc5126c91fb861f7718d85c69431b15f0bbf78ce83b4dc3159f",
-  "refit/ref2/missiler": "328ed926d3127fc5126c91fb861f7718d85c69431b15f0bbf78ce83b4dc3159f",
-  "refit/ref2/tanker": "9c9eef23923fea725e6ff82285f8c8f039c32697a90ce863f38389e50e08a9f7",
-  "refit/ref3/all0": "3f5f60b6efb8dcb54e82e44da6eac01a9d92138e6c5e41f7dbbdc9d1e158989f",
-  "refit/ref3/allI": "7de8bad69415c38c84bc67894f38cc4c344912aee9a798189e091737513bed80",
-  "refit/ref3/allIII": "ad492e99f9bd368e6096b2e98380ec750fe914692e8d7242b38f87cfd9001457",
-  "refit/ref3/alpha": "2a0c332f8a9d49e5f973378d94fbd3db55dd2b10a3888f74702eaee8133f70ec",
-  "refit/ref3/droner": "948b2f31f8f7e3c48f12df3406ca00c0f4109597d1858b299735109ad1d3298b",
-  "refit/ref3/fitIII": "33c22ae7d99a876e644570d6c57616975cddecb968ffc501e0d2b618236bddd8",
-  "refit/ref3/missiler": "7e456f8d9da860a5bd691b8bf8f0d2cec0da8ee36b9e28eba9477bf5a9347126",
-  "refit/ref3/tanker": "0551dd792099d8dc1fab497fe6fa1d3a2ecdfe9e83d70b969e702bf28e8782b8",
-  "refit/ref4/all0": "3e0ef2afb469dafa49a7434b157d12f610153b12b73101c1a737e32ed57f37fa",
-  "refit/ref4/allI": "0f7bf463cccd049a7be86c88394014a551884e38684becedb93a3da741db04c7",
-  "refit/ref4/allIII": "27b428da97f300f2918a97580c0e4dee2bd60a0af68dbe9c561db4128fa60a82",
-  "refit/ref4/alpha": "7a0376dfffea984c538e6f9899aa2c0cd7b2d1f84c2b5b54df529e044f53b837",
-  "refit/ref4/droner": "dfb81ea0df9edbc71b9b5a1df8293420d8a57edd680e18e21a2103e0bffed2bc",
-  "refit/ref4/fitIII": "4f2fe20d59e619db3b259bc6ea7aea621b6bd3c5e674966b8aff48ca0884de68",
-  "refit/ref4/missiler": "e37a0769daa41eec58c02564dca7b8f3cf616368ef19869dcb305efd853b798f",
-  "refit/ref4/tanker": "7ede38bbcb2bd2eb640d753be96d23094b80540c0c73fd9562a39d5bd918323a",
-  "refit/ref5/all0": "0a391857b0566f7967b469c2cce9ae2f8c9e9613a1228d7484d2ac2629f41adc",
-  "refit/ref5/allI": "7049e5c84f924c386007fadda829e1a5f8a956cb697f4bbd58d28178117be75e",
-  "refit/ref5/allIII": "d542822fdc9ce28f0c04040bd40a56b8e392e458c84f7718563ec802c53fc785",
-  "refit/ref5/alpha": "5c147903604fc2d27ebd9b1679529fbf79017f5d5c630b5136a05126fe095bb3",
-  "refit/ref5/droner": "0d02436348ca3a94687781a3dff3ab798f03668d44ec46414bb8f97187ff8e4a",
-  "refit/ref5/fitIII": "5af019e1f86ba5f576e1618544a59d6d63bfac55599f101c8821c6a27ef507ec",
-  "refit/ref5/missiler": "0f21aa293b004e4f6012342bcf84a4430d34a8dff51fab3fc4d36343fdf0e695",
-  "refit/ref5/tanker": "117358d682a6469cff21511f83379a0d275b661334e2a55d3fb7fdfce3cef1fc",
-  "refit/ref6/all0": "f72b10df846bc49ff4b34dde7f5121b4a9704c36dd70c7f2b97bcb087bb03dc8",
-  "refit/ref6/allI": "ca2b5413f01d3d56ff140ce9f649f9365cbdfec77bd921f9ba7b30e2f7e53c53",
-  "refit/ref6/allIII": "348acbf292d61f302feead55b90923ffb0525e59c95f7fba021ab0284815f23b",
-  "refit/ref6/alpha": "24d5b6a8f4375dbd47fef2ce0ecb03c38583a6b32a4c40ca2a733aa4955af2cd",
-  "refit/ref6/droner": "aedc0ea47a1c2d86ae19fe7f1018ee33279d0a24bab1c08a6e1dc1e6e6702703",
-  "refit/ref6/fitIII": "8c127376fc9f9a01be2660c434bdeb6915ee8d515ffb7097daf74deb7ada79db",
-  "refit/ref6/missiler": "8c127376fc9f9a01be2660c434bdeb6915ee8d515ffb7097daf74deb7ada79db",
-  "refit/ref6/tanker": "1fadb5670e0402db817225ba94b624fba615f996b13a178afb3f915a0f659d71"
+  "sdeBuild": "3670638",
+  "entries": {
+    "downgrade/ref1/all0": {
+      "sha256": "c8af6f0a1136e6081fe34a9ac72349dec736759f4f05ac2ab8a13c353aa643a0",
+      "status": "no_candidate",
+      "changes": 0,
+      "to": []
+    },
+    "downgrade/ref1/allI": {
+      "sha256": "779c6350cde83eae2d526db5ff9718c8ba50243511faae7670e10c7c8b2ba682",
+      "status": "ok",
+      "changes": 0,
+      "to": []
+    },
+    "downgrade/ref1/allIII": {
+      "sha256": "26c53b68e95a63c6f34ea37f8cb757e5f47904928f98c17a6d327a35b65a6c3f",
+      "status": "ok",
+      "changes": 0,
+      "to": []
+    },
+    "downgrade/ref1/alpha": {
+      "sha256": "fc74bdeb4be04d334dce68fd371aad3cf6bb385b8af14663954bda4589b9931d",
+      "status": "ok",
+      "changes": 0,
+      "to": []
+    },
+    "downgrade/ref1/droner": {
+      "sha256": "1e58596202fb9ee567e2229346ed34d77d8a7181de5eb2f2fa388009ea095e13",
+      "status": "no_candidate",
+      "changes": 0,
+      "to": []
+    },
+    "downgrade/ref1/fitIII": {
+      "sha256": "170d2c137a53eefa8dc0d19cbeefa398a17c1ca89adb3dc1ea3407eebddcfdcc",
+      "status": "ok",
+      "changes": 1,
+      "to": [
+        518
+      ]
+    },
+    "downgrade/ref1/missiler": {
+      "sha256": "56c98b40efb8992fa8a3324d6173f97e5d24c640e1511681cbaa8e2ff1767aa2",
+      "status": "ok",
+      "changes": 0,
+      "to": []
+    },
+    "downgrade/ref1/tanker": {
+      "sha256": "c14b805e3f9eccb5815a299cecaa15a8208a0f554d6a8289be40baf0ca32356e",
+      "status": "no_candidate",
+      "changes": 0,
+      "to": []
+    },
+    "downgrade/ref2/all0": {
+      "sha256": "ca684b445ad1a7605d496a17be6ba8e7d00765b227b16e8cc26dd1336c61363a",
+      "status": "no_candidate",
+      "changes": 0,
+      "to": []
+    },
+    "downgrade/ref2/allI": {
+      "sha256": "bffb811ea6891be766d571cf7ca9f26f36791c1de98be2931721a4498fbda011",
+      "status": "ok_with_downgrades",
+      "changes": 7,
+      "to": [
+        0,
+        14106,
+        14176,
+        0,
+        31882,
+        28274,
+        28294
+      ]
+    },
+    "downgrade/ref2/allIII": {
+      "sha256": "30b43fb0e0f37712843bfa48c02e9d46af159636606e2398ee2e770de2e34a77",
+      "status": "ok_with_downgrades",
+      "changes": 7,
+      "to": [
+        23527,
+        14106,
+        14176,
+        33850,
+        31882,
+        28274,
+        28294
+      ]
+    },
+    "downgrade/ref2/alpha": {
+      "sha256": "6c09b0a92392da108370c6148418265bd2b19f56c0333c6b3702ae0ded155364",
+      "status": "ok",
+      "changes": 6,
+      "to": [
+        32262,
+        14106,
+        14176,
+        33850,
+        31882,
+        28294
+      ]
+    },
+    "downgrade/ref2/droner": {
+      "sha256": "305fd652a1843ea5f3b57bd144a5b5bdab4ebb3259cd31bfddcf9b7eae546b35",
+      "status": "ok_with_downgrades",
+      "changes": 11,
+      "to": [
+        23527,
+        0,
+        0,
+        33850,
+        0,
+        19017,
+        18799,
+        23418,
+        31882,
+        28274,
+        28294
+      ]
+    },
+    "downgrade/ref2/fitIII": {
+      "sha256": "2b448f486b507728687349b9e4cf0d416dc1ce13591410d48ae8d057beb27665",
+      "status": "ok",
+      "changes": 0,
+      "to": []
+    },
+    "downgrade/ref2/missiler": {
+      "sha256": "2b448f486b507728687349b9e4cf0d416dc1ce13591410d48ae8d057beb27665",
+      "status": "ok",
+      "changes": 0,
+      "to": []
+    },
+    "downgrade/ref2/tanker": {
+      "sha256": "b9997fd303e57211b500f2ff6adef0ac2ad90d02e0861d7b2de01c7a5945d4f7",
+      "status": "ok_with_downgrades",
+      "changes": 12,
+      "to": [
+        0,
+        0,
+        14176,
+        0,
+        0,
+        0,
+        0,
+        19017,
+        18881,
+        0,
+        0,
+        0
+      ]
+    },
+    "downgrade/ref3/all0": {
+      "sha256": "febf3a8330dbbc62de4bd360eda9db0e68dba51bf98be49cbfda89aa5675fde3",
+      "status": "no_candidate",
+      "changes": 0,
+      "to": []
+    },
+    "downgrade/ref3/allI": {
+      "sha256": "efa9d1625d72b44edb8978ba3f9ff1caf7a88af948a04e888fd14b107119c154",
+      "status": "ok",
+      "changes": 3,
+      "to": [
+        14106,
+        28744,
+        28744
+      ]
+    },
+    "downgrade/ref3/allIII": {
+      "sha256": "9642f49b63537dd0f5700f12e358840352ad4e8547c337e44c54c9e436a79817",
+      "status": "ok",
+      "changes": 3,
+      "to": [
+        14106,
+        28744,
+        28744
+      ]
+    },
+    "downgrade/ref3/alpha": {
+      "sha256": "95548d2e1ce5e2afbbdd0b351ddff997b595d282220eea6d3a50fd5800eb6607",
+      "status": "no_candidate",
+      "changes": 0,
+      "to": []
+    },
+    "downgrade/ref3/droner": {
+      "sha256": "859b68cba2ab0f3d8b8ddcfa4ddb8963816082eee9cdcbc47e7e633c60e4a280",
+      "status": "no_candidate",
+      "changes": 0,
+      "to": []
+    },
+    "downgrade/ref3/fitIII": {
+      "sha256": "b50cc49a48516ed6058160e3f32ec8665acdfffb0bc1ac56bf38ab28c82056bc",
+      "status": "no_candidate",
+      "changes": 0,
+      "to": []
+    },
+    "downgrade/ref3/missiler": {
+      "sha256": "46cdd206a66ac1da21e12ba4898497638e3aec4142bc4aa278116ad92d930cd0",
+      "status": "ok",
+      "changes": 6,
+      "to": [
+        13921,
+        13921,
+        13921,
+        13921,
+        13921,
+        13921
+      ]
+    },
+    "downgrade/ref3/tanker": {
+      "sha256": "f9936380ab0b57aed1f7e7e2004d4ccea528208625f78d8c2b7332859b98b5bc",
+      "status": "no_candidate",
+      "changes": 0,
+      "to": []
+    },
+    "downgrade/ref4/all0": {
+      "sha256": "62db88dbab6a76d1fc2f9cb1d405d452ea8ea380c569cb84e68ba605ddd0be20",
+      "status": "no_candidate",
+      "changes": 0,
+      "to": []
+    },
+    "downgrade/ref4/allI": {
+      "sha256": "29c95286c951a29596a3de6deb74d73aa5ede29d6112934ab622e075e77a8583",
+      "status": "ok",
+      "changes": 2,
+      "to": [
+        28744,
+        28744
+      ]
+    },
+    "downgrade/ref4/allIII": {
+      "sha256": "69c83fa129b232f41a449776c4d1ce15c2baa13e6f97762e21e7ce2bc90a5829",
+      "status": "ok",
+      "changes": 2,
+      "to": [
+        28744,
+        28744
+      ]
+    },
+    "downgrade/ref4/alpha": {
+      "sha256": "037ae07f194558905ddf838d311e9bb9a06547e64d9bdb6106a5bf116cc2d7c8",
+      "status": "no_candidate",
+      "changes": 0,
+      "to": []
+    },
+    "downgrade/ref4/droner": {
+      "sha256": "2255f179be0df05e2c8f458ba6e3b7a687abebe379c2447f727631a494b8a7dd",
+      "status": "no_candidate",
+      "changes": 0,
+      "to": []
+    },
+    "downgrade/ref4/fitIII": {
+      "sha256": "c4c28fedb03f0000beef1ddedde76f78f140a8f556fa90a5d84a12f2b1c63357",
+      "status": "no_candidate",
+      "changes": 0,
+      "to": []
+    },
+    "downgrade/ref4/missiler": {
+      "sha256": "979c4d75675edbbefdb258de10f1545f10885ddda98e961de0eb0c47ec5984ce",
+      "status": "ok",
+      "changes": 5,
+      "to": [
+        13921,
+        13921,
+        13921,
+        13921,
+        13921
+      ]
+    },
+    "downgrade/ref4/tanker": {
+      "sha256": "af790c7011f37e034c1985f2842f56a6ddb83ea2e89d9f203273a189dde89a1d",
+      "status": "no_candidate",
+      "changes": 0,
+      "to": []
+    },
+    "downgrade/ref5/all0": {
+      "sha256": "792719bcf9fcb5b732b84a47226a2418ffb2ea70ffed47e64f23a167d5b16715",
+      "status": "no_candidate",
+      "changes": 0,
+      "to": []
+    },
+    "downgrade/ref5/allI": {
+      "sha256": "94e09be47346503dd4620aba9c676b525922ec3899670687adedac0650ed8878",
+      "status": "ok",
+      "changes": 2,
+      "to": [
+        19317,
+        31882
+      ]
+    },
+    "downgrade/ref5/allIII": {
+      "sha256": "bd13b07fce1268471a91a4d1427a688f62273d0c40a4d5dc85648d42e1e73a95",
+      "status": "ok",
+      "changes": 2,
+      "to": [
+        19317,
+        31882
+      ]
+    },
+    "downgrade/ref5/alpha": {
+      "sha256": "cd98e941c4dd6bddaf85b9c45e1d5c13f1b1878cae032bd0d9ceb492033edae1",
+      "status": "ok",
+      "changes": 10,
+      "to": [
+        13891,
+        13891,
+        13891,
+        13891,
+        13891,
+        13891,
+        13891,
+        19317,
+        14236,
+        31882
+      ]
+    },
+    "downgrade/ref5/droner": {
+      "sha256": "99440c7df5e7c7589abd7bafd6fa9157f4511690f8ac37ea5de58d2143a9c280",
+      "status": "no_candidate",
+      "changes": 0,
+      "to": []
+    },
+    "downgrade/ref5/fitIII": {
+      "sha256": "e9cdb7d0bb5cac7eb651e87b982587b011a9d8d28dc5ca5d896bf42f82a20099",
+      "status": "ok",
+      "changes": 4,
+      "to": [
+        23418,
+        10188,
+        10188,
+        22919
+      ]
+    },
+    "downgrade/ref5/missiler": {
+      "sha256": "267496c2d3e9d31ffdc38f5668dedc1dc5139f37ca22d11bd1f2c18e1911e04b",
+      "status": "ok",
+      "changes": 0,
+      "to": []
+    },
+    "downgrade/ref5/tanker": {
+      "sha256": "24ca4d4031c0064403389ee8e5efc81d5c29c9e86c3a8a8c2020b9f8b5d54918",
+      "status": "no_candidate",
+      "changes": 0,
+      "to": []
+    },
+    "downgrade/ref6/all0": {
+      "sha256": "1fd92dae8f0368a0f06f936790fe88b0e9ba739d214dd2ee612d0c986334eb14",
+      "status": "no_candidate",
+      "changes": 0,
+      "to": []
+    },
+    "downgrade/ref6/allI": {
+      "sha256": "2b757bb7c2e4dff79b65a222bd860657a887e5d5be68d27c9cb7882c0a675bf4",
+      "status": "ok_with_downgrades",
+      "changes": 8,
+      "to": [
+        0,
+        14106,
+        14176,
+        0,
+        31882,
+        28274,
+        28294,
+        28298
+      ]
+    },
+    "downgrade/ref6/allIII": {
+      "sha256": "aa535d739adbbbd660a0b62c1014335fdef7ce80ed7abad3c630821e44de8f8d",
+      "status": "ok_with_downgrades",
+      "changes": 8,
+      "to": [
+        23527,
+        14106,
+        14176,
+        33850,
+        31882,
+        28274,
+        28294,
+        28298
+      ]
+    },
+    "downgrade/ref6/alpha": {
+      "sha256": "78f6804c0303330329512543f3afd2777757c2fc12ed9959a24bd2e75dcd9570",
+      "status": "ok",
+      "changes": 7,
+      "to": [
+        32262,
+        14106,
+        14176,
+        33850,
+        31882,
+        28294,
+        28298
+      ]
+    },
+    "downgrade/ref6/droner": {
+      "sha256": "e7e9810614cd8189b6dc2020e5416b1faf8dd84f3411d2b09cef3390111cda7a",
+      "status": "ok_with_downgrades",
+      "changes": 18,
+      "to": [
+        0,
+        0,
+        0,
+        0,
+        23527,
+        0,
+        0,
+        0,
+        33850,
+        0,
+        19017,
+        19017,
+        521,
+        18799,
+        31882,
+        28274,
+        28294,
+        28298
+      ]
+    },
+    "downgrade/ref6/fitIII": {
+      "sha256": "94d57c32b4878918ef4999f8763e367330e5ffbf710484272ae16572d4d0a8dd",
+      "status": "ok",
+      "changes": 0,
+      "to": []
+    },
+    "downgrade/ref6/missiler": {
+      "sha256": "94d57c32b4878918ef4999f8763e367330e5ffbf710484272ae16572d4d0a8dd",
+      "status": "ok",
+      "changes": 0,
+      "to": []
+    },
+    "downgrade/ref6/tanker": {
+      "sha256": "434c6d8e5f8abcd549b207a8096007bbb1cc18e9db76c8f17ade4d3faa9bb861",
+      "status": "ok_with_downgrades",
+      "changes": 18,
+      "to": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        14176,
+        0,
+        0,
+        0,
+        19017,
+        19017,
+        18799,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    "refit/ref1/all0": {
+      "sha256": "94e3545086ea5d53dd39b274f95024c6a6aaf79f1630391551842142e5189a73",
+      "status": "no_candidate",
+      "changes": 0,
+      "to": []
+    },
+    "refit/ref1/allI": {
+      "sha256": "b0af8f6f2b9541e3ab001ce4ffac2929e529980b15c95f8cdc87cf1dfb979bf6",
+      "status": "ok",
+      "changes": 0,
+      "to": []
+    },
+    "refit/ref1/allIII": {
+      "sha256": "1fb3e509ae8eb70792278c2ef0d6231db900965c7294b791cf16bd674733255e",
+      "status": "ok",
+      "changes": 0,
+      "to": []
+    },
+    "refit/ref1/alpha": {
+      "sha256": "cbe0abcbd61254a56c3baa6edeca4cd5a65124ce2dd8081d24fb0af9433060e0",
+      "status": "ok",
+      "changes": 0,
+      "to": []
+    },
+    "refit/ref1/droner": {
+      "sha256": "b4654276dc3b794c9fc156094280c5d826a7a37e91cdc306bebba333b22aebc6",
+      "status": "no_candidate",
+      "changes": 0,
+      "to": []
+    },
+    "refit/ref1/fitIII": {
+      "sha256": "ce7d1eacf579f7661e6172d50b0bb6e305e6e1d32376fca602117d804652eb1c",
+      "status": "ok",
+      "changes": 1,
+      "to": [
+        0
+      ]
+    },
+    "refit/ref1/missiler": {
+      "sha256": "e26e1568b1b1b5f2da66e31da9d3aa1f1a2f23033cd5c581470cdae2278d6c3e",
+      "status": "ok",
+      "changes": 0,
+      "to": []
+    },
+    "refit/ref1/tanker": {
+      "sha256": "69f0b14166f5bdd3784e9421910236d606fcc8c634d3c7bc781126a42095a516",
+      "status": "no_candidate",
+      "changes": 0,
+      "to": []
+    },
+    "refit/ref2/all0": {
+      "sha256": "fd09fc45e21ef27ecf1d8a7b39ab71b93301182779f1e8e469d0654d25e2858e",
+      "status": "no_candidate",
+      "changes": 0,
+      "to": []
+    },
+    "refit/ref2/allI": {
+      "sha256": "193f2d067787bb6430b449d4a9d2bdf4a41ffdb152a36d5f3490643a27a421f0",
+      "status": "ok_with_downgrades",
+      "changes": 7,
+      "to": [
+        0,
+        14106,
+        14176,
+        0,
+        31882,
+        28274,
+        28294
+      ]
+    },
+    "refit/ref2/allIII": {
+      "sha256": "7d18ff5545cf6c29fcce595e9ccb378f1e06494f13c3f0ce8f47f69e18503b66",
+      "status": "ok_with_downgrades",
+      "changes": 8,
+      "to": [
+        23527,
+        14106,
+        14176,
+        33850,
+        32925,
+        31882,
+        28274,
+        28294
+      ]
+    },
+    "refit/ref2/alpha": {
+      "sha256": "f7a85f515ae4a56e0405ac038c689fd804b013c6c73f821431a4380663fd90e6",
+      "status": "ok",
+      "changes": 7,
+      "to": [
+        32262,
+        14106,
+        14176,
+        33850,
+        33842,
+        31882,
+        28294
+      ]
+    },
+    "refit/ref2/droner": {
+      "sha256": "59e86a4b9b19845babc67d07b00caa365fc6bfea5edbf080d02c8294809f0acc",
+      "status": "ok_with_downgrades",
+      "changes": 11,
+      "to": [
+        23527,
+        0,
+        0,
+        33850,
+        0,
+        19017,
+        18799,
+        23418,
+        31882,
+        28274,
+        28294
+      ]
+    },
+    "refit/ref2/fitIII": {
+      "sha256": "328ed926d3127fc5126c91fb861f7718d85c69431b15f0bbf78ce83b4dc3159f",
+      "status": "ok",
+      "changes": 0,
+      "to": []
+    },
+    "refit/ref2/missiler": {
+      "sha256": "328ed926d3127fc5126c91fb861f7718d85c69431b15f0bbf78ce83b4dc3159f",
+      "status": "ok",
+      "changes": 0,
+      "to": []
+    },
+    "refit/ref2/tanker": {
+      "sha256": "9c9eef23923fea725e6ff82285f8c8f039c32697a90ce863f38389e50e08a9f7",
+      "status": "ok_with_downgrades",
+      "changes": 12,
+      "to": [
+        0,
+        0,
+        14176,
+        0,
+        0,
+        0,
+        0,
+        19017,
+        18881,
+        0,
+        0,
+        0
+      ]
+    },
+    "refit/ref3/all0": {
+      "sha256": "3f5f60b6efb8dcb54e82e44da6eac01a9d92138e6c5e41f7dbbdc9d1e158989f",
+      "status": "no_candidate",
+      "changes": 0,
+      "to": []
+    },
+    "refit/ref3/allI": {
+      "sha256": "7de8bad69415c38c84bc67894f38cc4c344912aee9a798189e091737513bed80",
+      "status": "ok",
+      "changes": 3,
+      "to": [
+        14106,
+        28744,
+        28744
+      ]
+    },
+    "refit/ref3/allIII": {
+      "sha256": "ad492e99f9bd368e6096b2e98380ec750fe914692e8d7242b38f87cfd9001457",
+      "status": "ok",
+      "changes": 3,
+      "to": [
+        14106,
+        28744,
+        28744
+      ]
+    },
+    "refit/ref3/alpha": {
+      "sha256": "2a0c332f8a9d49e5f973378d94fbd3db55dd2b10a3888f74702eaee8133f70ec",
+      "status": "no_candidate",
+      "changes": 0,
+      "to": []
+    },
+    "refit/ref3/droner": {
+      "sha256": "948b2f31f8f7e3c48f12df3406ca00c0f4109597d1858b299735109ad1d3298b",
+      "status": "no_candidate",
+      "changes": 0,
+      "to": []
+    },
+    "refit/ref3/fitIII": {
+      "sha256": "33c22ae7d99a876e644570d6c57616975cddecb968ffc501e0d2b618236bddd8",
+      "status": "no_candidate",
+      "changes": 0,
+      "to": []
+    },
+    "refit/ref3/missiler": {
+      "sha256": "7e456f8d9da860a5bd691b8bf8f0d2cec0da8ee36b9e28eba9477bf5a9347126",
+      "status": "ok",
+      "changes": 6,
+      "to": [
+        13921,
+        13921,
+        13921,
+        13921,
+        13921,
+        13921
+      ]
+    },
+    "refit/ref3/tanker": {
+      "sha256": "0551dd792099d8dc1fab497fe6fa1d3a2ecdfe9e83d70b969e702bf28e8782b8",
+      "status": "no_candidate",
+      "changes": 0,
+      "to": []
+    },
+    "refit/ref4/all0": {
+      "sha256": "3e0ef2afb469dafa49a7434b157d12f610153b12b73101c1a737e32ed57f37fa",
+      "status": "no_candidate",
+      "changes": 0,
+      "to": []
+    },
+    "refit/ref4/allI": {
+      "sha256": "0f7bf463cccd049a7be86c88394014a551884e38684becedb93a3da741db04c7",
+      "status": "ok",
+      "changes": 2,
+      "to": [
+        28744,
+        28744
+      ]
+    },
+    "refit/ref4/allIII": {
+      "sha256": "27b428da97f300f2918a97580c0e4dee2bd60a0af68dbe9c561db4128fa60a82",
+      "status": "ok",
+      "changes": 2,
+      "to": [
+        28744,
+        28744
+      ]
+    },
+    "refit/ref4/alpha": {
+      "sha256": "7a0376dfffea984c538e6f9899aa2c0cd7b2d1f84c2b5b54df529e044f53b837",
+      "status": "no_candidate",
+      "changes": 0,
+      "to": []
+    },
+    "refit/ref4/droner": {
+      "sha256": "dfb81ea0df9edbc71b9b5a1df8293420d8a57edd680e18e21a2103e0bffed2bc",
+      "status": "no_candidate",
+      "changes": 0,
+      "to": []
+    },
+    "refit/ref4/fitIII": {
+      "sha256": "4f2fe20d59e619db3b259bc6ea7aea621b6bd3c5e674966b8aff48ca0884de68",
+      "status": "no_candidate",
+      "changes": 0,
+      "to": []
+    },
+    "refit/ref4/missiler": {
+      "sha256": "e37a0769daa41eec58c02564dca7b8f3cf616368ef19869dcb305efd853b798f",
+      "status": "ok",
+      "changes": 5,
+      "to": [
+        13921,
+        13921,
+        13921,
+        13921,
+        13921
+      ]
+    },
+    "refit/ref4/tanker": {
+      "sha256": "7ede38bbcb2bd2eb640d753be96d23094b80540c0c73fd9562a39d5bd918323a",
+      "status": "no_candidate",
+      "changes": 0,
+      "to": []
+    },
+    "refit/ref5/all0": {
+      "sha256": "0a391857b0566f7967b469c2cce9ae2f8c9e9613a1228d7484d2ac2629f41adc",
+      "status": "no_candidate",
+      "changes": 0,
+      "to": []
+    },
+    "refit/ref5/allI": {
+      "sha256": "7049e5c84f924c386007fadda829e1a5f8a956cb697f4bbd58d28178117be75e",
+      "status": "ok",
+      "changes": 2,
+      "to": [
+        19323,
+        31882
+      ]
+    },
+    "refit/ref5/allIII": {
+      "sha256": "d542822fdc9ce28f0c04040bd40a56b8e392e458c84f7718563ec802c53fc785",
+      "status": "ok",
+      "changes": 2,
+      "to": [
+        19323,
+        31882
+      ]
+    },
+    "refit/ref5/alpha": {
+      "sha256": "5c147903604fc2d27ebd9b1679529fbf79017f5d5c630b5136a05126fe095bb3",
+      "status": "no_candidate",
+      "changes": 0,
+      "to": []
+    },
+    "refit/ref5/droner": {
+      "sha256": "0d02436348ca3a94687781a3dff3ab798f03668d44ec46414bb8f97187ff8e4a",
+      "status": "no_candidate",
+      "changes": 0,
+      "to": []
+    },
+    "refit/ref5/fitIII": {
+      "sha256": "5af019e1f86ba5f576e1618544a59d6d63bfac55599f101c8821c6a27ef507ec",
+      "status": "ok",
+      "changes": 1,
+      "to": [
+        0
+      ]
+    },
+    "refit/ref5/missiler": {
+      "sha256": "0f21aa293b004e4f6012342bcf84a4430d34a8dff51fab3fc4d36343fdf0e695",
+      "status": "ok",
+      "changes": 0,
+      "to": []
+    },
+    "refit/ref5/tanker": {
+      "sha256": "117358d682a6469cff21511f83379a0d275b661334e2a55d3fb7fdfce3cef1fc",
+      "status": "no_candidate",
+      "changes": 0,
+      "to": []
+    },
+    "refit/ref6/all0": {
+      "sha256": "f72b10df846bc49ff4b34dde7f5121b4a9704c36dd70c7f2b97bcb087bb03dc8",
+      "status": "no_candidate",
+      "changes": 0,
+      "to": []
+    },
+    "refit/ref6/allI": {
+      "sha256": "ca2b5413f01d3d56ff140ce9f649f9365cbdfec77bd921f9ba7b30e2f7e53c53",
+      "status": "ok_with_downgrades",
+      "changes": 8,
+      "to": [
+        0,
+        14106,
+        14176,
+        0,
+        31882,
+        28274,
+        28294,
+        28298
+      ]
+    },
+    "refit/ref6/allIII": {
+      "sha256": "348acbf292d61f302feead55b90923ffb0525e59c95f7fba021ab0284815f23b",
+      "status": "ok_with_downgrades",
+      "changes": 9,
+      "to": [
+        23527,
+        14106,
+        14176,
+        33850,
+        32925,
+        31882,
+        28274,
+        28294,
+        28298
+      ]
+    },
+    "refit/ref6/alpha": {
+      "sha256": "24d5b6a8f4375dbd47fef2ce0ecb03c38583a6b32a4c40ca2a733aa4955af2cd",
+      "status": "ok",
+      "changes": 8,
+      "to": [
+        32262,
+        14106,
+        14176,
+        33850,
+        33842,
+        31882,
+        28294,
+        28298
+      ]
+    },
+    "refit/ref6/droner": {
+      "sha256": "aedc0ea47a1c2d86ae19fe7f1018ee33279d0a24bab1c08a6e1dc1e6e6702703",
+      "status": "no_candidate",
+      "changes": 0,
+      "to": []
+    },
+    "refit/ref6/fitIII": {
+      "sha256": "8c127376fc9f9a01be2660c434bdeb6915ee8d515ffb7097daf74deb7ada79db",
+      "status": "ok",
+      "changes": 0,
+      "to": []
+    },
+    "refit/ref6/missiler": {
+      "sha256": "8c127376fc9f9a01be2660c434bdeb6915ee8d515ffb7097daf74deb7ada79db",
+      "status": "ok",
+      "changes": 0,
+      "to": []
+    },
+    "refit/ref6/tanker": {
+      "sha256": "1fadb5670e0402db817225ba94b624fba615f996b13a178afb3f915a0f659d71",
+      "status": "no_candidate",
+      "changes": 0,
+      "to": []
+    }
+  }
 }
