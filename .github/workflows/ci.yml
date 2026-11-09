@@ -114,6 +114,11 @@ jobs:
             go test -race -timeout 300s -run 'Concurrent|Shared|Race|Parallel' $PLAIN
           fi
 
+      # The two heavy fit/solve corpus tests skip themselves under -race (minutes there); they
+      # run here, once, without it.
+      - name: go test (fit/solve corpus tests, no -race)
+        run: go test -count=1 -timeout 900s -run 'TestConvert_TwoPassNeverWorseThanClassic|TestFixDowngrade_UnchangedByTwoPass' ./fit/solve/
+
   # golangci-lint, config in .golangci.yml. Built with `go install` at a pinned version so the
   # binary is compiled by the job's Go. `|` (not `,`): fall back to the origin on ANY proxy error.
   lint:

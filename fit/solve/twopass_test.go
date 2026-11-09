@@ -46,10 +46,17 @@ func convertCorpus(t *testing.T, c *Catalog) []corpusPair {
 	return out
 }
 
-func TestConvert_TwoPassNeverWorseThanClassic(t *testing.T) {
-	if testing.Short() {
-		t.Skip("corpus run, long under -race")
+// skipHeavyCorpus skips a corpus test under -short and under the race detector: they take
+// minutes there and run in their own non-race CI step (see .github/workflows/ci.yml).
+func skipHeavyCorpus(t *testing.T) {
+	t.Helper()
+	if testing.Short() || raceEnabled {
+		t.Skip("corpus run: skipped under -short and -race; CI runs it in a non-race step")
 	}
+}
+
+func TestConvert_TwoPassNeverWorseThanClassic(t *testing.T) {
+	skipHeavyCorpus(t)
 	c := realCatalog(t)
 	ev := NewEngineEvaluator(gofa.New(c.Store()), 4)
 	ctx := context.Background()
@@ -100,9 +107,7 @@ func TestConvert_PassAOverHalfTheCapSkipsPassB(t *testing.T) {
 // the two-pass change (sha256 of the JSON, testdata/fixdown-golden.json, written at 1d01273).
 // EVE_UPDATE_GOLDEN=1 rewrites the file.
 func TestFixDowngrade_UnchangedByTwoPass(t *testing.T) {
-	if testing.Short() {
-		t.Skip("corpus run, long under -race")
-	}
+	skipHeavyCorpus(t)
 	c := realCatalog(t)
 	ev := NewEngineEvaluator(gofa.New(c.Store()), 4)
 	ctx := context.Background()
