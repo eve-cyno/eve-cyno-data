@@ -29,6 +29,9 @@ type Engine struct {
 	// defaultAmmo makes Stats load the default charge (see ApplyDefaultAmmo) into
 	// weapons that have none. Set by WithDefaultAmmo; false on New.
 	defaultAmmo bool
+	// filter, when set, edits the merged skill map before the skill items are built
+	// (WithPruning). nil keeps every skill.
+	filter skillFilter
 }
 
 // New constructs an Engine backed by the given SDE.
@@ -225,6 +228,17 @@ func (e *Engine) resolveCore(ctx context.Context, f fit.Fit, opts fit.StatsOpts,
 		for id, lvl := range opts.Skills {
 			skillsMap[id] = lvl
 		}
+	}
+
+	// Pruning: drop the skills that cannot reach this fit (see prune.go). Only with the
+	// full published skill list; the synthetic-SDE fallback above already is a subset.
+	if e.filter != nil && len(allSkillTypeIDs) > 0 {
+		fitTypes := make([]int, 0, len(items)+len(opts.Implants))
+		for _, it := range items {
+			fitTypes = append(fitTypes, it.TypeID)
+		}
+		fitTypes = append(fitTypes, opts.Implants...)
+		e.filter(sdeView, fitTypes, skillsMap)
 	}
 
 	// Append a KindSkill Item for each skill so the interpreter can apply

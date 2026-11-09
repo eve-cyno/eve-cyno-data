@@ -93,6 +93,7 @@ type cachedSDE struct {
 	effectCat   memo[int]
 	attrMeta    memo[dogma.AttrMeta]
 	skillIDs    atomic.Pointer[[]int]
+	skillIx     skillIndexHolder // pruning index (prune.go)
 }
 
 var _ SDE = (*cachedSDE)(nil)
