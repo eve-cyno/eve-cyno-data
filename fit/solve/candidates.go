@@ -554,9 +554,21 @@ func (c *Catalog) chargeFor(modID, chargeID int, skills fit.SkillProfile) int {
 	return best
 }
 
+// sameSplit: the two charges divide their damage in the same proportion over EM, explosive,
+// kinetic and thermal. Damage scales with charge size (EMP S 9/2/1/0, EMP M 18/4/2/0), so the
+// split is the share of each type in the total, compared to 9 decimals; two charges with no
+// damage share the empty split.
 func sameSplit(a, b *typeInfo) bool {
+	var sa, sb float64
 	for _, k := range attrDamageSplit {
-		if a.attrs[k] != b.attrs[k] {
+		sa += a.attrs[k]
+		sb += b.attrs[k]
+	}
+	if sa <= 0 || sb <= 0 {
+		return sa <= 0 && sb <= 0
+	}
+	for _, k := range attrDamageSplit {
+		if Round9(a.attrs[k]/sa) != Round9(b.attrs[k]/sb) {
 			return false
 		}
 	}

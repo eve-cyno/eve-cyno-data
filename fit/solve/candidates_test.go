@@ -201,6 +201,23 @@ func TestCandidates_ChargeFamily(t *testing.T) {
 	}
 }
 
+// The damage split is the proportion of the four damage types, not their values: ammo of
+// another size carries scaled damage (EMP S 9/2/1/0, EMP M 18/4/2/0 on the pinned build),
+// so a module of another charge size takes the sibling of its own size.
+func TestCandidates_ChargeSplitIsProportional(t *testing.T) {
+	sub := testSubset()
+	sub.Types = append(sub.Types,
+		ty(130, groupLaunc, 7, []int{12, 40}, map[int]float64{604: groupChg, attrChargeSize: 3}),
+		ty(209, groupChg, 8, nil, map[int]float64{114: 20, 116: 5, 117: 0, 118: 0, attrChargeSize: 3}), // other split
+		ty(210, groupChg, 8, nil, map[int]float64{114: 9, 116: 2, 117: 1, 118: 0, attrChargeSize: 1}),
+		ty(211, groupChg, 8, nil, map[int]float64{114: 18, 116: 4, 117: 2, 118: 0, attrChargeSize: 3}),
+	)
+	c := NewCatalog(sub)
+	require.Equal(t, 211, c.chargeFor(130, 210, full), "9/2/1/0 at size 1 is 18/4/2/0 at size 3")
+	require.Equal(t, 204, c.chargeFor(130, 200, full), "equal values are still the same split")
+	require.Equal(t, 0, c.chargeFor(130, 202, full), "0/10/0/0 has no size-3 sibling")
+}
+
 func TestCandidates_HullAndRigFilter(t *testing.T) {
 	c := NewCatalog(testSubset())
 	got := ids(c.Candidates(oneHigh(100, 0), hi0, refit(full)))
