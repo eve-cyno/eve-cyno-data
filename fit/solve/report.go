@@ -82,7 +82,9 @@ type TrainLine struct {
 	Name    string `json:"name"`
 	From    int    `json:"from"`
 	To      int    `json:"to"`
-	Text    string `json:"text"` // "Power Grid Management 3 to 4"
+	// For is the line (item) that needs the skill, set for a skill binding.
+	For  string `json:"for,omitempty"`
+	Text string `json:"text"` // "Power Grid Management III to IV"
 }
 
 // Report is the no_candidate report.
@@ -130,6 +132,10 @@ func BuildReport(ctx context.Context, c *Catalog, ev Evaluator, r Request, res *
 	if b, opt, ok := smallestViolation(nc.GatePassingInvalid); ok {
 		b.Text = bindingText(b)
 		rep.Binding = b
+		if b.Code == BindSkill {
+			rep.Binding.Text, rep.Train = c.skillBinding(b, opt)
+			return rep, nil
+		}
 		t, err := trainFor(ctx, c, ev, r, res, b, opt.Fit)
 		if err != nil {
 			return nil, err
@@ -219,6 +225,40 @@ func (c *Catalog) trainLine(skill, from, to int) TrainLine {
 	n := c.nameOf(skill)
 	return TrainLine{SkillID: skill, Name: n, From: from, To: to,
 		Text: fmt.Sprintf("%s %s to %s", n, roman(from), roman(to))}
+}
+
+// skillBinding is the text and the train of a skill binding: the skills the option's lines
+// lack, one line per skill from the pilot's level to the required one, in the violations'
+// order (the direct requirements of a line first), at most trainLines. Each line names the
+// item that needs the skill.
+func (c *Catalog) skillBinding(b Binding, opt Option) (string, []TrainLine) {
+	text := bindingText(b)
+	train := []TrainLine{}
+	seen := map[int]bool{}
+	for _, v := range opt.Violations {
+		if v.Code != fit.CodeSkill || v.Skill == nil || seen[v.Skill.TypeID] {
+			continue
+		}
+		line := ""
+		if len(v.Names) > 0 {
+			line = v.Names[0]
+		}
+		if line == "" {
+			line = c.nameOf(v.ItemTypeID)
+		}
+		if len(train) == 0 {
+			text = fmt.Sprintf("%s needs %s %s, the pilot has %s", line, c.nameOf(v.Skill.TypeID), roman(v.Skill.Needs), roman(v.Skill.Has))
+		}
+		if len(train) == trainLines {
+			break
+		}
+		seen[v.Skill.TypeID] = true
+		l := c.trainLine(v.Skill.TypeID, v.Skill.Has, v.Skill.Needs)
+		l.For = line
+		l.Text += " (" + line + ")"
+		train = append(train, l)
+	}
+	return text, train
 }
 
 // violationBinding classifies a fit violation: its binding code, how far over it is, the

@@ -178,3 +178,40 @@ func TestNoCandidate_TrainRanksRelevantSkills(t *testing.T) {
 	}
 	require.True(t, named, "train names Warhead Upgrades or Rapid Launch: %+v", rep.Train)
 }
+
+// M2: a skill binding trains the missing skills, naming the line and the skill, from the
+// pilot's level to the required one, the direct requirements first. The Vexor (reference 2)
+// carries a Medium Capacitor Booster II the droner pilot cannot use.
+func TestNoCandidate_SkillBindingTrains(t *testing.T) {
+	c := realCatalog(t)
+	f := refFit(t, c, 2)
+	droner := e3aProfiles(t)["droner"]
+	r := Request{Kind: KindRefit, Fit: f, Skills: droner}
+	res, _ := reportFor(t, c, r)
+	viols := fit.SkillViolations(context.Background(), c.Store(), f, fit.StatsOpts{Skills: droner, MissingAsZero: true})
+	require.NotEmpty(t, viols)
+	only := *res
+	nc := *res.NoCandidate
+	nc.GatePassingInvalid = []Option{{Fit: f, Violations: viols}}
+	only.NoCandidate = &nc
+	rep, err := BuildReport(context.Background(), c, NewEngineEvaluator(gofa.New(c.Store()), 4), r, &only)
+	require.NoError(t, err)
+	require.Equal(t, BindSkill, rep.Binding.Code)
+	require.NotEmpty(t, rep.Train)
+	require.LessOrEqual(t, len(rep.Train), 3)
+	// The first line is the first missing skill of the first violation (the direct one).
+	first := viols[0]
+	require.Equal(t, first.Skill.TypeID, rep.Train[0].SkillID)
+	require.Equal(t, first.Skill.Has, rep.Train[0].From)
+	require.Equal(t, first.Skill.Needs, rep.Train[0].To)
+	require.Equal(t, first.Names[0], rep.Train[0].For)
+	require.Contains(t, rep.Train[0].Text, rep.Train[0].Name)
+	require.Contains(t, rep.Train[0].Text, first.Names[0])
+	seen := map[int]bool{}
+	for _, l := range rep.Train {
+		require.False(t, seen[l.SkillID], "one line per skill")
+		seen[l.SkillID] = true
+		require.Greater(t, l.To, l.From)
+	}
+	require.Contains(t, rep.Binding.Text, first.Names[0])
+}
