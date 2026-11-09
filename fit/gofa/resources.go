@@ -57,7 +57,7 @@ var slotRank = map[string]int{"hi": 0, "mid": 1, "low": 2, "rig": 3, "subsystem"
 // is resolved as an inert item, so it adds nothing to the hull's output. Calibration counts
 // every rig, bandwidth the drones the pilot can launch (Stats' rule), the bay every drone.
 func (e *Engine) Resources(ctx context.Context, f fit.Fit, opts fit.StatsOpts) (fit.Resources, error) {
-	ship, items, _, drones, err := e.resolveCore(ctx, f, opts, true)
+	ship, items, _, drones, _, err := e.resolveCore(ctx, f, opts, true)
 	if err != nil {
 		return fit.Resources{}, err
 	}

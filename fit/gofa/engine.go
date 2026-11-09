@@ -64,13 +64,14 @@ func (e *Engine) resolve(f fit.Fit, opts fit.StatsOpts) (ship *Item, items []*It
 // module paired with its charge Item) and the expanded drone Items for DPS
 // calculation. Convergence tests use resolve(); Stats uses resolveForStats().
 func (e *Engine) resolveForStats(ctx context.Context, f fit.Fit, opts fit.StatsOpts) (ship *Item, items []*Item, weapons []weaponInstance, drones []*Item, err error) {
-	return e.resolveCore(ctx, f, opts, false)
+	ship, items, weapons, drones, _, err = e.resolveCore(ctx, f, opts, false)
+	return ship, items, weapons, drones, err
 }
 
 // resolveCore is resolveForStats with one switch: offlineInert keeps an offline module as an
 // inert item (resolved, never a source) so a resource reader sees its final CPU / PG load.
 // Stats leaves offline modules out entirely.
-func (e *Engine) resolveCore(ctx context.Context, f fit.Fit, opts fit.StatsOpts, offlineInert bool) (ship *Item, items []*Item, weapons []weaponInstance, drones []*Item, err error) {
+func (e *Engine) resolveCore(ctx context.Context, f fit.Fit, opts fit.StatsOpts, offlineInert bool) (ship *Item, items []*Item, weapons []weaponInstance, drones []*Item, notes implantNotes, err error) {
 	// One SDE view for the whole resolve: memoized reads of the current SDE
 	// generation (the dogma lookups below and the interpreter repeat per item).
 	sdeView := e.reader()
@@ -78,7 +79,7 @@ func (e *Engine) resolveCore(ctx context.Context, f fit.Fit, opts fit.StatsOpts,
 	// --- 1. Build the hull Item -------------------------------------------
 	hullAttrs := sdeView.GetDogma(f.HullID)
 	if len(hullAttrs) == 0 {
-		return nil, nil, nil, nil, fmt.Errorf("gofa: no dogma data for hull typeID %d", f.HullID)
+		return nil, nil, nil, nil, notes, fmt.Errorf("gofa: no dogma data for hull typeID %d", f.HullID)
 	}
 	ship = &Item{TypeID: f.HullID, Kind: KindShip, Attrs: hullAttrs}
 	items = append(items, ship)
@@ -138,7 +139,7 @@ func (e *Engine) resolveCore(ctx context.Context, f fit.Fit, opts fit.StatsOpts,
 		groupUnits := 0
 		for _, fm := range g.modules {
 			if err := ctx.Err(); err != nil {
-				return nil, nil, nil, nil, err
+				return nil, nil, nil, nil, notes, err
 			}
 			// Offline modules contribute nothing to stats — skip them entirely.
 			offline := fm.State == "offline"
@@ -153,7 +154,7 @@ func (e *Engine) resolveCore(ctx context.Context, f fit.Fit, opts fit.StatsOpts,
 			// Per-group caps match EVE (the ESI slot range per group; a drone bay holds at most a few
 			// hundred drones). They bound the interpreter's sources x targets cost, not only memory.
 			if n > g.limit-groupUnits {
-				return nil, nil, nil, nil, fmt.Errorf("%w: more than %d %s units (typeID %d, quantity %d)", fit.ErrFitTooLarge, g.limit, g.name, fm.TypeID, fm.Qty)
+				return nil, nil, nil, nil, notes, fmt.Errorf("%w: more than %d %s units (typeID %d, quantity %d)", fit.ErrFitTooLarge, g.limit, g.name, fm.TypeID, fm.Qty)
 			}
 			groupUnits += n
 			perUnit := 1
@@ -161,7 +162,7 @@ func (e *Engine) resolveCore(ctx context.Context, f fit.Fit, opts fit.StatsOpts,
 				perUnit = 2
 			}
 			if n > budget/perUnit {
-				return nil, nil, nil, nil, fmt.Errorf("%w: more than %d items (typeID %d, quantity %d)", fit.ErrFitTooLarge, maxExpandedItems, fm.TypeID, fm.Qty)
+				return nil, nil, nil, nil, notes, fmt.Errorf("%w: more than %d items (typeID %d, quantity %d)", fit.ErrFitTooLarge, maxExpandedItems, fm.TypeID, fm.Qty)
 			}
 			budget -= n * perUnit
 			for i := 0; i < n; i++ {
@@ -246,6 +247,14 @@ func (e *Engine) resolveCore(ctx context.Context, f fit.Fit, opts fit.StatsOpts,
 		items = append(items, &Item{TypeID: skillTypeID, Kind: KindSkill, Attrs: attrs})
 	}
 
+	// The pilot's implants (StatsOpts.Implants only; f.Implants is never read, decision O1).
+	var implantItems []*Item
+	implantItems, notes, err = buildImplants(sdeView, opts.Implants)
+	if err != nil {
+		return nil, nil, nil, nil, notes, err
+	}
+	items = append(items, implantItems...)
+
 	// --- 4. Run the interpreter -------------------------------------------
 	resolveModifiers(sdeView, ship, items, skillsMap)
 
@@ -295,7 +304,7 @@ func (e *Engine) resolveCore(ctx context.Context, f fit.Fit, opts fit.StatsOpts,
 		}
 	}
 
-	return ship, items, weapons, drones, nil
+	return ship, items, weapons, drones, notes, nil
 }
 
 // Dogma attribute IDs for the propulsion-module velocity/signature formula.
@@ -647,7 +656,7 @@ func (e *Engine) Stats(ctx context.Context, f fit.Fit, opts fit.StatsOpts) (fit.
 			estimated = estimated || u.Default
 		}
 	}
-	ship, items, weaponItems, droneItems, err := e.resolveForStats(ctx, f, opts)
+	ship, items, weaponItems, droneItems, notes, err := e.resolveCore(ctx, f, opts, false)
 	if err != nil {
 		return fit.FitStats{}, err
 	}
@@ -660,6 +669,7 @@ func (e *Engine) Stats(ctx context.Context, f fit.Fit, opts fit.StatsOpts) (fit.
 	if chargeFedReps {
 		unmodelled = append(unmodelled, UnmodelledChargeFedCap)
 	}
+	unmodelled = append(unmodelled, notes.unmodelled...)
 	return fit.FitStats{
 		Navigation: navigation(ship),
 		Capacitor:  capacitor(ship, items),
@@ -671,6 +681,7 @@ func (e *Engine) Stats(ctx context.Context, f fit.Fit, opts fit.StatsOpts) (fit.
 		Range:      weaponRange(weaponItems),
 		Estimated:  estimated,
 		Unmodelled: unmodelled,
+		Warnings:   notes.warnings,
 		Flags:      blockFlags(estimated, chargeFedReps),
 	}, nil
 }

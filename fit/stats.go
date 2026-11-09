@@ -29,7 +29,12 @@ type StatsOpts struct {
 	// given"); an empty non-nil map with the flag set is all 0. Default false keeps
 	// the all-V reference-character model of every existing caller.
 	MissingAsZero bool
-	Target        TargetProfile
+	// Implants are the pilot's implants, as type ids (decision O1: only this list applies; a
+	// fit's own implant lines never do). The engine builds an unpenalised item per implant;
+	// of two implants in one slot (attribute 331) the first wins, with a warning. An id the
+	// engine cannot apply is listed in FitStats.Unmodelled. nil and empty are no implants.
+	Implants []int
+	Target   TargetProfile
 	// ActiveDroneTypeIDs, when non-nil, is the priority list of drone typeIDs the
 	// user has launched. The engine launches them in order within bandwidth + the
 	// max-in-space cap; the rest stay in the bay (no DPS). nil → auto (fit order).
@@ -66,6 +71,10 @@ type FitStats struct {
 	Estimated bool
 	// Unmodelled lists modules/effects the engine did not model.
 	Unmodelled []string
+	// Warnings are notes on the input that changed the numbers without failing the call,
+	// such as an implant dropped because another one holds its slot. Not part of the public
+	// JSON shape (the data API schema is unchanged); in-process callers read the field.
+	Warnings []string `json:"-"`
 	// Flags carries Estimated and Not modelled per stat block (E19). Estimated and
 	// Unmodelled above stay as the fit-wide summary; Flags says which blocks they hit.
 	Flags BlockFlags

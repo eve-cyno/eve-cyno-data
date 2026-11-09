@@ -30,6 +30,9 @@ const (
 	// KindCharacter is the pilot: invTypes 1373 "Character". A charID ItemModifier targets
 	// it, not the ship (maxLockedTargets 192 and maxActiveDrones 352 live here).
 	KindCharacter
+	// KindImplant is one of the pilot's implants (StatsOpts.Implants): a source whose
+	// bonuses stack freely, like skills.
+	KindImplant
 )
 
 // Item is one entry in a fit: the hull, a fitted module/rig/drone/charge, or a
@@ -428,4 +431,21 @@ func fractionalBonus(op int, magnitude float64) float64 {
 	default:
 		return 0
 	}
+}
+
+// modifierSupported reports whether the interpreter can apply a modifier of this domain and
+// function. The offensive domains (targetID, otherID, structureID) are supported in the sense
+// that ignoring them is right for fit statistics; any other domain or function is unknown to
+// resolveTargets and its modifier would be silently dropped.
+func modifierSupported(m dogma.Modifier) bool {
+	switch m.Domain {
+	case "shipID", "charID", "itemID", "targetID", "otherID", "structureID":
+	default:
+		return false
+	}
+	switch m.Func {
+	case "ItemModifier", "LocationModifier", "LocationGroupModifier", "LocationRequiredSkillModifier", "OwnerRequiredSkillModifier":
+		return true
+	}
+	return false
 }

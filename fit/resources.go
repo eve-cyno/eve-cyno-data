@@ -66,7 +66,9 @@ func (c *moduleCursor) take(slot string) (ModuleResources, bool) {
 // attributes for opts (a skill profile; nil Skills is all V), instead of the all-V constant
 // model. The cap is the hull's resolved output, each module's draw its resolved load, so
 // untrained skills, hull role bonuses and rig drawbacks count. Every other rule is
-// Validate's, the 5 % soft band included.
+// Validate's. The 5 % soft band ("a fitting implant may cover it") applies unless opts names
+// implants: they are already in the numbers, so none is left to close the gap and any
+// overage is Hard.
 //
 // When rp cannot read the fit (an engine error such as a unit count over its caps, which
 // Validate reports as a slot or size violation anyway), the constant-model numbers stay.
@@ -88,6 +90,7 @@ func ValidateWith(ctx context.Context, s ValidateSDE, rp ResourceProvider, f Fit
 	if rp != nil {
 		if res, err := rp.Resources(ctx, f, opts); err == nil {
 			sp.res = &res
+			sp.noImplantBand = len(opts.Implants) > 0
 		}
 	}
 	rep := check(s, sp)
