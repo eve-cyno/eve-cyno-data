@@ -389,6 +389,14 @@ func TestSolve_NeverOutsideSubset(t *testing.T) {
 	for _, m := range res.Fit.High {
 		require.NotEqual(t, 8888, m.ChargeID)
 	}
+	// A start whose other lines are valid: the type outside the subset still never comes back.
+	for _, k := range []Kind{KindRefit, KindDowngrade} {
+		r2 := fakeSolve(t, fakeSubset(gun(1000, 1, 0, 40, nil), gun(1002, 1, 3, 49.5, nil)),
+			Request{Kind: k, Fit: highFit(1000, 7777), Skills: poor})
+		if r2.Fit != nil {
+			require.NotContains(t, highTypes(r2.Fit), 7777, k)
+		}
+	}
 
 	// Real SDE: the reference fits under two profiles, Fix and Downgrade.
 	rc := realCatalog(t)

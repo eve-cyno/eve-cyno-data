@@ -701,8 +701,26 @@ func (s *search) judge(asg []Candidate, f fit.Fit, ev Evaluation) *probe {
 		p.uncertain = uncertainOf(ev.Stats)
 	}
 	p.verdict = Accept(s.pol, s.b1, s.b2, p.eval)
+	if s.outsideSubset(f) {
+		// Never accepted, never ranked best: ValidateWith treats every written line as a
+		// module, so a start with a type the subset lacks would otherwise pass as valid.
+		p.eval.Valid = false
+		p.verdict.Accepted = false
+	}
 	p.rank = s.rankOf(asg, p.verdict.Objective)
 	return p
+}
+
+// outsideSubset reports whether the fit holds a module or drone type the catalog lacks.
+func (s *search) outsideSubset(f fit.Fit) bool {
+	for _, g := range slotGroups {
+		for _, m := range *g.mods(&f) {
+			if m.TypeID != 0 && !s.cat.Has(m.TypeID) {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // uncertainOf lists what the engine did not model that affects dps, tank or capacitor. An

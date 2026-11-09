@@ -129,3 +129,34 @@ func TestSkillBinding_KeepsHighestLevel(t *testing.T) {
 	require.Equal(t, 1, train[0].From)
 	require.Contains(t, text, "IV")
 }
+
+// M3: a written type outside the subset survives through the start probe unless judge rejects
+// every assignment that holds one. Rifter reference 1 with Mid[2] a type the subset lacks.
+func TestSolve_OutsideSubsetStartIsNeverReturned(t *testing.T) {
+	c := realCatalog(t)
+	f := refFit(t, c, 1)
+	f.Mid = append([]fit.FitModule(nil), f.Mid...)
+	f.Mid[2] = fit.FitModule{TypeID: 99999991, Name: "Not In Subset", Qty: 1}
+	ev := NewEngineEvaluator(gofa.New(c.Store()), 2)
+	for _, k := range []Kind{KindRefit, KindDowngrade} {
+		res, err := Solve(context.Background(), c, ev, Request{Kind: k, Fit: f, Skills: nil})
+		require.NoError(t, err)
+		if res.Fit != nil {
+			for _, m := range res.Fit.Mid {
+				require.NotEqual(t, 99999991, m.TypeID, "%s keeps a type outside the subset", k)
+			}
+		}
+	}
+}
+
+// M3 synthetic: a start whose other lines are valid, with one type outside the subset.
+func TestSolve_OutsideSubsetTypeNeverRanksBest(t *testing.T) {
+	sub := fakeSubset(gun(1000, 1, 0, 40, nil), gun(1002, 1, 3, 49.5, nil))
+	f := highFit(1000, 7777)
+	for _, k := range []Kind{KindRefit, KindDowngrade} {
+		res := fakeSolve(t, sub, Request{Kind: k, Fit: f, Skills: poor})
+		if res.Fit != nil {
+			require.NotContains(t, highTypes(res.Fit), 7777, k)
+		}
+	}
+}
