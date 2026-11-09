@@ -249,11 +249,7 @@ const maxPairLines = 12
 // makes the fit unstable are named, and failing that all of them when removing all is unstable. The note names the lines.
 // The cap rule itself is not changed; this only says what the baseline rests on.
 func capBaselineTrain(ctx context.Context, c *Catalog, ev Evaluator, r Request, res *Result) ([]TrainLine, string, error) {
-	base := res.Baseline.Flown
-	if res.Baseline.Used == BaselineDesigned {
-		base = res.Baseline.Designed
-	}
-	if r.Skills == nil || !base.CapStable {
+	if r.Skills == nil || !res.Baseline.Flown.CapStable {
 		return nil, "", nil
 	}
 	type cand struct {

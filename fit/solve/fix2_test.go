@@ -88,6 +88,17 @@ func TestNoCandidate_CapBindingTwoUnusableBoosters(t *testing.T) {
 	require.Contains(t, rep.Note, "cap-stable only through")
 }
 
+// L6: the cap rule gates against B2, so the note appears even when the policy baseline is
+// the designed one and that baseline is not cap-stable.
+func TestCapBaselineTrain_AlwaysChecksFlownBaseline(t *testing.T) {
+	c := NewCatalog(testSubset())
+	r := Request{Kind: KindDowngrade, Fit: highFit(108, 100), Skills: poor}
+	train, note, err := capBaselineTrain(context.Background(), c, capFake{minHigh: 2}, r, capResult(BaselineDesigned, false))
+	require.NoError(t, err)
+	require.NotEmpty(t, train)
+	require.Contains(t, note, "cap-stable only through")
+}
+
 // L5: the skill binding trains to the highest level any line needs.
 func TestSkillBinding_KeepsHighestLevel(t *testing.T) {
 	c := NewCatalog(testSubset())
