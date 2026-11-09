@@ -269,6 +269,8 @@ type hooks struct {
 	// noSym gives every line its own sym, so every line is evaluated (the reference run of the
 	// interchangeable-lines test).
 	noSym bool
+	// noRetry skips the second run of a Downgrade whose greedy run ended unaccepted.
+	noRetry bool
 }
 
 // line is one line of the fit the search changes.
@@ -349,6 +351,10 @@ type search struct {
 
 	canUse map[int]bool
 	down   map[[2]int]bool
+
+	// savedFirst: the repair of a minimal kind takes the change that saves the most of the
+	// binding before the loss per unit saved (see repairBetter).
+	savedFirst bool
 }
 
 func solve(ctx context.Context, c *Catalog, ev Evaluator, r Request, h *hooks) (*Result, error) {
@@ -923,8 +929,36 @@ func (s *search) evalOne(asg []Candidate) (*probe, error) {
 	return ps[0], nil
 }
 
-// run is the three phases from the starting assignment.
+// run is the three phases from the starting assignment. A Downgrade (or a Convert onto the
+// fit's own hull) without gates repairs by the most of the binding saved by one change, which
+// needs the fewest changed lines. That greedy rule can end on a fit that is not accepted, and
+// with gates the largest saving can lose the DPS or EHP a smaller change keeps; so with gates
+// the repair uses the loss per unit saved from the start, and a greedy run that ends without an
+// accepted fit is run again with it (the memo keeps the evaluations already made).
 func (s *search) run(start []Candidate) error {
+	s.savedFirst = s.minimalKind() && len(s.pol.Gates) == 0
+	if err := s.runOnce(start); err != nil || !s.savedFirst || s.capped || s.anyAccepted() || (s.hooks != nil && s.hooks.noRetry) {
+		return err
+	}
+	s.savedFirst = false
+	return s.runOnce(start)
+}
+
+// minimalKind: a Downgrade, or a Convert onto the fit's own hull.
+func (s *search) minimalKind() bool {
+	return s.kind == KindDowngrade || (s.kind == KindConvert && s.hull == s.req.Fit.HullID)
+}
+
+func (s *search) anyAccepted() bool {
+	for _, p := range s.order {
+		if p.accepted() {
+			return true
+		}
+	}
+	return false
+}
+
+func (s *search) runOnce(start []Candidate) error {
 	cur, err := s.forced(start)
 	if err != nil || cur == nil {
 		return err
@@ -1220,9 +1254,11 @@ func (s *search) repairBetter(cur *probe, m0 float64, a *probe, ma float64, b *p
 	if ca != cb {
 		return ca
 	}
-	if s.kind == KindDowngrade || (s.kind == KindConvert && s.hull == s.req.Fit.HullID) {
+	if s.savedFirst {
 		// Minimal repair (decision 2026-11-09): the most of the binding saved by one change
 		// needs the fewest changed lines; the loss per unit saved and the tie order follow.
+		// Only without gates: with a gate the largest saving can lose the output a smaller
+		// change keeps (run).
 		if sa, sb := Round9(m0-ma), Round9(m0-mb); sa != sb {
 			return sa > sb
 		}

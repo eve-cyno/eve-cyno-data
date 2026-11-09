@@ -108,3 +108,47 @@ func TestSolve_RepairKeepsEqualNeedOutputRaiser(t *testing.T) {
 		require.GreaterOrEqual(t, res.Result.DPS, 0.98*150, kind)
 	}
 }
+
+// Downgrade with a DPS gate of 90 %. Three 1001 guns draw 150 MW of 100 MW. Swapping one gun
+// for a 1003 saves 12 MW and loses 0.5 DPS; for a 1004 it saves 17 MW and loses 30 DPS. The
+// gate is met by three 1003s only; the most-saved rule would take 1004s and end below it.
+func TestSolve_DowngradeWithGatesKeepsLossPerUnitRule(t *testing.T) {
+	pg := func(v float64) map[int]float64 { return map[int]float64{attrPGNeed: v} }
+	sub := fakeSubset(
+		gun(1000, 1, 0, 10, rare(pg(10))),
+		gun(1001, 2, 5, 50, rare(pg(10))),
+		gun(1002, 1, 4, 50, pg(130.0/3)),
+		gun(1003, 1, 3, 49.5, pg(130.0/3-12)),
+		gun(1004, 1, 2, 20, pg(130.0/3-17)),
+	)
+	res := fakeSolve(t, sub, Request{Kind: KindDowngrade, Fit: highFit(1001, 1001, 1001), Skills: poor, Policy: fixPolicy(gateIs(StatDPS, 90))})
+	require.NotEqual(t, StatusNoCandidate, res.Status)
+	require.Equal(t, []int{1003, 1003, 1003}, highTypes(res.Fit))
+}
+
+// A Downgrade without gates repairs by the most of the binding saved. Three 1001 guns draw
+// 135 MW of 100 MW. The greedy run (1003 saves the most powergrid, 38 MW, but needs 45 CPU)
+// ends without an accepted fit; the run with the loss per unit rule finds one, and the solve
+// must return it.
+func TestSolve_DowngradeRetriesWhenTheGreedyRunEndsUnaccepted(t *testing.T) {
+	pgcpu := func(pg, cpu float64) map[int]float64 { return map[int]float64{attrPGNeed: pg, attrCPUNeed: cpu} }
+	sub := fakeSubset(
+		gun(1000, 1, 0, 10, rare(pgcpu(27, 60))),
+		gun(1001, 2, 5, 50, rare(pgcpu(45, 20))),
+		gun(1002, 1, 4, 37, pgcpu(42, 24)),
+		gun(1003, 1, 3, 11, pgcpu(7, 45)),
+		gun(1004, 1, 2, 41, pgcpu(54, 17)),
+	)
+	c := NewCatalog(sub)
+	r := Request{Kind: KindDowngrade, Fit: highFit(1001, 1001, 1001), Skills: poor, Policy: fixPolicy(nil)}
+	run := func(h *hooks) *Result {
+		res, err := solve(context.Background(), c, &fakeEngine{store: c.Store(), workers: 1}, r, h)
+		require.NoError(t, err)
+		return res
+	}
+	greedy := run(&hooks{noRetry: true})
+	require.Equal(t, StatusNoCandidate, greedy.Status, "the scenario must end the greedy run unaccepted")
+	res := run(nil)
+	require.NotEqual(t, StatusNoCandidate, res.Status)
+	require.True(t, res.Result.Valid)
+}
