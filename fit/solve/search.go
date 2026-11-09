@@ -1074,8 +1074,12 @@ func (s *search) hasEffect(c Candidate, e int) bool {
 }
 
 // repairCands are the single changes of line i worth evaluating for binding b: the other
-// usable candidates, without those that cannot lower it (a higher or equal base load, another slot
-// group, a non-weapon line for a hardpoint).
+// usable candidates, without those that cannot lower it (a higher base load, another slot
+// group, a non-weapon line for a hardpoint). An equal base need stays: a module with the same
+// need can raise the ship's output (a Co-Processor has CPU need 0 and a cpuMultiplier; a
+// Reactor Control Unit or Power Diagnostic System has PG need 0 and raises the PG output). No
+// cheaper exact rule keeps them: the output is an effect of the whole fit, not an attribute
+// of the line.
 func (s *search) repairCands(i int, cur *probe, b bindKey) []Candidate {
 	ln := &s.lines[i]
 	now := cur.asg[i]
@@ -1087,15 +1091,15 @@ func (s *search) repairCands(i int, cur *probe, b bindKey) []Candidate {
 		keep := true
 		switch b.code {
 		case fit.CodeCPUOver:
-			keep = ln.ref.Slot != SlotDrone && s.baseAttr(c, attrCPUNeed) < s.baseAttr(now, attrCPUNeed)
+			keep = ln.ref.Slot != SlotDrone && s.baseAttr(c, attrCPUNeed) <= s.baseAttr(now, attrCPUNeed)
 		case fit.CodePGOver:
-			keep = ln.ref.Slot != SlotDrone && s.baseAttr(c, attrPGNeed) < s.baseAttr(now, attrPGNeed)
+			keep = ln.ref.Slot != SlotDrone && s.baseAttr(c, attrPGNeed) <= s.baseAttr(now, attrPGNeed)
 		case fit.CodeCalibrationOver:
-			keep = ln.ref.Slot == SlotRig && s.baseAttr(c, attrCalibrationCost) < s.baseAttr(now, attrCalibrationCost)
+			keep = ln.ref.Slot == SlotRig && s.baseAttr(c, attrCalibrationCost) <= s.baseAttr(now, attrCalibrationCost)
 		case CodeDroneBayOver:
-			keep = ln.ref.Slot == SlotDrone && s.baseAttr(c, attrVolume) < s.baseAttr(now, attrVolume)
+			keep = ln.ref.Slot == SlotDrone && s.baseAttr(c, attrVolume) <= s.baseAttr(now, attrVolume)
 		case CodeDroneBandwidthOver:
-			keep = ln.ref.Slot == SlotDrone && s.baseAttr(c, attrDroneBandwidth) < s.baseAttr(now, attrDroneBandwidth)
+			keep = ln.ref.Slot == SlotDrone && s.baseAttr(c, attrDroneBandwidth) <= s.baseAttr(now, attrDroneBandwidth)
 		case fit.CodeSlotOverflow:
 			keep = c.Empty() && slotKeyOf(ln.ref.Slot) == b.slot
 		case fit.CodeTurretHardpointOver:
