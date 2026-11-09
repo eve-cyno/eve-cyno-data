@@ -10,8 +10,10 @@ import (
 // T5.6). Candidates (candidates.go) gives each line its family on the target hull; this file
 // adds what depends on the target as a whole, so the search can meet it:
 //
-//   - the fit's own hull: the identity map, a usable line keeps its module (under all V
-//     the original comes back with 0 changes);
+//   - the fit's own hull: searched as a Fix (each line its written module and its family;
+//     improve leaves unchanged lines alone once the fit is accepted), so under all V the
+//     original comes back with 0 changes, and under a pilot it does not suit only the
+//     lines repair must move change;
 //   - a T3 target other than the fit's own hull: no subsystems to use, no_candidate;
 //   - T3 subsystems on another hull: dropped (Candidates offers only the empty slot);
 //   - slot counts and hardpoints: lines map group by group in their written order; when
@@ -103,25 +105,23 @@ func (s *search) convertLines() (*NoCandidate, error) {
 	return nil, nil
 }
 
-// ownHullLines is the identity map: a usable line keeps its module and charge, an unusable
-// one gets the refit-rule candidates (Candidates on the same hull).
+// ownHullLines maps the lines onto the fit's own hull: each line offers its written module
+// and charge (when usable) and the Candidates of its family on that hull. The search treats
+// the own hull as a Fix does (search.fixLike): once the fit is accepted, improve leaves the
+// unchanged lines alone, so a fit that suits the pilot comes back as written, and one that
+// does not changes only the lines repair moves.
 func (s *search) ownHullLines() {
 	f := s.req.Fit
 	o := Options{Kind: KindConvert, Skills: s.req.Skills, Policy: s.pol, TargetHull: f.HullID}
 	for _, g := range slotGroups {
 		for i, m := range *g.mods(&f) {
 			ref := LineRef{Slot: g.slot, Index: i}
-			orig := Candidate{TypeID: m.TypeID, ChargeID: m.ChargeID, Qty: m.Qty}
-			var cs []Candidate
-			switch {
-			case !s.cat.Has(m.TypeID):
-				cs = []Candidate{{}}
-			case s.usable(orig):
-				cs = []Candidate{orig}
-			default:
-				cs = s.cat.Candidates(f, ref, o)
+			if !s.cat.Has(m.TypeID) {
+				s.addLine(ref, m, []Candidate{{}}) // a type outside the subset is never kept
+				continue
 			}
-			s.addLine(ref, m, cs)
+			orig := Candidate{TypeID: m.TypeID, ChargeID: m.ChargeID, Qty: m.Qty}
+			s.addLine(ref, m, append([]Candidate{orig}, s.cat.Candidates(f, ref, o)...))
 		}
 	}
 }

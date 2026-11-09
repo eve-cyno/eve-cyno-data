@@ -60,6 +60,33 @@ func TestConvert_OwnHullNoChange(t *testing.T) {
 	}
 }
 
+// On its own hull under a pilot the written fit does not suit, a Convert repairs it as a Fix
+// would: only the lines it must change move, and the rest stay as written.
+func TestConvert_OwnHullRepairs(t *testing.T) {
+	c := realCatalog(t)
+	p := e3aProfiles(t)["fitIII"]
+	for _, ref := range []int{1, 5} { // both invalid as written under fitIII
+		f := refFit(t, c, ref)
+		res := convertSolve(t, c, f, f.HullID, p)
+		require.False(t, res.Baseline.Flown.Valid, "ref %d", ref)
+		require.Contains(t, []Status{StatusOK, StatusOKWithDowngrades}, res.Status, "ref %d", ref)
+		require.True(t, res.Result.Valid, "ref %d", ref)
+		require.NotEmpty(t, res.Changes, "ref %d", ref)
+
+		fix, err := Solve(context.Background(), c, NewEngineEvaluator(gofa.New(c.Store()), 4),
+			Request{Kind: KindRefit, Fit: f, Skills: p})
+		require.NoError(t, err)
+		lines := func(cs []LineChange) []LineRef {
+			out := []LineRef{}
+			for _, ch := range cs {
+				out = append(out, LineRef{Slot: ch.Group, Index: ch.Index})
+			}
+			return out
+		}
+		require.Equal(t, lines(fix.Changes), lines(res.Changes), "ref %d: the lines a Fix changes, no others", ref)
+	}
+}
+
 // Weapons are capped by the target's hardpoints and lines by its slots; the search drops
 // the line whose loss is least.
 func TestConvert_HardpointsCap(t *testing.T) {

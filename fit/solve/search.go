@@ -1131,13 +1131,19 @@ func (s *search) repairBetter(cur *probe, m0 float64, a *probe, ma float64, b *p
 // that ranks better than the current fit is taken. It repeats until a full round takes
 // nothing or the cap ends it. A Fix ranks fewest changed lines first, so with an accepted
 // current fit it only tries lines it already changes.
+// fixLike: a Fix, or a Convert onto the fit's own hull. Once the current fit is accepted,
+// improve tries only the lines it has changed.
+func (s *search) fixLike() bool {
+	return s.kind == KindRefit || (s.kind == KindConvert && s.hull == s.req.Fit.HullID)
+}
+
 func (s *search) improve(cur *probe) error {
 	for !s.capped {
 		took := false
 		for i := range s.lines {
 			ln := &s.lines[i]
 			now := cur.asg[i]
-			if s.kind == KindRefit && cur.accepted() && now == ln.orig {
+			if s.fixLike() && cur.accepted() && now == ln.orig {
 				continue
 			}
 			var batch [][]Candidate
