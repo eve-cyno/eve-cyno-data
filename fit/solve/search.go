@@ -2,7 +2,6 @@ package solve
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"math"
 	"sort"
@@ -1257,7 +1256,12 @@ func (s *search) noCandidate() *NoCandidate {
 
 // Catalog helpers of the search.
 
+// typeName is the type's name, "" for 0 (no module, no charge; the SDE's type 0 is
+// "#System") and for a type outside the subset.
 func (c *Catalog) typeName(id int) string {
+	if id == 0 {
+		return ""
+	}
 	if t := c.types[id]; t != nil {
 		return t.name
 	}
@@ -1269,8 +1273,3 @@ func (c *Catalog) isShip(id int) bool {
 	t := c.types[id]
 	return t != nil && t.category == 6
 }
-
-// errConvert is returned until convert.go maps the lines of a Convert.
-var errConvert = errors.New("solve: convert is not available")
-
-func (s *search) convertLines() (*NoCandidate, error) { return nil, errConvert }
