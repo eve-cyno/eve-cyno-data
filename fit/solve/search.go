@@ -277,8 +277,9 @@ type line struct {
 	mod   fit.FitModule // the line as written: name, state
 	orig  Candidate     // the written choice
 	cands []Candidate   // usable candidates, canonical order (orig first when usable)
-	// sym names the lines that evaluate alike: same slot group, written choice and candidate
-	// list. Two lines of one sym that hold the same choice are interchangeable (the engine does
+	// sym names the lines that evaluate alike: same slot group, module state, written choice
+	// and candidate list (an offline line draws its load but adds no output, so it is no twin of
+	// an online one). Two lines of one sym that hold the same choice are interchangeable (the engine does
 	// not read the order of equal modules), so a round evaluates a change on one of them only.
 	sym string
 }
@@ -561,7 +562,7 @@ func (s *search) addLine(ref LineRef, m fit.FitModule, cs []Candidate) {
 		ln.cands = append(ln.cands, c)
 	}
 	sort.SliceStable(ln.cands, func(i, j int) bool { return s.candLess(ln.orig, ln.cands[i], ln.cands[j]) })
-	ln.sym = ln.ref.Slot + "|" + asgKey([]Candidate{ln.orig}) + "|" + asgKey(ln.cands)
+	ln.sym = ln.ref.Slot + "|" + m.State + "|" + asgKey([]Candidate{ln.orig}) + "|" + asgKey(ln.cands)
 	if s.hooks != nil && s.hooks.noSym {
 		ln.sym = strconv.Itoa(len(s.lines))
 	}
