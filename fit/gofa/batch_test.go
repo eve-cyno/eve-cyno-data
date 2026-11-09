@@ -220,3 +220,21 @@ func BenchmarkEvaluate(b *testing.B) {
 		})
 	}
 }
+
+// L4: next clears the slot it pops, as cancelQueued does for the units it drops, so the
+// queue's backing array holds no finished unit (and its call, fit and results).
+func TestPool_NextClearsPoppedSlot(t *testing.T) {
+	p := &Pool{}
+	p.cond = sync.NewCond(&p.mu)
+	inter := []*unit{{}, {}}
+	jobs := []*unit{{}, {}}
+	p.inter, p.jobs = inter, jobs
+	u, ok := p.next()
+	require.True(t, ok)
+	require.NotNil(t, u)
+	require.Nil(t, inter[0], "interactive slot cleared")
+	require.NotNil(t, inter[1])
+	p.next()
+	p.next()
+	require.Nil(t, jobs[0], "job slot cleared")
+}

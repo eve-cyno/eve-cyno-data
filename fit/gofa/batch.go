@@ -196,10 +196,10 @@ func (p *Pool) next() (u *unit, ok bool) {
 	for {
 		switch {
 		case len(p.inter) > 0:
-			u, p.inter = p.inter[0], p.inter[1:]
+			u, p.inter[0], p.inter = p.inter[0], nil, p.inter[1:]
 			return u, true
 		case len(p.jobs) > 0:
-			u, p.jobs = p.jobs[0], p.jobs[1:]
+			u, p.jobs[0], p.jobs = p.jobs[0], nil, p.jobs[1:]
 			return u, true
 		case p.closed:
 			return nil, false
