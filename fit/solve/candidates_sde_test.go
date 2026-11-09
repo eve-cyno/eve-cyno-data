@@ -10,10 +10,9 @@ import (
 	"eve-cyno.dev/go/data/sde/sdetest"
 )
 
-// The plan's example on the pinned build: HML II's candidates hold no Faction, Storyline or
-// Officer launcher; a Caldari Navy line keeps its own type and may take the other Faction
-// launcher of its meta group.
-func TestCandidates_AllowedMetaGroups_RealSDE(t *testing.T) {
+// Owner ruling 2026-11-09 on the pinned build: the candidates of HML II hold Faction,
+// Storyline and Officer launchers too, Officer last of the launchers, and the cap holds.
+func TestCandidates_AnyMetaGroup_RealSDE(t *testing.T) {
 	s, err := realsde.Open(sdetest.Path(t))
 	if err != nil || !s.Available() {
 		sdetest.Skip(t, "data/sde/sde.sqlite not available; skipping real-SDE test")
@@ -31,13 +30,24 @@ func TestCandidates_AllowedMetaGroups_RealSDE(t *testing.T) {
 	got := c.Candidates(f, hi0, o)
 	require.Equal(t, t2, got[0].TypeID)
 	require.LessOrEqual(t, len(got), MaxCandidates)
+	groups := map[int]bool{}
+	seenOfficer := false
 	for _, cd := range got[1:] {
 		if cd.Empty() {
 			continue
 		}
-		require.Contains(t, []int{MetaTech1, MetaTech2}, c.MetaGroup(cd.TypeID), "type %d", cd.TypeID)
 		require.True(t, c.Published(cd.TypeID))
+		require.NotEqual(t, MetaAbyssal, c.MetaGroup(cd.TypeID))
+		groups[c.MetaGroup(cd.TypeID)] = true
+		if c.IsOfficer(cd.TypeID) {
+			seenOfficer = true
+		} else {
+			require.False(t, seenOfficer, "type %d follows an Officer type", cd.TypeID)
+		}
 	}
+	t.Logf("HML II candidates: %d, meta groups %v, officer %v", len(got), groups, seenOfficer)
+	require.True(t, groups[4] || groups[3] || groups[6], "Faction, Storyline or Deadspace launchers are offered: %v", groups)
+	require.Equal(t, 0, got[len(got)-1].TypeID, "empty slot last")
 
 	f.High[0].TypeID = navy
 	got = c.Candidates(f, hi0, o)
@@ -46,5 +56,6 @@ func TestCandidates_AllowedMetaGroups_RealSDE(t *testing.T) {
 	for _, cd := range got {
 		all = append(all, cd.TypeID)
 	}
-	require.Contains(t, all, dread, "same meta group as the original")
+	require.Contains(t, all, t2, "Tech II is offered to a Faction line")
+	_ = dread
 }

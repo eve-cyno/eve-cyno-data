@@ -62,6 +62,9 @@ func TestNoCandidate_ImpossibleCase(t *testing.T) {
 	require.Empty(t, rep.Closest)
 }
 
+// The reports below run on techCatalog (Tech I and Tech II modules only, the candidate universe
+// before the 2026-11-09 rulings): the wider universe solves these fixtures.
+//
 // The reference fits under the eight E3a profiles with the fallback policy never end
 // no_candidate with gate-passing candidates over the powergrid (scanned 2026-11-09 on build
 // 3670638_20261104: every no_candidate pair is a hull the profile cannot fly, or candidates
@@ -70,8 +73,9 @@ func TestNoCandidate_ImpossibleCase(t *testing.T) {
 // Armor Repairer I and 200mm Steel Plates I, under profile fitIII, with the policy
 // DPS and EHP at 100 % of B2. Frozen numbers: B2 DPS 92.03, EHP 5860.18, invalid; the
 // original passes the gates and breaks the powergrid only, load 52.19 MW of 47.15 MW (short
-// by 5.04 MW). The search takes 73 evaluations and keeps 27 gate-passing invalid options; the
-// smallest violation among them is 47.1905 MW of 47.15 MW, short by 0.0405 MW.
+// by 5.04 MW). The search takes 27 evaluations and keeps 5 gate-passing invalid options (73 and
+// 27 before the twin-line and strict base-need pruning of the repair); the smallest violation
+// among them is 47.1905 MW of 47.15 MW, short by 0.0405 MW.
 const pgFixtureEFT = `[Rifter, PG fixture]
 Damage Control I
 Small Armor Repairer I
@@ -98,7 +102,7 @@ func pgFixture(t *testing.T, c *Catalog) Request {
 }
 
 func TestNoCandidate_PowergridBinding(t *testing.T) {
-	c := realCatalog(t)
+	c := techCatalog(t)
 	res, rep := reportFor(t, c, pgFixture(t, c))
 	require.Nil(t, res.NoCandidate.Hull)
 	require.NotEmpty(t, res.NoCandidate.GatePassingInvalid)
@@ -110,8 +114,8 @@ func TestNoCandidate_PowergridBinding(t *testing.T) {
 	require.InDelta(t, 47.15, b.Capacity, 0.01)
 	require.InDelta(t, 0.0405, b.Over, 0.001)
 	require.InDelta(t, 47.1905, b.Use, 0.001)
-	require.Len(t, res.NoCandidate.GatePassingInvalid, 27)
-	require.Equal(t, 73, res.Evaluations)
+	require.Len(t, res.NoCandidate.GatePassingInvalid, 5)
+	require.Equal(t, 27, res.Evaluations)
 	require.Equal(t, "Powergrid short by 0.04 MW", b.Text)
 	require.Contains(t, b.Text, "MW")
 
@@ -137,7 +141,7 @@ func TestNoCandidate_PowergridBinding(t *testing.T) {
 }
 
 func TestNoCandidate_ClosestAtMostTwo(t *testing.T) {
-	c := realCatalog(t)
+	c := techCatalog(t)
 	res, rep := reportFor(t, c, pgFixture(t, c))
 	require.LessOrEqual(t, len(rep.Closest), 2)
 	require.Equal(t, res.NoCandidate.Closest[:len(rep.Closest)], rep.Closest)
@@ -164,7 +168,7 @@ func TestNoCandidate_ClosestAtMostTwo(t *testing.T) {
 // ten lowest skill ids. Cerberus (reference 3) under allIII with a DPS gate at 101 % of Flown:
 // the train names a skill that lifts the missile damage (Warhead Upgrades or Rapid Launch).
 func TestNoCandidate_TrainRanksRelevantSkills(t *testing.T) {
-	c := realCatalog(t)
+	c := techCatalog(t)
 	f := refFit(t, c, 3)
 	r := Request{Kind: KindRefit, Fit: f, Skills: e3aProfiles(t)["allIII"],
 		Policy: Policy{Gates: []Gate{{Stat: StatDPS, AtLeast: 101}}, Baseline: BaselineFlown, AllowT2toT1: true, From: FromRequest}}
@@ -183,7 +187,7 @@ func TestNoCandidate_TrainRanksRelevantSkills(t *testing.T) {
 // pilot's level to the required one, the direct requirements first. The Vexor (reference 2)
 // carries a Medium Capacitor Booster II the droner pilot cannot use.
 func TestNoCandidate_SkillBindingTrains(t *testing.T) {
-	c := realCatalog(t)
+	c := techCatalog(t)
 	f := refFit(t, c, 2)
 	droner := e3aProfiles(t)["droner"]
 	r := Request{Kind: KindRefit, Fit: f, Skills: droner}

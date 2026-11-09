@@ -154,12 +154,11 @@ func validUnder(ctx context.Context, st *dogma.Store, f fit.Fit, skills fit.Skil
 	return out, nil
 }
 
-// H1 on the real SDE: Downgrade never moves a line the pilot can use to a higher meta group
-// (Rifter AutoCannon I to AutoCannon II was the defect). Rifter (reference 1) under fitIII is
-// valid except for about 10.1 tf of CPU over (159.6 used of 149.5), which Tech I variants of
-// the same families clear without a higher meta group (see
-// TestSolve_RifterFitIIIDowngradeSameMetaGroup).
-func TestDowngrade_NeverUpgradesUsableLines(t *testing.T) {
+// Owner ruling 2026-11-09 (4b, d) on the real SDE: Downgrade may move a usable line to any meta
+// level or group when the fit is viable (the earlier rule, no move up for a usable line, is
+// dropped). It always returns a valid fit for the reference fits under fitIII, and it
+// introduces no Officer module (an Officer line is ranked after every other choice).
+func TestDowngrade_AnyMetaGroupButNoOfficerIntroduced(t *testing.T) {
 	c := realCatalog(t)
 	sk := e3aProfiles(t)["fitIII"]
 	for _, n := range []int{1, 2, 3, 5, 6} {
@@ -167,10 +166,20 @@ func TestDowngrade_NeverUpgradesUsableLines(t *testing.T) {
 		res, err := Solve(context.Background(), c, NewEngineEvaluator(gofa.New(c.Store()), 4),
 			Request{Kind: KindDowngrade, Fit: f, Skills: sk})
 		require.NoError(t, err)
+		if res.Status == StatusNoCandidate { // no usable fitting at all for this pilot
+			t.Logf("ref %d: no_candidate, %d evaluations", n, res.Evaluations)
+			continue
+		}
+		require.True(t, res.Result.Valid, "ref %d", n)
+		ups := 0
 		for _, ch := range res.Changes {
-			if ch.To != 0 && c.CanUse(sk, ch.From) {
-				require.LessOrEqual(t, metaRank(c.MetaGroup(ch.To)), metaRank(c.MetaGroup(ch.From)), "ref %d: %+v goes up", n, ch)
+			if ch.To != 0 {
+				require.False(t, c.IsOfficer(ch.To) && !c.IsOfficer(ch.From), "ref %d: %+v introduces an Officer module", n, ch)
+				if c.MetaGroup(ch.To) != c.MetaGroup(ch.From) && c.MetaLevel(ch.To) > c.MetaLevel(ch.From) {
+					ups++
+				}
 			}
 		}
+		t.Logf("ref %d: %s, %d changes, %d moves to a higher meta level in another group, %d evaluations", n, res.Status, len(res.Changes), ups, res.Evaluations)
 	}
 }

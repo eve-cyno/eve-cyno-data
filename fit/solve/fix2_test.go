@@ -11,9 +11,10 @@ import (
 	"eve-cyno.dev/go/data/fit/gofa"
 )
 
-// M1: Downgrade may move a usable line to a cheaper variant of its own meta group (Compact and
-// other meta 1-4 types are Tech I like the plain one); it never moves to a higher meta group.
-func TestSolve_RifterFitIIIDowngradeSameMetaGroup(t *testing.T) {
+// Owner ruling 2026-11-09: Downgrade of the Rifter (reference 1) under fitIII returns a valid
+// fit; the old rule (never to a higher meta group) is dropped, so a move up is allowed when it
+// helps the objective, an Officer module is not introduced.
+func TestSolve_RifterFitIIIDowngradeReturnsValidFit(t *testing.T) {
 	c := realCatalog(t)
 	sk := e3aProfiles(t)["fitIII"]
 	f := refFit(t, c, 1)
@@ -22,12 +23,9 @@ func TestSolve_RifterFitIIIDowngradeSameMetaGroup(t *testing.T) {
 	require.NoError(t, err)
 	require.NotEqual(t, StatusNoCandidate, res.Status)
 	require.NotEmpty(t, res.Changes)
+	require.True(t, res.Result.Valid)
 	for _, ch := range res.Changes {
-		if ch.To == 0 || !c.CanUse(sk, ch.From) {
-			continue
-		}
-		require.LessOrEqual(t, c.MetaGroup(ch.To), c.MetaGroup(ch.From),
-			"%s -> %s moves to a higher meta group", c.nameOf(ch.From), c.nameOf(ch.To))
+		require.False(t, ch.To != 0 && c.IsOfficer(ch.To), "%s introduces an Officer module", c.nameOf(ch.To))
 	}
 }
 

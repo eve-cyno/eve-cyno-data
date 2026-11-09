@@ -25,10 +25,15 @@ const (
 // included).
 const MaxCandidates = 12
 
-// Meta groups (invMetaGroups) the solver treats by name.
+// Meta groups (invMetaGroups) the solver treats by name. Any meta group may be a candidate
+// (owner ruling 2026-11-09); Tech II is tried first and Officer last and warned.
 const (
-	MetaTech1 = 1
-	MetaTech2 = 2
+	MetaTech1   = 1
+	MetaTech2   = 2
+	MetaOfficer = 5
+	// MetaAbyssal types are the placeholders of mutated modules: they cannot be bought or
+	// flown as such, so they are never candidates (the "unflyable" exclusion of the rulings).
+	MetaAbyssal = 15
 )
 
 // Attribute and effect ids read here (SDE dogma ids).
@@ -189,10 +194,6 @@ func (c *Catalog) CanUse(skills fit.SkillProfile, id int) bool {
 	return fit.CanUse(context.Background(), c.store, skills, id).OK
 }
 
-// AllowedMeta reports whether the solver may introduce a type of meta group m on a line whose
-// original has meta group orig: Tech I, Tech II, or the original's own meta group.
-func AllowedMeta(m, orig int) bool { return m == MetaTech1 || m == MetaTech2 || m == orig }
-
 // Change is one line replaced: From and To are type ids, To 0 for an emptied line.
 type Change struct {
 	Line     LineRef
@@ -235,16 +236,24 @@ func lineModule(f fit.Fit, ref LineRef) (fit.FitModule, bool) {
 	return g[ref.Index], true
 }
 
+// IsOfficer reports whether the type is an Officer module (meta group 5).
+func (c *Catalog) IsOfficer(id int) bool { return id != 0 && c.MetaGroup(id) == MetaOfficer }
+
+// metaTier orders the candidates after "keep": Tech II (0), the rest (1), Officer (2).
+func (c *Catalog) metaTier(id int) int {
+	switch c.MetaGroup(id) {
+	case MetaTech2:
+		return 0
+	case MetaOfficer:
+		return 2
+	}
+	return 1
+}
+
 // metaBefore is the candidate order after "keep": Tech II first, then the rest by meta level
-// from high to low, then type id.
+// from high to low, then type id; Officer types come last of all.
 func (c *Catalog) metaBefore(a, b int) bool {
-	ta, tb := 1, 1
-	if c.MetaGroup(a) == MetaTech2 {
-		ta = 0
-	}
-	if c.MetaGroup(b) == MetaTech2 {
-		tb = 0
-	}
+	ta, tb := c.metaTier(a), c.metaTier(b)
 	if ta != tb {
 		return ta < tb
 	}
@@ -314,13 +323,19 @@ func (c *Catalog) prefilter(hull int, orig, cand *typeInfo) bool {
 }
 
 // Candidates returns the ordered candidates of one line. The original comes first, then its
-// variants in the order Tech II, then by meta level from high to low, then type id; the empty
-// slot comes last. At most MaxCandidates. A line that does not exist gives nil.
+// variants in the order Tech II, then by meta level from high to low, then type id, Officer
+// types after all others; the empty slot comes last. At most MaxCandidates. A line that does
+// not exist gives nil.
 //
-// Refit and Downgrade: the original's meta variants (same parent family, same slot, published,
-// in the subset, usable, in an allowed meta group). Convert: the family rule (group and
-// effect list, any size) ranked by powergrid against the target hull, with rigs mapped by
-// rig size. Rigs stay as they are unless Policy.AllowRigChanges; subsystems never change.
+// Refit and Downgrade: the original's variants of any meta level and meta group but Abyssal (same parent
+// family, same slot, published, in the subset, usable by the pilot, allowed on the hull).
+// Policy.AllowT2toT1 is ignored. Convert: the family rule (group and effect list, any size)
+// ranked by powergrid against the target hull, with rigs mapped by rig size. Rigs stay as
+// they are unless Policy.AllowRigChanges; subsystems never change.
+//
+// Every variant is usable by construction, and the cap of MaxCandidates cuts the ordered
+// list of usable variants, so the cap never leaves a line without a usable candidate when one
+// exists.
 func (c *Catalog) Candidates(f fit.Fit, ref LineRef, o Options) []Candidate {
 	m, ok := lineModule(f, ref)
 	if !ok {
@@ -355,22 +370,13 @@ func (c *Catalog) Candidates(f fit.Fit, ref LineRef, o Options) []Candidate {
 		root = orig.parent
 	}
 	var variants []int
-	origUsable := c.CanUse(o.Skills, orig.id)
-	anyUsable := origUsable
+	anyUsable := c.CanUse(o.Skills, orig.id)
 	for _, id := range c.families[root] {
 		t := c.types[id]
-		if id == orig.id || !t.published || t.slot != orig.slot {
-			continue
-		}
-		if !AllowedMeta(t.meta, orig.meta) || !c.eligibleT2T1(orig, t, o.Policy) {
+		if id == orig.id || !t.published || t.slot != orig.slot || t.meta == MetaAbyssal {
 			continue
 		}
 		if !c.CanUse(o.Skills, id) || !c.prefilter(f.HullID, orig, t) {
-			continue
-		}
-		// Downgrade goes down: a line the pilot can use takes a variant of its own meta
-		// group or a lower one, never a higher group (Tech I to Tech II and so on).
-		if o.Kind == KindDowngrade && origUsable && metaRank(t.meta) > metaRank(orig.meta) {
 			continue
 		}
 		variants = append(variants, id)
@@ -385,20 +391,6 @@ func (c *Catalog) Candidates(f fit.Fit, ref LineRef, o Options) []Candidate {
 		return capWithEmpty(out, true)
 	}
 	return capWithEmpty(out, false)
-}
-
-// metaRank orders meta groups for the Downgrade rule: Tech I lowest, then Tech II, then the
-// rarer groups by their invMetaGroups id (Tech III, 14, ranks with Tech II).
-func metaRank(m int) int {
-	if m == 14 {
-		return MetaTech2
-	}
-	return m
-}
-
-// eligibleT2T1 applies allowT2toT1 = false: a Tech II line never takes a Tech I type.
-func (c *Catalog) eligibleT2T1(orig, cand *typeInfo, p Policy) bool {
-	return p.AllowT2toT1 || orig.meta != MetaTech2 || cand.meta != MetaTech1
 }
 
 // capWithEmpty caps the list at MaxCandidates, keeping room for the empty slot.
@@ -449,7 +441,7 @@ func (c *Catalog) convertCandidates(src fit.Fit, ref LineRef, orig *typeInfo, ke
 			if !t.published && id != orig.id {
 				continue
 			}
-			if id != orig.id && (!AllowedMeta(t.meta, orig.meta) || !c.eligibleT2T1(orig, t, o.Policy) || !c.CanUse(o.Skills, id)) {
+			if id != orig.id && (t.meta == MetaAbyssal || !c.CanUse(o.Skills, id)) {
 				continue
 			}
 			got, has := t.attrs[attrRigSize]
@@ -499,7 +491,7 @@ func (c *Catalog) convertCandidates(src fit.Fit, ref LineRef, orig *typeInfo, ke
 	for _, id := range c.shapes[shapeKey(orig)] {
 		t := c.types[id]
 		if id != orig.id {
-			if !t.published || !AllowedMeta(t.meta, orig.meta) || !c.eligibleT2T1(orig, t, o.Policy) || !c.CanUse(o.Skills, id) {
+			if !t.published || t.meta == MetaAbyssal || !c.CanUse(o.Skills, id) {
 				continue
 			}
 		}
@@ -513,6 +505,9 @@ func (c *Catalog) convertCandidates(src fit.Fit, ref LineRef, orig *typeInfo, ke
 		ds[id] = dist(id)
 	}
 	sort.Slice(ids, func(i, j int) bool {
+		if oi, oj := c.IsOfficer(ids[i]), c.IsOfficer(ids[j]); oi != oj {
+			return oj // Officer types last
+		}
 		if ds[ids[i]] != ds[ids[j]] {
 			return ds[ids[i]] < ds[ids[j]]
 		}

@@ -704,7 +704,11 @@ func TestEngineEvaluator_EqualsFull(t *testing.T) {
 var (
 	realOnce sync.Once
 	realCat  *Catalog
+	realSub  *dogma.Subset
 	realErr  error
+
+	t12Once sync.Once
+	t12Cat  *Catalog
 )
 
 // realCatalog is the catalog over the subset of the pinned SDE, built once per test binary.
@@ -727,6 +731,7 @@ func realCatalog(t testing.TB) *Catalog {
 			realErr = err
 			return
 		}
+		realSub = sub
 		realCat = NewCatalog(sub)
 	})
 	if realErr != nil {
@@ -767,4 +772,57 @@ func e3aProfiles(t testing.TB) map[string]fit.SkillProfile {
 		out[id] = sp
 	}
 	return out
+}
+
+// techCatalog is the real catalog without the modules of any meta group but Tech I and Tech II:
+// the candidate universe of the rule before the 2026-11-09 rulings. The report tests use it for
+// no_candidate scenarios that the wider candidate set now solves. Charges, drones and hulls are
+// kept.
+func techCatalog(t testing.TB) *Catalog {
+	t.Helper()
+	realCatalog(t)
+	t12Once.Do(func() {
+		sub := &dogma.Subset{Format: realSub.Format, SDEVersion: realSub.SDEVersion, Effects: realSub.Effects, Attributes: realSub.Attributes}
+		for _, ty := range realSub.Types {
+			if ty.Category == 7 && ty.MetaGroup > 2 {
+				continue
+			}
+			sub.Types = append(sub.Types, ty)
+		}
+		t12Cat = NewCatalog(sub)
+	})
+	return t12Cat
+}
+
+// Interchangeable lines (same group, written module and candidates) are evaluated once per
+// round of repair and improve. The result equals the one with every line evaluated, and the
+// evaluations fall.
+func TestSolve_InterchangeableLinesEvaluatedOnce(t *testing.T) {
+	cpu := func(v float64) map[int]float64 { return map[int]float64{attrCPUNeed: v} }
+	sub := fakeSubset(
+		gun(1000, 1, 0, 10, cpu(50)),
+		gun(1001, 2, 5, 50, cpu(50)),
+		gun(1002, 1, 4, 45, cpu(40)),
+		gun(1003, 1, 3, 40, cpu(30)),
+		gun(1004, 1, 2, 30, cpu(20)),
+	)
+	c := NewCatalog(sub)
+	f := highFit(1001, 1001, 1001) // 150 CPU of 100
+	for _, kind := range []Kind{KindRefit, KindDowngrade} {
+		r := Request{Kind: kind, Fit: f, Skills: poor, Policy: fixPolicy(nil)}
+		run := func(h *hooks) *Result {
+			res, err := solve(context.Background(), c, &fakeEngine{store: c.Store(), workers: 2}, r, h)
+			require.NoError(t, err)
+			return res
+		}
+		with, without := run(nil), run(&hooks{noSym: true})
+		require.NotEqual(t, StatusNoCandidate, with.Status)
+		require.True(t, with.Result.Valid)
+		require.Less(t, with.Evaluations, without.Evaluations, "%s", kind)
+		t.Logf("%s: %d evaluations, %d without the twin rule", kind, with.Evaluations, without.Evaluations)
+		with.Evaluations = without.Evaluations
+		a, _ := json.Marshal(with)
+		b, _ := json.Marshal(without)
+		require.Equal(t, string(b), string(a), kind)
+	}
 }

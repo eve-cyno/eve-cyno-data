@@ -192,6 +192,7 @@ func SignedPercent(cand, base float64) (string, bool) {
 type Rank struct {
 	Changed    int     `json:"changed"`    // changed module lines
 	Downgrades int     `json:"downgrades"` // changes that are downgrades
+	Officers   int     `json:"officers"`   // lines holding an Officer module (meta group 5)
 	Objective  float64 `json:"objective"`
 	Price      float64 `json:"price"`
 	HasPrice   bool    `json:"hasPrice"` // false: no price known; ranks after any priced result
@@ -221,14 +222,16 @@ func cmpFloat(a, b float64) int {
 
 // Better reports whether a ranks strictly before b.
 //
-// Fix (refit): fewest changed lines, fewest downgrades, highest objective, lowest price,
-// type ids in line order. Downgrade and Convert: highest objective first, then the same
-// list. A result with a known price ranks before one without; two priced results rank by
+// Fix (refit): fewest changed lines, fewest downgrades, fewest Officer lines, highest
+// objective, lowest price, type ids in line order. Downgrade and Convert: fewest Officer lines,
+// highest objective, then fewest changed lines, fewest downgrades, lowest price, type ids.
+// (An Officer module is avoided unless viability or the gates need it.) A result with a known price ranks before one without; two priced results rank by
 // price.
 func Better(k Kind, a, b Rank) bool {
 	steps := []func() int{
 		func() int { return cmpInt(a.Changed, b.Changed) },
 		func() int { return cmpInt(a.Downgrades, b.Downgrades) },
+		func() int { return cmpInt(a.Officers, b.Officers) },
 		func() int { return -cmpFloat(a.Objective, b.Objective) },
 		func() int {
 			// A total order: a priced result before an unpriced one, then the lower price.
@@ -254,7 +257,8 @@ func Better(k Kind, a, b Rank) bool {
 		},
 	}
 	if k != KindRefit {
-		steps = append([]func() int{steps[2]}, append(steps[:2:2], steps[3:]...)...)
+		// officers, objective, then changed, downgrades, price, type ids
+		steps = append([]func() int{steps[2], steps[3]}, append(steps[:2:2], steps[4:]...)...)
 	}
 	for _, s := range steps {
 		if c := s(); c != 0 {

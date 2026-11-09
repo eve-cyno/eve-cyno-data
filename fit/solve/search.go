@@ -263,6 +263,9 @@ type hooks struct {
 	shuffle func(line int, cs []Candidate)
 	// probe sees every evaluated candidate fit.
 	probe func(p *probe)
+	// noSym gives every line its own sym, so every line is evaluated (the reference run of the
+	// interchangeable-lines test).
+	noSym bool
 }
 
 // line is one line of the fit the search changes.
@@ -271,6 +274,10 @@ type line struct {
 	mod   fit.FitModule // the line as written: name, state
 	orig  Candidate     // the written choice
 	cands []Candidate   // usable candidates, canonical order (orig first when usable)
+	// sym names the lines that evaluate alike: same slot group, written choice and candidate
+	// list. Two lines of one sym that hold the same choice are interchangeable (the engine does
+	// not read the order of equal modules), so a round evaluates a change on one of them only.
+	sym string
 }
 
 func (l *line) has(c Candidate) bool {
@@ -548,6 +555,10 @@ func (s *search) addLine(ref LineRef, m fit.FitModule, cs []Candidate) {
 		ln.cands = append(ln.cands, c)
 	}
 	sort.SliceStable(ln.cands, func(i, j int) bool { return s.candLess(ln.orig, ln.cands[i], ln.cands[j]) })
+	ln.sym = ln.ref.Slot + "|" + asgKey([]Candidate{ln.orig}) + "|" + asgKey(ln.cands)
+	if s.hooks != nil && s.hooks.noSym {
+		ln.sym = strconv.Itoa(len(s.lines))
+	}
 	if s.hooks != nil && s.hooks.shuffle != nil {
 		s.hooks.shuffle(len(s.lines), ln.cands)
 	}
@@ -761,8 +772,8 @@ func uncertainOf(st fit.FitStats) []string {
 const emptyRank = math.MaxInt32
 
 // rankOf is the tie-order view of an assignment: changed lines (type, charge or quantity)
-// against the written fit, downgrades, the objective, the price and the type ids in line
-// order (an empty line as emptyRank). The price counts module and drone lines (type x
+// against the written fit, downgrades, Officer lines, the objective, the price and the type
+// ids in line order (an empty line as emptyRank). The price counts module and drone lines (type x
 // quantity); charges are left out.
 func (s *search) rankOf(asg []Candidate, obj float64) Rank {
 	r := Rank{Objective: obj, TypeIDs: make([]int, len(asg)), HasPrice: len(s.req.Prices) > 0}
@@ -770,6 +781,9 @@ func (s *search) rankOf(asg []Candidate, obj float64) Rank {
 		r.TypeIDs[i] = c.TypeID
 		if c.Empty() {
 			r.TypeIDs[i] = emptyRank
+		}
+		if s.cat.IsOfficer(c.TypeID) {
+			r.Officers++
 		}
 		if c != s.lines[i].orig {
 			r.Changed++
@@ -1053,7 +1067,7 @@ func (s *search) hasEffect(c Candidate, e int) bool {
 }
 
 // repairCands are the single changes of line i worth evaluating for binding b: the other
-// usable candidates, without those that cannot lower it (a higher base load, another slot
+// usable candidates, without those that cannot lower it (a higher or equal base load, another slot
 // group, a non-weapon line for a hardpoint).
 func (s *search) repairCands(i int, cur *probe, b bindKey) []Candidate {
 	ln := &s.lines[i]
@@ -1066,15 +1080,15 @@ func (s *search) repairCands(i int, cur *probe, b bindKey) []Candidate {
 		keep := true
 		switch b.code {
 		case fit.CodeCPUOver:
-			keep = ln.ref.Slot != SlotDrone && s.baseAttr(c, attrCPUNeed) <= s.baseAttr(now, attrCPUNeed)
+			keep = ln.ref.Slot != SlotDrone && s.baseAttr(c, attrCPUNeed) < s.baseAttr(now, attrCPUNeed)
 		case fit.CodePGOver:
-			keep = ln.ref.Slot != SlotDrone && s.baseAttr(c, attrPGNeed) <= s.baseAttr(now, attrPGNeed)
+			keep = ln.ref.Slot != SlotDrone && s.baseAttr(c, attrPGNeed) < s.baseAttr(now, attrPGNeed)
 		case fit.CodeCalibrationOver:
-			keep = ln.ref.Slot == SlotRig && s.baseAttr(c, attrCalibrationCost) <= s.baseAttr(now, attrCalibrationCost)
+			keep = ln.ref.Slot == SlotRig && s.baseAttr(c, attrCalibrationCost) < s.baseAttr(now, attrCalibrationCost)
 		case CodeDroneBayOver:
-			keep = ln.ref.Slot == SlotDrone && s.baseAttr(c, attrVolume) <= s.baseAttr(now, attrVolume)
+			keep = ln.ref.Slot == SlotDrone && s.baseAttr(c, attrVolume) < s.baseAttr(now, attrVolume)
 		case CodeDroneBandwidthOver:
-			keep = ln.ref.Slot == SlotDrone && s.baseAttr(c, attrDroneBandwidth) <= s.baseAttr(now, attrDroneBandwidth)
+			keep = ln.ref.Slot == SlotDrone && s.baseAttr(c, attrDroneBandwidth) < s.baseAttr(now, attrDroneBandwidth)
 		case fit.CodeSlotOverflow:
 			keep = c.Empty() && slotKeyOf(ln.ref.Slot) == b.slot
 		case fit.CodeTurretHardpointOver:
@@ -1108,6 +1122,38 @@ func slotKeyOf(slot string) string {
 	return ""
 }
 
+// cmpCand orders two choices as the tie order does: by the type id of Rank.TypeIDs (an empty
+// line after every type), then charge and quantity.
+func cmpCand(a, b Candidate) int {
+	rid := func(c Candidate) int {
+		if c.Empty() {
+			return emptyRank
+		}
+		return c.TypeID
+	}
+	if d := cmpInt(rid(a), rid(b)); d != 0 {
+		return d
+	}
+	return cmpAsg([]Candidate{a}, []Candidate{b})
+}
+
+// symClasses groups the line indices that are interchangeable under the assignment asg: same
+// sym and same current choice. The groups are in order of their first line; a line is in one.
+func (s *search) symClasses(asg []Candidate) [][]int {
+	byKey := map[string]int{}
+	var out [][]int
+	for i := range s.lines {
+		k := s.lines[i].sym + "|" + asgKey(asg[i:i+1])
+		if j, ok := byKey[k]; ok {
+			out[j] = append(out[j], i)
+			continue
+		}
+		byKey[k] = len(out)
+		out = append(out, []int{i})
+	}
+	return out
+}
+
 // repair takes single changes that lower the binding violation until the fit keeps the
 // hard rule, nothing lowers it, the rounds (2 x lines) run out or the cap ends the search.
 func (s *search) repair(cur *probe) (*probe, error) {
@@ -1118,8 +1164,15 @@ func (s *search) repair(cur *probe) (*probe, error) {
 		}
 		m0 := s.measure(cur, b)
 		var batch [][]Candidate
-		for i := range s.lines {
-			for _, c := range s.repairCands(i, cur, b) {
+		// A change on interchangeable lines gives one result whichever line takes it; the
+		// tie order (type ids in line order) picks the first line when the new choice sorts
+		// before the current one and the last otherwise, so only that line is evaluated.
+		for _, cl := range s.symClasses(cur.asg) {
+			for _, c := range s.repairCands(cl[0], cur, b) {
+				i := cl[len(cl)-1]
+				if cmpCand(c, cur.asg[cl[0]]) < 0 {
+					i = cl[0]
+				}
 				batch = append(batch, with(cur.asg, i, c))
 			}
 		}
@@ -1177,10 +1230,17 @@ func (s *search) fixLike() bool {
 func (s *search) improve(cur *probe) error {
 	for !s.capped {
 		took := false
+		// Interchangeable lines (same sym, same current choice) that were tried since the
+		// current fit last changed took nothing, and so would their twins.
+		tried := map[string]bool{}
 		for i := range s.lines {
 			ln := &s.lines[i]
 			now := cur.asg[i]
 			if s.fixLike() && cur.accepted() && now == ln.orig {
+				continue
+			}
+			twin := ln.sym + "|" + asgKey([]Candidate{now})
+			if tried[twin] {
 				continue
 			}
 			var batch [][]Candidate
@@ -1204,6 +1264,9 @@ func (s *search) improve(cur *probe) error {
 			}
 			if best != nil && s.better(best, cur) {
 				cur, took = best, true
+				tried = map[string]bool{}
+			} else {
+				tried[twin] = true
 			}
 			if s.capped {
 				return nil
