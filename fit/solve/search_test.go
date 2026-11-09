@@ -678,9 +678,10 @@ func TestSolve_ZeroBaselineStat(t *testing.T) {
 	require.Equal(t, StatusNoCandidate, res.Status)
 }
 
-// Repair: each forced pick fits on its own, together they overrun the powergrid. Repair
-// first takes a change that clears the violation, then the least objective loss per MW
-// saved, then the tie order.
+// Repair (Downgrade): each forced pick fits on its own, together they overrun the powergrid.
+// Repair first takes a change that clears the violation, then the change that saves the most
+// MW (fewest changed lines, decision 2026-11-09), then the least objective loss per MW saved,
+// then the tie order.
 func TestSolve_RepairLowersBinding(t *testing.T) {
 	scenario := func(pg1000, pg1001 float64) []int {
 		sub := fakeSubset(
@@ -697,10 +698,11 @@ func TestSolve_RepairLowersBinding(t *testing.T) {
 	// 3 x 1002 = 120 MW of 100. 1000 (-20 MW) clears it on one line; 1003 (-15) does not.
 	// Cleared comes first; the three lines tie, and type ids in line order put 1000 first.
 	require.Equal(t, []int{1000, 1002, 1002}, scenario(20, 30))
-	// 1000 now draws 22 MW: no single change clears the 20 MW. 1003 loses 5 DPS for 15 MW,
-	// 1000 20 DPS for 18 MW: 1003 first (on the last line: type ids in line order), then a
-	// second 1003 clears the rest.
-	require.Equal(t, []int{1002, 1003, 1003}, scenario(22, 20))
+	// 1000 now draws 22 MW: no single change clears the 20 MW. 1000 saves 18 MW (loses 20
+	// DPS), 1003 saves 15 MW (loses 5 DPS): the larger saving comes first (on the first
+	// line: it sorts before the current type), then a 1003 on the last line clears the rest; improve
+	// then trades the changed first line for 1003 (more DPS). Two changed lines, as before.
+	require.Equal(t, []int{1003, 1002, 1003}, scenario(22, 20))
 }
 
 // A hull the pilot cannot fly ends at once: no_candidate with the hull's missing skills.

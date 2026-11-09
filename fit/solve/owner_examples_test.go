@@ -16,16 +16,23 @@ import (
 // that fails on real behaviour goes to review; it is never re-expected here.
 
 const (
-	typeArbalestHML = 8105 // 'Arbalest' Heavy Missile Launcher: Tech I, meta level 4
-	hullVexor       = 626
-	hullThoraxID    = 627
-	hullMyrmidon    = 24700
-	hullBrutix      = 16229
+	typeArbalestHML   = 8105  // 'Arbalest' Heavy Missile Launcher: Tech I, meta level 4
+	typeDominationHML = 13921 // Domination Heavy Missile Launcher: Faction, meta level 7
+	hullVexor         = 626
+	hullThoraxID      = 627
+	hullMyrmidon      = 24700
+	hullBrutix        = 16229
 )
 
 // Fix for a character: Cerberus (reference 3) for the missiler pilot, fallback policy. The
-// Heavy Missile Launcher II lines are unusable (no Heavy Missile Specialization); the pick
-// is the Tech I 'Arbalest' on all six, which keeps DPS and EHP.
+// Heavy Missile Launcher II lines are unusable (no Heavy Missile Specialization).
+//
+// 2026-11-09, owner ruling 4b (any meta level or group when the fit is viable; only an Officer
+// module warns): the pick is now the Faction 'Domination' Heavy Missile Launcher (meta group 4,
+// meta level 7) on all six lines, DPS 223.969 (+3.2 % over the B2 216.970), EHP unchanged. It
+// supersedes the 'Arbalest' pick (8105, Tech I, DPS equal to B2) of the earlier Tech-only
+// candidate rule; that alternative stays valid and is anchored in
+// TestOwnerExample_FixForCharacter_TechOnlyKeepsArbalest.
 func TestOwnerExample_FixForCharacter(t *testing.T) {
 	c := realCatalog(t)
 	f := refFit(t, c, 3)
@@ -33,35 +40,62 @@ func TestOwnerExample_FixForCharacter(t *testing.T) {
 	res, err := Solve(context.Background(), c, NewEngineEvaluator(gofa.New(c.Store()), 4),
 		Request{Kind: KindRefit, Fit: f, Skills: e3aProfiles(t)["missiler"]})
 	require.NoError(t, err)
-	require.Equal(t, StatusOKWithDowngrades, res.Status)
+	require.Equal(t, StatusOK, res.Status)
 	require.Len(t, res.Changes, 6)
 	for _, ch := range res.Changes {
 		require.Equal(t, SlotHigh, ch.Group)
-		require.Equal(t, typeArbalestHML, ch.To)
+		require.Equal(t, typeDominationHML, ch.To)
 		require.NotZero(t, ch.From)
-		require.True(t, ch.Downgrade, "%+v", ch)
+		require.False(t, ch.Downgrade, "%+v", ch)
 	}
-	require.Equal(t, 6, countType(res.Fit.High, typeArbalestHML))
+	require.Equal(t, 4, c.MetaGroup(typeDominationHML), "Faction")
+	require.Equal(t, 6, countType(res.Fit.High, typeDominationHML))
 	require.False(t, res.Baseline.Flown.Valid, "the written fit is not valid for this pilot")
 	require.True(t, res.Result.Valid)
-	require.InDelta(t, res.Baseline.Flown.DPS, res.Result.DPS, 1e-6)
-	require.InDelta(t, 216.970, res.Result.DPS, 5e-4)
-	require.InDelta(t, 50364.1, res.Result.EHP, 0.05)
+	require.InDelta(t, 223.969, res.Result.DPS, 5e-4)
+	require.Greater(t, res.Result.DPS, res.Baseline.Flown.DPS)
+	require.InDelta(t, 216.970, res.Baseline.Flown.DPS, 5e-4)
+	require.InDelta(t, 50364.122, res.Result.EHP, 5e-4)
 	require.InDelta(t, res.Baseline.Flown.EHP, res.Result.EHP, 1e-6)
+	require.True(t, res.Result.CapStable)
 	require.Empty(t, res.Uncertain)
+	require.Empty(t, res.Warnings)
+	require.Equal(t, 79, res.Evaluations)
 
 	// The rest of the fit is unchanged.
 	want := f
 	want.High = append([]fit.FitModule(nil), f.High...)
 	for _, ch := range res.Changes {
-		want.High[ch.Index].TypeID = typeArbalestHML
-		want.High[ch.Index].Name = "'Arbalest' Heavy Missile Launcher"
+		want.High[ch.Index].TypeID = typeDominationHML
+		want.High[ch.Index].Name = res.Fit.High[ch.Index].Name
 	}
 	require.Equal(t, want.High, res.Fit.High)
 	require.Equal(t, f.Mid, res.Fit.Mid)
 	require.Equal(t, f.Low, res.Fit.Low)
 	require.Equal(t, f.Rig, res.Fit.Rig)
 	require.Equal(t, f.Drones, res.Fit.Drones)
+}
+
+// The superseded Tech-I pick stays a valid answer: with only Tech I and Tech II candidates
+// (techCatalog) the same request returns the 'Arbalest' on all six lines, DPS equal to B2.
+func TestOwnerExample_FixForCharacter_TechOnlyKeepsArbalest(t *testing.T) {
+	c := techCatalog(t)
+	f := refFit(t, c, 3)
+	res, err := Solve(context.Background(), c, NewEngineEvaluator(gofa.New(c.Store()), 4),
+		Request{Kind: KindRefit, Fit: f, Skills: e3aProfiles(t)["missiler"]})
+	require.NoError(t, err)
+	require.Equal(t, StatusOKWithDowngrades, res.Status)
+	require.Len(t, res.Changes, 6)
+	for _, ch := range res.Changes {
+		require.Equal(t, typeArbalestHML, ch.To)
+		require.True(t, ch.Downgrade, "%+v", ch)
+	}
+	require.Equal(t, 6, countType(res.Fit.High, typeArbalestHML))
+	require.True(t, res.Result.Valid)
+	require.InDelta(t, res.Baseline.Flown.DPS, res.Result.DPS, 1e-6)
+	require.InDelta(t, 216.970, res.Result.DPS, 5e-4)
+	require.InDelta(t, res.Baseline.Flown.EHP, res.Result.EHP, 1e-6)
+	require.Empty(t, res.Uncertain)
 }
 
 func countType(mods []fit.FitModule, id int) int {

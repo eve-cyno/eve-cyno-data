@@ -273,3 +273,31 @@ func TestCapBaselineTrain_TwoLinesNoDuplicateEvaluation(t *testing.T) {
 	require.NotEmpty(t, train)
 	require.Equal(t, 3, n, "2 singles + 1 pair")
 }
+
+// Decision 2026-11-09 (Downgrade stays minimal): the improve phase of a Downgrade changes only
+// lines the pilot cannot use (or that repair moved); a usable line is never upgraded for the
+// objective. maxChanges are the ceilings of the minimal result.
+func TestDowngrade_MinimalChanges(t *testing.T) {
+	c := realCatalog(t)
+	ev := NewEngineEvaluator(gofa.New(c.Store()), 4)
+	profs := e3aProfiles(t)
+	for _, tc := range []struct{ ref, maxChanges int }{{1, 1}, {5, 4}} {
+		f := refFit(t, c, tc.ref)
+		res, err := Solve(context.Background(), c, ev, Request{Kind: KindDowngrade, Fit: f, Skills: profs["fitIII"]})
+		require.NoError(t, err)
+		t.Logf("ref %d fitIII: %s, %d changes, %d evaluations", tc.ref, res.Status, len(res.Changes), res.Evaluations)
+		require.True(t, res.Result.Valid)
+		require.LessOrEqual(t, len(res.Changes), tc.maxChanges, "ref %d", tc.ref)
+	}
+	// A fit valid as written returns 0 changes.
+	valid := 0
+	for ref := 1; ref <= 6; ref++ {
+		res, err := Solve(context.Background(), c, ev, Request{Kind: KindDowngrade, Fit: refFit(t, c, ref), Skills: profs["allIII"]})
+		require.NoError(t, err)
+		if res.Baseline.Flown.Valid {
+			valid++
+			require.Empty(t, res.Changes, "ref %d valid as written under allIII", ref)
+		}
+	}
+	require.NotZero(t, valid, "some reference fit is valid as written under allIII")
+}

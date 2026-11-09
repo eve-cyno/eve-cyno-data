@@ -1215,6 +1215,13 @@ func (s *search) repairBetter(cur *probe, m0 float64, a *probe, ma float64, b *p
 	if ca != cb {
 		return ca
 	}
+	if s.kind == KindDowngrade || (s.kind == KindConvert && s.hull == s.req.Fit.HullID) {
+		// Minimal repair (decision 2026-11-09): the most of the binding saved by one change
+		// needs the fewest changed lines; the loss per unit saved and the tie order follow.
+		if sa, sb := Round9(m0-ma), Round9(m0-mb); sa != sb {
+			return sa > sb
+		}
+	}
 	la := Round9((cur.verdict.Objective - a.verdict.Objective) / (m0 - ma))
 	lb := Round9((cur.verdict.Objective - b.verdict.Objective) / (m0 - mb))
 	if la != lb {
@@ -1227,10 +1234,11 @@ func (s *search) repairBetter(cur *probe, m0 float64, a *probe, ma float64, b *p
 // that ranks better than the current fit is taken. It repeats until a full round takes
 // nothing or the cap ends it. A Fix ranks fewest changed lines first, so with an accepted
 // current fit it only tries lines it already changes.
-// fixLike: a Fix, or a Convert onto the fit's own hull. Once the current fit is accepted,
-// improve tries only the lines it has changed.
+// fixLike: a Fix, a Downgrade, or a Convert onto the fit's own hull. Once the current fit is
+// accepted, improve tries only the lines it has changed (a Downgrade repairs what the pilot
+// cannot use; it does not upgrade lines the pilot can use, decision 2026-11-09).
 func (s *search) fixLike() bool {
-	return s.kind == KindRefit || (s.kind == KindConvert && s.hull == s.req.Fit.HullID)
+	return s.kind == KindRefit || s.kind == KindDowngrade || (s.kind == KindConvert && s.hull == s.req.Fit.HullID)
 }
 
 func (s *search) improve(cur *probe) error {
