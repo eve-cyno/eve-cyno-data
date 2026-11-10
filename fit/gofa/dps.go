@@ -35,7 +35,7 @@ func chargeDamage(it *Item) (em, exp, kin, therm float64) {
 		it.Attrs[attrThermalDamage]
 }
 
-// computeDPS calculates theoretical DPS and volley for all weapon instances and
+// computeDPS calculates theoretical DPS and volley (weapons and drones apart) for all weapon instances and
 // drones, populating fit.DPSStats and the total volley value.
 //
 // Theoretical DPS (full application, reload time not factored in; values
@@ -58,8 +58,8 @@ func chargeDamage(it *Item) (em, exp, kin, therm float64) {
 //
 // label, when non-nil, names each PerWeapon entry from the module and charge
 // typeIDs; nil keeps the generic "weapon" label.
-func computeDPS(weapons []weaponInstance, drones []*Item, label func(module, charge int) string) (stats fit.DPSStats, totalVolley float64, droneDPS float64) {
-	var weaponDPS, weaponVolley, droneVolley float64
+func computeDPS(weapons []weaponInstance, drones []*Item, label func(module, charge int) string) (stats fit.DPSStats, weaponVolley float64, droneDPS float64, droneVolley float64) {
+	var weaponDPS float64
 
 	for _, w := range weapons {
 		if w.charge == nil {
@@ -110,6 +110,7 @@ func computeDPS(weapons []weaponInstance, drones []*Item, label func(module, cha
 	}
 
 	stats.Theoretical = weaponDPS + droneDPS
-	totalVolley = weaponVolley + droneVolley
-	return stats, totalVolley, droneDPS
+	// The volley is the weapons' alone, like the game's fitting window (M6, fit parity); the
+	// drones' volley is returned separately.
+	return stats, weaponVolley, droneDPS, droneVolley
 }

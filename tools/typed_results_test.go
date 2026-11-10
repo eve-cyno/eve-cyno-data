@@ -250,7 +250,7 @@ func TestTypedResult_ComputeFitStats_DroneFit(t *testing.T) {
 	require.Equal(t, "all-V", c.Basis)
 
 	// Headline numbers as the text prints them.
-	require.Contains(t, res.Text, fmt.Sprintf("DPS %.0f · volley %.0f\n", c.DPS, c.Volley))
+	require.Contains(t, res.Text, fmt.Sprintf("DPS %.0f · drone volley %.0f\n", c.DPS, c.DroneVolley), "a drone boat has no weapon volley (M6)")
 	require.Contains(t, res.Text, fmt.Sprintf("EHP %.0f (shield %.0f, armor %.0f, hull %.0f)", c.Tank.EHP, c.Tank.ShieldEHP, c.Tank.ArmorEHP, c.Tank.HullEHP))
 	require.Contains(t, res.Text, fmt.Sprintf("Speed %.0f m/s (prop on) · align %.1fs · signature %.0f m", c.SpeedMS, c.AlignS, c.SignatureM))
 	require.True(t, c.PropOn)

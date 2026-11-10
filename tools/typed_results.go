@@ -419,14 +419,16 @@ type FitStatCard struct {
 	// Basis is "all-V", or "all-V, default ammo" when the engine loaded ammo.
 	Basis string `json:"basis"`
 	// DPS includes the drones; WeaponDPS and DroneDPS split it.
-	DPS       float64       `json:"dps"`
-	WeaponDPS float64       `json:"weapon_dps"`
-	DroneDPS  float64       `json:"drone_dps"`
-	Volley    float64       `json:"volley"`
-	Weapons   []WeaponGroup `json:"weapons"`
-	Drones    *DroneFlight  `json:"drones"`
-	Tank      TankCard      `json:"tank"`
-	SpeedMS   float64       `json:"speed_ms"`
+	DPS       float64 `json:"dps"`
+	WeaponDPS float64 `json:"weapon_dps"`
+	DroneDPS  float64 `json:"drone_dps"`
+	// Volley is the weapons' alone (the game's fitting window); DroneVolley is the launched drones'.
+	Volley      float64       `json:"volley"`
+	DroneVolley float64       `json:"drone_volley"`
+	Weapons     []WeaponGroup `json:"weapons"`
+	Drones      *DroneFlight  `json:"drones"`
+	Tank        TankCard      `json:"tank"`
+	SpeedMS     float64       `json:"speed_ms"`
 	// PropOn is true when an online afterburner / MWD is part of SpeedMS.
 	PropOn     bool    `json:"prop_on"`
 	AlignS     float64 `json:"align_s"`

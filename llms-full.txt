@@ -288,7 +288,7 @@ Compute the real stats of an EVE Online fit from its EFT text with the dogma eng
 - Arguments:
   - `eft_text` (string, required): Full fitting in EFT format, starting with [Ship Name, Fit Name]. Loaded ammo may be given as 'Module, Charge' lines.
   - `charges` (object): Optional ammo to use instead of the default, as {module name: charge name}, e.g. {"Rocket Launcher II": "Mjolnir Rocket"}. Only for weapons with no charge on their EFT line.
-- Typed result (`result.data`): FitStatCard with fields `hull`, `basis`, `dps`, `weapon_dps`, `drone_dps`, `volley`, `weapons`, `drones`, `tank`, `speed_ms`, `prop_on`, `align_s`, `signature_m`, `cap`, `load`, `no_ammo`, `unresolved_charges`, `unresolved_modules`
+- Typed result (`result.data`): FitStatCard with fields `hull`, `basis`, `dps`, `weapon_dps`, `drone_dps`, `volley`, `drone_volley`, `weapons`, `drones`, `tank`, `speed_ms`, `prop_on`, `align_s`, `signature_m`, `cap`, `load`, `no_ammo`, `unresolved_charges`, `unresolved_modules`
 - Sources: EVE Static Data Export (via Fuzzwork)
 
 ### appraise_items

@@ -63,7 +63,7 @@ func (o StatsOpts) skillLevel(skillTypeID int) int {
 // FitStats is the top-level result produced by a StatsProvider.
 type FitStats struct {
 	DPS        DPSStats
-	Volley     float64
+	Volley     float64 // weapons only (the game's fitting window); drones: Drones.Volley
 	Tank       TankStats
 	Capacitor  CapStats
 	Navigation NavStats
@@ -215,6 +215,7 @@ type TargetStats struct {
 // DroneStats summarises drone DPS and bay/bandwidth usage.
 type DroneStats struct {
 	DPS            float64
+	Volley         float64 // launched drones' volley; FitStats.Volley is the weapons' alone
 	BandwidthUsed  float64
 	BandwidthAvail float64
 	BayUsed        float64

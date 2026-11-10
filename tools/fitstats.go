@@ -175,6 +175,7 @@ func fitStatCard(ctx context.Context, deps *Deps, eft string, charges map[string
 		WeaponDPS:         math.Max(total-drones, 0),
 		DroneDPS:          drones,
 		Volley:            stats.Volley,
+		DroneVolley:       stats.Drones.Volley,
 		Weapons:           weaponGroups(stats, defaultLabels),
 		Drones:            droneFlight(stats, f),
 		Tank:              tankCard(stats),
@@ -287,7 +288,15 @@ func writeDPS(b *strings.Builder, c *FitStatCard) {
 	if c.WeaponDPS >= 0.5 && c.DroneDPS >= 0.5 {
 		fmt.Fprintf(b, " (weapons %.0f, drones %.0f)", c.WeaponDPS, c.DroneDPS)
 	}
-	fmt.Fprintf(b, " · volley %.0f\n", c.Volley)
+	// The volley is the weapons' alone, like the game's fitting window; a drone boat names its drones' volley instead.
+	switch {
+	case c.DroneVolley > 0 && c.Volley > 0:
+		fmt.Fprintf(b, " · volley %.0f · drone volley %.0f\n", c.Volley, c.DroneVolley)
+	case c.DroneVolley > 0:
+		fmt.Fprintf(b, " · drone volley %.0f\n", c.DroneVolley)
+	default:
+		fmt.Fprintf(b, " · volley %.0f\n", c.Volley)
+	}
 
 	for _, g := range c.Weapons {
 		suffix := ""

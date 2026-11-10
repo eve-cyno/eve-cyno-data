@@ -3141,6 +3141,9 @@ components:
       properties:
         DPS:
           type: number
+        Volley:
+          type: number
+          description: launched drones' volley; FitStats.Volley is the weapons' alone
         BandwidthUsed:
           type: number
         BandwidthAvail:
@@ -3165,6 +3168,7 @@ components:
             type: integer
       required:
         - DPS
+        - Volley
         - BandwidthUsed
         - BandwidthAvail
         - BayUsed
@@ -3543,6 +3547,9 @@ components:
           type: number
         volley:
           type: number
+          description: Volley is the weapons' alone (the game's fitting window); DroneVolley is the launched drones'.
+        drone_volley:
+          type: number
         weapons:
           type: array
           items:
@@ -3591,6 +3598,7 @@ components:
         - weapon_dps
         - drone_dps
         - volley
+        - drone_volley
         - weapons
         - drones
         - tank
@@ -3643,6 +3651,7 @@ components:
           $ref: '#/components/schemas/DPSStats'
         Volley:
           type: number
+          description: 'weapons only (the game''s fitting window); drones: Drones.Volley'
         Tank:
           $ref: '#/components/schemas/TankStats'
         Capacitor:

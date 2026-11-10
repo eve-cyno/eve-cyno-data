@@ -212,7 +212,8 @@ func TestEngine_FullDroneBoatKeepsItsNumbers(t *testing.T) {
 	}
 	require.InDelta(t, 256.513723702, st.DPS.Theoretical, 1e-6)
 	require.InDelta(t, 256.513723702, st.Drones.DPS, 1e-6)
-	require.InDelta(t, 1026.054894809, st.Volley, 1e-6)
+	require.Zero(t, st.Volley, "weapon volley: none (M6, fit parity)")
+	require.InDelta(t, 1026.054894809, st.Drones.Volley, 1e-6) // was FitStats.Volley before M6
 }
 
 // Per-group caps: more than the slot range of a group is refused, at the cap it is accepted.
