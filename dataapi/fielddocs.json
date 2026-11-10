@@ -39,6 +39,7 @@
   "fit.Resources.DroneBandwidth": "used by the launched drones",
   "fit.Resources.DroneBay": "used by every drone in the bay",
   "fit.Resources.Turrets": "hardpoints",
+  "fit.StatsOpts.AbsentHullSkillAtI": "AbsentHullSkillAtI counts a skill that the hull or a fitted subsystem requires and the profile does not list at all as level I, like the game's fitting simulation does for a real character (owner decision 2026-11-10). It acts only with a non-nil Skills and MissingAsZero. Default false: an \"all skills 0\" profile stays every skill at 0. A skill the profile lists (level 0 too) is never raised, and module, rig and drone skills are not.",
   "fit.StatsOpts.ActiveDroneTypeIDs": "ActiveDroneTypeIDs, when non-nil, is the priority list of drone typeIDs the user has launched. The engine launches them in order within bandwidth + the max-in-space cap; the rest stay in the bay (no DPS). nil → auto (fit order).",
   "fit.StatsOpts.DamagePattern": "DamagePattern is the id of the incoming damage split EHP is worked against (E8, see DamagePatterns). Empty is uniform, today's figure; an unknown id is an error.",
   "fit.StatsOpts.Implants": "Implants are the pilot's implants, as type ids (decision O1: only this list applies; a fit's own implant lines never do). The engine builds an unpenalised item per implant; of two implants in one slot (attribute 331) the first wins, with a warning. An id the engine cannot apply is listed in FitStats.Unmodelled. nil and empty are no implants.",

@@ -23,7 +23,7 @@ const (
 
 // profileOf is a real-character profile: the listed levels and nothing else.
 func profileOf(levels map[int]int) fit.StatsOpts {
-	return fit.StatsOpts{Skills: fit.SkillProfile(levels), MissingAsZero: true}
+	return fit.StatsOpts{Skills: fit.SkillProfile(levels), MissingAsZero: true, AbsentHullSkillAtI: true}
 }
 
 // Tengu: Caldari Core Systems gives 5 % capacitor capacity per level (subsystem effect).

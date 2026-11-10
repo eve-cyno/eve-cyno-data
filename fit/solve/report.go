@@ -259,7 +259,7 @@ func capBaselineTrain(ctx context.Context, c *Catalog, ev Evaluator, r Request, 
 		miss []fit.MissingSkill
 	}
 	var cands []cand
-	opts := fit.StatsOpts{Skills: r.Skills, MissingAsZero: true, Implants: r.Implants, DamagePattern: r.DamagePattern}
+	opts := fit.StatsOpts{Skills: r.Skills, MissingAsZero: true, AbsentHullSkillAtI: true, Implants: r.Implants, DamagePattern: r.DamagePattern}
 	f := r.Fit
 	for _, g := range slotGroups {
 		if g.slot == SlotDrone {
@@ -682,7 +682,7 @@ func trainFor(ctx context.Context, c *Catalog, ev Evaluator, r Request, res *Res
 			sk[id] = lvl
 			keys = append(keys, probeKey{id, lvl})
 			reqs = append(reqs, gofa.Request{Fit: f, Opts: fit.StatsOpts{
-				Skills: sk, MissingAsZero: true, Implants: r.Implants, DamagePattern: r.DamagePattern}})
+				Skills: sk, MissingAsZero: true, AbsentHullSkillAtI: true, Implants: r.Implants, DamagePattern: r.DamagePattern}})
 		}
 	}
 	if len(reqs) == 0 {

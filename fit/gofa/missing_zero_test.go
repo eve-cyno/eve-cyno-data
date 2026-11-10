@@ -51,7 +51,7 @@ func TestStats_UntrainedSkillCountsZero(t *testing.T) {
 	require.NoError(t, err)
 	require.InDelta(t, 194.41, asV.DPS.Theoretical, 0.005, "default model: missing skills are V")
 
-	zero, err := eng.Stats(ctx, f, fit.StatsOpts{Skills: partial, MissingAsZero: true})
+	zero, err := eng.Stats(ctx, f, fit.StatsOpts{Skills: partial, MissingAsZero: true, AbsentHullSkillAtI: true})
 	require.NoError(t, err)
 	// 73.01 until M4 (fit parity): the Caracal's absent hull skill (Caldari Cruiser) now counts level I.
 	require.InDelta(t, 76.8537, zero.DPS.Theoretical, 0.005, "MissingAsZero: untrained skills are 0, not V; the absent hull skill is I")
@@ -90,7 +90,7 @@ func TestStats_MissingAsZeroEqualsCompleteMap(t *testing.T) {
 			continue
 		}
 		n++
-		a := statsJSON(t, eng, pf.fit, fit.StatsOpts{Skills: fit.SkillProfile{skillCPUManagement: 3}, MissingAsZero: true})
+		a := statsJSON(t, eng, pf.fit, fit.StatsOpts{Skills: fit.SkillProfile{skillCPUManagement: 3}, MissingAsZero: true, AbsentHullSkillAtI: true})
 		b := statsJSON(t, eng, pf.fit, fit.StatsOpts{Skills: completeMap(eng, hullSkillsI(eng, pf.fit, map[int]int{skillCPUManagement: 3}))})
 		require.Equal(t, string(b), string(a), pf.name)
 	}
@@ -103,11 +103,29 @@ func TestStats_LevelZeroEqualsAbsent(t *testing.T) {
 	eng := New(s)
 	f := loadPerfFits(t, s, "caracal-missile")[0].fit
 	const rapidFiring, missileLauncherOp = 3310, 3319
-	absent := statsJSON(t, eng, f, fit.StatsOpts{Skills: fit.SkillProfile{skillCPUManagement: 3}, MissingAsZero: true})
-	zeros := statsJSON(t, eng, f, fit.StatsOpts{Skills: fit.SkillProfile{skillCPUManagement: 3, rapidFiring: 0, missileLauncherOp: 0}, MissingAsZero: true})
+	absent := statsJSON(t, eng, f, fit.StatsOpts{Skills: fit.SkillProfile{skillCPUManagement: 3}, MissingAsZero: true, AbsentHullSkillAtI: true})
+	zeros := statsJSON(t, eng, f, fit.StatsOpts{Skills: fit.SkillProfile{skillCPUManagement: 3, rapidFiring: 0, missileLauncherOp: 0}, MissingAsZero: true, AbsentHullSkillAtI: true})
 	require.Equal(t, string(absent), string(zeros))
 	// An empty non-nil profile is all 0; a nil one is all V, flag or not.
-	allZero := statsJSON(t, eng, f, fit.StatsOpts{Skills: fit.SkillProfile{}, MissingAsZero: true})
+	allZero := statsJSON(t, eng, f, fit.StatsOpts{Skills: fit.SkillProfile{}, MissingAsZero: true, AbsentHullSkillAtI: true})
 	require.Equal(t, string(statsJSON(t, eng, f, fit.StatsOpts{Skills: completeMap(eng, hullSkillsI(eng, f, nil))})), string(allZero))
 	require.Equal(t, string(statsJSON(t, eng, f, fit.StatsOpts{})), string(statsJSON(t, eng, f, fit.StatsOpts{MissingAsZero: true})))
+}
+
+// "All skills 0" is every skill at 0: the raise of an absent hull or subsystem skill to level I is a floor for a
+// real character, switched on by StatsOpts.AbsentHullSkillAtI (coordinator ruling 2026-11-11, review finding M1).
+func TestStats_AbsentHullSkillAtIIsAnExplicitOption(t *testing.T) {
+	s := openRealSDE(t)
+	defer s.Close()
+	eng := New(s)
+	for _, name := range []string{"caracal-missile"} {      // a weapon hull whose hull skill moves the numbers (a drone hull with the drone skills at 0 does not)
+		f := loadPerfFits(t, s, name)[0].fit
+		allZero := string(statsJSON(t, eng, f, fit.StatsOpts{Skills: completeMap(eng, nil)}))
+		// option off (the zero value): an empty profile with MissingAsZero is every skill at 0
+		require.Equal(t, allZero, string(statsJSON(t, eng, f, fit.StatsOpts{Skills: fit.SkillProfile{}, MissingAsZero: true})), name+": option off leaves the hull skill at 0")
+		// option on: the hull skill counts I, so the numbers move
+		raised := string(statsJSON(t, eng, f, fit.StatsOpts{Skills: fit.SkillProfile{}, MissingAsZero: true, AbsentHullSkillAtI: true}))
+		require.NotEqual(t, allZero, raised, name+": option on raises the absent hull skill to I")
+		require.Equal(t, string(statsJSON(t, eng, f, fit.StatsOpts{Skills: completeMap(eng, hullSkillsI(eng, f, nil))})), raised, name)
+	}
 }

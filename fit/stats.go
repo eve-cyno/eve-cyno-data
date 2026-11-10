@@ -29,6 +29,12 @@ type StatsOpts struct {
 	// given"); an empty non-nil map with the flag set is all 0. Default false keeps
 	// the all-V reference-character model of every existing caller.
 	MissingAsZero bool
+	// AbsentHullSkillAtI counts a skill that the hull or a fitted subsystem requires and the
+	// profile does not list at all as level I, like the game's fitting simulation does for a
+	// real character (owner decision 2026-11-10). It acts only with a non-nil Skills and
+	// MissingAsZero. Default false: an "all skills 0" profile stays every skill at 0. A skill
+	// the profile lists (level 0 too) is never raised, and module, rig and drone skills are not.
+	AbsentHullSkillAtI bool
 	// Implants are the pilot's implants, as type ids (decision O1: only this list applies; a
 	// fit's own implant lines never do). The engine builds an unpenalised item per implant;
 	// of two implants in one slot (attribute 331) the first wins, with a warning. An id the

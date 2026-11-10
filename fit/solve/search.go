@@ -582,7 +582,7 @@ func (s *search) setup() error {
 		}
 	}
 	s.pol = p
-	s.pilot = fit.StatsOpts{Skills: r.Skills, MissingAsZero: r.Skills != nil, Implants: r.Implants, DamagePattern: r.DamagePattern}
+	s.pilot = fit.StatsOpts{Skills: r.Skills, MissingAsZero: r.Skills != nil, AbsentHullSkillAtI: r.Skills != nil, Implants: r.Implants, DamagePattern: r.DamagePattern}
 	s.cap = r.MaxEvaluations
 	if s.cap <= 0 {
 		s.cap = CapInteractive
