@@ -1,6 +1,6 @@
 Fit stats: Hawk (all-V, default ammo)
-DPS 121 · volley 250
-  4x Rocket Launcher II [Scourge Rocket] (default ammo): 121 DPS
+DPS 132 · volley 272
+  4x Rocket Launcher II [Scourge Rocket] (default ammo): 132 DPS
 EHP 5175 (shield 3219, armor 1012, hull 944) · active rep 201 HP/s
 Resists EM/Th/Kin/Exp %: shield 55/80/70/50 · armor 50/86/62/10 · hull 33/33/33/33
 Speed 938 m/s (prop on) · align 5.6s · signature 43 m

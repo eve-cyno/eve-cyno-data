@@ -26,7 +26,8 @@ func TestFindCanonicalModule_SearchMode(t *testing.T) {
 func TestFindCanonicalModule_SearchErrorsAndOverflow(t *testing.T) {
 	s := testSDE(t)
 	text, _ := searchModules(s, map[string]any{"family": "Shield", "meta": "shiny"})
-	require.True(t, strings.HasPrefix(text, "Unknown meta group: shiny (known: Abyssal, "), text)
+	require.True(t, strings.HasPrefix(text, "Unknown meta group: shiny (known: "), text)
+	require.Contains(t, text, "Abyssal, ") // the list gained Aberrant on SDE build 3682781: only its presence is pinned
 	text, _ = searchModules(s, map[string]any{"family": "S", "slot": "mid"})
 	require.Equal(t, "family: at least 2 characters.", text)
 	text, _ = searchModules(s, map[string]any{"family": "Shield", "limit": 31.0})
