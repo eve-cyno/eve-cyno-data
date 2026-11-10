@@ -134,6 +134,8 @@
   "sde.JumpShip.JumpFreighterBonus": "eliteBonusJumpFreighter2 per Jump Freighters level (-10); 0 if none",
   "sde.JumpShip.Name": "SDE type name: \"Rhea\", \"Ansiblex Jump Bridge\"",
   "sde.JumpShip.NoHighsec": "disallowInHighSec",
+  "sde.ManufacturingProduct.Quantity": "units per run, at least 1",
+  "sde.ManufacturingProduct.TypeID": "product type id",
   "sde.ModuleHit.CPU": "attr 50",
   "sde.ModuleHit.CanLoadCharge": "true if the module accepts a charge (ammo)",
   "sde.ModuleHit.CanOverheat": "true if the module has an overload effect",
