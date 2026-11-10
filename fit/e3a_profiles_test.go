@@ -23,7 +23,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const e3aBuild = "3670638_20261104"
+const e3aBuild = "3682781_20261110"
 
 // The six reference hulls and the two extra hulls of the E3a profile table.
 var e3aHulls = []struct {

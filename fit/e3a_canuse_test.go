@@ -114,7 +114,8 @@ func TestE3a_CanUseClaims(t *testing.T) {
 	t.Run("fitIII", func(t *testing.T) {
 		fliesAll("fitIII", "Cerberus", "Tengu")
 		p := pf.Profiles["fitIII"]
-		require.Len(t, p.Dropped, 56, "56 skills drop to 0")
+		// 57 on SDE build 3682781 (56 on 3670638): the new skill 96100 is dropped like the rest.
+		require.Len(t, p.Dropped, 57, "57 skills drop to 0")
 		dropped := map[string]bool{}
 		for _, id := range p.Dropped {
 			dropped[e3aName(s, id)] = true
