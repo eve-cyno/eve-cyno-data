@@ -107,11 +107,12 @@ const (
 // 5 in the SDE because of the deprecated group 955 ("Depricated Subsystems",
 // unpublished); the game fits exactly one subsystem of each published group.
 //
-// The slot a subsystem takes is its subSystemSlot attribute (1366, attrSubSystemSlot):
-// 125 Core, 126 Defensive, 127 Offensive, 128 Propulsion, the same four values in the
-// four published groups (the deprecated group 955 and the "Spaceship Command" skill
-// Amarr Battlecruiser carry 125 too, but neither is a fittable subsystem). The group
-// id is only the fallback for a type without the attribute.
+// The slot a subsystem takes is decided by its group alone (958 Core, 954 Defensive,
+// 956 Offensive, 957 Propulsion). The subSystemSlot attribute (1366, attrSubSystemSlot)
+// carries the same four values 125..128 on those groups (a test pins the agreement) but
+// is not used to pick the slot: the unpublished deprecated group 955 has 80 "OLD"
+// subsystems with 1366 = 125..129, and the "Spaceship Command" skill Amarr Battlecruiser
+// carries 125 too; neither is a fittable subsystem. A type of any other group fills no slot.
 var subsystemGroups = []struct {
 	slot  int
 	group int
@@ -123,12 +124,9 @@ var subsystemGroups = []struct {
 	{128, 957, "Propulsion"},
 }
 
-// subsystemSlotOf is the subsystem slot (125..128) of a fitted subsystem, 0 when the
-// type names none.
+// subsystemSlotOf is the subsystem slot (125..128) of a fitted subsystem from its group,
+// 0 when the type is not in one of the four published subsystem groups.
 func subsystemSlotOf(s ValidateSDE, typeID int) int {
-	if v := int(s.GetDogma(typeID)[attrSubSystemSlot]); v != 0 {
-		return v
-	}
 	if g := s.GetGroupID(typeID); g != nil {
 		for _, sg := range subsystemGroups {
 			if sg.group == *g {
@@ -237,17 +235,6 @@ type checkSpec struct {
 	noImplantBand bool
 }
 
-// subsystemSlotName is the name of a subsystem slot value ("Core" for 125), "slot N" for
-// a value no published subsystem uses.
-func subsystemSlotName(slot int) string {
-	for _, sg := range subsystemGroups {
-		if sg.slot == slot {
-			return sg.name
-		}
-	}
-	return fmt.Sprintf("slot %d", slot)
-}
-
 // check is the single fit validator. Violations come out in this order: per slot
 // group (overflow, then each module's Alpha legality), hull Alpha legality, group
 // limits (by group ID), CPU, PG, calibration, turret and launcher hardpoints, charge
@@ -281,6 +268,9 @@ func check(s ValidateSDE, sp checkSpec) Report {
 		var gid int
 		if sp.sdeData {
 			gid = subsystemSlotOf(s, e.mod.TypeID)
+		}
+		if gid == 0 && sp.sdeData {
+			continue // not a published subsystem (e.g. a deprecated OLD one): fills no slot, adds nothing
 		}
 		if gid != 0 {
 			if len(bySubGroup[gid]) > 0 {
@@ -344,13 +334,14 @@ func check(s ValidateSDE, sp checkSpec) Report {
 	// any module (subsystem or not) but misses a group is Hard. An empty hull is not
 	// flagged, and a complete fit (one per group) never is.
 	if sp.sdeData && subSlots > 0 {
-		for _, slot := range subGroupOrder {
+		for _, sg := range subsystemGroups {
+			slot := sg.slot
 			if es := bySubGroup[slot]; len(es) > 1 {
 				names := make([]string, 0, len(es))
 				for _, e := range es {
 					names = append(names, e.mod.Name)
 				}
-				sn := subsystemSlotName(slot)
+				sn := sg.name
 				rep.Violations = append(rep.Violations, Violation{
 					Severity: Hard, Code: CodeSubsystemDuplicate,
 					Message: fmt.Sprintf("only one %s subsystem fits; found %d (%s)", sn, len(es), strings.Join(names, ", ")),

@@ -2,10 +2,14 @@ package fit
 
 import (
 	"context"
+	"database/sql"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
+	"eve-cyno.dev/go/data/sde"
+	"eve-cyno.dev/go/data/sde/sdetest"
 )
 
 // T3 strategic cruisers against the real SDE: the subsystems supply the hi / mid /
@@ -168,7 +172,7 @@ func TestT3_SeventhLauncherExceedsHardpoints(t *testing.T) {
 	require.Nil(t, t3Find(v, CodeSlotOverflow), "the 7 hi slots are not exceeded")
 }
 
-// t3Slots are the four hulls' subsystems by subSystemSlot (SDE attribute 1366): 125 Core,
+// t3Hulls are the four hulls' subsystems by subSystemSlot (SDE attribute 1366): 125 Core,
 // 126 Defensive, 127 Offensive, 128 Propulsion.
 var t3Hulls = []struct {
 	hull                       string
@@ -282,4 +286,84 @@ func TestT3_SubsystemSlotAttributeMatchesGroups(t *testing.T) {
 	skill := s.ResolveNames([]string{"Amarr Battlecruiser"})["Amarr Battlecruiser"]
 	require.NotZero(t, skill)
 	require.Nil(t, s.GetModuleSlot(skill), "a skill is never a fittable module")
+}
+
+// The deprecated OLD subsystems (group 955, unpublished) carry subSystemSlot 125..129 but are
+// no subsystem of any slot: a fit made of them is not valid and never names a slot outside
+// Core, Defensive, Offensive, Propulsion.
+func TestT3_OldSubsystemsFillNoSlot(t *testing.T) {
+	s := qc2OpenSDE(t)
+	elec := "OLD Tengu Electronics - Obfuscation Manifold"
+	def := "OLD Tengu Defensive - Adaptive Shielding"
+	eng := "OLD Tengu Engineering - Power Core Multiplier"
+	off := "OLD Tengu Offensive - Accelerated Ejection Bay"
+	prop := "OLD Tengu Propulsion - Fuel Catalyst"
+	for _, n := range []string{elec, def, eng, off, prop} {
+		require.NotZero(t, s.ResolveNames([]string{n})[n], n)
+	}
+	valid := map[string]bool{"Core": true, "Defensive": true, "Offensive": true, "Propulsion": true}
+	for _, subs := range [][]string{{elec, def, eng, off}, {prop, prop}, {prop, prop, elec}} {
+		f := t3Subs(s, "Tengu", subs...)
+		require.Len(t, f.Subsystem, len(subs))
+		v, _ := t3Both(t, f, s)
+		require.Len(t, t3Viols(v, CodeSubsystemMissing), 4, "%v", subs)
+		for _, x := range v.Violations {
+			if x.SubsystemSlot != "" {
+				require.True(t, valid[x.SubsystemSlot], x.SubsystemSlot)
+			}
+		}
+		require.Empty(t, t3Viols(v, CodeSubsystemDuplicate))
+	}
+}
+
+func TestT3_MissingSlotsComeInFixedOrder(t *testing.T) {
+	s := qc2OpenSDE(t)
+	f := t3Fit(s, 1, 0, 0)
+	v, _ := t3Both(t, f, s)
+	var got []string
+	for _, m := range t3Viols(v, CodeSubsystemMissing) {
+		got = append(got, m.SubsystemSlot)
+	}
+	require.Equal(t, []string{"Core", "Defensive", "Offensive", "Propulsion"}, got)
+
+	// two duplicated slots come out in the same fixed order, whatever the fit order
+	f = t3Subs(s, "Tengu", t3Prop, t3Prop, t3Def, t3Def2, t3Core, t3Off)
+	v, _ = t3Both(t, f, s)
+	got = nil
+	for _, d := range t3Viols(v, CodeSubsystemDuplicate) {
+		got = append(got, d.SubsystemSlot)
+	}
+	require.Equal(t, []string{"Defensive", "Propulsion"}, got)
+}
+
+// Every published subsystem is in one of the four groups, and its subSystemSlot attribute
+// (1366) agrees with the slot of its group.
+func TestT3_SubsystemAttributeAgreesWithGroupForAllPublished(t *testing.T) {
+	s := qc2OpenSDE(t)
+	db, err := sql.Open("sqlite", "file:"+sdetest.Path(t)+"?mode=ro")
+	require.NoError(t, err)
+	defer db.Close()
+	rows, err := db.Query("SELECT typeID, typeName FROM invTypes WHERE published = 1 AND groupID IN (958, 954, 956, 957)")
+	require.NoError(t, err)
+	defer rows.Close()
+	n := 0
+	for rows.Next() {
+		var id int
+		var name string
+		require.NoError(t, rows.Scan(&id, &name))
+		t3AgreeOne(t, s, id, name, &n)
+	}
+	require.NoError(t, rows.Err())
+	require.Equal(t, 48, n)
+}
+
+func t3AgreeOne(t *testing.T, s *sde.SDE, id int, name string, n *int) {
+	{
+		slot := subsystemSlotOf(s, id)
+		if slot == 0 {
+			return // not in the four groups (e.g. an unpublished OLD type)
+		}
+		*n++
+		require.Equal(t, slot, int(s.GetDogma(id)[attrSubSystemSlot]), name)
+	}
 }

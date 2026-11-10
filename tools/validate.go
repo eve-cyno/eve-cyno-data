@@ -415,7 +415,7 @@ func validationText(v fit.Violation) string {
 	case fit.CodeSubsystemDuplicate:
 		return fmt.Sprintf("duplicate %s subsystem (only one subsystem of each slot fits): %s", v.SubsystemSlot, strings.Join(v.Names, ", "))
 	case fit.CodeSubsystemMissing:
-		return fmt.Sprintf("missing %s subsystem (a T3 needs one subsystem in each of Core, Defensive, Offensive and Propulsion to undock)", v.SubsystemSlot)
+		return fmt.Sprintf("missing %s subsystem", v.SubsystemSlot)
 	case fit.CodeCalibrationOver:
 		return fmt.Sprintf("calibration over: %.0f/%.0f. Rigs: %s. Remove or downgrade one of these.", v.Load, v.Capacity, quoteNames(v.Names))
 	case fit.CodeTurretHardpointOver:
