@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"sort"
+	"strings"
 
 	"eve-cyno.dev/go/data/dogma"
 	"eve-cyno.dev/go/data/fit"
@@ -686,14 +687,15 @@ func (e *Engine) Stats(ctx context.Context, f fit.Fit, opts fit.StatsOpts) (fit.
 	// Only launched drones (bandwidth + max-in-space limited) contribute DPS.
 	char := characterOf(items)
 	launched := launchedDrones(ship, droneItems, opts.ActiveDroneTypeIDs, maxActiveDrones(char))
-	dpsStats, totalVolley, droneDPS := computeDPS(weaponItems, launched, e.weaponNamer())
+	dpsStats, weaponVolley, droneDPS, droneVolley := computeDPS(weaponItems, launched, e.weaponNamer())
 	var unmodelled []string
 	chargeFedReps := e.hasChargeFedReps(items)
 	if chargeFedReps {
 		unmodelled = append(unmodelled, UnmodelledChargeFedCap)
 	}
 	unmodelled = append(unmodelled, notes.unmodelled...)
-	unmodelled = append(unmodelled, unmodelledEffects(e.reader(), items)...)
+	effectUnmodelled := unmodelledEffects(e.reader(), items)
+	unmodelled = append(unmodelled, effectUnmodelled...)
 	tankStats := tankWith(ship, items, pattern)
 	groupSDE := e.reader()
 	tankStats.Repair = repairSummary(ship, items, groupSDE.GetGroupID)
@@ -702,14 +704,14 @@ func (e *Engine) Stats(ctx context.Context, f fit.Fit, opts fit.StatsOpts) (fit.
 		Capacitor:  capacitor(ship, items),
 		Tank:       tankStats,
 		DPS:        dpsStats,
-		Volley:     totalVolley,
-		Drones:     droneStats(ship, droneItems, launched, droneDPS, maxActiveDrones(char)),
+		Volley:     weaponVolley, // weapons only; drones in Drones.Volley
+		Drones:     droneStats(ship, droneItems, launched, droneDPS, droneVolley, maxActiveDrones(char)),
 		Targeting:  targeting(ship, char),
 		Range:      weaponRange(weaponItems),
 		Estimated:  estimated,
 		Unmodelled: unmodelled,
 		Warnings:   notes.warnings,
-		Flags:      blockFlags(estimated, chargeFedReps),
+		Flags:      blockFlags(estimated, chargeFedReps, effectUnmodelled),
 	}, nil
 }
 
@@ -805,9 +807,10 @@ const (
 
 // droneStats fills the Drones panel: bay/bandwidth from the hull, bay use from
 // all drones, bandwidth use + active count from the launched set.
-func droneStats(ship *Item, all, launched []*Item, droneDPS float64, maxActive int) fit.DroneStats {
+func droneStats(ship *Item, all, launched []*Item, droneDPS, droneVolley float64, maxActive int) fit.DroneStats {
 	ds := fit.DroneStats{
 		DPS:            droneDPS,
+		Volley:         droneVolley,
 		BandwidthAvail: ship.Attrs[attrShipDroneBW],
 		BayAvail:       ship.Attrs[attrShipDroneCap],
 		InBay:          len(all),
@@ -850,7 +853,7 @@ func targeting(ship, char *Item) fit.TargetStats {
 // default ammo was loaded (weapon blocks are estimated) and a charge-fed repairer or
 // booster is fitted (its capacitor draw is a no-charges figure, so capacitor and tank
 // are not fully modelled).
-func blockFlags(defaultAmmo, chargeFedReps bool) fit.BlockFlags {
+func blockFlags(defaultAmmo, chargeFedReps bool, effects []string) fit.BlockFlags {
 	// Empty, not nil: the API schema says these are arrays.
 	fl := fit.BlockFlags{Estimated: []fit.EstimatedFlag{}, NotModelled: []fit.NotModelledFlag{}}
 	if defaultAmmo {
@@ -863,6 +866,13 @@ func blockFlags(defaultAmmo, chargeFedReps bool) fit.BlockFlags {
 		fl.NotModelled = append(fl.NotModelled, fit.NotModelledFlag{
 			What:    UnmodelledChargeFedCap,
 			Affects: []fit.StatBlock{fit.BlockCapacitor, fit.BlockTank},
+		})
+	}
+	// A fitted module's effect with no modifiers and no formula step (see unmodelledEffects): any block may change.
+	for _, u := range effects {
+		fl.NotModelled = append(fl.NotModelled, fit.NotModelledFlag{
+			What:    "Module effect " + strings.TrimPrefix(u, UnmodelledEffectPrefix),
+			Affects: []fit.StatBlock{fit.BlockDPS, fit.BlockDrones, fit.BlockTank, fit.BlockCapacitor, fit.BlockNavigation, fit.BlockTargeting, fit.BlockRange},
 		})
 	}
 	return fl
