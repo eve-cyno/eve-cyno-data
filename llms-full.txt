@@ -270,7 +270,7 @@ Analyze a battle report from zKillboard, WarBeacon, or br.evetools.org. Call thi
 
 ### validate_fitting
 
-Validate an EVE Online ship fitting in EFT format. Checks CPU, powergrid, and slot counts against ship attributes assuming Engineering V (+25% PG) and Electronics V (+25% CPU) — the realistic baseline every PvP / abyss capable character has. Call this after generating a fit to confirm it is valid before presenting it to the user. A strategic cruiser (T3) takes exactly one subsystem of each slot: an empty slot is the hard violation "missing Core subsystem" (Defensive, Offensive, Propulsion alike), two in one slot is "duplicate Defensive subsystem (only one subsystem of each slot fits): A, B"; each violation names its slot in the field `SubsystemSlot`.
+Validate an EVE Online ship fitting in EFT format. Checks CPU, powergrid, and slot counts against ship attributes assuming Engineering V (+25% PG) and Electronics V (+25% CPU) — the realistic baseline every PvP / abyss capable character has. Call this after generating a fit to confirm it is valid before presenting it to the user. A strategic cruiser (T3) takes exactly one subsystem of each slot: an empty slot is the hard violation "missing Core subsystem" (Defensive, Offensive, Propulsion alike), two in one slot is "duplicate Defensive subsystem (only one subsystem of each slot fits): A, B".
 
 - Call: `POST /v1/tool/validate_fitting` or MCP tool `validate_fitting`
 - Access: public. No key needed.

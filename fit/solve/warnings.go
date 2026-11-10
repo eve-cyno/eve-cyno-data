@@ -133,7 +133,7 @@ func (s *search) warnings(ctx context.Context, best *probe, res *Result) ([]Warn
 func capEmptyMessage(chosen, flown float64) string {
 	sec := func(v float64) string {
 		if v < 20 {
-			return fmt.Sprintf("%.1f s", v)
+			return fmt.Sprintf("%.1f s", math.Floor(v*10+1e-9)/10)      // floored like the card: 19.96 never prints as 20.0
 		}
 		return fmt.Sprintf("%.0f s", math.Floor(v+1e-9))
 	}

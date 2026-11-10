@@ -954,7 +954,7 @@ paths:
         - tools
       summary: Validate an EVE Online ship fitting in EFT format.
       description: |-
-        Validate an EVE Online ship fitting in EFT format. Checks CPU, powergrid, and slot counts against ship attributes assuming Engineering V (+25% PG) and Electronics V (+25% CPU) — the realistic baseline every PvP / abyss capable character has. Call this after generating a fit to confirm it is valid before presenting it to the user. A strategic cruiser (T3) takes exactly one subsystem of each slot: an empty slot is the hard violation "missing Core subsystem" (Defensive, Offensive, Propulsion alike), two in one slot is "duplicate Defensive subsystem (only one subsystem of each slot fits): A, B"; each violation names its slot in the field `SubsystemSlot`.
+        Validate an EVE Online ship fitting in EFT format. Checks CPU, powergrid, and slot counts against ship attributes assuming Engineering V (+25% PG) and Electronics V (+25% CPU) — the realistic baseline every PvP / abyss capable character has. Call this after generating a fit to confirm it is valid before presenting it to the user. A strategic cruiser (T3) takes exactly one subsystem of each slot: an empty slot is the hard violation "missing Core subsystem" (Defensive, Offensive, Propulsion alike), two in one slot is "duplicate Defensive subsystem (only one subsystem of each slot fits): A, B".
 
         Sources: EVE Static Data Export (via Fuzzwork); ESI (EVE Swagger Interface). `result.data` is a `FitValidation` object when the call succeeds.
 
