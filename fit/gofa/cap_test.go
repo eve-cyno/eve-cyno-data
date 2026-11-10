@@ -330,6 +330,24 @@ func TestCapacitor_AllV27Table(t *testing.T) {
 	}
 }
 
+// Hawk (qc2-148): three Medium Ancillary Shield Boosters cost 178.2 GJ each at t = 0 with no charge
+// loaded. Capacity 507.875 GJ pays the neutralizer (33.75) and two boosters, leaving 117.7 GJ, so the
+// third booster is unpayable at t = 0 and the run ends at 0 s. The sum at t = 0 is 577.6 GJ, above
+// the capacity, so this is the defined behaviour, not a simulation error. The game's own display for
+// such a fit was not observed (no source): the 0 is the brief's rule, "stop at the first activation
+// it cannot pay". The old closed form said 2.83 s.
+func TestCapacitor_HawkThreeBoostersUnpayableAtStart(t *testing.T) {
+	evs := []capEvent{{33.75, 0, 6}, {178.2, 0, 3}, {178.2, 0, 3}, {178.2, 0, 3}, {3.75, 0, 5}, {5.5, 0, 7.5}}
+	sum := 0.0
+	for _, e := range evs {
+		sum += e.need
+	}
+	require.Greater(t, sum, 507.875)
+	got, ok := capSimulate(507.875, 140.625, evs)
+	require.True(t, ok)
+	require.Equal(t, 0.0, got)
+}
+
 // M3 (fit parity): the game simulates discrete activations from t = 0 and ends at the first one
 // it cannot pay; the closed form under a constant drain ran 3-9 % long.
 
