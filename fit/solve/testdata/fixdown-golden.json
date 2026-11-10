@@ -362,7 +362,7 @@
       ]
     },
     "downgrade/ref6/allIII": {
-      "sha256": "6779b8d58b2d717d85b1dc0342b03e5ac9bb70ef40a7f61cca258f115c0ad3a1",
+      "sha256": "989c818912ce356f2d57a388d800374958ee432b39e500b68d00cc922a6711c2",
       "status": "ok_with_downgrades",
       "changes": 8,
       "to": [
@@ -801,7 +801,7 @@
       ]
     },
     "refit/ref6/allIII": {
-      "sha256": "8eeae8176403ce56126504429fbf673caa4fe025a9b5d26fd11dc3be08fa29e3",
+      "sha256": "f19279ce89d3ad90dcc7a1e3c6144541aa93b67efc1c9cc733987be2899bf09a",
       "status": "ok_with_downgrades",
       "changes": 9,
       "to": [

@@ -122,6 +122,18 @@ func TestUnmodelledEffects_SDEEffectsAreAllClassified(t *testing.T) {
 // Reported as "effect:<id>" when fitted and online. The game computes these; this engine does not.
 var knownUnmodelledEffects = []int{
 	38, 3380, 4921, 6201, 6208, 6472, 6473, 6474, 6476, 6477, 6478, 6479, 6481, 6482, 6484, 6513,
-	6714, 6719, 6732, 6733, 6734, 6735, 6736, 6753, 8093, 11691, 12126, 12916,
+	6714, 6719, 6732, 6733, 6734, 6735, 6736, 6753, 11691, 12126,
 	4489, 4490, 4491, 4492, 6995, 8037,
+}
+
+// Review (fit parity, Opus): the flag of a micro jump drive names navigation and capacitor, not damage or tank.
+func TestBlockFlags_MicroJumpDriveAffectsNavigationAndCapacitorOnly(t *testing.T) {
+	fl := blockFlags(false, false, []string{UnmodelledEffectPrefix + "4921"})
+	require.Len(t, fl.NotModelled, 1)
+	require.ElementsMatch(t, []fit.StatBlock{fit.BlockNavigation, fit.BlockCapacitor}, fl.NotModelled[0].Affects)
+}
+
+func TestEffectHandling_BreachControlAndReclonerChangeNoStat(t *testing.T) {
+	require.Contains(t, effectHandling, 12916)
+	require.Contains(t, effectHandling, 8093)
 }

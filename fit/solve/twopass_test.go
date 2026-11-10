@@ -107,7 +107,7 @@ func TestConvert_PassAOverHalfTheCapSkipsPassB(t *testing.T) {
 // EVE_UPDATE_GOLDEN=1 rewrites the file and fails the run: regenerate it from the code at
 // 1d01273, never from the current code. Exception, 2026-11-10 (fit parity): the engine numbers moved
 // (Cerberus kinetic bonus, Reactive Armor Hardener, discrete capacitor, weapon-only volley), so the file was
-// regenerated once from the engine at that commit; the two-pass logic was untouched, see the as-built note.
+// regenerated from the engine at that commit (a second time after the Opus review narrowed the Not-modelled flags: two sha values moved, statuses and changes did not); the two-pass logic was untouched, see the as-built note.
 func TestFixDowngrade_UnchangedByTwoPass(t *testing.T) {
 	skipHeavyCorpus(t)
 	build := sdeBuildID(t)

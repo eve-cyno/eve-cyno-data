@@ -861,7 +861,8 @@ func uncertainOf(st fit.FitStats) []string {
 		}
 	}
 	for _, u := range st.Unmodelled {
-		if !covered[u] {
+		// A guard entry "effect:<id>" is covered by its block flag "Module effect <id>": one line, not two.
+		if !covered[u] && !covered["Module effect "+strings.TrimPrefix(u, gofa.UnmodelledEffectPrefix)] {
 			covered[u] = true
 			out = append(out, u)
 		}

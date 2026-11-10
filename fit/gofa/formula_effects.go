@@ -1,6 +1,7 @@
 package gofa
 
 import (
+	"eve-cyno.dev/go/data/fit"
 	"slices"
 	"strconv"
 
@@ -67,10 +68,17 @@ var effectHandling = func() map[int]string {
 	add("acts on another ship, no stat on the fit: remote assistance and electronic warfare",
 		55, 54, 6184, 6185, 6186, 6187, 6188, 6197, 6422, 6423, 6424, 6425, 6426, 6427, 6428, 6470,
 		6651, 6652, 6687, 6688, 6689, 6690, 6691, 6692, 6693, 6694, 6695, 7166)
+	add("no fit stat: Breach Control (12916) and the Tactical Capsuleer Recloner (8093) change nothing the stats read", 12916, 8093)
 	add("not a combat-fit stat: scanning, mining, salvaging, hacking, tractor, compression, entosis",
 		17, 46, 47, 67, 1738, 2255, 2726, 2757, 5163, 6063, 8364)
 	return m
 }()
+
+// unmodelledAffects narrows the blocks an unmodelled effect can change; an effect not listed may change any block.
+// The micro jump drive acts on the ship's position and the capacitor, never on damage or tank.
+var unmodelledAffects = map[int][]fit.StatBlock{
+	4921: {fit.BlockNavigation, fit.BlockCapacitor},
+}
 
 // unmodelledEffects returns the "effect:<id>" entries of the online modules of items that carry an
 // active, target or overload-category effect with no modifiers, no formula step and no

@@ -894,3 +894,10 @@ func TestSolve_InterchangeableLinesEvaluatedOnce(t *testing.T) {
 		require.Equal(t, string(b), string(a), kind)
 	}
 }
+
+// Review (fit parity, Opus): an unmodelled module effect is one line, not its flag and its guard entry.
+func TestUncertainOf_ModuleEffectIsNotListedTwice(t *testing.T) {
+	st := fit.FitStats{Unmodelled: []string{"effect:38"}}
+	st.Flags.NotModelled = []fit.NotModelledFlag{{What: "Module effect 38", Affects: []fit.StatBlock{fit.BlockDPS}}}
+	require.Equal(t, []string{"Module effect 38"}, uncertainOf(st))
+}

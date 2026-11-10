@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"sort"
+	"strconv"
 	"strings"
 
 	"eve-cyno.dev/go/data/dogma"
@@ -870,10 +871,14 @@ func blockFlags(defaultAmmo, chargeFedReps bool, effects []string) fit.BlockFlag
 	}
 	// A fitted module's effect with no modifiers and no formula step (see unmodelledEffects): any block may change.
 	for _, u := range effects {
-		fl.NotModelled = append(fl.NotModelled, fit.NotModelledFlag{
-			What:    "Module effect " + strings.TrimPrefix(u, UnmodelledEffectPrefix),
-			Affects: []fit.StatBlock{fit.BlockDPS, fit.BlockDrones, fit.BlockTank, fit.BlockCapacitor, fit.BlockNavigation, fit.BlockTargeting, fit.BlockRange},
-		})
+		affects := []fit.StatBlock{fit.BlockDPS, fit.BlockDrones, fit.BlockTank, fit.BlockCapacitor, fit.BlockNavigation, fit.BlockTargeting, fit.BlockRange}
+		id := strings.TrimPrefix(u, UnmodelledEffectPrefix)
+		if n, err := strconv.Atoi(id); err == nil {
+			if narrow, ok := unmodelledAffects[n]; ok {
+				affects = narrow
+			}
+		}
+		fl.NotModelled = append(fl.NotModelled, fit.NotModelledFlag{What: "Module effect " + id, Affects: affects})
 	}
 	return fl
 }

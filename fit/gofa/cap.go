@@ -115,6 +115,16 @@ func capacitor(ship *Item, items []*Item) fit.CapStats {
 	netDrain := totalUsage - totalInjection
 
 	var stablePct, secsToEmpty float64
+	// The closed form is an average: a burst larger than the capacitor holds (600 GJ every 100 s on a
+	// 1,000 GJ capacitor) runs dry although the average drain is below the peak recharge. The discrete
+	// run overrides the verdict then; it also catches a module that costs more than the capacity.
+	if stable {
+		if t, ok := capSimulateN(capacity, rechargeSec, capEvents(items), capStableCheckEvents); ok {
+			stable = false
+			stablePct = 0
+			secsToEmpty = capRound(t)
+		}
+	}
 	if stable {
 		secsToEmpty = 0
 		if netDrain <= 0 {
@@ -126,7 +136,7 @@ func capacitor(ship *Item, items []*Item) fit.CapStats {
 			r := (1 + math.Sqrt(math.Max(0, 1-k))) / 2
 			stablePct = capRound(float64(r*r) * 100)
 		}
-	} else {
+	} else if secsToEmpty == 0 {
 		stablePct = 0
 		if netDrain > peakRecharge {
 			if t, ok := capSimulate(capacity, rechargeSec, capEvents(items)); ok {
@@ -227,16 +237,27 @@ const capSimMaxEvents = 2_000_000
 // "Capacitor"), and the run ends at the first activation the capacitor cannot pay. It returns
 // that time in seconds and true, or 0 and false when the bound is reached. No step size:
 // events are the activation instants n * cycle, taken in item order (high, mid, low slots) at equal
-// instants, so the result is deterministic. The order matters only through a booster charge that
-// would overfill the capacitor (the excess is lost); the game's order is not documented.
+// instants, so the result is deterministic. The order can change the result (a booster charge that
+// would overfill the capacitor loses its excess; and which of two activations at one instant is
+// paid first decides which one fails: 84 s against 93 s on one probe); the game's order is not
+// documented.
 func capSimulate(capacity, rechargeSec float64, evs []capEvent) (float64, bool) {
+	return capSimulateN(capacity, rechargeSec, evs, capSimMaxEvents)
+}
+
+// capStableCheckEvents bounds the run that double-checks a closed-form "stable" result: depletion
+// within this many events (a few hours of a fast cycle) overrides it; a run that survives keeps it.
+const capStableCheckEvents = 20_000
+
+// capSimulateN is capSimulate with its own event bound.
+func capSimulateN(capacity, rechargeSec float64, evs []capEvent, maxEvents int) (float64, bool) {
 	if capacity <= 0 || len(evs) == 0 {
 		return 0, false
 	}
 	n := make([]int, len(evs)) // activations done per event
 	c := capacity
 	var t float64
-	for step := 0; step < capSimMaxEvents; step++ {
+	for step := 0; step < maxEvents; step++ {
 		// Next instant: the earliest next activation (n * cycle, exact per module).
 		next := float64(n[0]) * evs[0].cycleSec
 		for i := 1; i < len(evs); i++ {

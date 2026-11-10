@@ -129,7 +129,7 @@ func TestImplants_SlotDedupe(t *testing.T) {
 // reached its module (otherID): only Range[0] of five fits moved, TestAmmoRangeModifiers pins them.
 // Re-pinned for fit parity (M1-M4, M6): Cerberus kinetic, Reactive Armor Hardener, discrete capacitor, weapon-only volley
 // with Drones.Volley; the per-fit before/after figures are in the fit-parity as-built note.
-const statsAllV27Hash = "17207f6ccede0540192ed0b89f28349f5778c5c126a52f423ca163618b491962"
+const statsAllV27Hash = "abcb5f7e8a95263a403e0f7aef8df843d51defa3c2d11e5bb7f9814a40c6af44"
 
 // No implants changes nothing: nil and an empty list give today's bytes on the 27 fits.
 func TestImplants_NoneEqualsToday(t *testing.T) {

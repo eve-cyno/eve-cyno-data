@@ -397,3 +397,22 @@ func TestCapacitor_RunsDryMatchesGame(t *testing.T) {
 	require.GreaterOrEqual(t, mega.SecondsToEmpty, 152.0)
 	require.Less(t, mega.SecondsToEmpty, 153.0)
 }
+
+// Review (fit parity, Opus): the closed form is an average. 600 GJ every 100 s on a 1,000 GJ / 400 s
+// capacitor is 6 GJ/s against a 6.25 GJ/s peak recharge, so the average says stable (36 %), but the
+// bursts empty it: the discrete run overrides the verdict.
+func TestCapacitor_BurstLargerThanTheCapacitorHoldsIsNotStable(t *testing.T) {
+	burst := &Item{TypeID: 2, Kind: KindModule, Attrs: map[int]float64{attrCapNeed: 600, attrModuleDuration: 100_000}}
+	c := capacitor(capShip(), []*Item{burst})
+	require.False(t, c.Stable)
+	require.Equal(t, 0.0, c.StablePct)
+	require.Greater(t, c.SecondsToEmpty, 0.0)
+}
+
+// A module that costs more than the whole capacitor never activates: not stable, empty at t = 0.
+func TestCapacitor_ModuleCostingMoreThanTheCapacityIsNotStable(t *testing.T) {
+	big := &Item{TypeID: 2, Kind: KindModule, Attrs: map[int]float64{attrCapNeed: 1200, attrModuleDuration: 1_000_000}}
+	c := capacitor(capShip(), []*Item{big})
+	require.False(t, c.Stable)
+	require.Equal(t, 0.0, c.SecondsToEmpty)
+}
