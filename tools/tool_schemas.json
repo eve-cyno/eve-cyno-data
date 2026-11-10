@@ -327,7 +327,7 @@
     "type": "function",
     "function": {
       "name": "validate_fitting",
-      "description": "Validate an EVE Online ship fitting in EFT format. Checks CPU, powergrid, and slot counts against ship attributes assuming Engineering V (+25% PG) and Electronics V (+25% CPU) — the realistic baseline every PvP / abyss capable character has. Call this after generating a fit to confirm it is valid before presenting it to the user.",
+      "description": "Validate an EVE Online ship fitting in EFT format. Checks CPU, powergrid, and slot counts against ship attributes assuming Engineering V (+25% PG) and Electronics V (+25% CPU) — the realistic baseline every PvP / abyss capable character has. Call this after generating a fit to confirm it is valid before presenting it to the user. A strategic cruiser (T3) takes exactly one subsystem of each slot: an empty slot is the hard violation \"missing Core subsystem\" (Defensive, Offensive, Propulsion alike), two in one slot is \"duplicate Defensive subsystem (only one subsystem of each slot fits): A, B\"; each violation names its slot in the field `SubsystemSlot`.",
       "parameters": {
         "type": "object",
         "properties": {
@@ -346,7 +346,7 @@
     "type": "function",
     "function": {
       "name": "compute_fit_stats",
-      "description": "Compute the real stats of an EVE Online fit from its EFT text with the dogma engine (all-V skills, no implants): DPS per weapon group with the charge used, volley, EHP per layer with resists, max speed (propulsion on), align time, capacitor stability and CPU/PG load. Call this whenever the user asks for a fit's DPS, EHP, tank, speed, align or cap stability - never estimate these by hand. Weapons with no charge on their EFT line get a default T1 ammo (Scourge missiles; Phased Plasma / Antimatter / Multifrequency for turrets), which the output labels.",
+      "description": "Compute the real stats of an EVE Online fit from its EFT text with the dogma engine (all-V skills, no implants): DPS per weapon group with the charge used, volley, EHP per layer with resists, max speed (propulsion on), align time, capacitor stability and CPU/PG load. Call this whenever the user asks for a fit's DPS, EHP, tank, speed, align or cap stability - never estimate these by hand. Weapons with no charge on their EFT line get a default T1 ammo (Scourge missiles; Phased Plasma / Antimatter / Multifrequency for turrets), which the output labels. Numbers come from the SDE build the service serves (3682781_20261110 at the time of writing). Capacitor is a discrete simulation: modules activate from t = 0 and the run ends at the first activation the capacitor cannot pay (seconds are floored like the game's display); Stable means it never runs dry. Volley is the weapons' alone, drone volley is separate. A Reactive Armor Hardener counts at its static 0.85 default (the adaptive shift is not modelled). A fitted effect the engine has no formula for is never silently ignored: it is listed in `Unmodelled` as `effect:<id>` and as a `Not modelled` flag, and adds nothing to the numbers.",
       "parameters": {
         "type": "object",
         "properties": {

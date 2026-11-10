@@ -11,7 +11,7 @@ answer names its sources. It offers:
   production chains, solar-system search and details (security, neighbours, celestials, stations, ice belts), jump distances and
   jump-drive route planning (hops, light-years, fuel, gate jumps) for any jump-capable hull or an Ansiblex chain, NPC stations and
   mission agents by distance and services, skill plans with training time, planetary production chains, abyssal NPC facts.
-- **Fit validation and statistics** from the Gofa dogma engine: slots, CPU / powergrid, DPS, tank, capacitor, navigation.
+- **Fit validation and statistics** from the Gofa dogma engine: slots (one subsystem per slot on a strategic cruiser), CPU / powergrid, DPS and volley, tank, capacitor (discrete activations from t = 0), navigation. An effect the engine has no formula for is reported as Not modelled, never silently ignored.
 - **ESI pass-throughs**: market prices and history, daily average prices, sovereignty, system activity, killmail battles, LP store
   offers with ISK per LP, industry cost indices; plus live
   Thera and Turnur wormhole connections from EvE-Scout, and the newest kills in a system from zKillboard.
