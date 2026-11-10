@@ -318,6 +318,7 @@ func bestGradeSet(t *testing.T, sets []ImplantSet, family string) (ImplantSet, [
 // One shown stat per set family whose bonus the engine can show. The wanted ratio is the hand
 // formula above; the engine's is the stat with the whole set over the stat with no implants.
 func TestImplants_SetBonusHandFormula(t *testing.T) {
+	skipHeavyRace(t)
 	sets, _ := loadImplantSets(t)
 	s := openRealSDE(t)
 	defer s.Close()
@@ -375,6 +376,7 @@ func TestImplants_SetBonusHandFormula(t *testing.T) {
 // on: the ship (warp speed, scan strength) or a module or drone of a custom fit. Same hand
 // formula as above; the reference is the same fit with no implants.
 func TestImplants_SetBonusResolvedAttr(t *testing.T) {
+	skipHeavyRace(t)
 	sets, _ := loadImplantSets(t)
 	s := openRealSDE(t)
 	defer s.Close()
@@ -456,6 +458,7 @@ func TestImplants_SetBonusResolvedAttr(t *testing.T) {
 // Low-grade Grail set moves the Maller's radar sensor strength (208) by the hand formula with
 // ITS key 1569, not the high-grade key.
 func TestImplants_SetBonusLowGradeNavy(t *testing.T) {
+	skipHeavyRace(t)
 	sets, _ := loadImplantSets(t)
 	s := openRealSDE(t)
 	defer s.Close()
@@ -522,6 +525,7 @@ func TestImplants_SetBonusLowGradeNavy(t *testing.T) {
 //     5799 onto Data Analyzer / Data Miner modules' virusCoherence (1909). Hand formula:
 //     1909 = base + sum_i(b_i x P) = base + P x sum_i(b_i). All numbers come from the SDE.
 func TestImplants_SetBonusUnshownFamilies(t *testing.T) {
+	skipHeavyRace(t)
 	sets, _ := loadImplantSets(t)
 	s := openRealSDE(t)
 	defer s.Close()

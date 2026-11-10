@@ -80,6 +80,7 @@ func loadImplantSets(t *testing.T) ([]ImplantSet, *sql.DB) {
 // The key table equals every attribute named implantSet*, ImplantSet* or setBonus* minus the two
 // Wedge helpers. A new matching attribute fails here until it is classified.
 func TestImplantSets_KeyTableComplete(t *testing.T) {
+	skipHeavyRace(t)
 	_, db := loadImplantSets(t)
 	rows, err := db.Query(`SELECT attributeID, attributeName FROM dgmAttributeTypes
 		WHERE attributeName LIKE 'implantSet%' OR attributeName LIKE 'setBonus%' ORDER BY attributeID`)
@@ -106,6 +107,7 @@ func TestImplantSets_KeyTableComplete(t *testing.T) {
 
 // No published implant carries two set keys (ImplantSets takes the lowest; two would hide one).
 func TestImplantSets_OneKeyPerImplant(t *testing.T) {
+	skipHeavyRace(t)
 	_, ids, _, _ := loadImplantSetsAll(t)
 	s := openRealSDE(t)
 	defer s.Close()
@@ -123,6 +125,7 @@ func TestImplantSets_OneKeyPerImplant(t *testing.T) {
 // Every member's name starts with the set's name ("Mid-grade Crystal" -> "Mid-grade Crystal
 // Alpha"; Genolution -> "Genolution ..."), and Family/Name come from the lowest type id.
 func TestImplantSets_NamePrefix(t *testing.T) {
+	skipHeavyRace(t)
 	sets, _ := loadImplantSets(t)
 	for _, set := range sets {
 		lowest := set.Members[0].TypeID
@@ -146,6 +149,7 @@ func lowestIndex(ms []ImplantSetMember, id int) int {
 
 // ImplantSlot: attribute 331 as an integer 1..10; AU-79 (slot 79) and a non-implant are false.
 func TestImplantSlot(t *testing.T) {
+	skipHeavyRace(t)
 	_, _, names, _ := loadImplantSetsAll(t)
 	s := openRealSDE(t)
 	defer s.Close()
@@ -172,6 +176,7 @@ func TestImplantSlot(t *testing.T) {
 }
 
 func TestImplantSets_Counts(t *testing.T) {
+	skipHeavyRace(t)
 	sets, _ := loadImplantSets(t)
 	members := 0
 	for _, set := range sets {
@@ -184,6 +189,7 @@ func TestImplantSets_Counts(t *testing.T) {
 // Every grade word is High, Mid or Low (or none); the key table covers every published implant
 // that carries a key attribute (none is lost to a slot or name rule).
 func TestImplantSets_GradesAndCoverage(t *testing.T) {
+	skipHeavyRace(t)
 	sets, db := loadImplantSets(t)
 	for _, set := range sets {
 		require.Contains(t, []string{"High", "Mid", "Low", ""}, set.Grade, "%s: grade word", set.Name)
@@ -215,6 +221,7 @@ func TestImplantSets_GradesAndCoverage(t *testing.T) {
 
 // Slots are within 1..10, a member's slot is its attribute 331, and no implant is in two sets.
 func TestImplantSets_SlotsAndUniqueness(t *testing.T) {
+	skipHeavyRace(t)
 	sets, _ := loadImplantSets(t)
 	s := openRealSDE(t)
 	defer s.Close()
@@ -245,6 +252,7 @@ func TestImplantSets_SlotsAndUniqueness(t *testing.T) {
 
 // Sorted by family, then grade high, mid, low.
 func TestImplantSets_Order(t *testing.T) {
+	skipHeavyRace(t)
 	sets, _ := loadImplantSets(t)
 	rank := map[string]int{"High": 0, "Mid": 1, "Low": 2, "": 3}
 	for i := 1; i < len(sets); i++ {
@@ -267,6 +275,7 @@ func TestImplantSets_Order(t *testing.T) {
 // Mid-grade Crystal: Alpha 22107 (slot 1) to Omega 22112 (slot 6), all modelled; the Genolution
 // set has no grade and slots 1-4.
 func TestImplantSets_KnownSets(t *testing.T) {
+	skipHeavyRace(t)
 	sets, _ := loadImplantSets(t)
 	find := func(name string) ImplantSet {
 		for _, set := range sets {
@@ -299,6 +308,7 @@ func TestImplantSets_KnownSets(t *testing.T) {
 // Every implant of every set is modelled today (plan section 2); a regression here means the
 // engine would silently skip a set member.
 func TestImplantSets_AllModelled(t *testing.T) {
+	skipHeavyRace(t)
 	sets, _ := loadImplantSets(t)
 	for _, set := range sets {
 		for _, m := range set.Members {
