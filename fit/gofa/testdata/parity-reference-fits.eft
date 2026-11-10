@@ -1,0 +1,163 @@
+[Rifter, Reference 1 T1 frigate]
+Damage Control I
+Small Armor Repairer I
+Gyrostabilizer I
+200mm Steel Plates I
+
+1MN Afterburner I
+Stasis Webifier I
+Initiated Compact Warp Scrambler
+
+200mm AutoCannon I, EMP S
+200mm AutoCannon I, EMP S
+200mm AutoCannon I, EMP S
+
+Small Projectile Burst Aerator I
+Small Projectile Burst Aerator I
+
+[Vexor, Reference 2 drone cruiser]
+Drone Damage Amplifier II
+Drone Damage Amplifier II
+Medium Armor Repairer II
+Multispectrum Energized Membrane II
+Damage Control II
+
+10MN Afterburner II
+Medium Capacitor Booster II, Navy Cap Booster 400
+Drone Navigation Computer II
+Warp Scrambler II
+
+Drone Link Augmentor II
+
+Medium Auxiliary Nano Pump I
+Medium Auxiliary Nano Pump I
+Medium Nanobot Accelerator I
+
+Hammerhead II x5
+Hobgoblin II x5
+Valkyrie II x5
+
+[Cerberus, Reference 3 T2 missile ship]
+Ballistic Control System II
+Ballistic Control System II
+Damage Control II
+Power Diagnostic System II
+
+10MN Afterburner II
+Large Shield Extender II
+Large Shield Extender II
+Multispectrum Shield Hardener II
+Warp Disruptor II
+
+Heavy Missile Launcher II, Scourge Heavy Missile
+Heavy Missile Launcher II, Scourge Heavy Missile
+Heavy Missile Launcher II, Scourge Heavy Missile
+Heavy Missile Launcher II, Scourge Heavy Missile
+Heavy Missile Launcher II, Scourge Heavy Missile
+Heavy Missile Launcher II, Scourge Heavy Missile
+
+Medium Core Defense Field Extender I
+Medium Core Defense Field Extender I
+
+[Tengu, Reference 4 T3 cruiser]
+Ballistic Control System II
+Ballistic Control System II
+
+Large Shield Extender II
+Large Shield Extender II
+Cap Recharger II
+Cap Recharger II
+Cap Recharger II
+
+Heavy Missile Launcher II, Scourge Heavy Missile
+Heavy Missile Launcher II, Scourge Heavy Missile
+Heavy Missile Launcher II, Scourge Heavy Missile
+Heavy Missile Launcher II, Scourge Heavy Missile
+Heavy Missile Launcher II, Scourge Heavy Missile
+
+Medium Core Defense Field Extender I
+Medium Core Defense Field Extender I
+Medium Core Defense Field Extender I
+
+Tengu Core - Augmented Graviton Reactor
+Tengu Defensive - Amplification Node
+Tengu Offensive - Accelerated Ejection Bay
+Tengu Propulsion - Fuel Catalyst
+
+[Megathron, Reference 5 turret battleship]
+Damage Control II
+Magnetic Field Stabilizer II
+Magnetic Field Stabilizer II
+Magnetic Field Stabilizer II
+1600mm Steel Plates II
+1600mm Steel Plates II
+Multispectrum Energized Membrane II
+Multispectrum Energized Membrane II
+
+500MN Microwarpdrive II
+Warp Scrambler II
+Stasis Webifier II
+Sensor Booster II, Scan Resolution Script
+
+Neutron Blaster Cannon II, Void L
+Neutron Blaster Cannon II, Void L
+Neutron Blaster Cannon II, Void L
+Neutron Blaster Cannon II, Void L
+Neutron Blaster Cannon II, Void L
+Neutron Blaster Cannon II, Void L
+Neutron Blaster Cannon II, Void L
+
+Large Trimark Armor Pump I
+Large Trimark Armor Pump I
+Large Trimark Armor Pump I
+
+Hammerhead II x5
+
+[Myrmidon, Reference 6 capacitor-heavy active tank]
+Medium Armor Repairer II
+Medium Armor Repairer II
+Reactive Armor Hardener
+Damage Control II
+Multispectrum Energized Membrane II
+Drone Damage Amplifier II
+
+10MN Afterburner II
+Medium Capacitor Booster II, Navy Cap Booster 400
+Cap Recharger II
+Drone Navigation Computer II
+Warp Scrambler II
+
+Heavy Electron Blaster II, Null M
+Heavy Electron Blaster II, Null M
+Heavy Electron Blaster II, Null M
+Heavy Electron Blaster II, Null M
+Drone Link Augmentor II
+
+Medium Auxiliary Nano Pump I
+Medium Nanobot Accelerator I
+Medium Capacitor Control Circuit I
+
+Hammerhead II x5
+Hobgoblin II x5
+Valkyrie II x5
+Vespa II x5
+
+// doctrine: Reference sheet block 7
+// role: tackle
+[Rifter, Reference 7 comment lines]
+// a comment line inside the block
+Damage Control I
+Small Armor Repairer I
+Gyrostabilizer I
+200mm Steel Plates I
+
+1MN Afterburner I
+Stasis Webifier I
+Initiated Compact Warp Scrambler
+
+200mm AutoCannon I, EMP S
+200mm AutoCannon I, EMP S
+200mm AutoCannon I, EMP S
+
+Small Projectile Burst Aerator I
+Small Projectile Burst Aerator I

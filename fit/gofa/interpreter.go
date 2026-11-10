@@ -188,6 +188,9 @@ func resolveModifiers(s SDE, ship *Item, items []*Item, skills map[int]int) {
 					if !ok {
 						continue
 					}
+					if k, scaled := effectMagnitudeScale[effectMagnitudeKey{source.TypeID, effectID}]; scaled {
+						magnitude *= k
+					}
 
 					if isMultiplicative(m.Operation) {
 						bonus := fractionalBonus(m.Operation, magnitude)
