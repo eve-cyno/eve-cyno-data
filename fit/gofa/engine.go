@@ -230,6 +230,10 @@ func (e *Engine) resolveCore(ctx context.Context, f fit.Fit, opts fit.StatsOpts,
 		}
 	}
 
+	// A hull or subsystem skill the pilot does not have at all counts as level I, like the
+	// game's fitting simulation (owner decision 2026-11-10).
+	raiseAbsentHullSkills(opts, items, skillsMap)
+
 	// Pruning: drop the skills that cannot reach this fit (see prune.go). Only with the
 	// full published skill list; the synthetic-SDE fallback above already is a subset.
 	if e.filter != nil && len(allSkillTypeIDs) > 0 {

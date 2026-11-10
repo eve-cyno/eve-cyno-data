@@ -54,3 +54,30 @@ func DefaultSkills(s SDE, typeIDs []int) fit.SkillProfile {
 	}
 	return profile
 }
+
+// raiseAbsentHullSkills implements the game's behaviour for a skill that the hull or a fitted
+// subsystem requires and the pilot does not have at all: the fitting simulation counts it as
+// level I (owner decision 2026-11-10; observed on four numbers of the owner's in-game check
+// 2026-11-10, no public source found). It acts only when the caller passed a profile and
+// MissingAsZero (a real character; the web and every all-V caller never set it). A skill the
+// profile lists, at any level including 0, is left alone, a trained level below the
+// requirement is not raised, and module, rig and drone skills stay at 0 when absent.
+func raiseAbsentHullSkills(opts fit.StatsOpts, items []*Item, skills map[int]int) {
+	if opts.Skills == nil || !opts.MissingAsZero {
+		return
+	}
+	for _, it := range items {
+		if it.Kind != KindShip && it.Kind != KindSubsystem {
+			continue
+		}
+		for _, attr := range requiredSkillAttrs {
+			id, ok := it.Attrs[attr]
+			if !ok || id == 0 {
+				continue
+			}
+			if _, listed := opts.Skills[int(id)]; !listed {
+				skills[int(id)] = 1
+			}
+		}
+	}
+}
