@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"slices"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -20,13 +21,21 @@ const (
 	wantImplantMembers = 334
 )
 
+// implantFixture is the published implant catalogue and the derived sets, loaded once per test
+// binary (each load opens the SDE). It is filled on the first successful call; a call that skips
+// (no SDE) leaves it empty so the next test tries again.
+var implantFixture struct {
+	mu    sync.Mutex
+	sets  []ImplantSet
+	ids   []int
+	names map[int]string
+	db    *sql.DB // read-only, shared, never closed (the test binary exits)
+}
+
 // publishedImplants reads the published category-20 type ids and names straight from the SDE
 // file: gofa.SDE cannot list types, so the host passes this catalogue in production.
-func publishedImplants(t *testing.T) ([]int, map[int]string, *sql.DB) {
+func publishedImplants(t *testing.T, db *sql.DB) ([]int, map[int]string) {
 	t.Helper()
-	db, err := sql.Open("sqlite", "file:"+sdetest.Path(t)+"?mode=ro")
-	require.NoError(t, err)
-	t.Cleanup(func() { db.Close() })
 	rows, err := db.Query(`SELECT t.typeID, t.typeName FROM invTypes t JOIN invGroups g ON g.groupID = t.groupID
 		WHERE g.categoryID = 20 AND t.published = 1 ORDER BY t.typeID`)
 	require.NoError(t, err)
@@ -41,14 +50,31 @@ func publishedImplants(t *testing.T) ([]int, map[int]string, *sql.DB) {
 		names[id] = n
 	}
 	require.NoError(t, rows.Err())
-	return ids, names, db
+	return ids, names
+}
+
+// loadImplantSetsAll returns the shared fixture: sets, the catalogue ids and names, the db.
+func loadImplantSetsAll(t *testing.T) ([]ImplantSet, []int, map[int]string, *sql.DB) {
+	t.Helper()
+	f := &implantFixture
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.sets == nil {
+		db, err := sql.Open("sqlite", "file:"+sdetest.Path(t)+"?mode=ro")
+		require.NoError(t, err)
+		ids, names := publishedImplants(t, db)
+		s := openRealSDE(t)
+		defer s.Close()
+		f.sets = ImplantSets(s, ids, func(id int) string { return names[id] })
+		f.ids, f.names, f.db = ids, names, db
+	}
+	return f.sets, f.ids, f.names, f.db
 }
 
 func loadImplantSets(t *testing.T) ([]ImplantSet, *sql.DB) {
-	s := openRealSDE(t)
-	t.Cleanup(func() { s.Close() })
-	ids, names, db := publishedImplants(t)
-	return ImplantSets(s, ids, func(id int) string { return names[id] }), db
+	t.Helper()
+	sets, _, _, db := loadImplantSetsAll(t)
+	return sets, db
 }
 
 // The key table equals every attribute named implantSet*, ImplantSet* or setBonus* minus the two
@@ -75,6 +101,74 @@ func TestImplantSets_KeyTableComplete(t *testing.T) {
 	slices.Sort(want)
 	require.Equal(t, want, matched)
 	require.Len(t, ImplantSetKeyAttrs, 27)
+	require.True(t, slices.IsSorted(ImplantSetKeyAttrs), "the lowest-key rule needs ascending keys")
+}
+
+// No published implant carries two set keys (ImplantSets takes the lowest; two would hide one).
+func TestImplantSets_OneKeyPerImplant(t *testing.T) {
+	_, ids, _, _ := loadImplantSetsAll(t)
+	s := openRealSDE(t)
+	defer s.Close()
+	for _, id := range ids {
+		n := 0
+		for _, k := range ImplantSetKeyAttrs {
+			if _, ok := s.GetDogma(id)[k]; ok {
+				n++
+			}
+		}
+		require.LessOrEqual(t, n, 1, "implant %d carries %d set keys", id, n)
+	}
+}
+
+// Every member's name starts with the set's name ("Mid-grade Crystal" -> "Mid-grade Crystal
+// Alpha"; Genolution -> "Genolution ..."), and Family/Name come from the lowest type id.
+func TestImplantSets_NamePrefix(t *testing.T) {
+	sets, _ := loadImplantSets(t)
+	for _, set := range sets {
+		lowest := set.Members[0].TypeID
+		for _, m := range set.Members {
+			require.True(t, strings.HasPrefix(m.Name, set.Name+" "), "%q is not named after set %q", m.Name, set.Name)
+			lowest = min(lowest, m.TypeID)
+		}
+		_, fam := splitSetName(set.Members[lowestIndex(set.Members, lowest)].Name)
+		require.Equal(t, fam, set.Family, set.Name)
+	}
+}
+
+func lowestIndex(ms []ImplantSetMember, id int) int {
+	for i, m := range ms {
+		if m.TypeID == id {
+			return i
+		}
+	}
+	return -1
+}
+
+// ImplantSlot: attribute 331 as an integer 1..10; AU-79 (slot 79) and a non-implant are false.
+func TestImplantSlot(t *testing.T) {
+	_, _, names, _ := loadImplantSetsAll(t)
+	s := openRealSDE(t)
+	defer s.Close()
+	slot, ok := ImplantSlot(s, 22107) // Mid-grade Crystal Alpha
+	require.True(t, ok)
+	require.Equal(t, 1, slot)
+	slot, ok = ImplantSlot(s, 22112) // Omega
+	require.True(t, ok)
+	require.Equal(t, 6, slot)
+	au79 := 0
+	for id, n := range names {
+		if strings.Contains(n, "AU-79") {
+			au79 = id
+		}
+	}
+	require.NotZero(t, au79, "AU-79 is in the catalogue")
+	require.Equal(t, 79.0, s.GetDogma(au79)[attrImplantness])
+	_, ok = ImplantSlot(s, au79)
+	require.False(t, ok)
+	_, ok = ImplantSlot(s, 587) // Rifter
+	require.False(t, ok)
+	_, ok = ImplantSlot(s, -1)
+	require.False(t, ok)
 }
 
 func TestImplantSets_Counts(t *testing.T) {
@@ -93,6 +187,8 @@ func TestImplantSets_GradesAndCoverage(t *testing.T) {
 	sets, db := loadImplantSets(t)
 	for _, set := range sets {
 		require.Contains(t, []string{"High", "Mid", "Low", ""}, set.Grade, "%s: grade word", set.Name)
+		// Only the Genolution set (key 1799, attribute implantSetChristmas) has no grade word.
+		require.Equal(t, set.Key == 1799, set.Grade == "", "%s: ungraded only for key 1799", set.Name)
 		require.NotEmpty(t, set.Family, set.Name)
 	}
 	in := map[int]bool{}
@@ -219,6 +315,12 @@ func TestSplitSetName(t *testing.T) {
 	g, f = splitSetName("Ultra-grade Crystal Alpha")
 	require.Equal(t, "Ultra", g)
 	require.Equal(t, "Crystal", f)
+	g, f = splitSetName("mid-GRADE Crystal Alpha")
+	require.Equal(t, "mid", g)
+	require.Equal(t, "Crystal", f)
+	g, f = splitSetName("-grade Foo")
+	require.Equal(t, "", g)
+	require.Equal(t, "-grade", f)
 	g, f = splitSetName("Genolution Core Augmentation CA-1")
 	require.Equal(t, "", g)
 	require.Equal(t, "Genolution", f)

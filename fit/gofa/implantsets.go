@@ -10,14 +10,16 @@ import (
 //
 //   - slot: attribute 331 "implantness" (1-10);
 //   - set key: one of the attributes in ImplantSetKeyAttrs, held by every member of the set
-//     (value 1.0-1.7, the set multiplier);
+//     (the set multiplier of that member: 1.0-3.0 over all keys in build 3670638_20261104; the
+//     Omega implant carries the largest, e.g. 3.0 on key 802, 2.0 on the navy keys, 1.8 on
+//     Mimesis 2825, 1.6 on Wedge 5798);
 //   - grade: the first word of the type name ("High-grade", "Mid-grade", "Low-grade"); Genolution
 //     has none;
 //   - family: the word after the grade ("Crystal").
 //
 // Nothing here is read from any other tool or data set.
 
-// ImplantSetKeyAttrs are the 27 set-key attributes. They are every dgmAttributeTypes row named
+// ImplantSetKeyAttrs (ascending: the "lowest key wins" rule in ImplantSets depends on it) are the 27 set-key attributes. They are every dgmAttributeTypes row named
 // implantSet*, ImplantSet* or setBonus* except 5799 and 5800 (the Wedge helpers
 // implantSetHackingVirusCoherenceModifier and ...OmegaSetBonusFAKE, which carry no membership).
 // The navy sets use one key per grade (1550/1569 Grail, 1552/1571 Talon, 1553/1570 Spur,
@@ -50,7 +52,9 @@ type ImplantSetMember struct {
 	Slot   int
 	// Modelled is true when the engine applies the implant today (isModelledImplant: a
 	// category-20 type that is no booster or DNA mutator and whose every modifier is of a kind
-	// modifierSupported accepts).
+	// modifierSupported accepts). It means "the modifiers are supported", not "the bonus has an
+	// effect": the Edge set bonus lands on boosters, which the engine excludes by design, so an
+	// Edge implant is Modelled and still changes no stat.
 	Modelled bool
 }
 
@@ -76,16 +80,32 @@ func splitSetName(name string) (grade, family string) {
 	if len(words) == 0 {
 		return "", ""
 	}
-	if w, ok := strings.CutSuffix(words[0], gradeSuffix); ok && len(words) > 1 {
-		return w, words[1]
+	w := words[0]
+	if n := len(w) - len(gradeSuffix); n > 0 && len(words) > 1 && strings.EqualFold(w[n:], gradeSuffix) {
+		return w[:n], words[1]
 	}
 	return "", words[0]
+}
+
+// ImplantSlot returns the slot (attribute 331, an integer 1-10) of an implant type. It is false
+// for a type with no such attribute and for one outside 1-10 (Genolution 'Auroral' AU-79 has
+// 79). It does not check the category.
+func ImplantSlot(s SDE, id int) (int, bool) {
+	return slotOf(s.GetDogma(id))
+}
+
+func slotOf(attrs map[int]float64) (int, bool) {
+	v, ok := attrs[attrImplantness]
+	if !ok || v < 1 || v > 10 || v != float64(int(v)) {
+		return 0, false
+	}
+	return int(v), true
 }
 
 // ImplantSets groups the given implant type ids into sets. implantIDs is the host's implant
 // catalogue (gofa.SDE cannot list types); nameOf gives the type name. An id that is no
 // implant, has no key attribute or has a slot outside 1-10 (Genolution 'Auroral' AU-79 has 79)
-// belongs to no set. A grade word other than High, Mid or Low is returned as it is, minus the
+// belongs to no set. Family and Name come from the member with the lowest type id. A grade word other than High, Mid or Low is returned as it is, minus the
 // "-grade" suffix, so a caller or a test sees it. The result is sorted by family, then grade
 // high, mid, low, then key.
 func ImplantSets(s SDE, implantIDs []int, nameOf func(int) string) []ImplantSet {
@@ -108,11 +128,10 @@ func ImplantSets(s SDE, implantIDs []int, nameOf func(int) string) []ImplantSet 
 		if g := s.GetGroupID(id); g != nil && (*g == groupBooster || *g == groupDNAMutator) {
 			continue
 		}
-		v, ok := attrs[attrImplantness]
-		if !ok || v < 1 || v > 10 || v != float64(int(v)) {
+		slot, ok := slotOf(attrs)
+		if !ok {
 			continue
 		}
-		slot := int(v)
 		key := 0
 		for _, k := range ImplantSetKeyAttrs {
 			if _, has := attrs[k]; has {
@@ -124,16 +143,11 @@ func ImplantSets(s SDE, implantIDs []int, nameOf func(int) string) []ImplantSet 
 			continue
 		}
 		name := nameOf(id)
-		grade, family := splitSetName(name)
+		grade, _ := splitSetName(name)
 		gk := groupKey{key, grade}
 		set := groups[gk]
 		if set == nil {
-			set = &ImplantSet{Key: key, Family: family, Grade: grade}
-			if grade == "" {
-				set.Name = family
-			} else {
-				set.Name = grade + gradeSuffix + " " + family
-			}
+			set = &ImplantSet{Key: key, Grade: grade}
 			groups[gk] = set
 		}
 		set.Members = append(set.Members, ImplantSetMember{
@@ -149,6 +163,12 @@ func ImplantSets(s SDE, implantIDs []int, nameOf func(int) string) []ImplantSet 
 			}
 			return a.TypeID < b.TypeID
 		})
+		_, set.Family = splitSetName(set.Members[lowestID(set.Members)].Name)
+		if set.Grade == "" {
+			set.Name = set.Family
+		} else {
+			set.Name = set.Grade + gradeSuffix + " " + set.Family
+		}
 		for _, m := range set.Members {
 			if n := len(set.Slots); n == 0 || set.Slots[n-1] != m.Slot {
 				set.Slots = append(set.Slots, m.Slot)
@@ -170,4 +190,15 @@ func ImplantSets(s SDE, implantIDs []int, nameOf func(int) string) []ImplantSet 
 		return a.Key < b.Key
 	})
 	return out
+}
+
+// lowestID returns the index of the member with the lowest type id.
+func lowestID(ms []ImplantSetMember) int {
+	best := 0
+	for i, m := range ms {
+		if m.TypeID < ms[best].TypeID {
+			best = i
+		}
+	}
+	return best
 }

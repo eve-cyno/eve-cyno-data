@@ -452,15 +452,152 @@ func TestImplants_SetBonusResolvedAttr(t *testing.T) {
 	}
 }
 
-// Set families this file does not check against a number, and why. Each is a coverage gap, not a
-// known engine fault: the engine applies the family's modifiers (every one passes
-// modifierSupported, TestImplantSets_AllModelled), but the corpus has no holder to read.
-func TestImplants_SetBonusNotChecked(t *testing.T) {
-	for _, c := range []struct{ family, reason string }{
-		{"Virtue", "bonus lands on the character's own sensor strength (attribute 1371 through OwnerRequiredSkillModifier); no stat and no resolved holder is read"},
-		{"Edge", "bonus lands on boosters (group 303); the engine excludes boosters, so there is nothing to read"},
-		{"Wedge", "bonus is a ModAdd on Data Miner modules (group 538, attribute 1909), an additive delta; no corpus fit carries one"},
-	} {
-		t.Run(c.family, func(t *testing.T) { t.Skip(c.family + ": " + c.reason) })
+// The low-grade navy keys 1569-1572 (bestGradeSet picks the High-grade set, key 1550-1554): the
+// Low-grade Grail set moves the Maller's radar sensor strength (208) by the hand formula with
+// ITS key 1569, not the high-grade key.
+func TestImplants_SetBonusLowGradeNavy(t *testing.T) {
+	sets, _ := loadImplantSets(t)
+	s := openRealSDE(t)
+	defer s.Close()
+	eng := New(s)
+	var set ImplantSet
+	var ids []int
+	for _, c := range sets {
+		if c.Family == "Grail" && c.Grade == "Low" {
+			set = c
+			for _, m := range c.Members {
+				ids = append(ids, m.TypeID)
+			}
+		}
 	}
+	require.NotEmpty(t, ids, "a Low-grade Grail set exists")
+	require.Equal(t, 1569, set.Key)
+	f := fitNamed(t, s, "maller-armor")
+	ship := func(o fit.StatsOpts) float64 {
+		sh, _, _, _, err := eng.resolveForStats(context.Background(), f, o)
+		require.NoError(t, err)
+		return sh.Attrs[208]
+	}
+	base := ship(fit.StatsOpts{})
+	require.NotZero(t, base)
+	// The low-grade members carry scanRadarStrengthModifier (1565 = 1.0 on Alpha..Epsilon, none on
+	// the Omega), applied by effect 4451 as a ModAdd on the ship's 208. Effect 4460 is a
+	// PreAssign (operation 0) of the set key 1569 onto every member's 1565, the Omega included.
+	// The Omega's key (1.4) is the largest, so each of the six members counts K = 1.4. Hand
+	// formula: 208 = base + members x K, here + 6 x 1.4. (The resolved Omega item reads 1565 = 0
+	// because the attribute is absent from its map, yet the ship total includes its K: so only
+	// the five members that carry the attribute are checked item by item.)
+	k := 0.0
+	for _, id := range ids {
+		k = max(k, s.GetDogma(id)[set.Key])
+	}
+	require.Greater(t, k, 1.0)
+	_, items, _, _, err := eng.resolveForStats(context.Background(), f, fit.StatsOpts{Implants: ids})
+	require.NoError(t, err)
+	n := 0
+	for _, it := range items {
+		if it.Kind != KindImplant {
+			continue
+		}
+		n++
+		if _, has := s.GetDogma(it.TypeID)[1565]; has {
+			require.InDelta(t, k, it.Attrs[1565], 1e-9, "%d", it.TypeID)
+		}
+	}
+	require.Equal(t, len(ids), n)
+	want := base + float64(n)*k
+	require.InDelta(t, want, ship(fit.StatsOpts{Implants: ids}), 1e-9)
+}
+
+// The three set families FitStats cannot show a number for, checked on the resolved implant
+// items instead (the bonus multiplies each member's own attribute), plus the one with a shown
+// target (Wedge on a Data Analyzer) and the stats that must not move.
+//
+//   - Virtue: attribute 846 on each member is b x P, P = product of the members' key 1284. The
+//     engine's modifier target is the probes' baseSensorStrength (attribute 1371,
+//     OwnerRequiredSkillModifier, skill Astrometrics): no probe is in a fit, no stat shows it.
+//   - Edge: attribute 1126 on each member is b x P (P over key 1291). The bonus lands on
+//     boosters (group 303), which the engine excludes by design: no stat moves.
+//   - Wedge: attribute 5799 on each member is b x P (P over key 5798). The implants ModAdd
+//     5799 onto Data Analyzer / Data Miner modules' virusCoherence (1909). Hand formula:
+//     1909 = base + sum_i(b_i x P) = base + P x sum_i(b_i). All numbers come from the SDE.
+func TestImplants_SetBonusUnshownFamilies(t *testing.T) {
+	sets, _ := loadImplantSets(t)
+	s := openRealSDE(t)
+	defer s.Close()
+	eng := New(s)
+	ctx := context.Background()
+	cases := []struct {
+		family         string
+		bonusAttr, key int
+	}{
+		{"Virtue", 846, 1284},
+		{"Edge", 1126, 1291},
+		{"Wedge", 5799, 5798},
+	}
+	for _, c := range cases {
+		t.Run(c.family, func(t *testing.T) {
+			set, ids := bestGradeSet(t, sets, c.family)
+			require.Equal(t, c.key, set.Key)
+			p := 1.0
+			for _, id := range ids {
+				k, ok := s.GetDogma(id)[c.key]
+				require.True(t, ok, id)
+				p *= k
+			}
+			require.Greater(t, p, 1.0, "the set multiplier moves the bonus")
+			f := fitNamed(t, s, "maller-armor")
+			_, items, _, _, err := eng.resolveForStats(ctx, f, fit.StatsOpts{Implants: ids})
+			require.NoError(t, err)
+			checked := 0
+			for _, it := range items {
+				if it.Kind != KindImplant {
+					continue
+				}
+				b, has := s.GetDogma(it.TypeID)[c.bonusAttr]
+				if !has {
+					require.NotContains(t, it.Attrs, c.bonusAttr, "%d (Omega)", it.TypeID)
+					continue
+				}
+				require.InEpsilon(t, b*p, it.Attrs[c.bonusAttr], 1e-9, "%d: b=%v P=%v", it.TypeID, b, p)
+				checked++
+			}
+			require.Equal(t, 5, checked, "five members (Alpha..Epsilon) carry the bonus attribute")
+			// No shown stat moves: FitStats equal with and without the set (Edge: boosters are
+			// excluded; Virtue: probes; Wedge: no analyzer in this fit).
+			require.Equal(t, statsOf(t, eng, f, fit.StatsOpts{}), statsOf(t, eng, f, fit.StatsOpts{Implants: ids}))
+		})
+	}
+
+	t.Run("Wedge on a Data Analyzer II", func(t *testing.T) {
+		const (
+			analyzerII = 30834
+			virusCoh   = 1909
+			wedgeAttr  = 5799
+		)
+		set, ids := bestGradeSet(t, sets, "Wedge")
+		p, sumB := 1.0, 0.0
+		for _, id := range ids {
+			a := s.GetDogma(id)
+			p *= a[set.Key]
+			sumB += a[wedgeAttr]
+		}
+		f, _ := fit.ParseEFT("[Maller, t]\n\n\n\nData Analyzer II\n", s)
+		read := func(o fit.StatsOpts) float64 {
+			_, items, _, _, err := eng.resolveForStats(ctx, f, o)
+			require.NoError(t, err)
+			for _, it := range items {
+				if it.TypeID == analyzerII {
+					return it.Attrs[virusCoh]
+				}
+			}
+			t.Fatalf("Data Analyzer II is not in the resolved fit")
+			return 0
+		}
+		base := read(fit.StatsOpts{})
+		require.NotZero(t, base) // the resolved base (110 here) includes the pilot's skills, not the type's 60
+		want := base + p*sumB    // 110 + 1.6 x (2+3+4+5+6) = 142 on the Mid-grade set
+		require.InDelta(t, want, read(fit.StatsOpts{Implants: ids}), 1e-9)
+		require.Greater(t, want, base)
+	})
 }
