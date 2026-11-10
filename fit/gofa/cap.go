@@ -125,7 +125,11 @@ func capacitor(ship *Item, items []*Item) fit.CapStats {
 	} else {
 		stablePct = 0
 		if netDrain > peakRecharge {
-			secsToEmpty = capEmptySeconds(capacity, rechargeSec, netDrain)
+			if t, ok := capSimulate(capacity, rechargeSec, capEvents(items)); ok {
+				secsToEmpty = capRound(t)
+			} else {
+				secsToEmpty = capEmptySeconds(capacity, rechargeSec, netDrain) // simulation bound reached
+			}
 		}
 	}
 
@@ -150,10 +154,17 @@ func capEmptySeconds(capacity, rechargeSec, net float64) float64 {
 	return capRound(float64(2/a*math.Atan(1/(2*w))) / w)
 }
 
-// capDraw sums the capacitor use (GJ/s) of the active modules and the injection
-// income (GJ/s) of loaded cap-booster charges. It is the loop capacitor() used to
-// hold inline; the repair summary (E10) reads the same figures.
-func capDraw(items []*Item) (totalUsage, totalInjection float64) {
+// capEvent is one module's repeating capacitor event: it costs need at each cycle start and a
+// loaded cap-booster charge gives inject back at the same instant.
+type capEvent struct {
+	need, inject float64 // GJ per activation
+	cycleSec     float64
+}
+
+// capEvents lists the capacitor events of the active modules, in item order. A module without
+// a cycle time takes no part; a KindCharge item immediately after a module is its loaded charge.
+func capEvents(items []*Item) []capEvent {
+	var evs []capEvent
 	for i, it := range items {
 		if it.Kind != KindModule {
 			continue
@@ -170,18 +181,80 @@ func capDraw(items []*Item) (totalUsage, totalInjection float64) {
 		if dur <= 0 {
 			continue
 		}
-		durSec := dur / 1000.0
+		ev := capEvent{cycleSec: dur / 1000.0}
 		if need > 0 {
-			totalUsage += need / durSec
+			ev.need = need
 		}
-		// Check if the next item is a KindCharge loaded into this module.
+		// A KindCharge loaded into this module: capacitorBonus GJ per cycle of the booster.
 		if i+1 < len(items) && items[i+1].Kind == KindCharge {
-			charge := items[i+1]
-			if bonus := charge.Attrs[attrCapacitorBonus]; bonus > 0 {
-				// Injection rate: capacitorBonus GJ per cycle of the booster module.
-				totalInjection += bonus / durSec
+			if bonus := items[i+1].Attrs[attrCapacitorBonus]; bonus > 0 {
+				ev.inject = bonus
 			}
 		}
+		if ev.need > 0 || ev.inject > 0 {
+			evs = append(evs, ev)
+		}
+	}
+	return evs
+}
+
+// capDraw sums the capacitor use (GJ/s) of the active modules and the injection
+// income (GJ/s) of loaded cap-booster charges. The repair summary (E10) and the
+// stable-percentage closed form read these averages.
+func capDraw(items []*Item) (totalUsage, totalInjection float64) {
+	for _, ev := range capEvents(items) {
+		totalUsage += ev.need / ev.cycleSec
+		totalInjection += ev.inject / ev.cycleSec
 	}
 	return totalUsage, totalInjection
+}
+
+// capSimMaxEvents bounds the simulation: a run that reaches it (about a day of a fast cycle)
+// gives up and the caller keeps the closed form.
+const capSimMaxEvents = 2_000_000
+
+// capSimulate runs the game's discrete capacitor model from a full capacitor: every module
+// activates at t = 0 and again at each cycle start, taking its full cost up front (a booster
+// charge adds its injection right after), the capacitor recharges between activations along
+//
+//	C(t + dt) = Cmax * (1 + (sqrt(C / Cmax) - 1) * exp(-5 * dt / tau))^2
+//
+// (the closed solution of the recharge curve under no drain; EVE University wiki,
+// "Capacitor"), and the run ends at the first activation the capacitor cannot pay. It returns
+// that time in seconds and true, or 0 and false when the bound is reached. No step size:
+// events are the activation instants n * cycle, taken in item order (high, mid, low slots) at equal
+// instants, so the result is deterministic. The order matters only through a booster charge that
+// would overfill the capacitor (the excess is lost); the game's order is not documented.
+func capSimulate(capacity, rechargeSec float64, evs []capEvent) (float64, bool) {
+	if capacity <= 0 || len(evs) == 0 {
+		return 0, false
+	}
+	n := make([]int, len(evs)) // activations done per event
+	c := capacity
+	var t float64
+	for step := 0; step < capSimMaxEvents; step++ {
+		// Next instant: the earliest next activation (n * cycle, exact per module).
+		next := float64(n[0]) * evs[0].cycleSec
+		for i := 1; i < len(evs); i++ {
+			if at := float64(n[i]) * evs[i].cycleSec; at < next {
+				next = at
+			}
+		}
+		if dt := next - t; dt > 0 {
+			r := 1 + (math.Sqrt(c/capacity)-1)*math.Exp(-5*dt/rechargeSec)
+			c = capacity * float64(r*r)
+			t = next
+		}
+		for i := range evs {
+			if float64(n[i])*evs[i].cycleSec != next {
+				continue
+			}
+			if c < evs[i].need {
+				return t, true
+			}
+			c = math.Min(capacity, c-evs[i].need+evs[i].inject)
+			n[i]++
+		}
+	}
+	return 0, false
 }

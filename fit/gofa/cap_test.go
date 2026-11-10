@@ -51,10 +51,10 @@ func TestCapacitor_CapDraining(t *testing.T) {
 	got := capacitor(ship, []*Item{ship, module})
 	require.False(t, got.Stable, "module drain 5 GJ/s > peak 2.5 GJ/s → unstable")
 	require.InDelta(t, 100.0, got.Capacity, 1e-9)
-	// Exact solution of the recharge ODE (EVE University "Capacitor"): a = 10/T = 0.1,
-	// d = 5/100 = 0.05, q = d/a = 0.5, w = sqrt(q-1/4) = 0.5, t = (2/a) atan(1/(2w))/w
-	// = 20 * (pi/4) / 0.5 = 10*pi s. The old capacity/(net-peak) rule gave 40 s.
-	require.InDelta(t, 10*math.Pi, got.SecondsToEmpty, 1e-5)
+	// Discrete activations from t = 0 (M3): 5 GJ taken up front each second, recharge between.
+	// 31 s from an independent Python run of the same recurrence; the continuous closed form
+	// (10*pi = 31.42 s) is the upper bound the simulation stays within one cycle of.
+	require.InDelta(t, 31, got.SecondsToEmpty, 1e-6)
 }
 
 // TestCapacitor_ZeroRecharge verifies that a ship with zero recharge time
@@ -223,7 +223,8 @@ func TestCapacitor_StablePctIsEveUniFraction(t *testing.T) {
 	}
 }
 
-// Time to empty is the exact integral of dt = dC/(D - recharge(C)) from full to empty. At
+// Time to empty is the discrete simulation (M3, independent Python run of the same recurrence).
+// The continuous closed form, an upper bound, is the integral of dt = dC/(D - recharge(C)). At
 // k = D/peak: t = (2/a) atan(1/(2w))/w with a = 10/T and w = sqrt(k/4 - 1/4). With T=400:
 // a = 0.025; k = 2 -> w = 0.5, t = 80 * (pi/4)/0.5 = 40*pi s; k = 5 -> w = 1, t = 80*atan(0.5).
 func TestCapacitor_SecondsToEmptyExact(t *testing.T) {
@@ -231,9 +232,9 @@ func TestCapacitor_SecondsToEmptyExact(t *testing.T) {
 	got := capacitor(ship, []*Item{ship, drain(12.5)})
 	require.False(t, got.Stable)
 	require.Zero(t, got.StablePct)
-	require.InDelta(t, 40*math.Pi, got.SecondsToEmpty, 1e-5)
+	require.InDelta(t, 125, got.SecondsToEmpty, 1e-6) // closed form 40*pi = 125.66
 	got = capacitor(ship, []*Item{ship, drain(31.25)})
-	require.InDelta(t, 80*math.Atan(0.5), got.SecondsToEmpty, 1e-5)
+	require.InDelta(t, 37, got.SecondsToEmpty, 1e-6) // closed form 80*atan(0.5) = 37.1
 }
 
 // Time to empty falls as the drain rises, is continuous across the stability edge direction
@@ -253,33 +254,24 @@ func TestCapacitor_SecondsToEmptyMonotoneAndDeterministic(t *testing.T) {
 	}
 }
 
-// Independent check of the closed form: integrate dx/dt = a(sqrt(x)-x) - d from x=1 to 0 with
-// RK4 (h = 0.005 s, linear interpolation of the last step) and compare at 1e-4 relative.
-func TestCapacitor_SecondsToEmptyMatchesNumericIntegration(t *testing.T) {
-	ship := capShip() // capacity 1000, T = 400 s, a = 0.025
-	for _, use := range []float64{6.3, 8, 12.5, 25, 80} {
-		a, d := 10.0/400, use/1000
-		f := func(x float64) float64 { return a*(math.Sqrt(math.Max(x, 0))-x) - d }
-		x, tt, h := 1.0, 0.0, 0.005
-		for x > 0 {
-			k1 := f(x)
-			k2 := f(x + h/2*k1)
-			k3 := f(x + h/2*k2)
-			k4 := f(x + h*k3)
-			n := x + h/6*(k1+2*k2+2*k3+k4)
-			if n <= 0 {
-				tt += h * x / (x - n)
-				break
-			}
-			x, tt = n, tt+h
-		}
-		got := capacitor(ship, []*Item{ship, drain(use)}).SecondsToEmpty
-		require.InEpsilon(t, tt, got, 1e-4, "drain %v GJ/s", use)
+// The discrete result stays just below the continuous closed form (within 5 %): the first
+// activation is paid up front (earlier drain) and the run stops at the first unpayable
+// activation (before zero). Independent Python values for 1 s cycles on capShip (capacity 1000,
+// T = 400 s): 6.3 GJ -> 2647 s, 8 -> 327, 25 -> 48, 80 -> 13.
+func TestCapacitor_DiscreteStaysBelowClosedForm(t *testing.T) {
+	ship := capShip()
+	for _, c := range []struct{ use, want float64 }{{6.3, 2647}, {8, 327}, {12.5, 125}, {25, 48}, {80, 13}} {
+		got := capacitor(ship, []*Item{ship, drain(c.use)}).SecondsToEmpty
+		require.InDelta(t, c.want, got, 1e-6, "drain %v GJ/s", c.use)
+		closed := capEmptySeconds(1000, 400, c.use)
+		require.LessOrEqual(t, got, closed)
+		require.InEpsilon(t, closed, got, 0.05, "drain %v GJ/s", c.use)
 	}
 }
 
 // The 27 fits at all V: stable flag, stable level (percent) and time to empty (s). Stable fits stay
 // stable and unstable ones stay unstable against the old engine; only the two figures moved.
+// Time to empty is the discrete simulation since M3 (fit parity); the hawks run dry at t = 0.
 // Stable level check by hand, from the old figure o (= (1-sqrt(1-k))*100): the correct level is
 // ((1+sqrt(1-k))/2)^2 = (1-o/200)^2, e.g. maller-armor o=70.546725 -> (1-0.352734)^2 = 41.8954 %.
 // Time to empty is the closed form, cross-checked by numeric integration in
@@ -304,29 +296,29 @@ func TestCapacitor_AllV27Table(t *testing.T) {
 		{"caracal-missile", true, 100.000000, 0.000000},
 		{"maller-armor", true, 41.895376, 0.000000},
 		{"vexor-drone", true, 97.049635, 0.000000},
-		{"firetail-mwd", false, 0.000000, 146.230518},
+		{"firetail-mwd", false, 0.000000, 130.000000},
 		{"maller-cap-heavy", true, 100.000000, 0.000000},
 		{"harbinger-laser", true, 100.000000, 0.000000},
-		{"thorax-blaster", false, 0.000000, 271.199104},
+		{"thorax-blaster", false, 0.000000, 267.469879},
 		{"raven-cruise", true, 100.000000, 0.000000},
 		{"tengu-t3", true, 100.000000, 0.000000},
 		{"ishtar-sentry", true, 93.060972, 0.000000},
 		{"drake-active-shield", true, 73.944164, 0.000000},
-		{"qc2/hawk_no_coprocessor.eft", false, 0.000000, 2.833349},
+		{"qc2/hawk_no_coprocessor.eft", false, 0.000000, 0.000000},
 		{"qc2/q131_viator.eft", true, 100.000000, 0.000000},
-		{"qc2/q148_hawk.eft", false, 0.000000, 2.833349},
+		{"qc2/q148_hawk.eft", false, 0.000000, 0.000000},
 		{"qc2/q172_drake_navy_issue.eft", true, 65.453074, 0.000000},
 		{"qc2/q182_vargur.eft", true, 62.802805, 0.000000},
-		{"qc2/q200_cerberus.eft", false, 0.000000, 221.165215},
+		{"qc2/q200_cerberus.eft", false, 0.000000, 217.600000},
 		{"qc2/q201_stormbringer.eft", true, 62.840152, 0.000000},
 		{"qc2/q202_ikitursa.eft", true, 62.063722, 0.000000},
-		{"qc2/q215_leshak.eft", false, 0.000000, 118.427357},
-		{"qc2/q217_vargur.eft", false, 0.000000, 79.963808},
-		{"qc2/q64_thorax.eft", false, 0.000000, 69.830224},
-		{"qc2/q65_rifter.eft", false, 0.000000, 38.632098},
+		{"qc2/q215_leshak.eft", false, 0.000000, 114.000000},
+		{"qc2/q217_vargur.eft", false, 0.000000, 76.800000},
+		{"qc2/q64_thorax.eft", false, 0.000000, 65.000000},
+		{"qc2/q65_rifter.eft", false, 0.000000, 36.000000},
 		{"qc2/q69_cormorant.eft", true, 41.536758, 0.000000},
 		{"qc2/q79_gila.eft", true, 55.914475, 0.000000},
-		{"qc2/q97_drake.eft", false, 0.000000, 194.129490},
+		{"qc2/q97_drake.eft", false, 0.000000, 189.000000},
 	}
 	require.Len(t, want, len(gate27))
 	for i, w := range want {
@@ -336,4 +328,54 @@ func TestCapacitor_AllV27Table(t *testing.T) {
 		require.InDelta(t, w.pct, c.StablePct, 1e-6, w.name)
 		require.InDelta(t, w.tte, c.SecondsToEmpty, 1e-6, w.name)
 	}
+}
+
+// M3 (fit parity): the game simulates discrete activations from t = 0 and ends at the first one
+// it cannot pay; the closed form under a constant drain ran 3-9 % long.
+
+func TestCapSimulate_StopsAtFirstUnpayableActivation(t *testing.T) {
+	// No recharge to speak of: 100 GJ, 30 GJ per second. Paid at t = 0, 1, 2; at t = 3 only 10 left.
+	got, ok := capSimulate(100, 1e12, []capEvent{{need: 30, cycleSec: 1}})
+	require.True(t, ok)
+	require.InDelta(t, 3, got, 1e-6)
+}
+
+func TestCapSimulate_BoosterInjectionIsPaidBack(t *testing.T) {
+	// Costs 10, injects 5 per second: the capacitor holds 100 - 5k before activation k, and
+	// activation 19 finds 5 < 10.
+	got, ok := capSimulate(100, 1e12, []capEvent{{need: 10, inject: 5, cycleSec: 1}})
+	require.True(t, ok)
+	require.InDelta(t, 19, got, 1e-6)
+}
+
+func TestCapSimulate_AllModulesStartAtZero(t *testing.T) {
+	// Two modules of 60 GJ and 50 GJ, cycles 10 s and 7 s: both fire at t = 0 (110 > 100), so the
+	// second cannot pay at t = 0.
+	got, ok := capSimulate(100, 1e12, []capEvent{{need: 60, cycleSec: 10}, {need: 50, cycleSec: 7}})
+	require.True(t, ok)
+	require.InDelta(t, 0, got, 1e-9)
+}
+
+func TestCapSimulate_NoEventsOrBoundGivesUp(t *testing.T) {
+	_, ok := capSimulate(100, 100, nil)
+	require.False(t, ok)
+	// A net gain forever: the bound is reached.
+	_, ok = capSimulate(100, 100, []capEvent{{need: 1, inject: 2, cycleSec: 1}})
+	require.False(t, ok)
+}
+
+// Game, owner check 2026-11-10: the capacitor of reference fit 1 (Rifter) depletes in 1:03, of
+// reference fit 5 (Megathron, main) in 2:32; the game shows whole seconds, truncated.
+func TestCapacitor_RunsDryMatchesGame(t *testing.T) {
+	s := openRealSDE(t)
+	defer s.Close()
+	eng := New(s)
+	rifter := statsOf(t, eng, parityFit(t, s, 1), fit.StatsOpts{}).Capacitor
+	require.False(t, rifter.Stable)
+	require.GreaterOrEqual(t, rifter.SecondsToEmpty, 63.0)
+	require.Less(t, rifter.SecondsToEmpty, 64.0)
+
+	mega := statsOf(t, eng, parityFit(t, s, 5), fit.StatsOpts{}).Capacitor
+	require.GreaterOrEqual(t, mega.SecondsToEmpty, 152.0)
+	require.Less(t, mega.SecondsToEmpty, 153.0)
 }

@@ -132,6 +132,13 @@ class Fit:
                         L.append((it, eid, en, dict(func='Special', kind='charge', skillTypeID=S, modifiedAttributeID=a, modifyingAttributeID=292, operation=6)))
                     elif en == 'selfRof':
                         L.append((it, eid, en, dict(func='Special', kind='module', skillTypeID=S, modifiedAttributeID=51, modifyingAttributeID=293, operation=6)))
+            # Reactive Armor Hardener (effect 4928, no modifierInfo): its own four armor resonances (attributes
+            # 267-270, default 0.85) multiply the ship's, PreMul so it stacks with the Damage Control only (EVE
+            # University wiki, "Armor tanking"). The adaptive shift is not modelled.
+            for it in s.items:
+                if it.kind == 'module' and it.state == 'active' and any(e[0] == 4928 for e in effects(it.tid)):
+                    for a in (267, 268, 269, 270):
+                        L.append((it, 4928, 'adaptiveArmorHardener', dict(func='ItemModifier', domain='shipID', modifiedAttributeID=a, modifyingAttributeID=a, operation=0)))
             for it in s.items:
                 for eid, en, mods in s.active_effects(it):
                     if en == 'skillEffect': continue  # skill level is the trained level; this effect only models training state
@@ -169,6 +176,7 @@ class Fit:
             if m['modifiedAttributeID'] != a: continue
             if it not in s.targets(src, m): continue
             v = s.val(src, m['modifyingAttributeID'])
+            if eid == 899 and src.tid == 11993: v *= 2  # Cerberus: 5 % kinetic per level, the SDE row (2.5) is shared with EM, thermal, explosive (EVE University wiki "Cerberus")
             op = m['operation']
             pen = src.kind in ('module', 'rig', 'charge') and not STACKABLE.get(a, 1)
             rec = (src, en, v, pen)
@@ -213,30 +221,35 @@ PAIRS = [  # (hull ref, profile)
  (3, 'missiler'), (3, 'fitIII'), (4, 'fitIII'),
  (5, 'allIII'), (5, 'alpha'), (6, 'tanker'), (6, 'droner'), (3, 'allI'), (5, 'allI')]
 
-def cap_equilibrium(C, T, use, inj):
+def cap_simulate(C, T, evs):
+    """Discrete model: every module fires at t = 0 and at each cycle start, takes its full cost up front, a booster charge
+    injects right after, recharge between events C' = Cmax*(1+(sqrt(C/Cmax)-1)*exp(-5 dt/T))^2 (EVE University wiki,
+    "Capacitor"); the run ends at the first activation the capacitor cannot pay. evs = [(need, inject, cycle_s)]."""
+    n = [0] * len(evs); c = C; t = 0.0
+    for _ in range(2000000):
+        nxt = min(n[i] * evs[i][2] for i in range(len(evs)))
+        if nxt > t:
+            r = 1 + (math.sqrt(c / C) - 1) * math.exp(-5 * (nxt - t) / T); c = C * r * r; t = nxt
+        for i, (need, inj, cy) in enumerate(evs):
+            if n[i] * cy == nxt:
+                if c < need: return t
+                c = min(C, c - need + inj); n[i] += 1
+    return None
+
+def cap_equilibrium(C, T, use, inj, evs):
     peak = 2.5 * C / T
     net = use - inj
     if net <= 0: return True, 100.0, 0.0
     if net <= peak:
         k = net / peak
         return True, ((1 + math.sqrt(1 - k)) / 2) ** 2 * 100.0, 0.0
-    # unstable (k > 1): dc/dt = a*(sqrt(c)-c) - d with a = 10/T, d = net/C. Substitute s = sqrt(c):
-    #   dt = 2 s ds / (d - a s + a s^2), t = (2/a) * int_0^1 s/(s^2 - s + q) ds, q = d/a = k/4 > 1/4.
-    # With w = sqrt(q - 1/4) the log terms of the antiderivative cancel between s=1 and s=0:
-    #   t = (2/a) * atan(1/(2w)) / w.
+    # unstable (k > 1): the game's discrete simulation. The continuous closed form (substitute s = sqrt(c), dc/dt = a (s - c) - d with
+    # a = 10/T, d = net/C: t = (2/a) atan(1/(2w))/w, w = sqrt(q - 1/4), q = d/a) is the upper bound it stays below.
     a = 10.0 / T; q = net / C / a; w = math.sqrt(q - 0.25)
-    t = 2.0 / a * math.atan(1.0 / (2.0 * w)) / w
-    # cross-check by numeric integration (RK4, h = 0.05 s) of the same ODE: must agree to 1e-4 relative
-    def f(c): return a * (math.sqrt(max(c, 0)) - c) - d_
-    d_ = net / C
-    c0 = 1.0; tn = 0.0; h = 0.05
-    while c0 > 0 and tn < 1e5:
-        k1 = f(c0); k2 = f(c0 + h / 2 * k1); k3 = f(c0 + h / 2 * k2); k4 = f(c0 + h * k3)
-        n = c0 + h / 6 * (k1 + 2 * k2 + 2 * k3 + k4)
-        if n <= 0:
-            tn += h * c0 / (c0 - n); c0 = 0; break
-        c0 = n; tn += h
-    assert abs(tn - t) <= 1e-4 * t, (tn, t)
+    t_closed = 2.0 / a * math.atan(1.0 / (2.0 * w)) / w
+    t = cap_simulate(C, T, evs)
+    if t is None: return False, 0.0, t_closed
+    assert t <= t_closed + 1e-6, (t, t_closed)
     return False, 0.0, t
 
 def numbers(f):
@@ -276,13 +289,18 @@ def numbers(f):
     n['ehp'] = layer(263, RES4_SHIELD) + layer(265, RES4_ARMOR) + layer(9, RES4_HULL)
     # capacitor
     C = f.val(sh, 482); T = f.val(sh, 55) / 1000.0
-    use = inj = 0.0
-    for m in mods:
+    use = inj = 0.0; evs = []
+    # activation order at the same instant: high, mid, low, rig, subsystem slots (the engine's item order); it matters only through a
+    # booster charge that overfills the capacitor
+    SLOT_RANK = {'high': 0, 'mid': 1, 'low': 2}
+    for m in sorted(mods, key=lambda m: SLOT_RANK.get(getattr(m, 'slot', None), 3)):
         need = f.val(m, 6); dur = f.val(m, 73) or f.val(m, 51)
         if dur <= 0: continue
-        if need > 0 and m.state == 'active': use += need / (dur / 1000.0)
-        if m.charge is not None and f.val(m.charge, 67) > 0: inj += f.val(m.charge, 67) / (dur / 1000.0)
-    st, pct, tte = cap_equilibrium(C, T, use, inj)
+        ev_need = need if (need > 0 and m.state == 'active') else 0.0
+        ev_inj = f.val(m.charge, 67) if (m.charge is not None and f.val(m.charge, 67) > 0) else 0.0
+        use += ev_need / (dur / 1000.0); inj += ev_inj / (dur / 1000.0)
+        if ev_need > 0 or ev_inj > 0: evs.append((ev_need, ev_inj, dur / 1000.0))
+    st, pct, tte = cap_equilibrium(C, T, use, inj, evs)
     n.update(cap_capacity=C, cap_recharge_s=T, cap_peak=2.5 * C / T, cap_use=use, cap_inject=inj, cap_stable=st, cap_stable_pct=pct, cap_seconds_to_empty=tte)
     v = f.val(sh, 37)
     props = [m for m in mods if m.state == 'active' and any(e[0] in (6730, 6731) for e in effects(m.tid))]
@@ -392,7 +410,7 @@ def build_case(ref, pid):
     if n['cap_stable']:
         add('cap_stable_pct', n['cap_stable_pct'], REL, SRC['cap'], 'net drain %.8g; k = net/peak = %.8g; pct = 100*((1+sqrt(1-k))/2)^2' % (net, net / n['cap_peak'] if net > 0 else 0), est)
     else:
-        add('cap_seconds_to_empty', n['cap_seconds_to_empty'], REL, SRC['cap'], 'closed form of dt = dC/(net - recharge(C)) from full to empty, s = sqrt(c): t = (2/a) atan(1/(2w))/w, a = 10/T, w = sqrt(net/C/a - 1/4); net drain %.8g GJ/s' % net, est or 'continuous drain stands in for discrete module cycles')
+        add('cap_seconds_to_empty', n['cap_seconds_to_empty'], REL, SRC['cap'], 'discrete activations from t = 0 (stop at the first unpayable one), recharge C\' = Cmax (1 + (sqrt(C/Cmax) - 1) exp(-5 dt/T))^2; the continuous closed form is an upper bound; net drain %.8g GJ/s' % net, est)
     add('speed', n['speed'], REL, SRC['speed'], 'passive max velocity %.10g x (1 + speedFactor/100 x thrust/mass) for each active propulsion module, mass %.10g; no propulsion module: passive value' % (n['speed_passive'], n['mass_total']))
     return cases, doc
 
@@ -406,7 +424,7 @@ if __name__ == '__main__':
           '- Effects the SDE carries no modifier data for are applied by hand from the skill descriptions: `droneDmgBonus` (drone damage, attr 292 per level for drones requiring the skill), `missile*DmgBonus` (missile damage, same attribute), `selfRof` (rate of fire, attr 293). Propulsion modules (effects 6730/6731): speed x (1 + speedFactor/100 x thrust/mass).',
           '- States: every module active (EFT default). Skills not named in a profile are the profile level; a unusable module is still evaluated.',
           '- Missile damage: sum of the four damage attributes x pilot missileDamageMultiplier (attr 212, raised by Ballistic Control System attr 213, stacking penalised) / launcher cycle.',
-          '- Capacitor: see the formulas in `cases.json` sources. Stable percent is the stable equilibrium root; time to empty is the closed-form integral of the recharge curve under constant drain (substitution s = sqrt(c); an RK4 run, step 0.05 s, is asserted to agree to 1e-4).',
+          '- Capacitor: see the formulas in `cases.json` sources. Stable percent is the stable equilibrium root; time to empty is the discrete simulation of the game (activations from t = 0, first unpayable activation ends the run; asserted to stay below the continuous closed form).',
           '- Hand check of the method (done on paper, not by the script): Rifter allIII, 200mm AutoCannon I cycle = 3750 ms x (1 - 7.5% x Minmatar Frigate) x (1 - 2% x Gunnery) x (1 - 4% x Rapid Firing) x Gyrostabilizer 0.92 (SDE attr 204) x Burst Aerator 0.9 (stack-penalised, second one); see the hand check below.',
           '  Rifter allIII (Minmatar Frigate III, Gunnery V, Rapid Firing III, Surgical Strike III, Small Projectile Turret V): skill factors 0.775 x 0.90 x 0.88 = 0.6138; penalised chain 0.90, 0.91309, 0.95434 (0.9 and 0.9 aerators, 0.92 gyrostabilizer) = 0.78425; cycle 3750 x 0.6138 x 0.78425 = 1805.1 ms. Damage multiplier 2.8875 x 1.25 (SPT V) x 1.09 (SS III) x 1.07 (gyro, alone) = 4.2095. DPS per gun 12 x 4.2095 / 1.8051 = 27.98; three guns 83.95, the figure of the Rifter allIII section.',
           '']

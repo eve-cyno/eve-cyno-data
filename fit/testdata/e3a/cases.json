@@ -129,11 +129,10 @@
      "formula": "use 10.666667 GJ/s (sum need/cycle), injection 0 GJ/s, peak 2.5*250/125 = 5 GJ/s; stable iff peak + injection >= use"
     },
     "cap_seconds_to_empty": {
-     "value": 35.4189852,
+     "value": 30.0,
      "tol": "rel1e-6",
      "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
-     "formula": "closed form of dt = dC/(net - recharge(C)) from full to empty, s = sqrt(c): t = (2/a) atan(1/(2w))/w, a = 10/T, w = sqrt(net/C/a - 1/4); net drain 10.666667 GJ/s",
-     "estimated": "continuous drain stands in for discrete module cycles"
+     "formula": "discrete activations from t = 0 (stop at the first unpayable one), recharge C' = Cmax (1 + (sqrt(C/Cmax) - 1) exp(-5 dt/T))^2; the continuous closed form is an upper bound; net drain 10.666667 GJ/s"
     },
     "speed": {
      "value": 733.8488576,
@@ -270,11 +269,10 @@
      "formula": "use 11.871242 GJ/s (sum need/cycle), injection 0 GJ/s, peak 2.5*300/118.75 = 6.3157895 GJ/s; stable iff peak + injection >= use"
     },
     "cap_seconds_to_empty": {
-     "value": 41.40053531,
+     "value": 36.0,
      "tol": "rel1e-6",
      "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
-     "formula": "closed form of dt = dC/(net - recharge(C)) from full to empty, s = sqrt(c): t = (2/a) atan(1/(2w))/w, a = 10/T, w = sqrt(net/C/a - 1/4); net drain 11.871242 GJ/s",
-     "estimated": "continuous drain stands in for discrete module cycles"
+     "formula": "discrete activations from t = 0 (stop at the first unpayable one), recharge C' = Cmax (1 + (sqrt(C/Cmax) - 1) exp(-5 dt/T))^2; the continuous closed form is an upper bound; net drain 11.871242 GJ/s"
     },
     "speed": {
      "value": 949.0950181,
@@ -411,11 +409,10 @@
      "formula": "use 11.54183 GJ/s (sum need/cycle), injection 0 GJ/s, peak 2.5*300/106.25 = 7.0588235 GJ/s; stable iff peak + injection >= use"
     },
     "cap_seconds_to_empty": {
-     "value": 47.8865835,
+     "value": 45.0,
      "tol": "rel1e-6",
      "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
-     "formula": "closed form of dt = dC/(net - recharge(C)) from full to empty, s = sqrt(c): t = (2/a) atan(1/(2w))/w, a = 10/T, w = sqrt(net/C/a - 1/4); net drain 11.54183 GJ/s",
-     "estimated": "continuous drain stands in for discrete module cycles"
+     "formula": "discrete activations from t = 0 (stop at the first unpayable one), recharge C' = Cmax (1 + (sqrt(C/Cmax) - 1) exp(-5 dt/T))^2; the continuous closed form is an upper bound; net drain 11.54183 GJ/s"
     },
     "speed": {
      "value": 997.4787042,
@@ -552,11 +549,10 @@
      "formula": "use 12.135948 GJ/s (sum need/cycle), injection 0 GJ/s, peak 2.5*300/106.25 = 7.0588235 GJ/s; stable iff peak + injection >= use"
     },
     "cap_seconds_to_empty": {
-     "value": 43.4681601,
+     "value": 40.5,
      "tol": "rel1e-6",
      "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
-     "formula": "closed form of dt = dC/(net - recharge(C)) from full to empty, s = sqrt(c): t = (2/a) atan(1/(2w))/w, a = 10/T, w = sqrt(net/C/a - 1/4); net drain 12.135948 GJ/s",
-     "estimated": "continuous drain stands in for discrete module cycles"
+     "formula": "discrete activations from t = 0 (stop at the first unpayable one), recharge C' = Cmax (1 + (sqrt(C/Cmax) - 1) exp(-5 dt/T))^2; the continuous closed form is an upper bound; net drain 12.135948 GJ/s"
     },
     "speed": {
      "value": 949.1073529,
@@ -1077,10 +1073,10 @@
      "formula": "min(ship 6, pilot 12)"
     },
     "dps_weapons": {
-     "value": 216.969719,
+     "value": 241.0774655,
      "tol": "rel1e-6",
      "source": "EVE University \"Turret mechanics\" and \"Missile mechanics\"; SDE attrs 114/116/117/118 (damage), 64 (multiplier), 51 (cycle ms), 212 (pilot missile damage multiplier, raised by Ballistic Control System attr 213)",
-     "formula": "Heavy Missile Launcher II: (Scourge Heavy Missile damage 222.103125) x multiplier 1.195603198 / (cycle 7343.343792 ms/1000) ; summed over 6 weapons"
+     "formula": "Heavy Missile Launcher II: (Scourge Heavy Missile damage 246.78125) x multiplier 1.195603198 / (cycle 7343.343792 ms/1000) ; summed over 6 weapons"
     },
     "dps_drones": {
      "value": 0.0,
@@ -1089,7 +1085,7 @@
      "formula": "first bay drone,  ; summed over the 0 launched drones"
     },
     "dps_total": {
-     "value": 216.969719,
+     "value": 241.0774655,
      "tol": "rel1e-6",
      "source": "EVE University \"Turret mechanics\" and \"Missile mechanics\"; SDE attrs 114/116/117/118 (damage), 64 (multiplier), 51 (cycle ms), 212 (pilot missile damage multiplier, raised by Ballistic Control System attr 213)",
      "formula": "weapons + drones"
@@ -1217,10 +1213,10 @@
      "formula": "min(ship 6, pilot 12)"
     },
     "dps_weapons": {
-     "value": 246.0542035,
+     "value": 273.3935594,
      "tol": "rel1e-6",
      "source": "EVE University \"Turret mechanics\" and \"Missile mechanics\"; SDE attrs 114/116/117/118 (damage), 64 (multiplier), 51 (cycle ms), 212 (pilot missile damage multiplier, raised by Ballistic Control System attr 213)",
-     "formula": "Heavy Missile Launcher II: (Scourge Heavy Missile damage 230.484375) x multiplier 1.195603198 / (cycle 6719.686604 ms/1000) ; summed over 6 weapons"
+     "formula": "Heavy Missile Launcher II: (Scourge Heavy Missile damage 256.09375) x multiplier 1.195603198 / (cycle 6719.686604 ms/1000) ; summed over 6 weapons"
     },
     "dps_drones": {
      "value": 0.0,
@@ -1229,7 +1225,7 @@
      "formula": "first bay drone,  ; summed over the 0 launched drones"
     },
     "dps_total": {
-     "value": 246.0542035,
+     "value": 273.3935594,
      "tol": "rel1e-6",
      "source": "EVE University \"Turret mechanics\" and \"Missile mechanics\"; SDE attrs 114/116/117/118 (damage), 64 (multiplier), 51 (cycle ms), 212 (pilot missile damage multiplier, raised by Ballistic Control System attr 213)",
      "formula": "weapons + drones"
@@ -1539,11 +1535,10 @@
      "formula": "use 51.025938 GJ/s (sum need/cycle), injection 0 GJ/s, peak 2.5*5760/977.5 = 14.731458 GJ/s; stable iff peak + injection >= use"
     },
     "cap_seconds_to_empty": {
-     "value": 141.3032775,
+     "value": 140.0,
      "tol": "rel1e-6",
      "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
-     "formula": "closed form of dt = dC/(net - recharge(C)) from full to empty, s = sqrt(c): t = (2/a) atan(1/(2w))/w, a = 10/T, w = sqrt(net/C/a - 1/4); net drain 51.025938 GJ/s",
-     "estimated": "continuous drain stands in for discrete module cycles"
+     "formula": "discrete activations from t = 0 (stop at the first unpayable one), recharge C' = Cmax (1 + (sqrt(C/Cmax) - 1) exp(-5 dt/T))^2; the continuous closed form is an upper bound; net drain 51.025938 GJ/s"
     },
     "speed": {
      "value": 1023.454784,
@@ -1680,11 +1675,10 @@
      "formula": "use 52.259078 GJ/s (sum need/cycle), injection 0 GJ/s, peak 2.5*5760/977.5 = 14.731458 GJ/s; stable iff peak + injection >= use"
     },
     "cap_seconds_to_empty": {
-     "value": 137.1143403,
+     "value": 131.0984444,
      "tol": "rel1e-6",
      "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
-     "formula": "closed form of dt = dC/(net - recharge(C)) from full to empty, s = sqrt(c): t = (2/a) atan(1/(2w))/w, a = 10/T, w = sqrt(net/C/a - 1/4); net drain 52.259078 GJ/s",
-     "estimated": "continuous drain stands in for discrete module cycles"
+     "formula": "discrete activations from t = 0 (stop at the first unpayable one), recharge C' = Cmax (1 + (sqrt(C/Cmax) - 1) exp(-5 dt/T))^2; the continuous closed form is an upper bound; net drain 52.259078 GJ/s"
     },
     "speed": {
      "value": 974.5330976,
@@ -1797,10 +1791,10 @@
      "formula": "weapons + drones"
     },
     "ehp": {
-     "value": 31601.59988,
+     "value": 33386.33654,
      "tol": "rel1e-6",
      "source": "EVE University \"Effective HP\"; SDE attrs 263/265/9 (HP), resonances 271-274, 267-270, 109/110/111/113; uniform profile",
-     "formula": "shield 3500/mean(0.875,0.4375,0.525,0.7) + armor 5400/mean(0.3315,0.60435,0.436475,0.442) + hull 5700/mean(0.402,0.402,0.402,0.402)"
+     "formula": "shield 3500/mean(0.875,0.4375,0.525,0.7) + armor 5400/mean(0.288283,0.525562,0.379573,0.384377) + hull 5700/mean(0.402,0.402,0.402,0.402)"
     },
     "cap_capacity": {
      "value": 3335.0,
@@ -1822,10 +1816,10 @@
      "estimated": "cap booster charge count and reload (10 s) not modelled: injection taken as continuous charge/cycle"
     },
     "cap_seconds_to_empty": {
-     "value": 729.1235448,
+     "value": 658.92,
      "tol": "rel1e-6",
      "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
-     "formula": "closed form of dt = dC/(net - recharge(C)) from full to empty, s = sqrt(c): t = (2/a) atan(1/(2w))/w, a = 10/T, w = sqrt(net/C/a - 1/4); net drain 20.588881 GJ/s",
+     "formula": "discrete activations from t = 0 (stop at the first unpayable one), recharge C' = Cmax (1 + (sqrt(C/Cmax) - 1) exp(-5 dt/T))^2; the continuous closed form is an upper bound; net drain 20.588881 GJ/s",
      "estimated": "cap booster charge count and reload (10 s) not modelled: injection taken as continuous charge/cycle"
     },
     "speed": {
@@ -1939,10 +1933,10 @@
      "formula": "weapons + drones"
     },
     "ehp": {
-     "value": 30380.05964,
+     "value": 32070.24038,
      "tol": "rel1e-6",
      "source": "EVE University \"Effective HP\"; SDE attrs 263/265/9 (HP), resonances 271-274, 267-270, 109/110/111/113; uniform profile",
-     "formula": "shield 3500/mean(0.875,0.4375,0.525,0.7) + armor 5175/mean(0.34,0.612,0.442,0.442) + hull 5462.5/mean(0.402,0.402,0.402,0.402)"
+     "formula": "shield 3500/mean(0.875,0.4375,0.525,0.7) + armor 5175/mean(0.295675,0.532215,0.384377,0.384377) + hull 5462.5/mean(0.402,0.402,0.402,0.402)"
     },
     "cap_capacity": {
      "value": 2900.0,
@@ -1964,10 +1958,10 @@
      "estimated": "cap booster charge count and reload (10 s) not modelled: injection taken as continuous charge/cycle"
     },
     "cap_seconds_to_empty": {
-     "value": 309.7648695,
+     "value": 251.43,
      "tol": "rel1e-6",
      "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
-     "formula": "closed form of dt = dC/(net - recharge(C)) from full to empty, s = sqrt(c): t = (2/a) atan(1/(2w))/w, a = 10/T, w = sqrt(net/C/a - 1/4); net drain 20.69777 GJ/s",
+     "formula": "discrete activations from t = 0 (stop at the first unpayable one), recharge C' = Cmax (1 + (sqrt(C/Cmax) - 1) exp(-5 dt/T))^2; the continuous closed form is an upper bound; net drain 20.69777 GJ/s",
      "estimated": "cap booster charge count and reload (10 s) not modelled: injection taken as continuous charge/cycle"
     },
     "speed": {
@@ -2063,10 +2057,10 @@
      "formula": "min(ship 6, pilot 8)"
     },
     "dps_weapons": {
-     "value": 193.276163,
+     "value": 214.7512922,
      "tol": "rel1e-6",
      "source": "EVE University \"Turret mechanics\" and \"Missile mechanics\"; SDE attrs 114/116/117/118 (damage), 64 (multiplier), 51 (cycle ms), 212 (pilot missile damage multiplier, raised by Ballistic Control System attr 213)",
-     "formula": "Heavy Missile Launcher II: (Scourge Heavy Missile damage 213.721875) x multiplier 1.195603198 / (cycle 7932.480238 ms/1000) ; summed over 6 weapons"
+     "formula": "Heavy Missile Launcher II: (Scourge Heavy Missile damage 237.46875) x multiplier 1.195603198 / (cycle 7932.480238 ms/1000) ; summed over 6 weapons"
     },
     "dps_drones": {
      "value": 0.0,
@@ -2075,7 +2069,7 @@
      "formula": "first bay drone,  ; summed over the 0 launched drones"
     },
     "dps_total": {
-     "value": 193.276163,
+     "value": 214.7512922,
      "tol": "rel1e-6",
      "source": "EVE University \"Turret mechanics\" and \"Missile mechanics\"; SDE attrs 114/116/117/118 (damage), 64 (multiplier), 51 (cycle ms), 212 (pilot missile damage multiplier, raised by Ballistic Control System attr 213)",
      "formula": "weapons + drones"
@@ -2245,11 +2239,10 @@
      "formula": "use 54.498878 GJ/s (sum need/cycle), injection 0 GJ/s, peak 2.5*5760/1092.5 = 13.180778 GJ/s; stable iff peak + injection >= use"
     },
     "cap_seconds_to_empty": {
-     "value": 126.9005829,
+     "value": 120.0,
      "tol": "rel1e-6",
      "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
-     "formula": "closed form of dt = dC/(net - recharge(C)) from full to empty, s = sqrt(c): t = (2/a) atan(1/(2w))/w, a = 10/T, w = sqrt(net/C/a - 1/4); net drain 54.498878 GJ/s",
-     "estimated": "continuous drain stands in for discrete module cycles"
+     "formula": "discrete activations from t = 0 (stop at the first unpayable one), recharge C' = Cmax (1 + (sqrt(C/Cmax) - 1) exp(-5 dt/T))^2; the continuous closed form is an upper bound; net drain 54.498878 GJ/s"
     },
     "speed": {
      "value": 946.4825318,
