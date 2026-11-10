@@ -3,6 +3,7 @@ package gofa
 import (
 	"database/sql"
 	"fmt"
+	"math"
 	"slices"
 	"strings"
 	"testing"
@@ -25,7 +26,21 @@ func TestRAH_ReferenceFit6MatchesGame(t *testing.T) {
 	st := statsOf(t, eng, parityFit(t, s, 6), fit.StatsOpts{})
 	within(t, st.Tank.TotalEHP, 36697, 0.001, "total EHP")
 	require.NotContains(t, st.Unmodelled, UnmodelledEffectPrefix+"4928", "the hardener is modelled")
+	// Per layer, as the game's Defense tab shows it. The tab prints whole percent and shows the
+	// resonance rounded down, i.e. the resist rounded up (72.28 -> 73): 100 - floor(100 * resonance).
+	within(t, st.Tank.ShieldHP, 4375, 0.001, "shield HP")
+	within(t, st.Tank.ArmorHP, 5625, 0.001, "armor HP")
+	within(t, st.Tank.HullHP, 5937, 0.001, "hull HP")
+	a := st.Tank.ArmorResists
+	got := [4]float64{gameResistPct(a.EM), gameResistPct(a.Therm), gameResistPct(a.Kin), gameResistPct(a.Exp)}
+	require.Equal(t, [4]float64{73, 64, 64, 51}, got, "armor resists as the game prints them")
+	require.InDelta(t, 0.7228, a.EM, 0.0005, "exact EM")
+	require.InDelta(t, 0.5010, a.Exp, 0.0005, "exact explosive")
+	t.Logf("shield %+v hull %+v", st.Tank.ShieldResists, st.Tank.HullResists)
 }
+
+// gameResistPct is the whole percent the EVE client prints for a resist fraction.
+func gameResistPct(resist float64) float64 { return 100 - math.Floor(100*(1-resist)+1e-9) }
 
 // The hardener stacks with the Damage Control and with nothing else (EVE University wiki,
 // "Armor tanking"): with two membranes and no Damage Control it still gives its full 15 %.

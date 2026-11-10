@@ -71,6 +71,10 @@ const (
 //
 //	SecondsToEmpty = (2 / a) * atan(1 / (2 w)) / w.
 //
+// A fit whose first activations already exceed the capacity (Hawk qc2-148: three Medium Ancillary
+// Shield Boosters at 178.2 GJ each plus a neutralizer against 507.875 GJ) runs dry at t = 0:
+// SecondsToEmpty is 0 with Stable false. The game's display for that case is unverified.
+//
 // It is a closed form, not a numeric scheme: no step size, no worker or ordering
 // dependence. It is evaluated with float64 conversions that stop fused multiply-add, and
 // both results are rounded to 1e-6 (capRound), so an equality test on any machine sees the
