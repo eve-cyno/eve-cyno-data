@@ -689,6 +689,7 @@ func (e *Engine) Stats(ctx context.Context, f fit.Fit, opts fit.StatsOpts) (fit.
 		unmodelled = append(unmodelled, UnmodelledChargeFedCap)
 	}
 	unmodelled = append(unmodelled, notes.unmodelled...)
+	unmodelled = append(unmodelled, unmodelledEffects(e.reader(), items)...)
 	tankStats := tankWith(ship, items, pattern)
 	groupSDE := e.reader()
 	tankStats.Repair = repairSummary(ship, items, groupSDE.GetGroupID)

@@ -120,7 +120,12 @@ func (c *cachedSDE) GetTypeEffectIDs(typeID int) []int {
 	return c.typeEffects.get(typeID, c.src.GetTypeEffectIDs)
 }
 func (c *cachedSDE) GetEffectModifiers(effectID int) []dogma.Modifier {
-	return c.effectMods.get(effectID, c.src.GetEffectModifiers)
+	return c.effectMods.get(effectID, func(id int) []dogma.Modifier {
+		if m := c.src.GetEffectModifiers(id); len(m) > 0 {
+			return m
+		}
+		return formulaEffectModifiers[id] // synthetic rows for effects the SDE left empty
+	})
 }
 func (c *cachedSDE) GetEffectCategory(effectID int) int {
 	return c.effectCat.get(effectID, c.src.GetEffectCategory)
