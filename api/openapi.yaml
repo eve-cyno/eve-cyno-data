@@ -2864,7 +2864,7 @@ components:
           type: boolean
         summary:
           type: string
-          description: Summary is "stable" or "lasts 442s", empty when there is nothing trustworthy to say (no capacitor data, or reps that run on charges).
+          description: Summary is "stable" or "lasts 441s", empty when there is nothing trustworthy to say (no capacitor data, or reps that run on charges).
         charge_fed:
           type: boolean
           description: ChargeFed is true when an ancillary rep runs on charges, not on the capacitor, which makes the capacitor figures meaningless.

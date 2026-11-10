@@ -237,7 +237,7 @@
   "tools.AveragePrices.Source": "Source names the upstream: \"ESI /markets/prices\".",
   "tools.AveragePrices.Unresolved": "Unresolved lists names that are not items, and type IDs that are not in the SDE or not whole numbers (as \"type_id N\"); names are listed trimmed.",
   "tools.CapCard.ChargeFed": "ChargeFed is true when an ancillary rep runs on charges, not on the capacitor, which makes the capacitor figures meaningless.",
-  "tools.CapCard.Summary": "Summary is \"stable\" or \"lasts 442s\", empty when there is nothing trustworthy to say (no capacitor data, or reps that run on charges).",
+  "tools.CapCard.Summary": "Summary is \"stable\" or \"lasts 441s\", empty when there is nothing trustworthy to say (no capacitor data, or reps that run on charges).",
   "tools.ChainCost.CostIndex": "CostIndex is the manufacturing cost index used (the system's, or system_cost_index); null when none is known.",
   "tools.ChainCost.CostIndexAsOf": "CostIndexAsOf is the date (YYYY-MM-DD, UTC) of ESI's cost index list; null for an explicit system_cost_index or when none was read.",
   "tools.ChainCost.EstimatedItemValue": "EstimatedItemValue is the sum over every job of its ME 0 inputs at ESI adjusted prices, in ISK; null when no input has an adjusted price.",

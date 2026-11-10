@@ -397,7 +397,7 @@ type TankCard struct {
 type CapCard struct {
 	CapacityGJ float64 `json:"capacity_gj"`
 	Stable     bool    `json:"stable"`
-	// Summary is "stable" or "lasts 442s", empty when there is nothing trustworthy to
+	// Summary is "stable" or "lasts 441s", empty when there is nothing trustworthy to
 	// say (no capacitor data, or reps that run on charges).
 	Summary string `json:"summary"`
 	// ChargeFed is true when an ancillary rep runs on charges, not on the capacitor,

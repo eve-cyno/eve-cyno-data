@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math"
 )
 
 // Warning codes (Warning.Code).
@@ -101,7 +102,7 @@ func (s *search) warnings(ctx context.Context, best *probe, res *Result) ([]Warn
 	switch {
 	case !best.eval.CapStable && s.b2.CapStable:
 		if best.eval.SecondsToEmpty > 0 {
-			w.Message = fmt.Sprintf("The capacitor runs empty in %.0f s. The original fit is stable.", best.eval.SecondsToEmpty)
+			w.Message = fmt.Sprintf("The capacitor runs empty in %.0f s. The original fit is stable.", math.Floor(best.eval.SecondsToEmpty+1e-9))
 		} else {
 			w.Message = "The capacitor is not stable. The original fit is stable."
 		}
@@ -134,7 +135,7 @@ func capEmptyMessage(chosen, flown float64) string {
 		if v < 20 {
 			return fmt.Sprintf("%.1f s", v)
 		}
-		return fmt.Sprintf("%.0f s", v)
+		return fmt.Sprintf("%.0f s", math.Floor(v+1e-9))
 	}
 	return fmt.Sprintf("The capacitor runs empty in %s. The original fit runs empty in %s.", sec(chosen), sec(flown))
 }

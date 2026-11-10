@@ -99,7 +99,7 @@
       ]
     },
     "downgrade/ref2/droner": {
-      "sha256": "0a6f2a54d5e52adfec3a6d5cb2583868156cab016b6ed9d51b5094a67c501400",
+      "sha256": "497febba2ff705b13ab7dae57ce1a0337f4e9cc8b7b0db89c3ba85665576678f",
       "status": "ok_with_downgrades",
       "changes": 11,
       "to": [
@@ -552,7 +552,7 @@
       ]
     },
     "refit/ref2/droner": {
-      "sha256": "4276b66312cec918fc13ebba90b7d57f74e78cb2b963b3783cbd0abe0de713cf",
+      "sha256": "c5d3716651e500e2b5af56025a6ad4c44a1e412567d0a06c6654d198d8478f07",
       "status": "ok_with_downgrades",
       "changes": 11,
       "to": [
