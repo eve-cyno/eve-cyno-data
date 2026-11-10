@@ -379,11 +379,11 @@ Rigs:      0/3
 
 VIOLATIONS:
 • subsystem slots over: 6 used, 4 available. Remove: 'Tengu Propulsion - Interdiction Nullifier', 'Tengu Propulsion - Interdiction Nullifier'.
-• duplicate subsystem group (only one subsystem of each group fits): Tengu Core - Electronic Efficiency Gate, Tengu Core - Augmented Graviton Reactor
-• duplicate subsystem group (only one subsystem of each group fits): Tengu Propulsion - Interdiction Nullifier, Tengu Propulsion - Interdiction Nullifier
+• duplicate Core subsystem (only one subsystem of each slot fits): Tengu Core - Electronic Efficiency Gate, Tengu Core - Augmented Graviton Reactor
+• duplicate Propulsion subsystem (only one subsystem of each slot fits): Tengu Propulsion - Interdiction Nullifier, Tengu Propulsion - Interdiction Nullifier
 Note: skill profile = Power Grid Management V + CPU Management V (+25% PG/CPU), Weapon Upgrades V (-25% turret/launcher CPU), Advanced Weapon Upgrades V (-10% turret/launcher PG), Energy Grid Upgrades V (-25% power-core CPU). Implants and faction-specific bonuses NOT modelled. Data: SDE.
 ---- typed ----
-{"ship":"Tengu","valid":false,"cpu":{"used":102.5,"capacity":734.375,"unit":"tf"},"pg":{"used":125.2,"capacity":915,"unit":"MW"},"slots":{"high":{"used":1,"capacity":8},"mid":{"used":1,"capacity":6},"low":{"used":1,"capacity":2},"rig":{"used":0,"capacity":3}},"violations":["subsystem slots over: 6 used, 4 available. Remove: 'Tengu Propulsion - Interdiction Nullifier', 'Tengu Propulsion - Interdiction Nullifier'.","duplicate subsystem group (only one subsystem of each group fits): Tengu Core - Electronic Efficiency Gate, Tengu Core - Augmented Graviton Reactor","duplicate subsystem group (only one subsystem of each group fits): Tengu Propulsion - Interdiction Nullifier, Tengu Propulsion - Interdiction Nullifier"],"unresolved_modules":[],"data_source":"SDE"}
+{"ship":"Tengu","valid":false,"cpu":{"used":102.5,"capacity":734.375,"unit":"tf"},"pg":{"used":125.2,"capacity":915,"unit":"MW"},"slots":{"high":{"used":1,"capacity":8},"mid":{"used":1,"capacity":6},"low":{"used":1,"capacity":2},"rig":{"used":0,"capacity":3}},"violations":["subsystem slots over: 6 used, 4 available. Remove: 'Tengu Propulsion - Interdiction Nullifier', 'Tengu Propulsion - Interdiction Nullifier'.","duplicate Core subsystem (only one subsystem of each slot fits): Tengu Core - Electronic Efficiency Gate, Tengu Core - Augmented Graviton Reactor","duplicate Propulsion subsystem (only one subsystem of each slot fits): Tengu Propulsion - Interdiction Nullifier, Tengu Propulsion - Interdiction Nullifier"],"unresolved_modules":[],"data_source":"SDE"}
 ##### hc_subsystem_on_non_t3 #####
 STATUS: INVALID (1 violation(s)) — Rifter
 

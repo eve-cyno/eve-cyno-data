@@ -748,7 +748,7 @@
       ]
     },
     "refit/ref5/alpha": {
-      "sha256": "5c147903604fc2d27ebd9b1679529fbf79017f5d5c630b5136a05126fe095bb3",
+      "sha256": "c1e3b9bb376658987066de871183e9455d57a8a0ceb128c65100b52846e8b592",
       "status": "no_candidate",
       "changes": 0,
       "to": []
@@ -832,7 +832,7 @@
       ]
     },
     "refit/ref6/droner": {
-      "sha256": "b9cd3bfce6523de58c3af137507f90ed9cb2e65c6cac6f6576e952f441fe75fd",
+      "sha256": "7e0a09211588bf126232dafd0659ed4e8153e68cadac75abc7aac1fa3cfd5ad6",
       "status": "no_candidate",
       "changes": 0,
       "to": []
@@ -850,7 +850,7 @@
       "to": []
     },
     "refit/ref6/tanker": {
-      "sha256": "6ee560e81f97a11b46d18605956141091b71135c7216e1f3bef3576f1f9e72ae",
+      "sha256": "561131b9f323a8dd0b2d5307d9156f759cdff79e9da385cec75fdcb5e5d484c9",
       "status": "no_candidate",
       "changes": 0,
       "to": []

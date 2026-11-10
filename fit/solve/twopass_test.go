@@ -108,6 +108,7 @@ func TestConvert_PassAOverHalfTheCapSkipsPassB(t *testing.T) {
 // 1d01273, never from the current code. Exception, 2026-11-10 (fit parity): the engine numbers moved
 // (Cerberus kinetic bonus, Reactive Armor Hardener, discrete capacitor, weapon-only volley), so the file was
 // regenerated from the engine at that commit (a second time after the Opus review narrowed the Not-modelled flags: two sha values moved, statuses and changes did not); the two-pass logic was untouched, see the as-built note.
+// Exception, 2026-11-10 (subsystem slots): refit/ref5/alpha, refit/ref6/droner and refit/ref6/tanker moved their sha256 only (statuses, changes and To identical) because the subsystem violations are now one per slot with a SubsystemSlot field.
 func TestFixDowngrade_UnchangedByTwoPass(t *testing.T) {
 	skipHeavyCorpus(t)
 	build := sdeBuildID(t)

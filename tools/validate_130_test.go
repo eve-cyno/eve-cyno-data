@@ -178,7 +178,7 @@ Tengu Offensive - Accelerated Ejection Bay
 
 	fd := buildDetail(t, eft)
 	require.False(t, fd.Valid)
-	require.Contains(t, fd.Violations[len(fd.Violations)-1], "missing subsystem")
+	require.Contains(t, fd.Violations[len(fd.Violations)-1], "missing Propulsion subsystem")
 }
 
 // The Alpha caps are FC's (chrCloneGradeSkills), not a hand-kept list: these were
