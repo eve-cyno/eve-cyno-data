@@ -53,7 +53,29 @@ func TestStats_UntrainedSkillCountsZero(t *testing.T) {
 
 	zero, err := eng.Stats(ctx, f, fit.StatsOpts{Skills: partial, MissingAsZero: true})
 	require.NoError(t, err)
-	require.InDelta(t, 73.01, zero.DPS.Theoretical, 0.005, "MissingAsZero: untrained skills are 0, not V")
+	// 73.01 until M4 (fit parity): the Caracal's absent hull skill (Caldari Cruiser) now counts level I.
+	require.InDelta(t, 76.8537, zero.DPS.Theoretical, 0.005, "MissingAsZero: untrained skills are 0, not V; the absent hull skill is I")
+}
+
+// hullSkillsI is what the complete map must say to equal a partial MissingAsZero profile: the
+// hull's and the subsystems' required skills at I (M4, fit parity), everything else 0.
+func hullSkillsI(eng *Engine, f fit.Fit, overrides map[int]int) map[int]int {
+	out := map[int]int{}
+	ids := []int{f.HullID}
+	for _, m := range f.Subsystem {
+		ids = append(ids, m.TypeID)
+	}
+	for _, id := range ids {
+		for _, a := range requiredSkillAttrs {
+			if sk := int(eng.sde.GetDogma(id)[a]); sk != 0 {
+				out[sk] = 1
+			}
+		}
+	}
+	for k, v := range overrides {
+		out[k] = v
+	}
+	return out
 }
 
 func TestStats_MissingAsZeroEqualsCompleteMap(t *testing.T) {
@@ -69,7 +91,7 @@ func TestStats_MissingAsZeroEqualsCompleteMap(t *testing.T) {
 		}
 		n++
 		a := statsJSON(t, eng, pf.fit, fit.StatsOpts{Skills: fit.SkillProfile{skillCPUManagement: 3}, MissingAsZero: true})
-		b := statsJSON(t, eng, pf.fit, fit.StatsOpts{Skills: completeMap(eng, map[int]int{skillCPUManagement: 3})})
+		b := statsJSON(t, eng, pf.fit, fit.StatsOpts{Skills: completeMap(eng, hullSkillsI(eng, pf.fit, map[int]int{skillCPUManagement: 3}))})
 		require.Equal(t, string(b), string(a), pf.name)
 	}
 	require.Equal(t, 12, n, "the 12 corpus fits")
@@ -86,6 +108,6 @@ func TestStats_LevelZeroEqualsAbsent(t *testing.T) {
 	require.Equal(t, string(absent), string(zeros))
 	// An empty non-nil profile is all 0; a nil one is all V, flag or not.
 	allZero := statsJSON(t, eng, f, fit.StatsOpts{Skills: fit.SkillProfile{}, MissingAsZero: true})
-	require.Equal(t, string(statsJSON(t, eng, f, fit.StatsOpts{Skills: completeMap(eng, nil)})), string(allZero))
+	require.Equal(t, string(statsJSON(t, eng, f, fit.StatsOpts{Skills: completeMap(eng, hullSkillsI(eng, f, nil))})), string(allZero))
 	require.Equal(t, string(statsJSON(t, eng, f, fit.StatsOpts{})), string(statsJSON(t, eng, f, fit.StatsOpts{MissingAsZero: true})))
 }

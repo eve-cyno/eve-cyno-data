@@ -95,7 +95,7 @@ func TestMissiles_BCSCountedOnce(t *testing.T) {
 		"caracal-missile":       194.413197791,
 		"raven-cruise":          532.485447153,
 		"tengu-t3":              364.524745858,
-		"qc2/q200_cerberus.eft": 836.465662681,
+		"qc2/q200_cerberus.eft": 923.781291868, // was 836.465662681 on data 893486e: Cerberus kinetic bonus 5 % (M1, fit parity)
 	}
 	for name, dps := range want {
 		f := loadPerfFits(t, s, name)[0].fit

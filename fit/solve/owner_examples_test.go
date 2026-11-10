@@ -53,9 +53,9 @@ func TestOwnerExample_FixForCharacter(t *testing.T) {
 	require.Equal(t, 6, countType(res.Fit.High, typeDominationHML))
 	require.False(t, res.Baseline.Flown.Valid, "the written fit is not valid for this pilot")
 	require.True(t, res.Result.Valid)
-	require.InDelta(t, 223.969, res.Result.DPS, 5e-4)
+	require.InDelta(t, 248.8542, res.Result.DPS, 5e-4) // was 223.969 before the Cerberus kinetic fix (M1)
 	require.Greater(t, res.Result.DPS, res.Baseline.Flown.DPS)
-	require.InDelta(t, 216.970, res.Baseline.Flown.DPS, 5e-4)
+	require.InDelta(t, 241.0775, res.Baseline.Flown.DPS, 5e-4) // was 216.970 before M1
 	require.InDelta(t, 50364.122, res.Result.EHP, 5e-4)
 	require.InDelta(t, res.Baseline.Flown.EHP, res.Result.EHP, 1e-6)
 	require.True(t, res.Result.CapStable)
@@ -99,7 +99,7 @@ func TestOwnerExample_FixForCharacter_TechOnlyKeepsArbalest(t *testing.T) {
 	require.Equal(t, 6, countType(res.Fit.High, typeArbalestHML))
 	require.True(t, res.Result.Valid)
 	require.InDelta(t, res.Baseline.Flown.DPS, res.Result.DPS, 1e-6)
-	require.InDelta(t, 216.970, res.Result.DPS, 5e-4)
+	require.InDelta(t, 241.0775, res.Result.DPS, 5e-4) // was 216.970 before M1
 	require.InDelta(t, res.Baseline.Flown.EHP, res.Result.EHP, 1e-6)
 	require.Empty(t, res.Uncertain)
 }

@@ -105,7 +105,9 @@ func TestConvert_PassAOverHalfTheCapSkipsPassB(t *testing.T) {
 // the two-pass change (sha256 of the JSON plus a readable summary, testdata/fixdown-golden.json,
 // written at 1d01273 for the SDE build named in the file; another build skips the test).
 // EVE_UPDATE_GOLDEN=1 rewrites the file and fails the run: regenerate it from the code at
-// 1d01273, never from the current code.
+// 1d01273, never from the current code. Exception, 2026-11-10 (fit parity): the engine numbers moved
+// (Cerberus kinetic bonus, Reactive Armor Hardener, discrete capacitor, weapon-only volley), so the file was
+// regenerated once from the engine at that commit; the two-pass logic was untouched, see the as-built note.
 func TestFixDowngrade_UnchangedByTwoPass(t *testing.T) {
 	skipHeavyCorpus(t)
 	build := sdeBuildID(t)
