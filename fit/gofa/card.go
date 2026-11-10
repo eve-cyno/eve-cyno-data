@@ -2,6 +2,7 @@ package gofa
 
 import (
 	"fmt"
+	"math"
 
 	"eve-cyno.dev/go/data/fit"
 )
@@ -40,7 +41,8 @@ func CapSummary(s fit.FitStats) string {
 	case ChargeFedCap(s):
 		return ""
 	case s.Capacitor.SecondsToEmpty > 0:
-		return fmt.Sprintf("cap lasts %.0fs", s.Capacitor.SecondsToEmpty)
+		// The game floors the time it shows (152.8 s reads 2:32), so the card does too.
+		return fmt.Sprintf("cap lasts %.0fs", math.Floor(s.Capacitor.SecondsToEmpty+1e-9))
 	}
 	return ""
 }

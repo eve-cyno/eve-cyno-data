@@ -222,6 +222,9 @@ func TestCapSummary(t *testing.T) {
 	lasts := fit.FitStats{Capacitor: fit.CapStats{SecondsToEmpty: 151.4}}
 	require.Equal(t, "cap lasts 151s", CapSummary(lasts))
 
+	// The game floors: 152.8 s reads 2:32, not 153 (owner check 2026-11-10, Megathron main).
+	require.Equal(t, "cap lasts 152s", CapSummary(fit.FitStats{Capacitor: fit.CapStats{SecondsToEmpty: 152.82}}))
+
 	fed := fit.FitStats{Capacitor: fit.CapStats{SecondsToEmpty: 3}, Unmodelled: []string{UnmodelledChargeFedCap}}
 	require.Equal(t, "", CapSummary(fed), "an unstable cap number is hidden when reps run on charges")
 

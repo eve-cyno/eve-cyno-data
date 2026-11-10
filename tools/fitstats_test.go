@@ -215,7 +215,7 @@ func TestWriteCap(t *testing.T) {
 	}
 	require.Equal(t, "Cap: stable · 312 GJ\n",
 		render(fit.FitStats{Capacitor: fit.CapStats{Stable: true, Capacity: 312.5}}))
-	require.Equal(t, "Cap: lasts 442s · 1812 GJ\n",
+	require.Equal(t, "Cap: lasts 441s · 1812 GJ\n", // floored like the game: 441.6 s reads 7:21
 		render(fit.FitStats{Capacitor: fit.CapStats{SecondsToEmpty: 441.6, Capacity: 1812.5}}))
 	require.Equal(t, "Cap: n/a - ancillary reps run on charges, not on capacitor\n",
 		render(fit.FitStats{
