@@ -262,3 +262,205 @@ func TestValidateWith_ImplantsMakeOverageHard(t *testing.T) {
 		require.NotEqual(t, fit.CodeCPUOver, v.Code)
 	}
 }
+
+// T3 (plan 2026-11-10-fit-implant-sets): one hand-computed set-bonus number per set family.
+//
+// A set bonus is a dogma effect on every member: it multiplies (PreMul, operation 0) the
+// implant bonus attribute A of the implants that carry A by the member's own set-key value K.
+// Every member applies it, the source included, so with members j the bonus of implant i is
+//
+//	b_i x P, P = product over members j of K_j  (K_j = attribute <key> of implant j)
+//
+// and the implant itself is a PostPercent (operation 6) on a ship or module attribute, one
+// unpenalised modifier per implant. The shown stat therefore moves by
+//
+//	ratio = product over implants i that carry A of (1 + b_i x P / 100)
+//
+// (the Mid-grade Crystal case above: 1.1^5 x 1.25 = 2.01314 on Alpha..Epsilon bonuses 1..5 %
+// gives 1.3383). b_i, K_j and the group of implants come from SDE attributes only.
+func setBonusRatio(t *testing.T, s SDE, ids []int, bonusAttr, keyAttr int) float64 {
+	t.Helper()
+	p := 1.0
+	for _, id := range ids {
+		k, ok := s.GetDogma(id)[keyAttr]
+		require.True(t, ok, "implant %d carries key attribute %d", id, keyAttr)
+		p *= k
+	}
+	ratio, carriers := 1.0, 0
+	for _, id := range ids {
+		if b, ok := s.GetDogma(id)[bonusAttr]; ok {
+			ratio *= 1 + b*p/100
+			carriers++
+		}
+	}
+	require.Positive(t, carriers, "some implant carries bonus attribute %d", bonusAttr)
+	return ratio
+}
+
+// bestGradeSet returns the member ids of the family's set at the highest grade present.
+func bestGradeSet(t *testing.T, sets []ImplantSet, family string) (ImplantSet, []int) {
+	t.Helper()
+	for _, g := range []string{"High", "Mid", "Low", ""} {
+		for _, set := range sets {
+			if set.Family == family && set.Grade == g {
+				ids := make([]int, 0, len(set.Members))
+				for _, m := range set.Members {
+					ids = append(ids, m.TypeID)
+				}
+				return set, ids
+			}
+		}
+	}
+	t.Fatalf("no implant set of family %q", family)
+	return ImplantSet{}, nil
+}
+
+// One shown stat per set family whose bonus the engine can show. The wanted ratio is the hand
+// formula above; the engine's is the stat with the whole set over the stat with no implants.
+func TestImplants_SetBonusHandFormula(t *testing.T) {
+	sets, _ := loadImplantSets(t)
+	s := openRealSDE(t)
+	defer s.Close()
+	eng := New(s)
+	ctx := context.Background()
+	type stat func(fit.FitStats, fit.Resources) float64
+	cases := []struct {
+		family    string
+		fitName   string
+		bonusAttr int // the implant attribute the set bonus multiplies
+		what      string
+		stat      stat
+	}{
+		{"Crystal", "drake-active-shield", 548, "shield boost per second (shieldBoostMultiplier -> shield boost amount)",
+			func(st fit.FitStats, _ fit.Resources) float64 { return st.Tank.ActiveRepPerSec }},
+		{"Amulet", "maller-armor", 335, "armor HP (armorHpBonus)",
+			func(st fit.FitStats, _ fit.Resources) float64 { return st.Tank.ArmorHP }},
+		{"Nirvana", "caracal-missile", 3015, "shield HP (shieldHpBonus)",
+			func(st fit.FitStats, _ fit.Resources) float64 { return st.Tank.ShieldHP }},
+		{"Snake", "thorax-blaster", 315, "max velocity (velocityBonus)",
+			func(st fit.FitStats, _ fit.Resources) float64 { return st.Navigation.MaxVelocity }},
+		{"Rapture", "maller-armor", 314, "capacitor recharge time (capRechargeBonus)",
+			func(st fit.FitStats, _ fit.Resources) float64 { return st.Capacitor.RechargeSec }},
+		{"Halo", "thorax-blaster", 554, "signature radius (signatureRadiusBonus)",
+			func(st fit.FitStats, _ fit.Resources) float64 { return st.Navigation.SignatureRadius }},
+		{"Nomad", "rifter-turret", 151, "align time (agilityBonus)",
+			func(st fit.FitStats, _ fit.Resources) float64 { return st.Navigation.AlignTimeSec }},
+		{"Asklepian", "maller-armor", 2457, "armor repaired per second (armorRepairBonus)",
+			func(st fit.FitStats, _ fit.Resources) float64 { return st.Tank.ActiveRepPerSec }},
+		{"Genolution", "maller-armor", 313, "powergrid output (CA powerEngineeringOutputBonus)",
+			func(_ fit.FitStats, r fit.Resources) float64 { return r.PG.Cap }},
+	}
+	for _, c := range cases {
+		t.Run(c.family, func(t *testing.T) {
+			set, ids := bestGradeSet(t, sets, c.family)
+			f := fitNamed(t, s, c.fitName)
+			base := statsOf(t, eng, f, fit.StatsOpts{})
+			baseRes, err := eng.Resources(ctx, f, fit.StatsOpts{})
+			require.NoError(t, err)
+			o := fit.StatsOpts{Implants: ids}
+			st := statsOf(t, eng, f, o)
+			res, err := eng.Resources(ctx, f, o)
+			require.NoError(t, err)
+			require.Empty(t, st.Unmodelled, set.Name)
+			want := setBonusRatio(t, s, ids, c.bonusAttr, set.Key)
+			require.NotEqual(t, 1.0, want, "%s: the hand formula moves %s", set.Name, c.what)
+			b := c.stat(base, baseRes)
+			require.NotZero(t, b, "%s on %s", c.what, c.fitName)
+			require.InEpsilon(t, want, c.stat(st, res)/b, 1e-9, "%s (%s on %s)", set.Name, c.what, c.fitName)
+		})
+	}
+}
+
+// The families whose bonus FitStats does not show, read on the resolved item the bonus lands
+// on: the ship (warp speed, scan strength) or a module or drone of a custom fit. Same hand
+// formula as above; the reference is the same fit with no implants.
+func TestImplants_SetBonusResolvedAttr(t *testing.T) {
+	sets, _ := loadImplantSets(t)
+	s := openRealSDE(t)
+	defer s.Close()
+	eng := New(s)
+	ctx := context.Background()
+	const (
+		attrWarpSpeed = 600
+		attrDuration  = 73
+		attrMaxRange  = 54
+		attrTracking  = 160
+	)
+	// where picks the attribute holder out of a resolve: the ship, the first module of the type
+	// id, or the first drone.
+	type where struct {
+		ship   bool
+		module int
+		drone  bool
+	}
+	cases := []struct {
+		family    string
+		eft       string // custom fit; "" = the corpus fit fitName
+		fitName   string
+		bonusAttr int
+		at        where
+		attr      int
+		what      string
+	}{
+		{family: "Ascendancy", fitName: "maller-armor", bonusAttr: 624, at: where{ship: true}, attr: attrWarpSpeed, what: "warp speed multiplier (WarpSBonus)"},
+		{family: "Grail", fitName: "maller-armor", bonusAttr: 1030, at: where{ship: true}, attr: 208, what: "radar sensor strength (scanRadarStrengthPercent)"},
+		{family: "Talon", fitName: "caracal-missile", bonusAttr: 1027, at: where{ship: true}, attr: 211, what: "gravimetric sensor strength (scanGravimetricStrengthPercent)"},
+		{family: "Spur", fitName: "thorax-blaster", bonusAttr: 1029, at: where{ship: true}, attr: 210, what: "magnetometric sensor strength (scanMagnetometricStrengthPercent)"},
+		{family: "Jackal", fitName: "rifter-turret", bonusAttr: 1028, at: where{ship: true}, attr: 209, what: "ladar sensor strength (scanLadarStrengthPercent)"},
+		{family: "Talisman", eft: "[Maller, t]\n\n\n\nMedium Energy Nosferatu II\n", bonusAttr: 66, at: where{module: 12259}, attr: attrDuration, what: "Nosferatu duration (durationBonus)"},
+		{family: "Savior", eft: "[Maller, t]\n\n\nMedium Remote Shield Booster II\n", bonusAttr: 3024, at: where{module: 3598}, attr: attrDuration, what: "remote shield booster duration (remoteRepDurationCapBonus)"},
+		{family: "Harvest", eft: "[Maller, t]\n\n\n\nMiner II\n", bonusAttr: 351, at: where{module: 482}, attr: attrMaxRange, what: "mining laser range (maxRangeBonus)"},
+		{family: "Centurion", eft: "[Maller, t]\n\n\nRemote Sensor Dampener II\n", bonusAttr: 294, at: where{module: 1969}, attr: attrMaxRange, what: "sensor dampener range (rangeSkillBonus)"},
+		{family: "Mimesis", eft: "[Maller, t]\n\n\n\nHeavy Entropic Disintegrator I\n", bonusAttr: 2823, at: where{module: 47273}, attr: 2734, what: "precursor weapon max damage bonus (damageMultiplierBonusMaxModifier)"},
+		{family: "Hydra", fitName: "vexor-drone", bonusAttr: 3028, at: where{drone: true}, attr: attrTracking, what: "drone tracking speed (hydraDroneTrackingBonus)"},
+	}
+	read := func(t *testing.T, f fit.Fit, opts fit.StatsOpts, at where, attr int) float64 {
+		t.Helper()
+		ship, items, _, drones, err := eng.resolveForStats(ctx, f, opts)
+		require.NoError(t, err)
+		switch {
+		case at.ship:
+			return ship.Attrs[attr]
+		case at.drone:
+			require.NotEmpty(t, drones)
+			return drones[0].Attrs[attr]
+		}
+		for _, it := range items {
+			if it.TypeID == at.module {
+				return it.Attrs[attr]
+			}
+		}
+		t.Fatalf("module %d is not in the resolved fit", at.module)
+		return 0
+	}
+	for _, c := range cases {
+		t.Run(c.family, func(t *testing.T) {
+			set, ids := bestGradeSet(t, sets, c.family)
+			var f fit.Fit
+			if c.eft != "" {
+				f, _ = fit.ParseEFT(c.eft, s)
+			} else {
+				f = fitNamed(t, s, c.fitName)
+			}
+			base := read(t, f, fit.StatsOpts{}, c.at, c.attr)
+			require.NotZero(t, base, c.what)
+			got := read(t, f, fit.StatsOpts{Implants: ids}, c.at, c.attr)
+			want := setBonusRatio(t, s, ids, c.bonusAttr, set.Key)
+			require.NotEqual(t, 1.0, want, "%s: the hand formula moves %s", set.Name, c.what)
+			require.InEpsilon(t, want, got/base, 1e-9, "%s (%s)", set.Name, c.what)
+		})
+	}
+}
+
+// Set families this file does not check against a number, and why. Each is a coverage gap, not a
+// known engine fault: the engine applies the family's modifiers (every one passes
+// modifierSupported, TestImplantSets_AllModelled), but the corpus has no holder to read.
+func TestImplants_SetBonusNotChecked(t *testing.T) {
+	for _, c := range []struct{ family, reason string }{
+		{"Virtue", "bonus lands on the character's own sensor strength (attribute 1371 through OwnerRequiredSkillModifier); no stat and no resolved holder is read"},
+		{"Edge", "bonus lands on boosters (group 303); the engine excludes boosters, so there is nothing to read"},
+		{"Wedge", "bonus is a ModAdd on Data Miner modules (group 538, attribute 1909), an additive delta; no corpus fit carries one"},
+	} {
+		t.Run(c.family, func(t *testing.T) { t.Skip(c.family + ": " + c.reason) })
+	}
+}
