@@ -171,9 +171,9 @@ Tengu Offensive - Accelerated Ejection Bay
 `
 	text, v := validateWith(t, deps, nil, eft, false)
 	require.Contains(t, text, "STATUS: INVALID", text)
-	require.Contains(t, text, "duplicate subsystem group")
+	require.Contains(t, text, "duplicate Core subsystem")
 	require.Contains(t, text, "Tengu Core - Electronic Efficiency Gate, Tengu Core - Augmented Graviton Reactor")
-	require.Contains(t, text, "missing subsystems: Propulsion Subsystem (3 of 4 fitted")
+	require.Contains(t, text, "missing Propulsion subsystem (a T3 needs one subsystem in each")
 	require.False(t, v.Valid)
 
 	fd := buildDetail(t, eft)

@@ -26,12 +26,13 @@ const (
 	// the modules beyond the limit, in the order written.
 	CodeSlotOverflow Code = "slot_overflow"
 	// CodeSubsystemMissing: a T3 strategic cruiser (a hull with subsystem slots)
-	// fitted with modules or subsystems but not one subsystem of every group (Core,
-	// Defensive, Offensive, Propulsion), which the game requires to undock. Count is
-	// the groups present, Limit the groups required, Names the missing group names.
+	// fitted with modules or subsystems but with no subsystem in a slot (Core,
+	// Defensive, Offensive, Propulsion), which the game requires to undock. One
+	// violation per empty slot: SubsystemSlot and Names[0] name it, Count 0, Limit 1.
 	CodeSubsystemMissing Code = "subsystem_missing"
 	// CodeSubsystemDuplicate: two subsystems of the same group (only one of each
-	// group fits). Names lists the subsystems of the duplicated group.
+	// group fits). One violation per duplicated slot: SubsystemSlot names it, Names
+	// lists its subsystems, Count the number fitted, Limit 1.
 	CodeSubsystemDuplicate Code = "subsystem_duplicate"
 	// CodeCPUOver / CodePGOver: the fit draws more than the hull outputs.
 	// Load/Capacity are the numbers, Consumers the heaviest modules.
@@ -105,14 +106,37 @@ const (
 // Subsystem groups (invGroups category 32). The hull's subsystemSlots (1367) reads
 // 5 in the SDE because of the deprecated group 955 ("Depricated Subsystems",
 // unpublished); the game fits exactly one subsystem of each published group.
+//
+// The slot a subsystem takes is its subSystemSlot attribute (1366, attrSubSystemSlot):
+// 125 Core, 126 Defensive, 127 Offensive, 128 Propulsion, the same four values in the
+// four published groups (the deprecated group 955 and the "Spaceship Command" skill
+// Amarr Battlecruiser carry 125 too, but neither is a fittable subsystem). The group
+// id is only the fallback for a type without the attribute.
 var subsystemGroups = []struct {
-	id   int
-	name string
+	slot  int
+	group int
+	name  string
 }{
-	{958, "Core Subsystem"},
-	{954, "Defensive Subsystem"},
-	{956, "Offensive Subsystem"},
-	{957, "Propulsion Subsystem"},
+	{125, 958, "Core"},
+	{126, 954, "Defensive"},
+	{127, 956, "Offensive"},
+	{128, 957, "Propulsion"},
+}
+
+// subsystemSlotOf is the subsystem slot (125..128) of a fitted subsystem, 0 when the
+// type names none.
+func subsystemSlotOf(s ValidateSDE, typeID int) int {
+	if v := int(s.GetDogma(typeID)[attrSubSystemSlot]); v != 0 {
+		return v
+	}
+	if g := s.GetGroupID(typeID); g != nil {
+		for _, sg := range subsystemGroups {
+			if sg.group == *g {
+				return sg.slot
+			}
+		}
+	}
+	return 0
 }
 
 // categoryImplant is the SDE categoryID shared by implants AND boosters (drugs). Both
@@ -213,6 +237,17 @@ type checkSpec struct {
 	noImplantBand bool
 }
 
+// subsystemSlotName is the name of a subsystem slot value ("Core" for 125), "slot N" for
+// a value no published subsystem uses.
+func subsystemSlotName(slot int) string {
+	for _, sg := range subsystemGroups {
+		if sg.slot == slot {
+			return sg.name
+		}
+	}
+	return fmt.Sprintf("slot %d", slot)
+}
+
 // check is the single fit validator. Violations come out in this order: per slot
 // group (overflow, then each module's Alpha legality), hull Alpha legality, group
 // limits (by group ID), CPU, PG, calibration, turret and launcher hardpoints, charge
@@ -245,9 +280,7 @@ func check(s ValidateSDE, sp checkSpec) Report {
 		}
 		var gid int
 		if sp.sdeData {
-			if g := s.GetGroupID(e.mod.TypeID); g != nil {
-				gid = *g
-			}
+			gid = subsystemSlotOf(s, e.mod.TypeID)
 		}
 		if gid != 0 {
 			if len(bySubGroup[gid]) > 0 {
@@ -311,16 +344,17 @@ func check(s ValidateSDE, sp checkSpec) Report {
 	// any module (subsystem or not) but misses a group is Hard. An empty hull is not
 	// flagged, and a complete fit (one per group) never is.
 	if sp.sdeData && subSlots > 0 {
-		for _, gid := range subGroupOrder {
-			if es := bySubGroup[gid]; len(es) > 1 {
+		for _, slot := range subGroupOrder {
+			if es := bySubGroup[slot]; len(es) > 1 {
 				names := make([]string, 0, len(es))
 				for _, e := range es {
 					names = append(names, e.mod.Name)
 				}
+				sn := subsystemSlotName(slot)
 				rep.Violations = append(rep.Violations, Violation{
 					Severity: Hard, Code: CodeSubsystemDuplicate,
-					Message: fmt.Sprintf("only one subsystem per group fits; found %d (%s)", len(es), strings.Join(names, ", ")),
-					Slot:    "subsystem", Count: len(es), Limit: 1, Names: names,
+					Message: fmt.Sprintf("only one %s subsystem fits; found %d (%s)", sn, len(es), strings.Join(names, ", ")),
+					Slot:    "subsystem", SubsystemSlot: sn, Count: len(es), Limit: 1, Names: names,
 				})
 			}
 		}
@@ -331,18 +365,14 @@ func check(s ValidateSDE, sp checkSpec) Report {
 			}
 		}
 		if anyModule {
-			var missing []string
 			for _, sg := range subsystemGroups {
-				if len(bySubGroup[sg.id]) == 0 {
-					missing = append(missing, sg.name)
+				if len(bySubGroup[sg.slot]) == 0 {
+					rep.Violations = append(rep.Violations, Violation{
+						Severity: Hard, Code: CodeSubsystemMissing,
+						Message: "missing " + sg.name + " subsystem",
+						Slot:    "subsystem", SubsystemSlot: sg.name, Count: 0, Limit: 1, Names: []string{sg.name},
+					})
 				}
-			}
-			if len(missing) > 0 {
-				rep.Violations = append(rep.Violations, Violation{
-					Severity: Hard, Code: CodeSubsystemMissing,
-					Message: "missing subsystem(s): " + strings.Join(missing, ", "),
-					Slot:    "subsystem", Count: len(subsystemGroups) - len(missing), Limit: len(subsystemGroups), Names: missing,
-				})
 			}
 		}
 	}

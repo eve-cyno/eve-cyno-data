@@ -30,6 +30,9 @@ type Violation struct {
 
 	// Slot is the slot group of a CodeSlotOverflow: "hi", "mid", "low", "rig" or "subsystem".
 	Slot string
+	// SubsystemSlot is the T3 subsystem slot ("Core", "Defensive", "Offensive" or
+	// "Propulsion") of a CodeSubsystemMissing / CodeSubsystemDuplicate.
+	SubsystemSlot string
 	// Count / Limit: the modules found against the allowance (slots of the group, or
 	// the group's maxGroupFitted).
 	Count, Limit int

@@ -413,10 +413,9 @@ func validationText(v fit.Violation) string {
 		return fmt.Sprintf("alpha-clone illegal module(s), drone(s) or charge(s) (they need skills an Alpha clone cannot train - Omega required): %s",
 			strings.Join(v.Names, ", "))
 	case fit.CodeSubsystemDuplicate:
-		return fmt.Sprintf("duplicate subsystem group (only one subsystem of each group fits): %s", strings.Join(v.Names, ", "))
+		return fmt.Sprintf("duplicate %s subsystem (only one subsystem of each slot fits): %s", v.SubsystemSlot, strings.Join(v.Names, ", "))
 	case fit.CodeSubsystemMissing:
-		return fmt.Sprintf("missing subsystems: %s (%d of %d fitted; a T3 needs one of each group to undock)",
-			strings.Join(v.Names, ", "), v.Count, v.Limit)
+		return fmt.Sprintf("missing %s subsystem (a T3 needs one subsystem in each of Core, Defensive, Offensive and Propulsion to undock)", v.SubsystemSlot)
 	case fit.CodeCalibrationOver:
 		return fmt.Sprintf("calibration over: %.0f/%.0f. Rigs: %s. Remove or downgrade one of these.", v.Load, v.Capacity, quoteNames(v.Names))
 	case fit.CodeTurretHardpointOver:

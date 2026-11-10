@@ -56,6 +56,7 @@
   "fit.Violation.Names": "Names are the modules the violation is about.",
   "fit.Violation.Skill": "Skill / ItemTypeID: the missing skill {typeId, needs, has} and the item that needs it, of a CodeSkill.",
   "fit.Violation.Slot": "Slot is the slot group of a CodeSlotOverflow: \"hi\", \"mid\", \"low\", \"rig\" or \"subsystem\".",
+  "fit.Violation.SubsystemSlot": "SubsystemSlot is the T3 subsystem slot (\"Core\", \"Defensive\", \"Offensive\" or \"Propulsion\") of a CodeSubsystemMissing / CodeSubsystemDuplicate.",
   "rag.Attribution.Author": "Author is the person behind the fit when the corpus knows one.",
   "rag.Attribution.Credit": "Credit is who must be credited next to the text (\"EVE University\" for wiki text).",
   "rag.Attribution.License": "License is the short statement of the terms the data is used under.",
