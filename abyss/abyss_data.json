@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "source": "EVE SDE (Fenris Creations)",
-  "sde_build": "3586130_20261007",
+  "sde_build": "3682781_20261110",
   "notes": [
     "Derived only from SDE tables invTypes, invGroups, dgmTypeAttributes and dgmTypeEffects.",
     "The SDE gives the weather environments no dogma: per-weather, per-tier penalties and bonuses are not in it.",
