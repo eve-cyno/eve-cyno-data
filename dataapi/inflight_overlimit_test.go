@@ -220,3 +220,22 @@ func TestInflight_OverLimitAnswerAtAFullRouteIsRecordedLikeTheRealOne(t *testing
 	}
 	require.NotContains(t, got, "busy_pool")
 }
+
+// A caller that filled yesterday's anonymous daily cap is not over the cap after 00:00 UTC:
+// at a full route it gets 503 busy, not the stale daily-cap 429, and the next request that
+// the route serves starts the new day and succeeds.
+func TestInflight_BusyAfterMidnightIgnoresYesterdaysAnonCap(t *testing.T) {
+	c := &clock{t: time.Date(2026, 11, 11, 23, 0, 0, 0, time.UTC)}
+	mcp := newHoldMCP()
+	api := newAPI(t, dataapi.Config{MCP: mcp, Auth: keyedFixture(t, "ecd_test_key_one"), Limits: &dataapi.Limits{}, AnonDailyCap: 1, Now: c.now, MaxInFlight: 1})
+	require.Equal(t, http.StatusOK, do(api, http.MethodPost, "/v1/mcp", mcpCall, fromIP("203.0.113.9")...).Code)
+	requireError(t, do(api, http.MethodPost, "/v1/mcp", mcpCall, fromIP("203.0.113.9")...), http.StatusTooManyRequests, "daily_quota_exceeded")
+
+	// The route fills before the clock passes midnight, so no Spend has started the new day
+	// when the caller arrives: only Check's own day comparison can tell it is under the cap.
+	release := hold(t, api, mcp, fromIP("198.51.100.200")...)
+	c.t = time.Date(2026, 11, 12, 0, 0, 1, 0, time.UTC)
+	requireError(t, do(api, http.MethodPost, "/v1/mcp", mcpCall, fromIP("203.0.113.9")...), http.StatusServiceUnavailable, "busy")
+	require.Equal(t, http.StatusOK, release())
+	require.Equal(t, http.StatusOK, do(api, http.MethodPost, "/v1/mcp", mcpCall, fromIP("203.0.113.9")...).Code)
+}

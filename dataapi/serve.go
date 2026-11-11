@@ -76,8 +76,10 @@ func validRequestID(s string) bool {
 //
 // The gate runs before every charge (the key's quota, the anonymous daily cap and, inside
 // the mux, the route limiter and the upstream limiter): a busy refusal has spent nothing. A
-// full route first checks, without recording, whether the caller is over one of those limits
-// (gateRefusal) and answers that limit's 429 instead of 503 busy.
+// full route first runs three checks that record nothing (gateRefusal): the per-IP route
+// limiter, the anonymous daily cap and the key's quota. A caller over one of them gets that
+// limit's 429 instead of 503 busy. The upstream limiter is deliberately not pre-checked, so
+// a caller that only it would refuse still gets 503 busy.
 func (a *API) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	id := r.Header.Get(HeaderRequestID)
 	if !validRequestID(id) {

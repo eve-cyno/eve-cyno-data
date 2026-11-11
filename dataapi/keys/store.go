@@ -57,6 +57,7 @@ var (
 var (
 	_ dataapi.Authenticator = (*Store)(nil)
 	_ dataapi.Quota         = (*Store)(nil)
+	_ dataapi.QuotaChecker  = (*Store)(nil)
 	_ dataapi.Usage         = (*Store)(nil)
 )
 

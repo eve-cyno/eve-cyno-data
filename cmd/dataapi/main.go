@@ -84,8 +84,12 @@
 //	                          GET/DELETE on /v1/mcp are not capped. Over it the route answers 503
 //	                          busy with Retry-After: 1 at once instead of queueing; the check runs
 //	                          before every limit, the daily cap and a key's quota, so a busy
-//	                          answer charges nothing. A caller already over one of those gets
-//	                          its 429 with the real Retry-After instead
+//	                          answer charges nothing. A full route first runs three checks that
+//	                          record nothing: the per-IP route limiter, the anonymous daily
+//	                          cap and the key's quota; a caller already over one of them gets
+//	                          its 429 with the real Retry-After instead. The upstream limiter
+//	                          is deliberately not pre-checked, so a caller that only the
+//	                          upstream limiter would refuse still gets 503 busy
 //	DATAAPI_ADMIN_TOKEN       bearer token of the admin API that issues, revokes and audits
 //	                          keys. Unset: no admin listener. Never logged
 //	DATAAPI_ADMIN_ADDR        admin listen address (default 127.0.0.1:8093; the container
