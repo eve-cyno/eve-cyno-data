@@ -50,6 +50,10 @@ type Item struct {
 	// Slot is the fit slot group of a module unit ("hi", "mid", "low", "rig", "subsystem");
 	// empty for every other item.
 	Slot string
+	// CapBooster marks a capacitor booster module (group 76). Only its loaded charge injects
+	// capacitor: an ancillary shield booster or armor repairer may hold the same charge type
+	// but gives nothing back.
+	CapBooster bool
 	// Other is the paired item an otherID modifier reaches: the loaded charge for a module,
 	// the host module for a charge. nil when nothing is paired.
 	Other *Item

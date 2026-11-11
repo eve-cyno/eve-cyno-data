@@ -1,6 +1,7 @@
 package gofa
 
 import (
+	"context"
 	"math"
 	"testing"
 
@@ -109,7 +110,7 @@ func TestCapacitor_CapBoosterInjection(t *testing.T) {
 	}}
 	// Medium Capacitor Booster II: duration 12000 ms, no cap need of its own
 	// (the cap injection comes from the loaded charge; gofa reads the charge attr).
-	capBooster := &Item{TypeID: 2024, Kind: KindModule, Attrs: map[int]float64{
+	capBooster := &Item{TypeID: 2024, Kind: KindModule, CapBooster: true, Attrs: map[int]float64{
 		attrModuleDuration: 12_000.0,
 		// capacitorNeed deliberately absent — booster cost covered by charge injection
 	}}
@@ -415,4 +416,36 @@ func TestCapacitor_ModuleCostingMoreThanTheCapacityIsNotStable(t *testing.T) {
 	c := capacitor(capShip(), []*Item{big})
 	require.False(t, c.Stable)
 	require.Equal(t, 0.0, c.SecondsToEmpty)
+}
+
+// TestCapacitor_AncillaryBoosterChargeInjectsNothing: an ancillary shield booster is loaded with a
+// cap booster charge (it fires on it and then costs no capacitor), but only a capacitor booster
+// module gives the charge's capacitor back. The charged booster must leave the capacitor as the
+// same fit without the booster.
+func TestCapacitor_AncillaryBoosterChargeInjectsNothing(t *testing.T) {
+	s := openRealSDE(t)
+	defer s.Close()
+	eng := New(s)
+	stats := func(mid string) fit.CapStats {
+		f, _ := fit.ParseEFT("[Drake, asb]\n\n\n"+mid+"10MN Afterburner II\nWarp Scrambler II\n", s)
+		require.NotZero(t, f.HullID)
+		st, err := eng.Stats(context.Background(), f, fit.StatsOpts{})
+		require.NoError(t, err)
+		return st.Capacitor
+	}
+	with := stats("Medium Ancillary Shield Booster, Navy Cap Booster 150\n")
+	without := stats("")
+	require.False(t, with.Stable && !without.Stable, "the charge must not make the fit stable")
+	require.Equal(t, without, with, "a cap booster charge in an ancillary shield booster adds no capacitor")
+}
+
+// A module that is not a capacitor booster injects nothing, whatever charge it holds.
+func TestCapEvents_OnlyCapBoosterModulesInject(t *testing.T) {
+	charge := &Item{TypeID: 1, Kind: KindCharge, Attrs: map[int]float64{attrCapacitorBonus: 150}}
+	asb := &Item{TypeID: 2, Kind: KindModule, Attrs: map[int]float64{attrModuleDuration: 3000}}
+	require.Empty(t, capEvents([]*Item{asb, charge}), "an ancillary shield booster with a cap charge has no event")
+	booster := &Item{TypeID: 3, Kind: KindModule, CapBooster: true, Attrs: map[int]float64{attrModuleDuration: 3000}}
+	evs := capEvents([]*Item{booster, charge})
+	require.Len(t, evs, 1)
+	require.InDelta(t, 150.0, evs[0].inject, 1e-9)
 }

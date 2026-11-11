@@ -26,6 +26,9 @@ const (
 	// a capacitor booster uses ammunition to inject extra energy).  Gofa models the
 	// injection as income on the recharge side of the balance.
 	attrCapacitorBonus = 67
+
+	// groupCapBooster is the group of Capacitor Booster modules (effect powerBooster 48).
+	groupCapBooster = 76
 )
 
 // capacitor computes CapStats from the resolved ship Item and all fitted items.
@@ -199,8 +202,8 @@ func capEvents(items []*Item) []capEvent {
 		if need > 0 {
 			ev.need = need
 		}
-		// A KindCharge loaded into this module: capacitorBonus GJ per cycle of the booster.
-		if i+1 < len(items) && items[i+1].Kind == KindCharge {
+		// A KindCharge loaded into a capacitor booster module: capacitorBonus GJ per cycle of the booster.
+		if it.CapBooster && i+1 < len(items) && items[i+1].Kind == KindCharge {
 			if bonus := items[i+1].Attrs[attrCapacitorBonus]; bonus > 0 {
 				ev.inject = bonus
 			}

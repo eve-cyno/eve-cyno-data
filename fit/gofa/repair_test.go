@@ -98,8 +98,9 @@ func TestRepair_Sustained(t *testing.T) {
 	r := repairSummary(ship, []*Item{sb}, g)
 	require.InDelta(t, 100.0, r.Local.Shield, 1e-9)
 	require.InDelta(t, 50.0, r.Sustained.Shield, 1e-9)
+	cb := &Item{TypeID: 6, Kind: KindModule, CapBooster: true, Attrs: map[int]float64{attrModuleDuration: 5000}}
 	inj := &Item{TypeID: 5, Kind: KindCharge, Attrs: map[int]float64{attrCapacitorBonus: 50}} // 50 / 5 s = 10 GJ/s
-	r = repairSummary(ship, []*Item{sb, inj}, g)
+	r = repairSummary(ship, []*Item{sb, cb, inj}, g)
 	require.InDelta(t, 100.0, r.Sustained.Shield, 1e-9)
 }
 

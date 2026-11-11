@@ -175,6 +175,11 @@ func (e *Engine) resolveCore(ctx context.Context, f fit.Fit, opts fit.StatsOpts,
 				// resolveModifiers can mutate each independently.
 				attrs := sdeView.GetDogma(fm.TypeID)
 				modItem := &Item{TypeID: fm.TypeID, Kind: g.kind, Attrs: attrs, Overheat: fm.State == "overheat", Inert: offline, Slot: itemSlot(g.name)}
+				if g.kind == KindModule {
+					if gid := sdeView.GetGroupID(fm.TypeID); gid != nil && *gid == groupCapBooster {
+						modItem.CapBooster = true
+					}
+				}
 				items = append(items, modItem)
 
 				// For weapon modules with a loaded charge, build a KindCharge
