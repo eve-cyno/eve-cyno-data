@@ -14,6 +14,15 @@ type Quota interface {
 	Spend(id string) (ok bool, retryAfter time.Duration)
 }
 
+// QuotaChecker is an optional interface of a Quota: Check reports what Spend would answer for
+// the caller id now, with the same retryAfter, and records nothing (no charge, no day change,
+// no write). A busy route uses it to answer a caller over its quota with the real 429; a Quota
+// without it leaves such a caller to the busy answer. Implementations must be safe for
+// concurrent use.
+type QuotaChecker interface {
+	Check(id string) (ok bool, retryAfter time.Duration)
+}
+
 // Usage receives one record per request of an authenticated caller, after the response is
 // written. endpoint is a low-cardinality label: the matched mux pattern
 // ("GET /v1/fits/search"), "tool:<name>" for a catalog tool on the raw tool route, "tool:?"

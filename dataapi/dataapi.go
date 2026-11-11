@@ -487,7 +487,8 @@ func (a *API) register(rt route) {
 	if !rt.root {
 		full = a.prefix + rt.path
 	}
-	h := cached(rt.cache, a.limited(newTieredLimiter(rt.rate(a.surface), a.keyedFactor), func(w http.ResponseWriter, r *http.Request) {
+	limit := newTieredLimiter(rt.rate(a.surface), a.keyedFactor)
+	h := cached(rt.cache, a.limited(limit, func(w http.ResponseWriter, r *http.Request) {
 		rt.handle(a, w, r)
 	}))
 	if rt.trialFree {
@@ -499,13 +500,13 @@ func (a *API) register(rt route) {
 	gate := !rt.trialFree && a.maxInFlight > 0
 	if rt.anyMethod {
 		if gate {
-			a.gates[full] = newRouteGate(a.maxInFlight, true)
+			a.gates[full] = newRouteGate(a.maxInFlight, true, limit, rt.cache)
 		}
 		a.mux.HandleFunc(full, h)
 		return
 	}
 	if gate {
-		a.gates[rt.method+" "+full] = newRouteGate(a.maxInFlight, false)
+		a.gates[rt.method+" "+full] = newRouteGate(a.maxInFlight, false, limit, rt.cache)
 	}
 	a.mux.HandleFunc(rt.method+" "+full, h)
 	a.mux.HandleFunc(full, func(w http.ResponseWriter, r *http.Request) {

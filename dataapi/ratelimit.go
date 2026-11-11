@@ -84,14 +84,42 @@ func (l *WindowLimiter) Allow(key string) (ok bool, retryAfter time.Duration) {
 	}
 	if len(keep) >= l.max {
 		l.hits[key] = keep
-		retry := keep[0].Add(l.window).Sub(now)
-		if retry <= 0 {
-			retry = time.Millisecond
-		}
-		return false, retry
+		return false, l.retryAfter(keep[0], now)
 	}
 	l.hits[key] = append(keep, now)
 	return true, 0
+}
+
+// Check reports what Allow would answer for key now, with the same retryAfter, and records
+// nothing: no event, no pruning, no sweep. A busy route runs it to answer a caller that is
+// over its limit with the real 429. Allow stays the only call that spends budget.
+func (l *WindowLimiter) Check(key string) (ok bool, retryAfter time.Duration) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	now := l.now()
+	cut := now.Add(-l.window)
+	n := 0
+	var oldest time.Time
+	for _, t := range l.hits[key] {
+		if t.After(cut) {
+			if n == 0 {
+				oldest = t
+			}
+			n++
+		}
+	}
+	if n >= l.max {
+		return false, l.retryAfter(oldest, now)
+	}
+	return true, 0
+}
+
+// retryAfter is the wait until the oldest counted event leaves the window (always > 0).
+func (l *WindowLimiter) retryAfter(oldest, now time.Time) time.Duration {
+	if retry := oldest.Add(l.window).Sub(now); retry > 0 {
+		return retry
+	}
+	return time.Millisecond
 }
 
 // sweep drops keys whose events have all left the window, at most once per
@@ -124,14 +152,20 @@ func (a *API) limited(t tieredLimiter, h http.HandlerFunc) http.HandlerFunc {
 		}
 		ok, retry := l.Allow(a.keys.Key(r))
 		if !ok {
-			secs := int((retry + time.Second - 1) / time.Second)
-			if secs < 1 {
-				secs = 1
-			}
-			w.Header().Set("Retry-After", strconv.Itoa(secs))
-			writeError(w, r, http.StatusTooManyRequests, "rate_limited", "too many requests, slow down")
+			writeRateLimited(w, r, retry)
 			return
 		}
 		h(w, r)
 	}
+}
+
+// writeRateLimited answers 429 rate_limited with Retry-After in whole seconds (at least 1),
+// rounded up. The route limiter and a busy route's check write the same answer.
+func writeRateLimited(w http.ResponseWriter, r *http.Request, retry time.Duration) {
+	secs := int((retry + time.Second - 1) / time.Second)
+	if secs < 1 {
+		secs = 1
+	}
+	w.Header().Set("Retry-After", strconv.Itoa(secs))
+	writeError(w, r, http.StatusTooManyRequests, "rate_limited", "too many requests, slow down")
 }

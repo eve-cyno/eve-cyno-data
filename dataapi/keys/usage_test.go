@@ -299,3 +299,49 @@ func TestConcurrentSpendIsStoredOnClose(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 601, u.Days[0].Count)
 }
+
+// Check answers what Spend would answer without charging, and it never rolls the day: on a
+// new UTC day it answers ok and leaves the counters on the old day for the next Spend.
+func TestStore_CheckNeverRollsTheDay(t *testing.T) {
+	now := time.Date(2026, 10, 12, 23, 0, 0, 0, time.UTC)
+	s := openTest(t, keys.Options{DailyCap: 2, Now: clockAt(&now)})
+	k, _, err := s.Create(bg, "discord:abc", "", "")
+	require.NoError(t, err)
+	unlimited, _, err := s.Create(bg, "discord:def", "", "")
+	require.NoError(t, err)
+	_, err = s.SetCap(bg, unlimited.ID, 0)
+	require.NoError(t, err)
+
+	for range 10 {
+		ok, retry := s.Check(k.ID)
+		require.True(t, ok)
+		require.Zero(t, retry)
+	}
+	for i := range 2 {
+		ok, _ := s.Spend(k.ID)
+		require.True(t, ok, "spend %d: the checks charged nothing", i+1)
+	}
+	ok, retry := s.Check(k.ID)
+	require.False(t, ok)
+	require.Equal(t, time.Hour, retry, "the time to 00:00 UTC, as Spend says")
+	_, spendRetry := s.Spend(k.ID)
+	require.Equal(t, retry, spendRetry)
+	ok, _ = s.Check("key_000000000000")
+	require.True(t, ok, "an unknown id is always allowed")
+	ok, _ = s.Check(unlimited.ID)
+	require.True(t, ok, "a key without a cap is always allowed")
+
+	now = now.Add(time.Hour) // 00:00 UTC next day
+	ok, retry = s.Check(k.ID)
+	require.True(t, ok, "a new day starts with the whole cap")
+	require.Zero(t, retry)
+
+	// Had Check rolled over, the store would now be on the new day with empty counters and
+	// a stepped-back clock would read that day. It is still on the old day.
+	now = now.Add(-time.Minute)
+	ok, _ = s.Check(k.ID)
+	require.False(t, ok, "Check did not roll the day")
+	l, err := s.List(bg, "discord:abc")
+	require.NoError(t, err)
+	require.Equal(t, 2, l[0].UsedToday)
+}

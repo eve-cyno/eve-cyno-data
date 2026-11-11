@@ -71,6 +71,25 @@ func (q *anonQuota) Spend(key string) (ok bool, retryAfter time.Duration) {
 	return true, 0
 }
 
+// Check reports what Spend would answer for the client key now and records nothing: no
+// count, no day reset, no table-full warning. On a UTC day the counters are not on yet it
+// answers ok (the next Spend starts the day at zero); a client the table never counted is ok
+// too (Spend counts it or, with the table full, serves it uncounted).
+func (q *anonQuota) Check(key string) (ok bool, retryAfter time.Duration) {
+	now := q.now().UTC()
+	day := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
+
+	q.mu.Lock()
+	defer q.mu.Unlock()
+	if !day.Equal(q.day) {
+		return true, 0
+	}
+	if q.counts[key] >= q.cap {
+		return false, day.Add(24 * time.Hour).Sub(now)
+	}
+	return true, 0
+}
+
 // clients is the number of clients counted today (tests).
 func (q *anonQuota) clients() int {
 	q.mu.Lock()

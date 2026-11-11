@@ -9,7 +9,7 @@ import (
 
 // A full gate refuses at once instead of queueing, and a released slot admits the next request.
 func TestRouteGate_RefusesWhenFullAndFreesOnRelease(t *testing.T) {
-	g := newRouteGate(2, false)
+	g := newRouteGate(2, false, tieredLimiter{}, "")
 	r1, pool, ok := g.tryAcquire()
 	require.True(t, ok)
 	require.Equal(t, poolWork, pool)

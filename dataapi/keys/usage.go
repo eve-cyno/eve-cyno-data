@@ -108,17 +108,45 @@ func (s *Store) Spend(id string) (bool, time.Duration) {
 	}
 	r := s.rows[id]
 	if k.cap > 0 && r.count >= k.cap {
-		end, err := time.Parse(time.DateOnly, s.day)
-		retry := time.Second
-		if err == nil {
-			retry = max(end.Add(24*time.Hour).Sub(now), time.Second)
-		}
-		return false, retry
+		return false, s.untilDayEnd(now)
 	}
 	r.count++
 	s.rows[id] = r
 	s.dirty[id] = true
 	return true, 0
+}
+
+// Check implements dataapi.QuotaChecker: it answers what Spend would answer for key id now,
+// with the same retry, and changes nothing. It never rolls the day over and never flushes:
+// when the UTC day has moved past the day the counters are on, the next Spend starts the key
+// at zero, so Check answers ok.
+func (s *Store) Check(id string) (bool, time.Duration) {
+	s.mu.RLock()
+	k, known := s.byID[id]
+	s.mu.RUnlock()
+	if !known || k.cap <= 0 {
+		return true, 0
+	}
+	now := s.now().UTC()
+	s.usageMu.Lock()
+	defer s.usageMu.Unlock()
+	if now.Format(time.DateOnly) > s.day {
+		return true, 0
+	}
+	if s.rows[id].count >= k.cap {
+		return false, s.untilDayEnd(now)
+	}
+	return true, 0
+}
+
+// untilDayEnd is the time from now to the end of the day the counters are on, at least 1 s.
+// The caller holds usageMu.
+func (s *Store) untilDayEnd(now time.Time) time.Duration {
+	end, err := time.Parse(time.DateOnly, s.day)
+	if err != nil {
+		return time.Second
+	}
+	return max(end.Add(24*time.Hour).Sub(now), time.Second)
 }
 
 // rollover writes the rows of the finished day, starts today empty and prunes old rows.

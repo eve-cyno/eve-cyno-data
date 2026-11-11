@@ -125,3 +125,36 @@ func TestClientIP_InvalidCFHeaderIgnored(t *testing.T) {
 		require.Equal(t, "172.18.0.5", ClientIP(req), "header %q", bad)
 	}
 }
+
+// Check answers what Allow would answer, with the same retry, and records nothing: any number
+// of checks leaves the whole budget to Allow.
+func TestWindowLimiter_CheckRecordsNothing(t *testing.T) {
+	l, clk := newTestLimiter(2, time.Minute)
+	for range 100 {
+		ok, retry := l.Check("a")
+		require.True(t, ok)
+		require.Zero(t, retry)
+	}
+	for i := range 2 {
+		ok, _ := l.Allow("a")
+		require.True(t, ok, "event %d: the checks recorded nothing", i+1)
+		clk.advance(10 * time.Second)
+	}
+	ok, retry := l.Check("a")
+	require.False(t, ok)
+	require.Equal(t, 40*time.Second, retry, "until the oldest counted event leaves the window")
+	okAllow, retryAllow := l.Allow("a")
+	require.False(t, okAllow)
+	require.Equal(t, retry, retryAllow, "Check and Allow agree")
+	ok, _ = l.Check("b")
+	require.True(t, ok, "keys are independent")
+
+	clk.advance(40 * time.Second) // the first event leaves the window
+	ok, _ = l.Check("a")
+	require.True(t, ok)
+	ok, _ = l.Allow("a")
+	require.True(t, ok)
+	ok, retry = l.Check("a")
+	require.False(t, ok)
+	require.Equal(t, 10*time.Second, retry)
+}

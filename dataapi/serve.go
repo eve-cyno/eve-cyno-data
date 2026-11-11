@@ -75,7 +75,9 @@ func validRequestID(s string) bool {
 // daily cap of callers without a key around the route mux.
 //
 // The gate runs before every charge (the key's quota, the anonymous daily cap and, inside
-// the mux, the route limiter and the upstream limiter): a busy refusal has spent nothing.
+// the mux, the route limiter and the upstream limiter): a busy refusal has spent nothing. A
+// full route first checks, without recording, whether the caller is over one of those limits
+// (gateRefusal) and answers that limit's 429 instead of 503 busy.
 func (a *API) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	id := r.Header.Get(HeaderRequestID)
 	if !validRequestID(id) {
@@ -103,6 +105,10 @@ func (a *API) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	quotaRefused := false
 	muxRan := false
 	busyPool := ""
+	// rateRefusedAtGate: a full route answered the route limiter's 429 (gateRefusal). The mux
+	// never ran, so the usage label comes from the resolved pattern, as the limiter's own 429
+	// would have it.
+	rateRefusedAtGate := false
 	rec := &statusRecorder{ResponseWriter: w}
 	start := time.Now()
 	defer func() {
@@ -143,14 +149,27 @@ func (a *API) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		a.logRefusedToolCall(r, rec.statusCode(), toolLogged, time.Since(start))
 		// A busy refusal is not usage: a key's endpoint record stays what was served.
 		if c := CallerFrom(r.Context()); c.Authenticated() && a.usage != nil && busyPool == "" {
-			a.usage.Record(c.ID, usageEndpoint(r), rec.statusCode() == http.StatusTooManyRequests)
+			endpoint := usageEndpoint(r.PathValue("name"), r.Pattern)
+			if rateRefusedAtGate {
+				endpoint = usageEndpoint(a.toolName(r, route), route)
+			}
+			a.usage.Record(c.ID, endpoint, rec.statusCode() == http.StatusTooManyRequests)
 		}
 	}()
 	if gate := a.gateFor(r, pattern); gate != nil {
 		release, pool, ok := gate.tryAcquire()
 		if !ok {
-			busyPool = pool
-			writeBusy(rec, r)
+			// A caller the chain below would refuse gets that 429, not 503 busy: the checks
+			// record nothing, so the refusal still charges nothing.
+			switch a.gateRefusal(rec, r, pattern, gate) {
+			case refusedDaily:
+				quotaRefused = true
+			case refusedRate:
+				rateRefusedAtGate = true
+			default:
+				busyPool = pool
+				writeBusy(rec, r)
+			}
 			return
 		}
 		// Registered after the access-log defer, so it runs first: on a normal return, on a
@@ -164,7 +183,7 @@ func (a *API) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	if a.anon != nil && !CallerFrom(r.Context()).Authenticated() && !a.trialFree[pattern] {
+	if a.countsAnon(r, pattern) {
 		// The same client key the per-minute limiter uses for a caller without a key. An
 		// invalid key is an anonymous caller too.
 		if ok, retry := a.anon.Spend(a.keys.Key(r)); !ok {
@@ -175,6 +194,53 @@ func (a *API) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	muxRan = true
 	a.mux.ServeHTTP(rec, r)
+}
+
+// countsAnon reports whether the anonymous daily cap counts the request: a caller without a
+// valid key on a route the cap does not exempt.
+func (a *API) countsAnon(r *http.Request, pattern string) bool {
+	return a.anon != nil && !CallerFrom(r.Context()).Authenticated() && !a.trialFree[pattern]
+}
+
+// gateAnswer is which 429 a full route answered instead of 503 busy (refusedNone: busy).
+type gateAnswer int
+
+const (
+	refusedNone  gateAnswer = iota
+	refusedDaily            // the key's quota or the anonymous daily cap
+	refusedRate             // the route's per-minute limiter
+)
+
+// gateRefusal runs, while the route is full, the checks of the chain the request would have
+// passed, in its order (the key's quota, the anonymous daily cap, the route's per-minute
+// limiter), and records nothing. When one of them refuses, it writes that check's 429 with
+// the writer the chain uses (same code, body and Retry-After) and names it; otherwise it
+// writes nothing and the caller answers busy. The upstream limiter is not checked: its 429
+// comes after the argument check and only for a live call. A Quota without QuotaChecker is
+// not checked either.
+func (a *API) gateRefusal(w http.ResponseWriter, r *http.Request, pattern string, g *routeGate) gateAnswer {
+	if c := CallerFrom(r.Context()); c.Authenticated() && a.quota != nil {
+		if qc, ok := a.quota.(QuotaChecker); ok {
+			if ok, retry := qc.Check(c.ID); !ok {
+				writeQuotaRefusal(w, r, retry)
+				return refusedDaily
+			}
+		}
+	}
+	if a.countsAnon(r, pattern) {
+		if ok, retry := a.anon.Check(a.keys.Key(r)); !ok {
+			writeAnonQuotaRefusal(w, r, retry, a.anon.cap, a.surface.PublicURL)
+			return refusedDaily
+		}
+	}
+	if l := g.limit.pick(r); l != nil {
+		if ok, retry := l.Check(a.keys.Key(r)); !ok {
+			// Under the route's cache policy, as the limiter inside the mux writes it.
+			cached(g.cache, func(w http.ResponseWriter, r *http.Request) { writeRateLimited(w, r, retry) })(w, r)
+			return refusedRate
+		}
+	}
+	return refusedNone
 }
 
 // logRefusedToolCall writes the usage line of a tool call (POST {prefix}/tool/{name}) that was
@@ -200,10 +266,11 @@ func (a *API) logRefusedToolCall(r *http.Request, status int, handlerLogged bool
 	})
 }
 
-// usageEndpoint is the Usage label of a served request: "tool:<name>" for the raw tool route ("tool:?" for a name that is no registered tool),
-// else the matched mux pattern, "-" when none matched.
-func usageEndpoint(r *http.Request) string {
-	if name := r.PathValue("name"); name != "" {
+// usageEndpoint is the Usage label of a request with the tool name and the mux pattern:
+// "tool:<name>" for the raw tool route ("tool:?" for a name that is no registered tool), else
+// the pattern, "-" when none matched (a quota refusal before the mux).
+func usageEndpoint(name, pattern string) string {
+	if name != "" {
 		// The name is caller-controlled: only registered tools get their own label, so the
 		// label set stays bounded.
 		if _, ok := catalog.Lookup(name); ok {
@@ -211,10 +278,10 @@ func usageEndpoint(r *http.Request) string {
 		}
 		return "tool:?"
 	}
-	if r.Pattern == "" {
+	if pattern == "" {
 		return "-"
 	}
-	return r.Pattern
+	return pattern
 }
 
 // logsCaller reports whether the access line of a request to the mux pattern carries a caller

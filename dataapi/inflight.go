@@ -12,7 +12,10 @@ const poolWork = "work"
 // before any budget is charged (the key's quota, the anonymous daily cap, the route limiter,
 // the upstream limiter). A request over the cap is refused at once with 503 busy and
 // Retry-After: 1, never queued: a queue is what grows the heap when a route is overloaded.
-// Because nothing has run when the refusal is written, a busy answer charges nothing.
+// Because nothing has run when the refusal is written, a busy answer charges nothing. A caller
+// that the chain would refuse anyway (over its key's quota, the anonymous daily cap or the
+// route's per-minute limit) gets that 429 with its real Retry-After instead (API.gateRefusal);
+// those checks record nothing either.
 //
 // The slot is released when ServeHTTP returns (normal return, a handler panic,
 // http.ErrAbortHandler). When a client disconnects, the handler may return while a tool that
@@ -24,11 +27,17 @@ type routeGate struct {
 	// with 405, and a GET stream (should stateless mode ever be turned off) must never hold a
 	// slot for its lifetime.
 	postOnly bool
+	// limit is the route's per-minute limiter (the one the route's handler spends), so a busy
+	// refusal can check, without recording, whether the caller is over it.
+	limit tieredLimiter
+	// cache is the route's Cache-Control policy, which the limiter's 429 is written under.
+	cache string
 }
 
-// newRouteGate returns a gate of max slots (max > 0).
-func newRouteGate(max int, postOnly bool) *routeGate {
-	return &routeGate{work: make(chan struct{}, max), postOnly: postOnly}
+// newRouteGate returns a gate of max slots (max > 0) in front of a route whose per-minute
+// limiter is limit and whose cache policy is cache.
+func newRouteGate(max int, postOnly bool, limit tieredLimiter, cache string) *routeGate {
+	return &routeGate{work: make(chan struct{}, max), postOnly: postOnly, limit: limit, cache: cache}
 }
 
 // tryAcquire takes a slot without waiting. ok is false when the pool is full; pool names the
