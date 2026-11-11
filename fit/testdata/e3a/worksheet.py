@@ -19,6 +19,7 @@ AN = {a: n for a, n in c.execute('select attributeID,attributeName from dgmAttri
 STACKABLE = {a: s for a, s in c.execute('select attributeID,stackable from dgmAttributeTypes')}
 DEFAULT = {a: d for a, d in c.execute('select attributeID,defaultValue from dgmAttributeTypes')}
 VOLUME = {t: v for t, v in c.execute('select typeID,volume from invTypes')}
+# invTypes capacity and volume are read unmodified; the Go engine's resolved attrs 38 and 161 are equal to them today.
 CAPACITY = {t: v for t, v in c.execute('select typeID,capacity from invTypes')}
 MASS = {t: v for t, v in c.execute('select typeID,mass from invTypes')}
 _attrs = {}

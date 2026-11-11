@@ -105,8 +105,8 @@ const (
 // Shield Boosters at 178.2 GJ each plus a neutralizer against 507.875 GJ) runs dry at t = 0:
 // SecondsToEmpty is 0 with Stable false. The game's display for that case is unverified.
 //
-// It is a closed form, not a numeric scheme: no step size, no worker or ordering
-// dependence. It is evaluated with float64 conversions that stop fused multiply-add, and
+// The closed forms (stable level, empty time at the bound) have no step size and no worker or
+// ordering dependence; the discrete run is deterministic too (events in item order). They are evaluated with float64 conversions that stop fused multiply-add, and
 // both results are rounded to 1e-6 (capRound), so an equality test on any machine sees the
 // same bits.
 func capacitor(ship *Item, items []*Item) fit.CapStats {
@@ -123,19 +123,16 @@ func capacitor(ship *Item, items []*Item) fit.CapStats {
 
 	// Sum cap usage from all active modules, and collect cap-booster injection income.
 	//
-	// Cap-booster charges carry attrCapacitorBonus (attr 67) — the GJ injected per
-	// module cycle.  The injection is income, i.e. equivalent to a negative
-	// activation cost, so we model it as:
-	//   injectionRate = charge.capacitorBonus / (module.duration / 1000)   GJ/s
-	// and subtract it from totalUsage (income reduces net drain).
+	// Cap-booster charges carry attrCapacitorBonus (attr 67), the GJ injected per module cycle.
+	// The injection is income, i.e. a negative activation cost. The rate used here is the load
+	// average of capEvent.injectPerSec, charges * bonus / (charges * cycle + reload), subtracted
+	// from the usage (income reduces net drain).
 	//
-	// Modules without a loaded charge contribute only their activation cost.
-	// The chargeByModule map is not available here, so we identify cap-booster
-	// charges as KindCharge items whose attrCapacitorBonus > 0, paired with their
-	// parent module via the items slice order: a KindCharge always immediately
-	// follows its parent KindModule in the resolveForStats item list.
-	totalUsage, totalInjection := capDraw(items)
+	// Modules without a loaded charge contribute only their activation cost. A KindCharge item
+	// immediately follows its parent KindModule in the resolveForStats item list, which is how
+	// capEvents pairs a booster with its charge.
 	evs := capEvents(items)
+	totalUsage, totalInjection := capDrawOf(evs)
 
 	// Net drain = module activation cost − cap-booster injection average.
 	netDrain := totalUsage - totalInjection
@@ -300,7 +297,12 @@ func capEvents(items []*Item) []capEvent {
 // average (GJ/s) of loaded cap-booster charges, reload included. The repair summary (E10), the
 // delta and the stable-percentage closed form read these averages.
 func capDraw(items []*Item) (totalUsage, totalInjection float64) {
-	for _, ev := range capEvents(items) {
+	return capDrawOf(capEvents(items))
+}
+
+// capDrawOf is capDraw over an event list already built.
+func capDrawOf(evs []capEvent) (totalUsage, totalInjection float64) {
+	for _, ev := range evs {
 		totalUsage += ev.need / ev.cycleSec
 		if ev.inject > 0 {
 			totalInjection += ev.injectPerSec()
@@ -326,8 +328,9 @@ const capSimMaxEvents = 2_000_000
 // after each load). At an instant where several events coincide, all costs are paid first, in item
 // order (high, mid, low slots), then the booster injections are added (capped at the capacity); the
 // order is the coordinator's M3 rule and the result is deterministic. The game's own order is not
-// documented; it can change the result (a charge that would overfill the capacitor loses its excess,
-// and which of two costs is paid first decides which one fails).
+// documented; it can change the result (a charge that would overfill the capacitor loses its excess).
+// All costs are paid before any injection, so the order of the costs alone is what decides which
+// of two unpayable costs fails first.
 func capSimulate(capacity, rechargeSec float64, evs []capEvent) (float64, bool) {
 	return capSimulateN(capacity, rechargeSec, evs, capSimMaxEvents)
 }

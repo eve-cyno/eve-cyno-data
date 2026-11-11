@@ -198,8 +198,10 @@ type CapStats struct {
 	// minus the use of the active modules plus the average injection of a loaded capacitor
 	// booster (charges * bonus / (charges * cycle + reload)), in GJ/s. Negative when the
 	// capacitor drains. Not the verdict: Stable comes from a discrete run, so a small positive
-	// delta can still run dry. For a fit with charge-fed ancillary reps (FitStats.Unmodelled) the use
-	// is that of the repairers with no charge loaded, so the delta is not meaningful there.
+	// delta can still run dry. In the game only an ancillary shield booster with a charge loaded
+	// uses no capacitor, but the engine counts its capacitorNeed, so the delta is not meaningful
+	// when the fit has charge-fed ancillary reps (FitStats.Unmodelled; the stat card hides the
+	// capacitor text then, see CapSummary).
 	DeltaGJps float64
 	// DeltaPct is DeltaGJps as a percentage of the peak recharge (100 * DeltaGJps / peak).
 	DeltaPct float64

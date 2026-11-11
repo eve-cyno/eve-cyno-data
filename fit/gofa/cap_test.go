@@ -453,8 +453,8 @@ func TestCapEvents_OnlyCapBoosterModulesInject(t *testing.T) {
 }
 
 // Model M3 (capacitor with a cap booster), checked against the owner's game screenshots at all V.
-// A Medium Capacitor Booster II holds floor(40 m3 / 12 m3) = 3 Navy Cap Booster 400, cycle 7.65 s,
-// reload 10 s: average injection 1200 / (3 * 7.65 + 10) = 26.087 GJ/s. The game shows a delta
+// A Medium Capacitor Booster II holds floor(40 m3 / 12 m3) = 3 Navy Cap Booster 400, cycle 12 s,
+// reload 10 s: average injection 1200 / (3 * 12 + 10) = 26.087 GJ/s. The game shows a delta
 // (peak recharge - use + injection) of +13.8 GJ/s (110.2 %) on the Vexor.
 func TestCapacitor_M3_Vexor(t *testing.T) {
 	s := openRealSDE(t)
@@ -469,7 +469,7 @@ func TestCapacitor_M3_Vexor(t *testing.T) {
 
 // Myrmidon: the delta is +0.18 % but the run empties (the game says "Depletes"): the verdict is the
 // discrete run, not the sign of the delta. The time to empty counts only the 3 loaded charges and
-// is 17 cycles of 7.65 s.
+// is 17 cycles of the Medium Armor Repairer II (7.65 s).
 func TestCapacitor_M3_Myrmidon(t *testing.T) {
 	s := openRealSDE(t)
 	defer s.Close()
@@ -515,23 +515,46 @@ func TestCapEvents_BoosterLoadAverage(t *testing.T) {
 }
 
 // With only the loaded charges the time to empty is shorter than with unlimited charges.
+// Capacitor 300, no recharge, 10 GJ per second; a booster of 25 GJ every 5 s, 2 charges, reload 5 s.
 func TestCapSimulate_LoadedChargesOnly(t *testing.T) {
 	evs := []capEvent{{need: 10, cycleSec: 1}, {inject: 25, cycleSec: 5, charges: 2, reloadSec: 5}}
-	// Unlimited: 25 GJ per 15 s load, 10 GJ/s use: still drains, but later than with two charges only.
 	unl, ok1 := capSimulate(300, 1e12, evs)
 	one, ok2 := capSimulate(300, 1e12, capLoadedOnly(evs))
 	require.True(t, ok1)
 	require.True(t, ok2)
-	require.Less(t, one, unl)
+	require.InDelta(t, 43, unl, 1e-9)
+	require.InDelta(t, 33, one, 1e-9)
 }
 
-// At one instant the costs are paid before the injection (M3). Capacitor 100, a cost of 80 and an
-// injection of 60 every second, no recharge. Costs first: 100 -> 20 -> 80 at t = 0; 80 -> 0 -> 60 at
-// t = 1; at t = 2 the cost 80 finds 60 and fails. Injection first would give min(100, 160) - 80 = 20
-// at t = 0 and fail at t = 1.
+// At one instant all costs are paid before any injection (M3). Capacitor 100, no recharge, an
+// injection of 50 every 2 s and a cost of 30 every second. Costs first, then the clamped injection:
+// the capacitor after each instant reads 100 (t=0: 70, +50 clamped), 70, 90 (t=2), 60, 80, 50, 70, 40,
+// 60 (t=8), 30, 50 (t=10), 20, and the cost at t = 12 fails.
 func TestCapSimulate_CostsBeforeInjectionAtOneInstant(t *testing.T) {
-	evs := []capEvent{{need: 80, cycleSec: 1}, {inject: 60, cycleSec: 1}}
-	got, ok := capSimulate(100, 1e12, evs)
+	got, ok := capSimulate(100, 1e12, []capEvent{{inject: 50, cycleSec: 2}, {need: 30, cycleSec: 1}})
 	require.True(t, ok)
-	require.InDelta(t, 2, got, 1e-9)
+	require.InDelta(t, 12, got, 1e-9) // injection first or interleaved: 11; no clamp: 16
+}
+
+// An injection that would overfill the capacitor loses its excess: cost 30 per second, one
+// injection of 50 at t = 0 and one at t = 1000 s. 100 -> 70 -> clamp 100 (no clamp: 120) -> 70, 40,
+// 10, and the cost at t = 4 fails. Without the clamp it fails at 5; injection first gives 3.
+func TestCapSimulate_InjectionClampedAtCapacity(t *testing.T) {
+	got, ok := capSimulate(100, 1e12, []capEvent{{need: 30, cycleSec: 1}, {inject: 50, cycleSec: 1000}})
+	require.True(t, ok)
+	require.InDelta(t, 4, got, 1e-9)
+}
+
+// Two cap boosters fire in lock-step (both at t = 0, both reload at the same instants): the second
+// one's first charge lands on a full capacitor and is lost to the clamp. Unverified against the game.
+// Myrmidon reference fit with the booster line doubled (the recharger kept): stable 100 %, delta 106.6 %.
+func TestCapacitor_M3_TwoBoostersInLockStep(t *testing.T) {
+	s := openRealSDE(t)
+	defer s.Close()
+	one := "Medium Capacitor Booster II, Navy Cap Booster 400"
+	f := parityFitWith(t, s, 6, one, one+"\n"+one)
+	c := statsOf(t, New(s), f, fit.StatsOpts{}).Capacitor
+	require.True(t, c.Stable)
+	require.InDelta(t, 100.0, c.StablePct, 1e-9)
+	require.InDelta(t, 106.616, c.DeltaPct, 5e-3)
 }
