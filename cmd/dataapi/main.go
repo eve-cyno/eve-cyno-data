@@ -57,8 +57,12 @@
 //	DATAAPI_ESI_GUARD_PERCENT share (0-90, default 25) of every ESI rate-limit group's tokens
 //	                          kept unspent; below it a tool answers 503 upstream_busy instead
 //	                          of calling ESI. Every ESI call is logged as msg "esi_call"
-//	DATAAPI_LOG_SALT          salt of the opaque "caller" token in the tool/MCP access-log
-//	                          lines (default: random per process)
+//	DATAAPI_LOG_SALT          secret of the opaque "caller" token in the tool/MCP access-log
+//	                          lines; tokens rotate at 00:00 UTC, so they compare only within one
+//	                          UTC day (with it set, also across restarts within the day). No
+//	                          default: unset or blank means a random secret per process, noted
+//	                          once at startup. The value is never logged; set it only in the
+//	                          host .env, since whoever holds it can reverse a token
 //	ESI_CONTACT               contact for the ESI User-Agent (esi)
 //	DATAAPI_PUBLIC_URL        the public origin, e.g. https://data.eve-cyno.dev (https, no path or
 //	                          query; invalid is a startup error). Makes the OpenAPI servers entry
@@ -229,6 +233,20 @@ func maxInFlightUpstream(getenv func(string) string) (int, error) {
 	return n, nil
 }
 
+// logSalt resolves DATAAPI_LOG_SALT, the secret of the caller token, and says once which kind
+// of secret the tokens use: blank or unset is "" (dataapi then draws a random secret for this
+// process). The value itself is never logged.
+func logSalt(getenv func(string) string, log *slog.Logger) string {
+	s := strings.TrimSpace(getenv("DATAAPI_LOG_SALT"))
+	if s == "" {
+		log.Info("caller token: DATAAPI_LOG_SALT unset, using a random secret per process; tokens rotate at 00:00 UTC and at every restart",
+			"env", "DATAAPI_LOG_SALT")
+		return ""
+	}
+	log.Info("caller token: secret from DATAAPI_LOG_SALT; tokens rotate at 00:00 UTC", "env", "DATAAPI_LOG_SALT")
+	return s
+}
+
 // dailyCap resolves DATAAPI_KEY_DAILY_CAP: an integer 0..keys.MaxDailyCap (0 = no cap).
 func dailyCap(getenv func(string) string) (int, error) {
 	v := strings.TrimSpace(getenv("DATAAPI_KEY_DAILY_CAP"))
@@ -385,7 +403,8 @@ type exposure struct {
 	publicURL string
 	// upstream overrides the per-caller budget of the live-ESI tools (nil: the default).
 	upstream *dataapi.Rate
-	// logSalt is DATAAPI_LOG_SALT ("" means a random salt per process).
+	// logSalt is DATAAPI_LOG_SALT, the secret of the per-UTC-day caller token ("" means a random
+	// secret per process). Never logged.
 	logSalt string
 	// store is the self-serve key store (nil: none). Its keys authenticate next to auth, and
 	// it enforces the daily quota and records usage.
@@ -593,7 +612,7 @@ func run(log *slog.Logger) error {
 	}
 	ex := exposure{
 		toolAPI: exposeToolAPI(os.Getenv), mcp: exposeMCP(os.Getenv), auth: auth, publicURL: pub,
-		upstream: &upstream, logSalt: os.Getenv("DATAAPI_LOG_SALT"),
+		upstream: &upstream, logSalt: logSalt(os.Getenv, log),
 		store: store, keyedFactor: factor, dailyCap: dayCap, anonDailyCap: anonCap, maxInFlight: maxIF, maxInFlightUpstream: maxIFUp, sdeBuild: followSDEBuild(cfg.SDEPath, deps.Tools.SDE, log),
 	}
 	log.Info("ESI pass-through tools: shared Expires cache, fail-fast budget guard",

@@ -141,8 +141,8 @@ func (a *API) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			attrs = append(attrs, "tool", name)
 		}
 		if a.logsCaller(route) || quotaRefused {
-			// An opaque, salted token (never the address) so a noisy caller shows up in
-			// the logs without the logs holding IPs.
+			// An opaque token, keyed per UTC day (never the address), so a noisy caller shows
+			// up in the logs without the logs holding IPs.
 			attrs = append(attrs, "caller", a.hasher.hash(a.keys.Key(r)))
 		}
 		if busyPool != "" {

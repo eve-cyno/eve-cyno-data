@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"eve-cyno.dev/go/data/catalog"
@@ -101,26 +102,64 @@ func upstreamSentence(s Surface, t catalog.Tool) string {
 	return b.String()
 }
 
-// callerHasher turns a rate-limit key (a client IP or "key:<id>") into the short opaque
-// token the access log carries, so abuse can be spotted per caller without logging
-// addresses: HMAC-SHA256 under a salt, truncated to 64 bits. The salt is random per
-// process unless Config.LogSalt is set, so by default a token cannot be linked across
-// restarts and the hash cannot be reversed by enumerating the IPv4 space.
-type callerHasher struct{ salt []byte }
+// callerTokenDomain prefixes the UTC date in the derivation of a day key, so the secret's HMACs
+// for the caller token cannot collide with any other use of it. Changing it changes every token.
+const callerTokenDomain = "eve-cyno dataapi caller token v1\x00"
 
-func newCallerHasher(salt string) callerHasher {
-	if salt != "" {
-		return callerHasher{salt: []byte(salt)}
-	}
-	b := make([]byte, 32)
-	_, _ = rand.Read(b) // crypto/rand.Read does not fail on supported platforms
-	return callerHasher{salt: b}
+// callerHasher turns a rate-limit key (a client key, see ClientKey, or "key:<id>") into the short
+// opaque token the access log carries, so abuse can be spotted per caller without logging
+// addresses. The token is HMAC-SHA256 of the key under the day key, truncated to 64 bits, in hex;
+// the day key is HMAC-SHA256 of callerTokenDomain and the UTC date ("2006-01-02") under the
+// secret. So a token is comparable within one UTC day and never across days, and nobody
+// without the secret can reverse it by enumerating the IPv4 space. The secret is Config.LogSalt;
+// when it is empty it is 32 random bytes per process, so tokens also reset at every restart.
+// The secret and the day keys are never logged. It is safe for concurrent use.
+type callerHasher struct {
+	secret []byte
+	now    func() time.Time
+	// day caches the key of the last UTC day a token was made for; a request on another day
+	// derives that day's key and replaces it.
+	day atomic.Pointer[callerDay]
 }
 
-func (h callerHasher) hash(key string) string {
-	m := hmac.New(sha256.New, h.salt)
+// callerDay is the day key of one UTC date.
+type callerDay struct {
+	date string
+	key  []byte
+}
+
+// newCallerHasher returns the hasher under secret ("" means a random secret for this process),
+// reading the day from now (nil means time.Now).
+func newCallerHasher(secret string, now func() time.Time) *callerHasher {
+	if now == nil {
+		now = time.Now
+	}
+	h := &callerHasher{secret: []byte(secret), now: now}
+	if secret == "" {
+		h.secret = make([]byte, 32)
+		_, _ = rand.Read(h.secret) // crypto/rand.Read does not fail on supported platforms
+	}
+	return h
+}
+
+// hash returns the token of key for the current UTC day.
+func (h *callerHasher) hash(key string) string {
+	m := hmac.New(sha256.New, h.dayKey(h.now().UTC().Format(time.DateOnly)))
 	m.Write([]byte(key))
 	return hex.EncodeToString(m.Sum(nil)[:8])
+}
+
+// dayKey returns the key of the UTC date, from the cache when it holds that date. Two requests
+// on both sides of midnight may replace each other's entry; each still gets its own date's key.
+func (h *callerHasher) dayKey(date string) []byte {
+	if d := h.day.Load(); d != nil && d.date == date {
+		return d.key
+	}
+	m := hmac.New(sha256.New, h.secret)
+	m.Write([]byte(callerTokenDomain + date))
+	d := &callerDay{date: date, key: m.Sum(nil)}
+	h.day.Store(d)
+	return d.key
 }
 
 // upstreamLabel names the live upstream of a tool for error messages (ESI when the tool

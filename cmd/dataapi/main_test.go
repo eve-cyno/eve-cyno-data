@@ -1,8 +1,10 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -305,6 +307,71 @@ func TestMaxInFlightUpstream(t *testing.T) {
 	n, err = maxInFlightUpstream(env(map[string]string{"DATAAPI_MAX_INFLIGHT": "8"}))
 	require.NoError(t, err)
 	require.Equal(t, 0, n)
+}
+
+func TestLogSalt(t *testing.T) {
+	var buf bytes.Buffer
+	log := slog.New(slog.NewJSONHandler(&buf, nil))
+	const secret = "s3cret-from-the-host-env"
+	require.Equal(t, secret, logSalt(env(map[string]string{"DATAAPI_LOG_SALT": secret}), log))
+	require.Equal(t, 1, strings.Count(buf.String(), "\n"), "one startup line: %s", buf.String())
+	require.Contains(t, buf.String(), `"env":"DATAAPI_LOG_SALT"`)
+	require.NotContains(t, buf.String(), "random secret per process")
+	require.NotContains(t, buf.String(), secret, "the secret is never logged")
+	require.NotContains(t, buf.String(), "s3cret", "no part of the secret is logged")
+
+	for _, unset := range []map[string]string{nil, {"DATAAPI_LOG_SALT": ""}, {"DATAAPI_LOG_SALT": " \t "}} {
+		buf.Reset()
+		require.Empty(t, logSalt(env(unset), log), "%q", unset)
+		require.Equal(t, 1, strings.Count(buf.String(), "\n"), "one notice: %s", buf.String())
+		require.Contains(t, buf.String(), "random secret per process")
+		require.Contains(t, buf.String(), `"env":"DATAAPI_LOG_SALT"`)
+	}
+}
+
+// accessToken makes one tool call through h from one IPv4 address and returns the caller token
+// of its access line in buf.
+func accessToken(t *testing.T, h http.Handler, buf *bytes.Buffer) string {
+	t.Helper()
+	req := httptest.NewRequest(http.MethodPost, "/v1/tool/get_jumps_between", strings.NewReader(`{"from_system":"Jita","to_system":"Amarr"}`))
+	req.Header.Set("CF-Connecting-IP", "203.0.113.7")
+	h.ServeHTTP(httptest.NewRecorder(), req)
+	for _, line := range strings.Split(strings.TrimSpace(buf.String()), "\n") {
+		var m map[string]any
+		require.NoError(t, json.Unmarshal([]byte(line), &m), line)
+		if m["msg"] == "request" {
+			tok, ok := m["caller"].(string)
+			require.True(t, ok, line)
+			return tok
+		}
+	}
+	t.Fatal("no access line")
+	return ""
+}
+
+// The exposure's secret reaches the caller token: one secret is one token across restarts
+// within the UTC day, another secret another, and no secret a random one per process.
+func TestNewHandler_LogSaltKeysTheCallerToken(t *testing.T) {
+	token := func(salt string) string {
+		var buf bytes.Buffer
+		h, err := newHandler(&bootstrap.Deps{Tools: &tools.Deps{}}, exposure{toolAPI: true, logSalt: salt}, slog.New(slog.NewJSONHandler(&buf, nil)))
+		require.NoError(t, err)
+		tok := accessToken(t, h, &buf)
+		require.NotContains(t, buf.String(), "203.0.113.7")
+		if salt != "" {
+			require.NotContains(t, buf.String(), salt)
+		}
+		return tok
+	}
+	day := time.Now().UTC().Format(time.DateOnly)
+	a1, a2, b, r1, r2 := token("salt-a"), token("salt-a"), token("salt-b"), token(""), token("")
+	if time.Now().UTC().Format(time.DateOnly) != day {
+		t.Skip("the UTC day changed during the test: the tokens rotated")
+	}
+	require.Equal(t, a1, a2, "one secret: the same token after a restart within the day")
+	require.NotEqual(t, a1, b, "another secret: another token")
+	require.NotEqual(t, r1, r2, "no secret: a random one per process")
+	require.NotEqual(t, a1, r1)
 }
 
 func TestAnonDailyCap(t *testing.T) {

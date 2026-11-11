@@ -270,7 +270,7 @@ type Config struct {
 	AnonDailyCap int
 
 	// Now returns the current time (nil means time.Now). It is a test seam for the daily
-	// caps.
+	// caps and the UTC day of the caller token.
 	Now func() time.Time
 
 	// Quota, when non-nil, is spent once per request of an authenticated caller; a refused
@@ -309,8 +309,10 @@ type Config struct {
 	// extra limit.
 	Upstream *UpstreamLimiter
 
-	// LogSalt keys the caller token of the access log (see callerHasher). Empty means a
-	// random salt per process.
+	// LogSalt is the secret of the caller token of the access log (see callerHasher); tokens
+	// rotate at 00:00 UTC. Empty means a random secret per process (still rotated per day).
+	// Keep it out of code, defaults and logs: whoever holds it can reverse a token by
+	// enumerating addresses.
 	LogSalt string
 
 	// ToolFormat selects the body of a successful tool call; zero is the JSON
@@ -372,7 +374,7 @@ type API struct {
 	toolTimeout time.Duration
 	mcp         http.Handler
 	upstream    *UpstreamLimiter
-	hasher      callerHasher
+	hasher      *callerHasher
 	surface     Surface
 	docs        renderedDocs
 	pages       renderedPages
@@ -438,7 +440,7 @@ func New(cfg Config) (*API, error) {
 		toolTimeout:         cfg.ToolTimeout,
 		mcp:                 cfg.MCP,
 		upstream:            cfg.Upstream,
-		hasher:              newCallerHasher(cfg.LogSalt),
+		hasher:              newCallerHasher(cfg.LogSalt, cfg.Now),
 		log:                 cfg.Logger,
 		mux:                 http.NewServeMux(),
 		trialFree:           map[string]bool{},

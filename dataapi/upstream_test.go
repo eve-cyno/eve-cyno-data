@@ -1,9 +1,15 @@
 package dataapi_test
 
 import (
+	"bytes"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -123,6 +129,229 @@ func TestAccessLog_CarriesAnOpaqueCallerTokenForToolRoutesOnly(t *testing.T) {
 	require.Regexp(t, `^[0-9a-f]{16}$`, callers[0])
 	require.NotContains(t, buf.String(), "203.0.113", "no address reaches the log")
 	require.NotContains(t, health, "caller", "only tool routes carry a caller token")
+}
+
+// tokenAPI serves the public tool API (route limits off, so nothing refuses) with the
+// caller-token secret, the clock (nil: time.Now) and the authenticator (nil: none) given; its
+// log goes to the returned buffer.
+func tokenAPI(t *testing.T, secret string, now func() time.Time, auth dataapi.Authenticator) (*dataapi.API, *bytes.Buffer) {
+	t.Helper()
+	log, buf := logSink()
+	limits := dataapi.DefaultLimits()
+	limits.Tool = dataapi.Rate{}
+	return newAPI(t, dataapi.Config{
+		Deps: emptyToolDeps(), ToolAPI: dataapi.ToolAPIPublic, Limits: &limits, Auth: auth,
+		LogSalt: secret, Now: now, Logger: log,
+	}), buf
+}
+
+// lastToken returns the caller token of the last access line in buf.
+func lastToken(t *testing.T, buf *bytes.Buffer) string {
+	t.Helper()
+	lines := logLines(t, buf)
+	for i := len(lines) - 1; i >= 0; i-- {
+		if lines[i]["msg"] != "request" {
+			continue
+		}
+		tok, ok := lines[i]["caller"].(string)
+		require.True(t, ok, "the access line carries a caller token: %v", lines[i])
+		require.Regexp(t, `^[0-9a-f]{16}$`, tok)
+		return tok
+	}
+	t.Fatal("no access line")
+	return ""
+}
+
+// tokenOf makes one tool call with the headers given and returns the caller token of its
+// access line.
+func tokenOf(t *testing.T, a *dataapi.API, buf *bytes.Buffer, hdr ...string) string {
+	t.Helper()
+	do(a, "POST", "/v1/tool/get_jumps_between", `{"from_system":"Jita","to_system":"Amarr"}`, hdr...)
+	return lastToken(t, buf)
+}
+
+// wantToken is the caller token by its definition: the day key is HMAC-SHA256 of the domain
+// string and the UTC date under the secret, the token HMAC-SHA256 of the caller key under the
+// day key, cut to 8 bytes, in hex.
+func wantToken(secret, day, key string) string {
+	m := hmac.New(sha256.New, []byte(secret))
+	m.Write([]byte("eve-cyno dataapi caller token v1\x00" + day))
+	m = hmac.New(sha256.New, m.Sum(nil))
+	m.Write([]byte(key))
+	return hex.EncodeToString(m.Sum(nil)[:8])
+}
+
+func TestCallerToken_SameKeySameDayIsStable(t *testing.T) {
+	c := &clock{t: time.Date(2026, 11, 12, 0, 0, 0, 0, time.UTC)}
+	a, buf := tokenAPI(t, "test-secret", c.now, nil)
+	first := tokenOf(t, a, buf, fromIP("203.0.113.7")...)
+	for _, at := range []time.Time{
+		time.Date(2026, 11, 12, 13, 0, 0, 0, time.UTC),
+		time.Date(2026, 11, 12, 23, 59, 59, 999_999_999, time.UTC),
+	} {
+		c.t = at
+		require.Equal(t, first, tokenOf(t, a, buf, fromIP("203.0.113.7")...), "same caller, same UTC day: %s", at)
+	}
+	require.NotEqual(t, first, tokenOf(t, a, buf, fromIP("203.0.113.8")...), "another caller, another token")
+
+	// A restart within the day keeps the token: the secret keys it, not the process.
+	b, bbuf := tokenAPI(t, "test-secret", c.now, nil)
+	require.Equal(t, first, tokenOf(t, b, bbuf, fromIP("203.0.113.7")...))
+}
+
+func TestCallerToken_ChangesAtMidnightUTC(t *testing.T) {
+	c := &clock{t: time.Date(2026, 11, 12, 23, 59, 59, 999_999_999, time.UTC)}
+	a, buf := tokenAPI(t, "test-secret", c.now, testKeys(t))
+	before := tokenOf(t, a, buf, fromIP("203.0.113.7")...)
+	keyedBefore := tokenOf(t, a, buf, append(fromIP("203.0.113.7"), "X-API-Key", keyAlpha)...)
+
+	c.t = time.Date(2026, 11, 13, 0, 0, 0, 0, time.UTC)
+	after := tokenOf(t, a, buf, fromIP("203.0.113.7")...)
+	require.NotEqual(t, before, after, "tokens never join across UTC days")
+	require.NotEqual(t, keyedBefore, tokenOf(t, a, buf, append(fromIP("203.0.113.7"), "X-API-Key", keyAlpha)...), "a keyed caller's token rotates too")
+	require.Equal(t, wantToken("test-secret", "2026-11-12", "203.0.113.7"), before)
+	require.Equal(t, wantToken("test-secret", "2026-11-13", "203.0.113.7"), after)
+
+	// The day is the UTC one: 00:30 on the 13th at UTC+2 is still the 12th in UTC.
+	c.t = time.Date(2026, 11, 13, 0, 30, 0, 0, time.FixedZone("UTC+2", 2*60*60))
+	require.Equal(t, before, tokenOf(t, a, buf, fromIP("203.0.113.7")...))
+	// 23:30 on the 12th at UTC-2 is the 13th in UTC.
+	c.t = time.Date(2026, 11, 12, 23, 30, 0, 0, time.FixedZone("UTC-2", -2*60*60))
+	require.Equal(t, after, tokenOf(t, a, buf, fromIP("203.0.113.7")...))
+}
+
+func TestCallerToken_DependsOnTheSecret(t *testing.T) {
+	c := &clock{t: time.Date(2026, 11, 12, 12, 0, 0, 0, time.UTC)}
+	a, abuf := tokenAPI(t, "secret-one", c.now, nil)
+	b, bbuf := tokenAPI(t, "secret-two", c.now, nil)
+	one := tokenOf(t, a, abuf, fromIP("203.0.113.7")...)
+	two := tokenOf(t, b, bbuf, fromIP("203.0.113.7")...)
+	require.NotEqual(t, one, two)
+	require.Equal(t, wantToken("secret-one", "2026-11-12", "203.0.113.7"), one)
+	require.Equal(t, wantToken("secret-two", "2026-11-12", "203.0.113.7"), two)
+}
+
+func TestCallerToken_EmptySecretIsRandomPerProcess(t *testing.T) {
+	c := &clock{t: time.Date(2026, 11, 12, 12, 0, 0, 0, time.UTC)}
+	a, abuf := tokenAPI(t, "", c.now, nil)
+	b, bbuf := tokenAPI(t, "", c.now, nil)
+	set, sbuf := tokenAPI(t, "test-secret", c.now, nil)
+
+	first := tokenOf(t, a, abuf, fromIP("203.0.113.7")...)
+	require.Equal(t, first, tokenOf(t, a, abuf, fromIP("203.0.113.7")...), "stable within the process and the day")
+	require.NotEqual(t, first, tokenOf(t, a, abuf, fromIP("203.0.113.8")...), "another caller, another token")
+	require.NotEqual(t, first, tokenOf(t, b, bbuf, fromIP("203.0.113.7")...), "another process, another random secret")
+	require.NotEqual(t, first, tokenOf(t, set, sbuf, fromIP("203.0.113.7")...), "a set secret gives other tokens")
+	require.NotEqual(t, wantToken("", "2026-11-12", "203.0.113.7"), first, "the empty string is never the secret")
+
+	c.t = time.Date(2026, 11, 13, 0, 0, 0, 0, time.UTC)
+	require.NotEqual(t, first, tokenOf(t, a, abuf, fromIP("203.0.113.7")...), "the random secret still rotates per UTC day")
+}
+
+// Fixed secret, day and caller key give fixed tokens, so no refactor changes them silently. The
+// values were computed outside Go (openssl dgst -mac HMAC).
+func TestCallerToken_KnownVector(t *testing.T) {
+	const secret = "known-vector-secret"
+	c := &clock{t: time.Date(2026, 11, 12, 8, 0, 0, 0, time.UTC)}
+	a, buf := tokenAPI(t, secret, c.now, testKeys(t))
+	ip := fromIP("203.0.113.7")
+	keyed := append(fromIP("203.0.113.7"), "X-API-Key", keyAlpha)
+	ipv6 := fromIP("2001:db8:1:2::abcd")
+	for _, tc := range []struct {
+		day, ipTok, keyTok, ipv6Tok string
+		at                          time.Time
+	}{
+		{"2026-11-12", "add486f81360e945", "3413ade0852786fd", "3b3807824543b5ed", time.Date(2026, 11, 12, 8, 0, 0, 0, time.UTC)},
+		{"2026-11-13", "981285a1e624eb93", "498421d67d470b46", "ad57e44fd2a27d8f", time.Date(2026, 11, 13, 8, 0, 0, 0, time.UTC)},
+	} {
+		c.t = tc.at
+		require.Equal(t, tc.ipTok, tokenOf(t, a, buf, ip...), tc.day)
+		require.Equal(t, tc.keyTok, tokenOf(t, a, buf, keyed...), tc.day)
+		require.Equal(t, tc.ipv6Tok, tokenOf(t, a, buf, ipv6...), tc.day)
+		require.Equal(t, tc.ipTok, wantToken(secret, tc.day, "203.0.113.7"))
+		require.Equal(t, tc.keyTok, wantToken(secret, tc.day, "key:alpha"))
+		require.Equal(t, tc.ipv6Tok, wantToken(secret, tc.day, "2001:db8:1:2::/64"))
+	}
+}
+
+// Requests on both sides of midnight at once: every token is the right one of the two days.
+// Run under -race, it also proves the cached day key is safe for concurrent use.
+func TestCallerToken_ConcurrentDayChangeIsRaceFree(t *testing.T) {
+	day1 := time.Date(2026, 11, 12, 23, 59, 59, 0, time.UTC)
+	day2 := day1.Add(2 * time.Second)
+	var calls atomic.Int64
+	now := func() time.Time {
+		if calls.Add(1)%2 == 0 {
+			return day2
+		}
+		return day1
+	}
+	a, buf := tokenAPI(t, "test-secret", now, nil)
+	var wg sync.WaitGroup
+	for range 8 {
+		wg.Go(func() {
+			for range 50 {
+				do(a, "POST", "/v1/tool/get_jumps_between", `{"from_system":"Jita","to_system":"Amarr"}`, fromIP("203.0.113.7")...)
+			}
+		})
+	}
+	wg.Wait()
+
+	want := map[string]bool{
+		wantToken("test-secret", "2026-11-12", "203.0.113.7"): true,
+		wantToken("test-secret", "2026-11-13", "203.0.113.7"): true,
+	}
+	seen := map[string]int{}
+	for _, line := range logLines(t, buf) {
+		if line["msg"] != "request" {
+			continue
+		}
+		tok, _ := line["caller"].(string)
+		require.True(t, want[tok], "token %q is one of the two days'", tok)
+		seen[tok]++
+	}
+	require.Len(t, seen, 2, "both days were served")
+	require.Equal(t, 400, seen[wantToken("test-secret", "2026-11-12", "203.0.113.7")]+seen[wantToken("test-secret", "2026-11-13", "203.0.113.7")])
+}
+
+// Two addresses of one IPv6 /64 are one caller token; another /64 is another. Neither address
+// reaches the log.
+func TestAccessLog_IPv6SlashSixtyFourIsOneCallerToken(t *testing.T) {
+	c := &clock{t: time.Date(2026, 11, 12, 12, 0, 0, 0, time.UTC)}
+	a, buf := tokenAPI(t, "test-secret", c.now, nil)
+	one := tokenOf(t, a, buf, fromIP("2001:db8:1:2::1")...)
+	require.Equal(t, one, tokenOf(t, a, buf, fromIP("2001:db8:1:2:ffff:ffff:ffff:ffff")...), "one /64, one token")
+	doFrom(a, "[2001:db8:1:2::9]:443", "POST", "/v1/tool/get_jumps_between", `{"from_system":"Jita","to_system":"Amarr"}`)
+	require.Equal(t, one, lastToken(t, buf), "the TCP peer is keyed by its /64 too")
+	require.NotEqual(t, one, tokenOf(t, a, buf, fromIP("2001:db8:1:3::1")...), "another /64, another token")
+	require.Equal(t, wantToken("test-secret", "2026-11-12", "2001:db8:1:2::/64"), one)
+	require.NotContains(t, buf.String(), "2001:db8", "no address or prefix reaches the log")
+}
+
+// The full log of a run with IPv4, IPv6, IPv4-mapped, peer-only, keyed and wrongly keyed
+// callers holds no address, no /64 prefix, no caller key, no API key and not the secret.
+func TestAccessLog_CallerTokenNeverCarriesTheAddressOrTheSecret(t *testing.T) {
+	const secret = "never-logged-secret-7f3a9c"
+	c := &clock{t: time.Date(2026, 11, 12, 12, 0, 0, 0, time.UTC)}
+	a, buf := tokenAPI(t, secret, c.now, testKeys(t))
+	for _, hdr := range [][]string{
+		fromIP("203.0.113.7"),
+		fromIP("2001:db8:1:2::1"),
+		fromIP("::ffff:198.51.100.4"),
+		append(fromIP("203.0.113.9"), "X-API-Key", keyAlpha),
+		append(fromIP("203.0.113.10"), "X-API-Key", "wrong-key-0000"),
+	} {
+		tokenOf(t, a, buf, hdr...)
+	}
+	doFrom(a, "[2001:db8:5:6::7]:443", "POST", "/v1/tool/get_jumps_between", `{"from_system":"Jita","to_system":"Amarr"}`)
+	lastToken(t, buf)
+	doFrom(a, "192.0.2.44:5555", "POST", "/v1/tool/get_jumps_between", `{"from_system":"Jita","to_system":"Amarr"}`)
+	lastToken(t, buf)
+
+	out := buf.String()
+	for _, s := range []string{"203.0.113", "198.51.100", "192.0.2", "2001:db8", "::ffff", "/64", "key:alpha", keyAlpha, "wrong-key-0000", secret} {
+		require.NotContains(t, out, s)
+	}
 }
 
 func TestGeneratedDocs_StateTheLiveToolsLimitAndBusyAnswer(t *testing.T) {
