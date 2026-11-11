@@ -193,6 +193,54 @@ func TestClientKey(t *testing.T) {
 	}
 }
 
+// clientAddr is the one parse of the client's address that the bucket (ClientKey) and the
+// access-line labels share: CF-Connecting-IP, else the TCP peer, with port and zone dropped and
+// an IPv4-mapped address unmapped, so both always see the same address.
+func TestClientAddr(t *testing.T) {
+	cases := []struct {
+		name       string
+		remoteAddr string
+		hdr        string
+		want       string // "" means no address parses
+	}{
+		{"cf ipv4", "172.18.0.5:1", "203.0.113.7", "203.0.113.7"},
+		{"cf ipv4-mapped is unmapped", "172.18.0.5:1", "::ffff:203.0.113.9", "203.0.113.9"},
+		{"cf ipv6 is kept whole", "172.18.0.5:1", "2001:db8:1:2:aaaa:bbbb:cccc:dddd", "2001:db8:1:2:aaaa:bbbb:cccc:dddd"},
+		{"cf zone is dropped", "172.18.0.5:1", "fe80::1%eth0", "fe80::1"},
+		{"cf header wins over the peer", "198.51.100.1:443", "203.0.113.7", "203.0.113.7"},
+		{"bad header falls back to the peer", "203.0.113.9:4444", "garbage", "203.0.113.9"},
+		{"header with a port is bad", "203.0.113.9:4444", "1.2.3.4:80", "203.0.113.9"},
+		{"ipv4 peer without the port", "203.0.113.9:4444", "", "203.0.113.9"},
+		{"ipv6 peer without the port", "[2001:db8:1:2::9]:443", "", "2001:db8:1:2::9"},
+		{"mapped peer is unmapped", "[::ffff:203.0.113.9]:443", "", "203.0.113.9"},
+		{"peer zone is dropped", "[fe80::1%eth0]:443", "", "fe80::1"},
+		{"bare ipv6 peer", "2001:db8:1:2::9", "", "2001:db8:1:2::9"},
+		{"bare mapped peer", "::ffff:203.0.113.9", "", "203.0.113.9"},
+		{"bare ipv4 peer", "203.0.113.9", "", "203.0.113.9"},
+		{"empty peer", "", "", ""},
+		{"unparseable peer", "unix-socket", "", ""},
+		{"unparseable peer host with a port", "localhost:80", "", ""},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			req := httptest.NewRequest("GET", "/x", nil)
+			req.RemoteAddr = tc.remoteAddr
+			if tc.hdr != "" {
+				req.Header.Set("CF-Connecting-IP", tc.hdr)
+			}
+			addr, ok := clientAddr(req)
+			if tc.want == "" {
+				require.False(t, ok, "%v", addr)
+				return
+			}
+			require.True(t, ok)
+			require.Equal(t, tc.want, addr.String())
+			require.Empty(t, addr.Zone())
+			require.False(t, addr.Is4In6())
+		})
+	}
+}
+
 func TestIPKeys_KeysByTheSlash64(t *testing.T) {
 	req := httptest.NewRequest("GET", "/x", nil)
 	req.Header.Set("CF-Connecting-IP", "2001:db8:1:2::5")

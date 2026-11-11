@@ -44,30 +44,35 @@ func ClientIP(r *http.Request) string {
 
 // ClientKey is the limiter bucket of the visitor: keys are per IPv6 /64, because one subscriber
 // holds a whole /64 and Cloudflare's pseudo-IPv4 is off, so single addresses are free to rotate.
-// IPv4 (also IPv4-mapped IPv6, unmapped before masking) is keyed by its address. The source is
-// CF-Connecting-IP, else the TCP peer (port and zone dropped); when nothing parses it is ClientIP.
+// IPv4 (also IPv4-mapped IPv6, unmapped before masking) is keyed by its address. The address is
+// clientAddr's; when nothing parses the key is ClientIP.
 func ClientKey(r *http.Request) string {
-	addr, ok := netip.Addr{}, false
-	if ip, err := netip.ParseAddr(r.Header.Get("CF-Connecting-IP")); err == nil {
-		addr, ok = ip, true
-	} else if host, _, err := net.SplitHostPort(r.RemoteAddr); err == nil {
-		addr, ok = parsePeer(host)
-	} else {
-		addr, ok = parsePeer(r.RemoteAddr)
-	}
+	addr, ok := clientAddr(r)
 	if !ok {
 		return ClientIP(r)
 	}
-	addr = addr.WithZone("").Unmap()
 	if addr.Is4() {
 		return addr.String()
 	}
 	return netip.PrefixFrom(addr, 64).Masked().String()
 }
 
-func parsePeer(s string) (netip.Addr, bool) {
-	a, err := netip.ParseAddr(s)
-	return a, err == nil
+// clientAddr is the visitor's address as every limit and every access-line label reads it, so a
+// bucket and a label can never disagree on the caller: CF-Connecting-IP when it parses (see
+// ClientIP), else the TCP peer, with the port and the zone dropped and an IPv4-mapped IPv6 address
+// unmapped. ok is false when neither parses.
+func clientAddr(r *http.Request) (addr netip.Addr, ok bool) {
+	addr, err := netip.ParseAddr(r.Header.Get("CF-Connecting-IP"))
+	if err != nil {
+		host := r.RemoteAddr
+		if h, _, splitErr := net.SplitHostPort(host); splitErr == nil {
+			host = h
+		}
+		if addr, err = netip.ParseAddr(host); err != nil {
+			return netip.Addr{}, false
+		}
+	}
+	return addr.WithZone("").Unmap(), true
 }
 
 // WindowLimiter is a sliding-window-log limiter: at most max events per key in
