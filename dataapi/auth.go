@@ -212,7 +212,7 @@ func authErrorFrom(ctx context.Context) error {
 }
 
 // CallerKeys names the rate-limit bucket by the authenticated key ("key:<id>"), and by
-// client IP (ClientIP) for an anonymous caller or an invalid key, so guessing keys is
+// client key (ClientKey, per IPv6 /64) for an anonymous caller or an invalid key, so guessing keys is
 // limited per IP. It is the default KeyResolver.
 type CallerKeys struct{}
 
@@ -221,7 +221,7 @@ func (CallerKeys) Key(r *http.Request) string {
 	if c := CallerFrom(r.Context()); c.Authenticated() {
 		return "key:" + c.ID
 	}
-	return ClientIP(r)
+	return ClientKey(r)
 }
 
 // writeKeyedRefusal answers 401 api_key_required for an anonymous caller (403 key_not_permitted for

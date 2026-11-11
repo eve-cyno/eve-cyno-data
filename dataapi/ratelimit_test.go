@@ -186,3 +186,25 @@ func TestToolAPI_LoopbackIsNotRateLimited(t *testing.T) {
 		require.Equal(t, http.StatusNotFound, do(a, "POST", "/v1/tool/no_such_tool", `{}`).Code, "request %d", i+1)
 	}
 }
+
+// Per-minute bucket: addresses of one IPv6 /64 share it, another /64 has its own, and an
+// IPv4-mapped address shares the IPv4 bucket.
+func TestRateLimit_IPv6SharesOneBucketPerSlash64(t *testing.T) {
+	a := newAPI(t, dataapi.Config{Deps: emptyToolDeps(), ToolAPI: dataapi.ToolAPIPublic})
+	for i := 0; i < 60; i++ {
+		addr := "[2001:db8:1:2::" + strconv.Itoa(i+1) + "]:2222"
+		require.Equal(t, http.StatusNotFound, doFrom(a, addr, "POST", "/v1/tool/no_such_tool", `{}`).Code, "request %d", i+1)
+	}
+	requireError(t, doFrom(a, "[2001:db8:1:2:ffff::1]:1", "POST", "/v1/tool/no_such_tool", `{}`), http.StatusTooManyRequests, "rate_limited")
+	require.Equal(t, http.StatusNotFound, doFrom(a, "[2001:db8:1:3::1]:1", "POST", "/v1/tool/no_such_tool", `{}`).Code)
+}
+
+func TestRateLimit_IPv4MappedSharesTheIPv4Bucket(t *testing.T) {
+	a := newAPI(t, dataapi.Config{Deps: emptyToolDeps(), ToolAPI: dataapi.ToolAPIPublic})
+	for i := 0; i < 60; i++ {
+		require.Equal(t, http.StatusNotFound, doFrom(a, "198.51.100.12:2222", "POST", "/v1/tool/no_such_tool", `{}`,
+			"CF-Connecting-IP", "198.51.100.12").Code)
+	}
+	requireError(t, doFrom(a, "172.18.0.5:1", "POST", "/v1/tool/no_such_tool", `{}`,
+		"CF-Connecting-IP", "::ffff:198.51.100.12"), http.StatusTooManyRequests, "rate_limited")
+}

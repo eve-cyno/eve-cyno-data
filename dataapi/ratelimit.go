@@ -19,11 +19,11 @@ type KeyResolver interface {
 	Key(r *http.Request) string
 }
 
-// IPKeys keys every request by its client IP (see ClientIP).
+// IPKeys keys every request by its client key (see ClientKey).
 type IPKeys struct{}
 
 // Key implements KeyResolver.
-func (IPKeys) Key(r *http.Request) string { return ClientIP(r) }
+func (IPKeys) Key(r *http.Request) string { return ClientKey(r) }
 
 // ClientIP returns the visitor's IP without a port. It prefers Cloudflare's
 // CF-Connecting-IP header (Cloudflare overwrites it on every request and the
@@ -31,6 +31,7 @@ func (IPKeys) Key(r *http.Request) string { return ClientIP(r) }
 // otherwise uses the TCP peer. The client-controlled X-Forwarded-For, X-Real-IP
 // and True-Client-IP are never read: any caller could rotate them to get a fresh
 // bucket. A malformed CF-Connecting-IP is ignored rather than used as a key.
+// It returns the address itself; use ClientKey for limiter buckets.
 func ClientIP(r *http.Request) string {
 	if ip, err := netip.ParseAddr(r.Header.Get("CF-Connecting-IP")); err == nil {
 		return ip.WithZone("").Unmap().String()
@@ -39,6 +40,34 @@ func ClientIP(r *http.Request) string {
 		return host
 	}
 	return r.RemoteAddr
+}
+
+// ClientKey is the limiter bucket of the visitor: keys are per IPv6 /64, because one subscriber
+// holds a whole /64 and Cloudflare's pseudo-IPv4 is off, so single addresses are free to rotate.
+// IPv4 (also IPv4-mapped IPv6, unmapped before masking) is keyed by its address. The source is
+// CF-Connecting-IP, else the TCP peer (port and zone dropped); when nothing parses it is ClientIP.
+func ClientKey(r *http.Request) string {
+	addr, ok := netip.Addr{}, false
+	if ip, err := netip.ParseAddr(r.Header.Get("CF-Connecting-IP")); err == nil {
+		addr, ok = ip, true
+	} else if host, _, err := net.SplitHostPort(r.RemoteAddr); err == nil {
+		addr, ok = parsePeer(host)
+	} else {
+		addr, ok = parsePeer(r.RemoteAddr)
+	}
+	if !ok {
+		return ClientIP(r)
+	}
+	addr = addr.WithZone("").Unmap()
+	if addr.Is4() {
+		return addr.String()
+	}
+	return netip.PrefixFrom(addr, 64).Masked().String()
+}
+
+func parsePeer(s string) (netip.Addr, bool) {
+	a, err := netip.ParseAddr(s)
+	return a, err == nil
 }
 
 // WindowLimiter is a sliding-window-log limiter: at most max events per key in

@@ -158,3 +158,43 @@ func TestWindowLimiter_CheckRecordsNothing(t *testing.T) {
 	require.False(t, ok)
 	require.Equal(t, 10*time.Second, retry)
 }
+
+func TestClientKey(t *testing.T) {
+	cases := []struct {
+		name       string
+		remoteAddr string
+		hdr        string
+		want       string
+	}{
+		{"ipv4", "172.18.0.5:1", "203.0.113.7", "203.0.113.7"},
+		{"ipv4-mapped ipv6 becomes the ipv4", "172.18.0.5:1", "::ffff:203.0.113.9", "203.0.113.9"},
+		{"ipv6 is masked to its /64", "172.18.0.5:1", "2001:db8:1:2:aaaa:bbbb:cccc:dddd", "2001:db8:1:2::/64"},
+		{"another host of the same /64", "172.18.0.5:1", "2001:db8:1:2::1", "2001:db8:1:2::/64"},
+		{"another /64", "172.18.0.5:1", "2001:db8:1:3::1", "2001:db8:1:3::/64"},
+		{"header zone is dropped", "172.18.0.5:1", "fe80::1%eth0", "fe80::/64"},
+		{"bad header falls back to the peer", "203.0.113.9:4444", "garbage", "203.0.113.9"},
+		{"ipv6 peer is masked too", "[2001:db8:1:2::9]:443", "", "2001:db8:1:2::/64"},
+		{"mapped peer with port", "[::ffff:203.0.113.9]:443", "", "203.0.113.9"},
+		{"peer zone with port", "[fe80::1%eth0]:443", "", "fe80::/64"},
+		{"bare ipv6 peer", "2001:db8:1:2::9", "", "2001:db8:1:2::/64"},
+		{"bare ipv4 peer", "203.0.113.9", "", "203.0.113.9"},
+		{"empty peer", "", "", ""},
+		{"unparseable peer is used verbatim", "unix-socket", "", "unix-socket"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			req := httptest.NewRequest("GET", "/x", nil)
+			req.RemoteAddr = tc.remoteAddr
+			if tc.hdr != "" {
+				req.Header.Set("CF-Connecting-IP", tc.hdr)
+			}
+			require.Equal(t, tc.want, ClientKey(req))
+		})
+	}
+}
+
+func TestIPKeys_KeysByTheSlash64(t *testing.T) {
+	req := httptest.NewRequest("GET", "/x", nil)
+	req.Header.Set("CF-Connecting-IP", "2001:db8:1:2::5")
+	require.Equal(t, "2001:db8:1:2::/64", IPKeys{}.Key(req))
+}

@@ -380,3 +380,16 @@ func TestPortal_AccessPageStatesTheTrialAndTheKeyedLimits(t *testing.T) {
 	idx := do(api, http.MethodGet, "/", "", "Accept", "application/json").Body.String()
 	require.Regexp(t, `"max": 20,\s+"max_with_key": 120`, idx)
 }
+
+// Two addresses of one IPv6 /64 are one client for the daily cap; another /64 and an IPv4 are not.
+func TestAnonDailyCap_IPv6SlashSixtyFourIsOneClient(t *testing.T) {
+	c := &clock{t: time.Date(2026, 10, 13, 22, 30, 0, 0, time.UTC)}
+	api := capAPI(t, 4, "https://data.example", c, keyedFixture(t, trialKey))
+	for i := range 4 {
+		addr := "2001:db8:1:2::" + strconv.Itoa(i+1)
+		require.Equal(t, http.StatusNotFound, counted(api, fromIP(addr)...).Code, "request %d", i+1)
+	}
+	requireError(t, counted(api, fromIP("2001:db8:1:2:ffff::7")...), http.StatusTooManyRequests, "daily_quota_exceeded")
+	require.Equal(t, http.StatusNotFound, counted(api, fromIP("2001:db8:1:3::1")...).Code)
+	require.Equal(t, http.StatusNotFound, counted(api, fromIP("203.0.113.9")...).Code)
+}
