@@ -209,11 +209,15 @@ jobs:
 
       - uses: ./.github/actions/go
 
+      # github.com/segmentio/asm (since v1.2.1) is MIT-0 (MIT No Attribution, OSI-approved). The
+      # go-licenses classifier does not recognise the MIT-0 text, so the module is checked by hand
+      # and ignored here; re-check its LICENSE when the version changes.
       - name: go-licenses check
         run: |
           GOBIN="$RUNNER_TEMP/bin" go install "github.com/google/go-licenses/v2@${GO_LICENSES_VERSION}"
           "$RUNNER_TEMP/bin/go-licenses" check ./... \
-            --allowed_licenses=MIT,BSD-2-Clause,BSD-3-Clause,Apache-2.0,ISC,MPL-2.0
+            --allowed_licenses=MIT,BSD-2-Clause,BSD-3-Clause,Apache-2.0,ISC,MPL-2.0,MIT-0 \
+            --ignore github.com/segmentio/asm
 
   # Generated files (api/openapi.yaml, llms.txt, llms-full.txt, tool_schemas.json,
   # dataapi/fielddocs.json) must be committed in sync with the tool catalog. abyss/abyss_data.json

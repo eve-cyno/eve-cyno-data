@@ -11,6 +11,9 @@ updates:
       interval: "weekly"
       day: "monday"
     open-pull-requests-limit: 5
+    ignore:
+      # Must follow modernc.org/sqlite (it pins the matching libc); bumping it alone breaks the build.
+      - dependency-name: "modernc.org/libc"
     groups:
       go-minor-and-patch:
         update-types: ["minor", "patch"]
