@@ -232,34 +232,37 @@ func TestInflight_ClassificationMatchesTheHandler(t *testing.T) {
 		}
 		live := `{` + route + `,"live_info":true}`
 		for name, body := range map[string]string{
-			"duplicate name, last live":      `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"search_item_by_name","name":"get_sovereignty","arguments":{}}}`,
-			"duplicate name, last SDE":       `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"get_sovereignty","name":"search_item_by_name","arguments":{"names":["Tritanium"]}}}`,
-			"Name instead of name":           `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"Name":"get_sovereignty","arguments":{}}}`,
-			"Method instead of method":       `{"jsonrpc":"2.0","id":1,"Method":"tools/call","params":{"name":"get_sovereignty","arguments":{}}}`,
-			"Params instead of params":       `{"jsonrpc":"2.0","id":1,"method":"tools/call","Params":{"name":"get_sovereignty","arguments":{}}}`,
-			"Arguments instead of arguments": `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"plan_jump_route","Arguments":` + live + `}}`,
-			"duplicate arguments, last live": `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"plan_jump_route","arguments":{` + route + `},"arguments":` + live + `}}`,
-			"duplicate method, last list":    `{"jsonrpc":"2.0","id":1,"method":"tools/call","method":"tools/list","params":{"name":"get_sovereignty","arguments":{}}}`,
-			"duplicate method, last call":    `{"jsonrpc":"2.0","id":1,"method":"tools/list","method":"tools/call","params":{"name":"get_sovereignty","arguments":{}}}`,
-			"no arguments":                   `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"get_sovereignty"}}`,
-			"params not an object":           `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":["get_sovereignty"]}`,
-			"name not a string":              `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":7,"arguments":{}}}`,
-			"tools/list":                     `{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{"name":"get_sovereignty"}}`,
-			"unknown tool":                   `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"no_such_tool","arguments":{}}}`,
-			"escaped tool-name key":          `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"\u006eame":"get_sovereignty","arguments":{}}}`,
-			"escaped method key":             `{"jsonrpc":"2.0","id":1,"\u006dethod":"tools/call","params":{"name":"get_sovereignty","arguments":{}}}`,
-			"id 1e400":                       `{"jsonrpc":"2.0","id":1e400,"method":"tools/call","params":{"name":"get_sovereignty","arguments":{}}}`,
-			"nested deeper than 1000":        `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"get_sovereignty","arguments":{"x":` + strings.Repeat("[", 1100) + strings.Repeat("]", 1100) + `}}}`,
-			"string id":                      `{"jsonrpc":"2.0","id":"a-1","method":"tools/call","params":{"name":"get_sovereignty","arguments":{}}}`,
-			"no id (a notification)":         `{"jsonrpc":"2.0","method":"tools/call","params":{"name":"get_sovereignty","arguments":{}}}`,
-			"null id":                        `{"jsonrpc":"2.0","id":null,"method":"tools/call","params":{"name":"get_sovereignty","arguments":{}}}`,
-			"object id":                      `{"jsonrpc":"2.0","id":{},"method":"tools/call","params":{"name":"get_sovereignty","arguments":{}}}`,
-			"no version":                     `{"id":1,"method":"tools/call","params":{"name":"get_sovereignty","arguments":{}}}`,
-			"version 1.0":                    `{"jsonrpc":"1.0","id":1,"method":"tools/call","params":{"name":"get_sovereignty","arguments":{}}}`,
-			"trailing garbage":               `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"get_sovereignty","arguments":{}}} garbage`,
-			"trailing data":                  `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"get_sovereignty","arguments":{}}} {}`,
-			"not JSON":                       `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"get_sovereignty"`,
-			"pretty printed":                 "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 1,\n  \"method\": \"tools/call\",\n  \"params\": {\n    \"name\": \"get_sovereignty\",\n    \"arguments\": {}\n  }\n}\n",
+			"duplicate name, last live":         `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"search_item_by_name","name":"get_sovereignty","arguments":{}}}`,
+			"duplicate name, last SDE":          `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"get_sovereignty","name":"search_item_by_name","arguments":{"names":["Tritanium"]}}}`,
+			"Name instead of name":              `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"Name":"get_sovereignty","arguments":{}}}`,
+			"Method instead of method":          `{"jsonrpc":"2.0","id":1,"Method":"tools/call","params":{"name":"get_sovereignty","arguments":{}}}`,
+			"Params instead of params":          `{"jsonrpc":"2.0","id":1,"method":"tools/call","Params":{"name":"get_sovereignty","arguments":{}}}`,
+			"Arguments instead of arguments":    `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"plan_jump_route","Arguments":` + live + `}}`,
+			"duplicate arguments, last live":    `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"plan_jump_route","arguments":{` + route + `},"arguments":` + live + `}}`,
+			"duplicate method, last list":       `{"jsonrpc":"2.0","id":1,"method":"tools/call","method":"tools/list","params":{"name":"get_sovereignty","arguments":{}}}`,
+			"duplicate method, last call":       `{"jsonrpc":"2.0","id":1,"method":"tools/list","method":"tools/call","params":{"name":"get_sovereignty","arguments":{}}}`,
+			"no arguments":                      `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"get_sovereignty"}}`,
+			"params not an object":              `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":["get_sovereignty"]}`,
+			"name not a string":                 `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":7,"arguments":{}}}`,
+			"tools/list":                        `{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{"name":"get_sovereignty"}}`,
+			"unknown tool":                      `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"no_such_tool","arguments":{}}}`,
+			"escaped tool-name key":             `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"\u006eame":"get_sovereignty","arguments":{}}}`,
+			"escaped method key":                `{"jsonrpc":"2.0","id":1,"\u006dethod":"tools/call","params":{"name":"get_sovereignty","arguments":{}}}`,
+			"id 1e400":                          `{"jsonrpc":"2.0","id":1e400,"method":"tools/call","params":{"name":"get_sovereignty","arguments":{}}}`,
+			"nested deeper than 1000":           `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"get_sovereignty","arguments":{"x":` + strings.Repeat("[", 1100) + strings.Repeat("]", 1100) + `}}}`,
+			"depth 1000 (accepted)":             `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"get_sovereignty","arguments":{"x":` + strings.Repeat("[", 997) + strings.Repeat("]", 997) + `}}}`,
+			"depth 1001 (refused)":              `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"get_sovereignty","arguments":{"x":` + strings.Repeat("[", 998) + strings.Repeat("]", 998) + `}}}`,
+			"closing bracket before a deep run": `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"get_sovereignty","arguments":{}}}]` + strings.Repeat("[", 1001),
+			"string id":                         `{"jsonrpc":"2.0","id":"a-1","method":"tools/call","params":{"name":"get_sovereignty","arguments":{}}}`,
+			"no id (a notification)":            `{"jsonrpc":"2.0","method":"tools/call","params":{"name":"get_sovereignty","arguments":{}}}`,
+			"null id":                           `{"jsonrpc":"2.0","id":null,"method":"tools/call","params":{"name":"get_sovereignty","arguments":{}}}`,
+			"object id":                         `{"jsonrpc":"2.0","id":{},"method":"tools/call","params":{"name":"get_sovereignty","arguments":{}}}`,
+			"no version":                        `{"id":1,"method":"tools/call","params":{"name":"get_sovereignty","arguments":{}}}`,
+			"version 1.0":                       `{"jsonrpc":"1.0","id":1,"method":"tools/call","params":{"name":"get_sovereignty","arguments":{}}}`,
+			"trailing garbage":                  `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"get_sovereignty","arguments":{}}} garbage`,
+			"trailing data":                     `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"get_sovereignty","arguments":{}}} {}`,
+			"not JSON":                          `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"get_sovereignty"`,
+			"pretty printed":                    "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 1,\n  \"method\": \"tools/call\",\n  \"params\": {\n    \"name\": \"get_sovereignty\",\n    \"arguments\": {}\n  }\n}\n",
 		} {
 			bodies[name] = body
 		}
@@ -279,6 +282,8 @@ func TestInflight_ClassificationMatchesTheHandler(t *testing.T) {
 	t.Run("REST", func(t *testing.T) {
 		argsCases = append(argsCases,
 			argsCase{"nested deeper than 1000", "plan_jump_route", `{` + route + `,"live_info":true,"x":` + strings.Repeat("[", 1100) + strings.Repeat("]", 1100) + `}`},
+			argsCase{"depth 1000 (accepted)", "plan_jump_route", `{` + route + `,"live_info":true,"x":` + strings.Repeat("[", 998) + strings.Repeat("]", 998) + `}`},
+			argsCase{"depth 1001 (refused)", "plan_jump_route", `{` + route + `,"live_info":true,"x":` + strings.Repeat("[", 999) + strings.Repeat("]", 999) + `}`},
 			argsCase{"number 1e400", "plan_jump_route", `{` + route + `,"live_info":true,"x":1e400}`})
 		for _, c := range append(argsCases, argsCase{"empty body", "get_production_chain", ``}) {
 			req := postReq("/v1/tool/"+c.tool, c.args)
@@ -408,7 +413,9 @@ func TestFitSearch_BlankQNeverEmbedsAndClassifierAgrees(t *testing.T) {
 		{"q=%20", 0, http.StatusOK},
 		{"q=%20%09", 0, http.StatusOK},
 		{"q=", 0, http.StatusOK},
-		{"q=x", 0, http.StatusUnauthorized}, // anonymous: the key gate stops it before the embedder
+		{"q=x", 0, http.StatusUnauthorized},         // anonymous: the key gate stops it before the embedder
+		{"q=%C2%A0", 0, http.StatusOK},              // NBSP is blank: no embed, no key needed
+		{"q=%E2%80%8B", 0, http.StatusUnauthorized}, // zero-width space is a real q: the key gate answers, the classifier says upstream
 	} {
 		ec := &embedCounter{}
 		a, err := New(Config{Deps: NewDeps(&tools.Deps{}, nil), Auth: keys})

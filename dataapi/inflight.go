@@ -283,7 +283,9 @@ func jsonTooDeep(b []byte, max int) bool {
 				return true
 			}
 		case c == '}' || c == ']':
-			depth--
+			if depth > 0 { // clamped like the SDK's checkMaxDepth: a stray closer does not buy extra depth
+				depth--
+			}
 		}
 	}
 	return false
