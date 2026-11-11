@@ -79,6 +79,12 @@
 //	                          0-10000000, default 200; 0 = no cap). In memory, per client IP;
 //	                          the documentation pages and /health are not counted. Applies only
 //	                          where keys exist (a key file or DATAAPI_KEYS_DB)
+//	DATAAPI_MAX_INFLIGHT      requests each route runs at the same time (integer 0-10000, default
+//	                          0 = no cap); the documentation pages, the portal assets, /health and
+//	                          GET/DELETE on /v1/mcp are not capped. Over it the route answers 503
+//	                          busy with Retry-After: 1 at once instead of queueing; the check runs
+//	                          before every limit, the daily cap and a key's quota, so a busy
+//	                          answer charges nothing
 //	DATAAPI_ADMIN_TOKEN       bearer token of the admin API that issues, revokes and audits
 //	                          keys. Unset: no admin listener. Never logged
 //	DATAAPI_ADMIN_ADDR        admin listen address (default 127.0.0.1:8093; the container
@@ -176,6 +182,23 @@ func anonDailyCap(getenv func(string) string) (int, error) {
 	n, err := strconv.Atoi(v)
 	if err != nil || n < 0 || n > keys.MaxDailyCap {
 		return 0, fmt.Errorf("DATAAPI_ANON_DAILY_CAP: want an integer 0-%d, got %q", keys.MaxDailyCap, v)
+	}
+	return n, nil
+}
+
+// maxInFlightLimit is the largest DATAAPI_MAX_INFLIGHT accepted.
+const maxInFlightLimit = 10000
+
+// maxInFlight resolves DATAAPI_MAX_INFLIGHT: an integer 0..maxInFlightLimit (0 = no cap, the
+// default).
+func maxInFlight(getenv func(string) string) (int, error) {
+	v := strings.TrimSpace(getenv("DATAAPI_MAX_INFLIGHT"))
+	if v == "" {
+		return 0, nil
+	}
+	n, err := strconv.Atoi(v)
+	if err != nil || n < 0 || n > maxInFlightLimit {
+		return 0, fmt.Errorf("DATAAPI_MAX_INFLIGHT: want an integer 0-%d, got %q", maxInFlightLimit, v)
 	}
 	return n, nil
 }
@@ -348,6 +371,8 @@ type exposure struct {
 	// anonDailyCap is DATAAPI_ANON_DAILY_CAP: the requests per UTC day of a client without a
 	// key (0: no cap). It applies only when some key source is configured.
 	anonDailyCap int
+	// maxInFlight is DATAAPI_MAX_INFLIGHT: requests each capped route runs at once (0 = no cap).
+	maxInFlight int
 	// sdeBuild yields the SDE build id /v1/health reports at request time ("" when unknown).
 	sdeBuild func() string
 }
@@ -410,6 +435,7 @@ func newHandler(d *bootstrap.Deps, ex exposure, log *slog.Logger) (http.Handler,
 		LogSalt:          ex.logSalt,
 		Logger:           log,
 		KeyedLimitFactor: ex.keyedFactor,
+		MaxInFlight:      ex.maxInFlight,
 		SDEBuildFunc:     ex.sdeBuild,
 	}
 	if ex.store != nil {
@@ -513,6 +539,10 @@ func run(log *slog.Logger) error {
 	if err != nil {
 		return err
 	}
+	maxIF, err := maxInFlight(os.Getenv)
+	if err != nil {
+		return err
+	}
 	var store *keys.Store
 	if path := os.Getenv("DATAAPI_KEYS_DB"); path != "" {
 		store, err = keys.Open(path, keys.Options{DailyCap: dayCap, Logger: log})
@@ -530,7 +560,7 @@ func run(log *slog.Logger) error {
 	ex := exposure{
 		toolAPI: exposeToolAPI(os.Getenv), mcp: exposeMCP(os.Getenv), auth: auth, publicURL: pub,
 		upstream: &upstream, logSalt: os.Getenv("DATAAPI_LOG_SALT"),
-		store: store, keyedFactor: factor, dailyCap: dayCap, anonDailyCap: anonCap, sdeBuild: followSDEBuild(cfg.SDEPath, deps.Tools.SDE, log),
+		store: store, keyedFactor: factor, dailyCap: dayCap, anonDailyCap: anonCap, maxInFlight: maxIF, sdeBuild: followSDEBuild(cfg.SDEPath, deps.Tools.SDE, log),
 	}
 	log.Info("ESI pass-through tools: shared Expires cache, fail-fast budget guard",
 		"upstream_tool_limit_per_min", upstream.Max, "upstream_tool_limit_per_min_keyed", upstream.KeyedMax, "esi_guard_percent", guard)

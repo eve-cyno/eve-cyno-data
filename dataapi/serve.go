@@ -71,8 +71,11 @@ func validRequestID(s string) bool {
 }
 
 // ServeHTTP implements http.Handler: request ID, API-key authentication, panic recovery,
-// the access log, the daily quota of keyed callers and the daily cap of callers without a key
-// around the route mux.
+// the access log, the in-flight gate of the route, the daily quota of keyed callers and the
+// daily cap of callers without a key around the route mux.
+//
+// The gate runs before every charge (the key's quota, the anonymous daily cap and, inside
+// the mux, the route limiter and the upstream limiter): a busy refusal has spent nothing.
 func (a *API) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	id := r.Header.Get(HeaderRequestID)
 	if !validRequestID(id) {
@@ -92,8 +95,14 @@ func (a *API) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		ctx = context.WithValue(ctx, authKey{}, authState{caller: caller, err: err})
 	}
 	r = r.WithContext(ctx)
+	// The pattern the mux will pick, resolved once: it chooses the gate, the daily-cap
+	// exemption and, when a refusal stops the request before the mux runs, the access line's
+	// route. r.Pattern itself is left to the mux (the usage labels read it).
+	_, pattern := a.mux.Handler(r)
 
 	quotaRefused := false
+	muxRan := false
+	busyPool := ""
 	rec := &statusRecorder{ResponseWriter: w}
 	start := time.Now()
 	defer func() {
@@ -108,27 +117,46 @@ func (a *API) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				rec.status = http.StatusInternalServerError
 			}
 		}
+		route := r.Pattern // the matched mux pattern: low cardinality, no query string
+		if !muxRan {
+			route = pattern // a refusal before the mux: the pattern it would have matched
+		}
 		attrs := []any{
 			"method", r.Method,
-			"route", r.Pattern, // the matched mux pattern: low cardinality, no query string
+			"route", route,
 			"status", rec.statusCode(),
 			"bytes", rec.bytes,
 			"duration_ms", time.Since(start).Milliseconds(),
 		}
-		if name := r.PathValue("name"); name != "" {
+		if name := a.toolName(r, route); name != "" {
 			attrs = append(attrs, "tool", name)
 		}
-		if a.logsCaller(r) || quotaRefused {
+		if a.logsCaller(route) || quotaRefused {
 			// An opaque, salted token (never the address) so a noisy caller shows up in
 			// the logs without the logs holding IPs.
 			attrs = append(attrs, "caller", a.hasher.hash(a.keys.Key(r)))
 		}
+		if busyPool != "" {
+			attrs = append(attrs, "busy_pool", busyPool)
+		}
 		log.Info("request", attrs...)
 		a.logRefusedToolCall(r, rec.statusCode(), toolLogged, time.Since(start))
-		if c := CallerFrom(r.Context()); c.Authenticated() && a.usage != nil {
+		// A busy refusal is not usage: a key's endpoint record stays what was served.
+		if c := CallerFrom(r.Context()); c.Authenticated() && a.usage != nil && busyPool == "" {
 			a.usage.Record(c.ID, usageEndpoint(r), rec.statusCode() == http.StatusTooManyRequests)
 		}
 	}()
+	if gate := a.gateFor(r, pattern); gate != nil {
+		release, pool, ok := gate.tryAcquire()
+		if !ok {
+			busyPool = pool
+			writeBusy(rec, r)
+			return
+		}
+		// Registered after the access-log defer, so it runs first: on a normal return, on a
+		// handler panic and on http.ErrAbortHandler alike.
+		defer release()
+	}
 	if c := CallerFrom(r.Context()); c.Authenticated() && a.quota != nil {
 		if ok, retry := a.quota.Spend(c.ID); !ok {
 			quotaRefused = true // the mux never ran: the access log still names the caller
@@ -136,7 +164,7 @@ func (a *API) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	if a.anon != nil && !CallerFrom(r.Context()).Authenticated() && !a.isTrialFree(r) {
+	if a.anon != nil && !CallerFrom(r.Context()).Authenticated() && !a.trialFree[pattern] {
 		// The same client key the per-minute limiter uses for a caller without a key. An
 		// invalid key is an anonymous caller too.
 		if ok, retry := a.anon.Spend(a.keys.Key(r)); !ok {
@@ -145,6 +173,7 @@ func (a *API) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	muxRan = true
 	a.mux.ServeHTTP(rec, r)
 }
 
@@ -171,13 +200,6 @@ func (a *API) logRefusedToolCall(r *http.Request, status int, handlerLogged bool
 	})
 }
 
-// isTrialFree reports whether r is a request the anonymous daily cap does not count (see
-// route.trialFree).
-func (a *API) isTrialFree(r *http.Request) bool {
-	_, pattern := a.mux.Handler(r)
-	return a.trialFree[pattern]
-}
-
 // usageEndpoint is the Usage label of a served request: "tool:<name>" for the raw tool route ("tool:?" for a name that is no registered tool),
 // else the matched mux pattern, "-" when none matched.
 func usageEndpoint(r *http.Request) string {
@@ -195,10 +217,29 @@ func usageEndpoint(r *http.Request) string {
 	return r.Pattern
 }
 
-// logsCaller reports whether the access log of r carries a caller token: only the routes that
-// run tools (REST and MCP), where per-caller volume is what abuse monitoring needs.
-func (a *API) logsCaller(r *http.Request) bool {
-	return r.PathValue("name") != "" || r.URL.Path == a.prefix+"/mcp"
+// logsCaller reports whether the access line of a request to the mux pattern carries a caller
+// token: only the routes that run tools (REST and MCP), where per-caller volume is what abuse
+// monitoring needs. It keys on the pattern, so a refusal before the mux carries it too.
+func (a *API) logsCaller(pattern string) bool {
+	p := patternPath(pattern)
+	return p == a.prefix+"/tool/{name}" || p == a.prefix+"/mcp"
+}
+
+// toolName is the tool attribute of the access line: the {name} path value once the mux ran,
+// else, for a request the tool route would have served, the name from the path (the rule of
+// logRefusedToolCall). "" for every other request.
+func (a *API) toolName(r *http.Request, pattern string) string {
+	if name := r.PathValue("name"); name != "" {
+		return name
+	}
+	if patternPath(pattern) != a.prefix+"/tool/{name}" {
+		return ""
+	}
+	name, ok := strings.CutPrefix(r.URL.Path, a.prefix+"/tool/")
+	if !ok || strings.Contains(name, "/") {
+		return ""
+	}
+	return name
 }
 
 // statusRecorder remembers the status and size of a response for the access log.

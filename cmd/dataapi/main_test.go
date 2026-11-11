@@ -267,6 +267,21 @@ func TestDailyCap(t *testing.T) {
 	}
 }
 
+func TestMaxInFlight(t *testing.T) {
+	n, err := maxInFlight(env(nil))
+	require.NoError(t, err)
+	require.Equal(t, 0, n, "unset: no gate")
+	for v, want := range map[string]int{"0": 0, "8": 8, " 12 ": 12, "10000": 10000} {
+		n, err = maxInFlight(env(map[string]string{"DATAAPI_MAX_INFLIGHT": v}))
+		require.NoError(t, err, v)
+		require.Equal(t, want, n, v)
+	}
+	for _, bad := range []string{"-1", "10001", "x", "1.5"} {
+		_, err = maxInFlight(env(map[string]string{"DATAAPI_MAX_INFLIGHT": bad}))
+		require.ErrorContains(t, err, "DATAAPI_MAX_INFLIGHT", bad)
+	}
+}
+
 func TestAnonDailyCap(t *testing.T) {
 	c, err := anonDailyCap(env(nil))
 	require.NoError(t, err)

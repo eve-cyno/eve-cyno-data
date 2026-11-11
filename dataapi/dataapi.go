@@ -11,7 +11,7 @@
 //   - Errors are JSON, always: {"error":{"code":"...","message":"..."}}. Codes
 //     are stable: not_found, method_not_allowed, invalid_request,
 //     payload_too_large, rate_limited, daily_quota_exceeded, unavailable, upstream_error,
-//     upstream_busy, unknown_tool, tool_disabled, api_key_required, invalid_api_key,
+//     upstream_busy, busy, unknown_tool, tool_disabled, api_key_required, invalid_api_key,
 //     key_not_permitted, timeout, internal_error.
 //   - Every response carries X-Request-ID: the caller's value when it is a safe
 //     token ([A-Za-z0-9._-], 1-64 chars), otherwise a generated one. The same ID
@@ -247,6 +247,13 @@ type Config struct {
 	// protects the live upstreams, whoever calls.
 	KeyedLimitFactor int
 
+	// MaxInFlight caps the requests each route runs at once (see routeGate); the documentation
+	// routes, the portal assets, /health, the 405 fallbacks, the 404 catch-all and every
+	// non-POST request to MCP are exempt. The gate runs before every budget, so a request over
+	// the cap is answered 503 busy with Retry-After: 1 and charges nothing. Zero or below means
+	// no cap.
+	MaxInFlight int
+
 	// AnonDailyCap is the number of requests a client without an API key may make per UTC
 	// day (counted per rate-limit key, see KeyResolver, in memory only); over it the API
 	// answers 429 daily_quota_exceeded until 00:00 UTC. The documentation routes, the
@@ -342,6 +349,10 @@ type API struct {
 	keys        KeyResolver
 	auth        Authenticator
 	keyedFactor int
+	maxInFlight int
+	// gates maps the mux pattern of every capped route to its in-flight gate (empty when
+	// MaxInFlight is off).
+	gates       map[string]*routeGate
 	quota       Quota
 	anon        *anonQuota
 	usage       Usage
@@ -407,6 +418,7 @@ func New(cfg Config) (*API, error) {
 		keys:        cfg.Keys,
 		auth:        cfg.Auth,
 		keyedFactor: cfg.KeyedLimitFactor,
+		maxInFlight: cfg.MaxInFlight,
 		quota:       cfg.Quota,
 		usage:       cfg.Usage,
 		sdeBuild:    sdeBuildSource(cfg),
@@ -419,6 +431,7 @@ func New(cfg Config) (*API, error) {
 		log:         cfg.Logger,
 		mux:         http.NewServeMux(),
 		trialFree:   map[string]bool{},
+		gates:       map[string]*routeGate{},
 	}
 	if p, ok := cfg.Deps.Retriever.(Pinger); ok && p != nil {
 		a.corpusProbe = newCorpusProbe(p, cfg.CorpusProbeTTL)
@@ -481,9 +494,18 @@ func (a *API) register(rt route) {
 		a.trialFree[full] = true
 		a.trialFree[rt.method+" "+full] = true
 	}
+	// The in-flight gate (ServeHTTP) keys on the pattern of the handler that does the work:
+	// documentation, assets and /health stay uncapped, and so does the 405 fallback below.
+	gate := !rt.trialFree && a.maxInFlight > 0
 	if rt.anyMethod {
+		if gate {
+			a.gates[full] = newRouteGate(a.maxInFlight, true)
+		}
 		a.mux.HandleFunc(full, h)
 		return
+	}
+	if gate {
+		a.gates[rt.method+" "+full] = newRouteGate(a.maxInFlight, false)
 	}
 	a.mux.HandleFunc(rt.method+" "+full, h)
 	a.mux.HandleFunc(full, func(w http.ResponseWriter, r *http.Request) {

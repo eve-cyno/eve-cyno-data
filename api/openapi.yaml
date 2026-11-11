@@ -3209,6 +3209,7 @@ components:
             - unavailable
             - upstream_error
             - upstream_busy
+            - busy
             - unknown_tool
             - tool_disabled
             - api_key_required
@@ -6579,7 +6580,7 @@ components:
         X-Request-ID:
           $ref: '#/components/headers/RequestID'
     Unavailable:
-      description: A dependency this operation needs is not loaded, for example the SDE or the fit corpus (`unavailable`), or the upstream a live-data tool reads (EVE's ESI) is near its rate limit and nothing was sent (`upstream_busy`; retry after the number of seconds in `Retry-After`).
+      description: A dependency this operation needs is not loaded, for example the SDE or the fit corpus (`unavailable`), or the upstream a live-data tool reads (EVE's ESI) is near its rate limit and nothing was sent (`upstream_busy`; retry after the number of seconds in `Retry-After`), or the route is at its concurrency cap (`busy`; retry after `Retry-After`).
       content:
         application/json:
           schema:
