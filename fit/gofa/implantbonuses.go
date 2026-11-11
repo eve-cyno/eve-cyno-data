@@ -39,6 +39,20 @@ type ImplantTotal struct {
 	// ModAdd and PostPercent, 1 for PreMul and PostMul) is not one: it is left out here and
 	// from the match, and an attribute with no other carrier gets no total.
 	TypeIDs []int
+	// Targets is what the total applies to: the distinct targets of the carriers' shared tuple
+	// set, sorted by (Domain, GroupID, SkillTypeID, Modified, Func). Carriers that act on
+	// different targets (a ship hardwiring and a drone hardwiring reading one attribute) have
+	// one ImplantTotal each, told apart by Targets.
+	Targets []ImplantTarget
+}
+
+// ImplantTarget is one thing a bonus acts on, as the SDE modifier gives it.
+type ImplantTarget struct {
+	Domain      string // modifier domain: shipID, charID, targetID, otherID, itemID, ...
+	Modified    int    // the modified attribute id
+	GroupID     int    // -1 when the modifier names no group
+	SkillTypeID int    // -1 when the modifier names no required skill
+	Func        string // modifier function, e.g. ItemModifier, OwnerRequiredSkillModifier
 }
 
 // ImplantSetFactor is the multiplier one set key gives: the product of the RESOLVED key values
@@ -56,7 +70,7 @@ type ImplantSetFactor struct {
 // ImplantBonusResult is the answer of ImplantBonuses.
 type ImplantBonusResult struct {
 	Items  []ImplantBonus     // in input order
-	Totals []ImplantTotal     // by attribute, ascending
+	Totals []ImplantTotal     // by attribute ascending, then by target set (see ImplantBonuses)
 	Sets   []ImplantSetFactor // by key, ascending
 	// Unknown lists ids the SDE does not know or that are no implant (a booster, a ship), in
 	// input order and once each. Ignored lists the implants dropped because an earlier one
@@ -82,8 +96,11 @@ type modTuple struct {
 //
 // Totals. For an attribute A, a carrier is a modelled implant that holds A and has a modifier
 // that reads A (an effect modifier whose modifying attribute is A). Its tuple set is one
-// modTuple for each such modifier. A total is given when every carrier has the same tuple set
-// and all tuples share one operation (so a pilot can read "+33 % shield boost" as one number).
+// modTuple for each such modifier. Carriers are grouped by tuple set: each group
+// whose tuples share one operation gets its own total, from its own carriers only, with Targets
+// saying what it applies to (so "+33 % shield boost" on the ship and on drones are two totals,
+// not one number and not none). A group that mixes operations gets no total. Totals are ordered
+// by attribute, then by the group's sorted tuples (domain, group, skill, modified, op, func).
 // ModAdd sums, PostPercent compounds ((prod(1+v/100)-1) x 100), PreMul and PostMul multiply; any
 // other operation gives no total. Set keys get none (their effect is in Value).
 func (e *Engine) ImplantBonuses(ctx context.Context, ids []int) (ImplantBonusResult, error) {
@@ -206,54 +223,122 @@ func implantTotals(s SDE, items []*Item) []ImplantTotal {
 	sort.Ints(attrs)
 	var out []ImplantTotal
 	for _, a := range attrs {
-		cs := byAttr[a]
-		ops := map[int]bool{}
-		ok := true
-		for _, c := range cs {
-			if !sameTuples(c.tuples, cs[0].tuples) {
-				ok = false
-				break
+		// One group per distinct tuple set: carriers that act on different targets (a ship's
+		// shield and a drone's) are never added together, and none of them is dropped.
+		var groups []*tupleGroup
+		for _, c := range byAttr[a] {
+			var g *tupleGroup
+			for _, cand := range groups {
+				if sameTuples(cand.tuples, c.tuples) {
+					g = cand
+					break
+				}
 			}
-			for t := range c.tuples {
-				ops[t.op] = true
+			if g == nil {
+				g = &tupleGroup{tuples: c.tuples, sorted: sortedTuples(c.tuples)}
+				groups = append(groups, g)
+			}
+			g.items = append(g.items, c.it)
+		}
+		sort.SliceStable(groups, func(i, j int) bool { return compareTupleLists(groups[i].sorted, groups[j].sorted) < 0 })
+		for _, g := range groups {
+			if t, ok := g.total(a); ok {
+				out = append(out, t)
 			}
 		}
-		if len(ops) != 1 { // one operation across every tuple, or no total
-			ok = false
-		}
-		op := -2
-		for o := range ops { // one entry at most: no map order involved
-			op = o
-		}
-		if !ok {
-			continue
-		}
-		total := ImplantTotal{Attr: a, Op: op}
-		switch op {
-		case opModAdd:
-			for _, c := range cs {
-				total.Value += c.it.Attrs[a]
-			}
-		case opPostPercent:
-			p := 1.0
-			for _, c := range cs {
-				p *= 1 + c.it.Attrs[a]/100
-			}
-			total.Value = (p - 1) * 100
-		case opPreMul, opPostMul:
-			total.Value = 1
-			for _, c := range cs {
-				total.Value *= c.it.Attrs[a]
-			}
-		default:
-			continue
-		}
-		for _, c := range cs {
-			total.TypeIDs = append(total.TypeIDs, c.it.TypeID)
-		}
-		out = append(out, total)
 	}
 	return out
+}
+
+// tupleGroup is the carriers of one attribute that share one tuple set.
+type tupleGroup struct {
+	tuples map[modTuple]bool
+	sorted []modTuple // tuples in tupleLess order
+	items  []*Item    // in input order
+}
+
+// total combines the group's carriers; false when its tuples mix operations or use one the
+// totals do not support.
+func (g *tupleGroup) total(attr int) (ImplantTotal, bool) {
+	op := -2
+	for i, t := range g.sorted {
+		if i > 0 && t.op != op {
+			return ImplantTotal{}, false // one operation across every tuple, or no total
+		}
+		op = t.op
+	}
+	total := ImplantTotal{Attr: attr, Op: op}
+	switch op {
+	case opModAdd:
+		for _, it := range g.items {
+			total.Value += it.Attrs[attr]
+		}
+	case opPostPercent:
+		p := 1.0
+		for _, it := range g.items {
+			p *= 1 + it.Attrs[attr]/100
+		}
+		total.Value = (p - 1) * 100
+	case opPreMul, opPostMul:
+		total.Value = 1
+		for _, it := range g.items {
+			total.Value *= it.Attrs[attr]
+		}
+	default:
+		return ImplantTotal{}, false
+	}
+	for _, it := range g.items {
+		total.TypeIDs = append(total.TypeIDs, it.TypeID)
+	}
+	seen := map[ImplantTarget]bool{}
+	for _, t := range g.sorted {
+		tg := ImplantTarget{Domain: t.domain, Modified: t.modified, GroupID: t.group, SkillTypeID: t.skill, Func: t.fn}
+		if !seen[tg] {
+			seen[tg] = true
+			total.Targets = append(total.Targets, tg)
+		}
+	}
+	return total, true
+}
+
+// tupleLess orders tuples by (domain, group, skill, modified, op, fn).
+func tupleLess(a, b modTuple) bool {
+	switch {
+	case a.domain != b.domain:
+		return a.domain < b.domain
+	case a.group != b.group:
+		return a.group < b.group
+	case a.skill != b.skill:
+		return a.skill < b.skill
+	case a.modified != b.modified:
+		return a.modified < b.modified
+	case a.op != b.op:
+		return a.op < b.op
+	}
+	return a.fn < b.fn
+}
+
+func sortedTuples(ts map[modTuple]bool) []modTuple {
+	out := make([]modTuple, 0, len(ts))
+	for t := range ts {
+		out = append(out, t)
+	}
+	sort.Slice(out, func(i, j int) bool { return tupleLess(out[i], out[j]) })
+	return out
+}
+
+// compareTupleLists compares two sorted tuple lists element by element, the shorter first when
+// one is a prefix of the other.
+func compareTupleLists(a, b []modTuple) int {
+	for i := 0; i < len(a) && i < len(b); i++ {
+		if tupleLess(a[i], b[i]) {
+			return -1
+		}
+		if tupleLess(b[i], a[i]) {
+			return 1
+		}
+	}
+	return len(a) - len(b)
 }
 
 // isIdentityBonus reports whether value changes nothing under every operation of ts: 0 for

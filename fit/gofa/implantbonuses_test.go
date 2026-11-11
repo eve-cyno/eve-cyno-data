@@ -2,6 +2,7 @@ package gofa
 
 import (
 	"context"
+	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -20,6 +21,17 @@ func totalOf(r ImplantBonusResult, attr int) (ImplantTotal, bool) {
 		}
 	}
 	return ImplantTotal{}, false
+}
+
+// totalsOf is every total of one attribute, in output order (one per distinct target set).
+func totalsOf(r ImplantBonusResult, attr int) []ImplantTotal {
+	var out []ImplantTotal
+	for _, t := range r.Totals {
+		if t.Attr == attr {
+			out = append(out, t)
+		}
+	}
+	return out
 }
 
 func itemOf(t *testing.T, r ImplantBonusResult, id int) ImplantBonus {
@@ -119,7 +131,9 @@ func TestImplantBonuses_CombineRules(t *testing.T) {
 	require.False(t, ok, "division has no total")
 }
 
-// Carriers that act differently give no total: another modified attribute, another operation.
+// Carriers that act differently are never added together: each tuple set gets its own total
+// (before 2026-11-11 the attribute got none), and Targets says what each applies to. A group
+// that mixes operations still gets none.
 func TestImplantBonuses_TotalsNeedOneTuple(t *testing.T) {
 	cases := map[string]map[int][]sde.Modifier{
 		"another target": {10: {shipMod(opPostPercent, 40)}, 12: {shipMod(opPostPercent, 41)}},
@@ -132,8 +146,12 @@ func TestImplantBonuses_TotalsNeedOneTuple(t *testing.T) {
 			f := bonusFake(map[int][]int{700: {10}, 702: {12}}, mods)
 			r, err := New(f).ImplantBonuses(context.Background(), []int{700, 702})
 			require.NoError(t, err)
-			_, ok := totalOf(r, 50)
-			require.False(t, ok)
+			ts := totalsOf(r, 50)
+			require.Len(t, ts, 2, "one total per tuple set, not none")
+			require.Equal(t, []int{700}, filterIDs(ts, 700))
+			require.Equal(t, []int{702}, filterIDs(ts, 702))
+			// another op: same targets, told apart by Op; else by Targets
+			require.True(t, ts[0].Op != ts[1].Op || !reflect.DeepEqual(ts[0].Targets, ts[1].Targets))
 			require.Empty(t, r.Unknown)
 		})
 	}
@@ -158,8 +176,7 @@ func TestImplantBonuses_TotalsNeedOneTuple(t *testing.T) {
 		f = bonusFake(map[int][]int{700: {10}, 702: {12}}, mods)
 		r, err = New(f).ImplantBonuses(context.Background(), []int{700, 702})
 		require.NoError(t, err, name)
-		_, ok = totalOf(r, 50)
-		require.False(t, ok, name)
+		require.Len(t, totalsOf(r, 50), 2, name)
 	}
 	// Several modifiers on one attribute (the Savior shape): the same set on every carrier gives
 	// one total, counting each carrier once.
@@ -170,13 +187,50 @@ func TestImplantBonuses_TotalsNeedOneTuple(t *testing.T) {
 	tot, ok := totalOf(r, 50)
 	require.True(t, ok)
 	require.InDelta(t, (1.1*1.2-1)*100, tot.Value, 1e-9)
-	// A carrier with an extra modifier breaks the match.
+	// A carrier with an extra modifier is another group: two totals, the first one's target set
+	// is a subset of the second's.
 	f = bonusFake(map[int][]int{700: {10}, 702: {10, 13}},
 		map[int][]sde.Modifier{10: {shipMod(opPostPercent, 40)}, 13: {shipMod(opPostPercent, 41)}})
 	r, err = New(f).ImplantBonuses(context.Background(), []int{700, 702})
 	require.NoError(t, err)
-	_, ok = totalOf(r, 50)
-	require.False(t, ok)
+	require.Len(t, totalsOf(r, 50), 2)
+}
+
+// filterIDs is the carrier ids of the total in ts that holds id.
+func filterIDs(ts []ImplantTotal, id int) []int {
+	for _, t := range ts {
+		for _, x := range t.TypeIDs {
+			if x == id {
+				return t.TypeIDs
+			}
+		}
+	}
+	return nil
+}
+
+// Synthetic: two tuple sets on one attribute give two totals, sorted by tuple set, each from its
+// own carriers; carriers of one set still combine into one.
+func TestImplantBonuses_GroupsByTarget(t *testing.T) {
+	drone := sde.Modifier{Domain: "charID", Func: "OwnerRequiredSkillModifier", ModifiedAttr: 41, ModifyingAttr: 50, Operation: opPostPercent, SkillTypeID: new(int)}
+	*drone.SkillTypeID = 3436
+	f := bonusFake(map[int][]int{700: {10}, 702: {11}, 703: {10}, 704: {10}, 705: {11}},
+		map[int][]sde.Modifier{10: {shipMod(opPostPercent, 40)}, 11: {drone}})
+	f.categoryID[703], f.groupID[703] = 20, 300 // 703 is a ship in bonusFake: make it an implant
+	r, err := New(f).ImplantBonuses(context.Background(), []int{702, 700, 703, 705})
+	require.NoError(t, err)
+	ts := totalsOf(r, 50)
+	require.Len(t, ts, 2)
+	// charID sorts before shipID.
+	require.Equal(t, []ImplantTarget{{Domain: "charID", Modified: 41, GroupID: -1, SkillTypeID: 3436, Func: "OwnerRequiredSkillModifier"}}, ts[0].Targets)
+	require.Equal(t, []int{702, 705}, ts[0].TypeIDs)
+	require.InDelta(t, (1.20*1.04-1)*100, ts[0].Value, 1e-9)
+	require.Equal(t, []ImplantTarget{{Domain: "shipID", Modified: 40, GroupID: -1, SkillTypeID: -1, Func: "ItemModifier"}}, ts[1].Targets)
+	require.Equal(t, []int{700, 703}, ts[1].TypeIDs)
+	require.InDelta(t, (1.10*1.07-1)*100, ts[1].Value, 1e-9)
+	// Same input, same output.
+	again, err := New(f).ImplantBonuses(context.Background(), []int{702, 700, 703, 705})
+	require.NoError(t, err)
+	require.Equal(t, r, again)
 }
 
 // A set key multiplies the bonus of every carrier; the key gets a factor, never a total.
@@ -333,8 +387,8 @@ func TestImplantBonuses_RealTotals(t *testing.T) {
 
 	r, err = eng.ImplantBonuses(ctx, []int{implGunslingerSS, implSnapshotHM})
 	require.NoError(t, err)
-	_, ok = totalOf(r, 292)
-	require.False(t, ok, "292 on two weapon families: different targets")
+	// 292 on two weapon families: two targets, so two totals (formerly none).
+	require.Len(t, totalsOf(r, 292), 2, "292 on two weapon families: one total per target set")
 }
 
 // The Capsule and a Rifter give the same Value (implant effects do not read the hull).
@@ -487,7 +541,7 @@ func TestImplantBonuses_FactorUsesResolvedKey(t *testing.T) {
 	require.NotEqual(t, ask.Base[803], f803.Factor)
 }
 
-// Guards on the totals, real data: attributes whose carriers act differently get none.
+// Guards on the totals, real data: attributes whose carriers act differently get one total per target set.
 func TestImplantBonuses_RealNoTotals(t *testing.T) {
 	skipHeavyRace(t)
 	s := openRealSDE(t)
@@ -500,6 +554,47 @@ func TestImplantBonuses_RealNoTotals(t *testing.T) {
 	require.False(t, ok, "447 on the Snake set")
 	r, err = eng.ImplantBonuses(context.Background(), []int{27197, 27260})
 	require.NoError(t, err)
-	_, ok = totalOf(r, 1915)
-	require.False(t, ok, "1915 on Hacking plus Environmental Analysis")
+	// Hacking and Environmental Analysis act on different targets: two totals, formerly none.
+	require.Len(t, totalsOf(r, 1915), 2, "1915 on Hacking plus Environmental Analysis")
+}
+
+// One attribute read by a ship-shield hardwiring and a drone-shield hardwiring: two totals, each
+// with its own target; a second implant on the same target joins the same total.
+func TestImplantBonuses_RealShipAndDroneTargets(t *testing.T) {
+	skipHeavyRace(t)
+	s := openRealSDE(t)
+	defer s.Close()
+	eng := New(s)
+	const sm701, dd1001, dd1003 = 27105, 54543, 54544 // Zainou 'Gnome' SM-701 (slot 7), Valdimar DD-1001 and DD-1003 (slot 10)
+	r, err := eng.ImplantBonuses(context.Background(), []int{sm701, dd1001})
+	require.NoError(t, err)
+	ts := totalsOf(r, 337) // shield capacity bonus
+	require.Len(t, ts, 2)
+	ship := ImplantTarget{Domain: "shipID", Modified: 263, GroupID: -1, SkillTypeID: -1, Func: "ItemModifier"}
+	var shipT, droneT *ImplantTotal
+	for i := range ts {
+		if len(ts[i].Targets) == 1 && ts[i].Targets[0] == ship {
+			shipT = &ts[i]
+		} else {
+			droneT = &ts[i]
+		}
+	}
+	require.NotNil(t, shipT)
+	require.NotNil(t, droneT)
+	require.Equal(t, opPostPercent, shipT.Op)
+	require.Equal(t, []int{sm701}, shipT.TypeIDs)
+	require.InDelta(t, itemOf(t, r, sm701).Value[337], shipT.Value, 1e-9)
+	require.Equal(t, []int{dd1001}, droneT.TypeIDs)
+	require.InDelta(t, itemOf(t, r, dd1001).Value[337], droneT.Value, 1e-9)
+	require.Equal(t, []ImplantTarget{
+		{Domain: "charID", Modified: 263, GroupID: -1, SkillTypeID: 3436, Func: "OwnerRequiredSkillModifier"},
+		{Domain: "charID", Modified: 263, GroupID: -1, SkillTypeID: 23069, Func: "OwnerRequiredSkillModifier"},
+	}, droneT.Targets, "drones: the skill-required modifiers, not the ship")
+
+	// Combining on one target is covered by TestImplantBonuses_GroupsByTarget; here DD-1003 alone.
+	r, err = eng.ImplantBonuses(context.Background(), []int{dd1003})
+	require.NoError(t, err)
+	ts = totalsOf(r, 337)
+	require.Len(t, ts, 1)
+	require.InDelta(t, itemOf(t, r, dd1003).Value[337], ts[0].Value, 1e-9)
 }
