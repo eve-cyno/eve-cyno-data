@@ -61,8 +61,17 @@
 //	                          lines; tokens rotate at 00:00 UTC, so they compare only within one
 //	                          UTC day (with it set, also across restarts within the day). No
 //	                          default: unset or blank means a random secret per process, noted
-//	                          once at startup. The value is never logged; set it only in the
-//	                          host .env, since whoever holds it can reverse a token
+//	                          once at startup; a secret under 32 bytes (trimmed) is used with a
+//	                          startup warning. The value is never logged; set it only in the
+//	                          host .env (openssl rand -hex 32), since whoever holds it can
+//	                          reverse a token
+//	DATAAPI_ANTHROPIC_RANGES  comma-separated CIDR prefixes; an access line whose client address
+//	                          (the one the limits key on) lies in one carries range="anthropic",
+//	                          never the address. Unset: Anthropic's outbound ranges
+//	                          160.79.104.0/21,153.61.208.0/20 (the compose default too); set but
+//	                          blank: no label; an invalid item is a startup error. Every access
+//	                          line whose client address parses also carries ipf (v4, v6, or
+//	                          pseudo for class E, Cloudflare's pseudo-IPv4)
 //	ESI_CONTACT               contact for the ESI User-Agent (esi)
 //	DATAAPI_PUBLIC_URL        the public origin, e.g. https://data.eve-cyno.dev (https, no path or
 //	                          query; invalid is a startup error). Makes the OpenAPI servers entry
@@ -130,6 +139,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"net/netip"
 	"os"
 	"os/signal"
 	"regexp"
@@ -233,9 +243,14 @@ func maxInFlightUpstream(getenv func(string) string) (int, error) {
 	return n, nil
 }
 
+// minLogSaltLen is the shortest DATAAPI_LOG_SALT (in bytes, trimmed) that starts without a
+// warning: the random secret of an unset one is 32 bytes too.
+const minLogSaltLen = 32
+
 // logSalt resolves DATAAPI_LOG_SALT, the secret of the caller token, and says once which kind
 // of secret the tokens use: blank or unset is "" (dataapi then draws a random secret for this
-// process). The value itself is never logged.
+// process). A set secret under minLogSaltLen bytes is still used, with one warning, since a short
+// one may be guessed and every token reversed. The value, and its length, are never logged.
 func logSalt(getenv func(string) string, log *slog.Logger) string {
 	s := strings.TrimSpace(getenv("DATAAPI_LOG_SALT"))
 	if s == "" {
@@ -244,7 +259,33 @@ func logSalt(getenv func(string) string, log *slog.Logger) string {
 		return ""
 	}
 	log.Info("caller token: secret from DATAAPI_LOG_SALT; tokens rotate at 00:00 UTC", "env", "DATAAPI_LOG_SALT")
+	if len(s) < minLogSaltLen {
+		log.Warn("caller token: DATAAPI_LOG_SALT is shorter than 32 bytes, so it may be guessed; set one from `openssl rand -hex 32`",
+			"env", "DATAAPI_LOG_SALT")
+	}
 	return s
+}
+
+// defaultAnthropicRanges are Anthropic's outbound IPv4 ranges, the addresses its MCP tool calls
+// to external servers (claude.ai and Claude Desktop custom connectors) come from; Anthropic
+// publishes no outbound IPv6. Source: https://platform.claude.com/docs/en/api/ip-addresses
+// (outbound requests). The compose file passes the same default.
+const defaultAnthropicRanges = "160.79.104.0/21,153.61.208.0/20"
+
+// anthropicRanges resolves DATAAPI_ANTHROPIC_RANGES, the networks whose access lines carry
+// range="anthropic": unset is defaultAnthropicRanges, set but blank is none (no label), anything
+// else a comma-separated CIDR list (dataapi.ParseRanges). The error names the variable and the
+// position of the bad item, never the value.
+func anthropicRanges(lookup func(string) (string, bool)) ([]netip.Prefix, error) {
+	v, ok := lookup("DATAAPI_ANTHROPIC_RANGES")
+	if !ok {
+		v = defaultAnthropicRanges
+	}
+	ranges, err := dataapi.ParseRanges(v)
+	if err != nil {
+		return nil, fmt.Errorf("DATAAPI_ANTHROPIC_RANGES: %w", err)
+	}
+	return ranges, nil
 }
 
 // dailyCap resolves DATAAPI_KEY_DAILY_CAP: an integer 0..keys.MaxDailyCap (0 = no cap).
@@ -406,6 +447,9 @@ type exposure struct {
 	// logSalt is DATAAPI_LOG_SALT, the secret of the per-UTC-day caller token ("" means a random
 	// secret per process). Never logged.
 	logSalt string
+	// anthropicRanges is DATAAPI_ANTHROPIC_RANGES: the networks whose access lines carry
+	// range="anthropic" (none: no label).
+	anthropicRanges []netip.Prefix
 	// store is the self-serve key store (nil: none). Its keys authenticate next to auth, and
 	// it enforces the daily quota and records usage.
 	store *keys.Store
@@ -481,6 +525,7 @@ func newHandler(d *bootstrap.Deps, ex exposure, log *slog.Logger) (http.Handler,
 		Limits:              &limits,
 		Upstream:            upstream,
 		LogSalt:             ex.logSalt,
+		AnthropicRanges:     ex.anthropicRanges,
 		Logger:              log,
 		KeyedLimitFactor:    ex.keyedFactor,
 		MaxInFlight:         ex.maxInFlight,
@@ -596,6 +641,16 @@ func run(log *slog.Logger) error {
 	if err != nil {
 		return err
 	}
+	ranges, err := anthropicRanges(os.LookupEnv)
+	if err != nil {
+		return err
+	}
+	if len(ranges) > 0 {
+		log.Info("access log: lines from Anthropic's connector addresses carry range=anthropic (never the address)",
+			"env", "DATAAPI_ANTHROPIC_RANGES", "prefixes", len(ranges))
+	} else {
+		log.Info("access log: no range label, DATAAPI_ANTHROPIC_RANGES is blank", "env", "DATAAPI_ANTHROPIC_RANGES")
+	}
 	var store *keys.Store
 	if path := os.Getenv("DATAAPI_KEYS_DB"); path != "" {
 		store, err = keys.Open(path, keys.Options{DailyCap: dayCap, Logger: log})
@@ -612,7 +667,7 @@ func run(log *slog.Logger) error {
 	}
 	ex := exposure{
 		toolAPI: exposeToolAPI(os.Getenv), mcp: exposeMCP(os.Getenv), auth: auth, publicURL: pub,
-		upstream: &upstream, logSalt: logSalt(os.Getenv, log),
+		upstream: &upstream, logSalt: logSalt(os.Getenv, log), anthropicRanges: ranges,
 		store: store, keyedFactor: factor, dailyCap: dayCap, anonDailyCap: anonCap, maxInFlight: maxIF, maxInFlightUpstream: maxIFUp, sdeBuild: followSDEBuild(cfg.SDEPath, deps.Tools.SDE, log),
 	}
 	log.Info("ESI pass-through tools: shared Expires cache, fail-fast budget guard",

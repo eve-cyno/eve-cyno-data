@@ -54,6 +54,8 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"net/netip"
+	"slices"
 	"strings"
 	"time"
 
@@ -310,10 +312,16 @@ type Config struct {
 	Upstream *UpstreamLimiter
 
 	// LogSalt is the secret of the caller token of the access log (see callerHasher); tokens
-	// rotate at 00:00 UTC. Empty means a random secret per process (still rotated per day).
-	// Keep it out of code, defaults and logs: whoever holds it can reverse a token by
-	// enumerating addresses.
+	// rotate at 00:00 UTC. White space around it is ignored; empty or blank means a random
+	// secret per process (still rotated per day). Keep it out of code, defaults and logs:
+	// whoever holds it can reverse a token by enumerating addresses.
 	LogSalt string
+
+	// AnthropicRanges are the networks Anthropic's connector calls come from (claude.ai and
+	// Claude Desktop custom connectors). The access line of a client inside one, by the address
+	// ClientKey buckets, carries range="anthropic", never the address. Nil or empty means no
+	// range label. Build it with ParseRanges (an IPv4-mapped IPv6 prefix would never match).
+	AnthropicRanges []netip.Prefix
 
 	// ToolFormat selects the body of a successful tool call; zero is the JSON
 	// envelope. Errors are the JSON error shape in either format.
@@ -381,6 +389,8 @@ type API struct {
 	portal      *portalSite
 	log         *slog.Logger
 	mux         *http.ServeMux
+	// anthropic are the networks whose access lines carry range="anthropic" (see clientLabels).
+	anthropic []netip.Prefix
 	// trialFree holds the mux patterns whose requests the anonymous daily cap does not count.
 	trialFree map[string]bool
 	// corpusProbe is nil unless Deps.Retriever implements Pinger.
@@ -441,6 +451,7 @@ func New(cfg Config) (*API, error) {
 		mcp:                 cfg.MCP,
 		upstream:            cfg.Upstream,
 		hasher:              newCallerHasher(cfg.LogSalt, cfg.Now),
+		anthropic:           slices.Clone(cfg.AnthropicRanges),
 		log:                 cfg.Logger,
 		mux:                 http.NewServeMux(),
 		trialFree:           map[string]bool{},

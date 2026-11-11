@@ -128,12 +128,13 @@ type callerDay struct {
 	key  []byte
 }
 
-// newCallerHasher returns the hasher under secret ("" means a random secret for this process),
-// reading the day from now (nil means time.Now).
+// newCallerHasher returns the hasher under secret, trimmed of white space ("" or blank means a
+// random secret for this process), reading the day from now (nil means time.Now).
 func newCallerHasher(secret string, now func() time.Time) *callerHasher {
 	if now == nil {
 		now = time.Now
 	}
+	secret = strings.TrimSpace(secret)
 	h := &callerHasher{secret: []byte(secret), now: now}
 	if secret == "" {
 		h.secret = make([]byte, 32)

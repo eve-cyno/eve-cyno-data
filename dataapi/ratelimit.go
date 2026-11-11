@@ -9,12 +9,11 @@ import (
 	"time"
 )
 
-// KeyResolver names the rate-limit bucket a request counts against. It is the
-// seam for per-API-key limits: today every caller is keyed by IP (IPKeys); once
-// keys exist a resolver returns e.g. "key:<id>" for an
-// authenticated caller and falls back to IPKeys for anonymous ones. The key is
-// opaque to the limiter; resolvers should prefix it so key and IP namespaces
-// cannot collide.
+// KeyResolver names the rate-limit bucket a request counts against. The default,
+// CallerKeys, returns "key:<id>" for an authenticated caller and the client key
+// (ClientKey: the IPv4 address, or the /64 of an IPv6 one) for everyone else; IPKeys
+// buckets every request by its client key. The key is opaque to the limiter;
+// resolvers should prefix it so key and address namespaces cannot collide.
 type KeyResolver interface {
 	Key(r *http.Request) string
 }

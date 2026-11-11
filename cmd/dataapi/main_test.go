@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"net/netip"
 	"os"
 	"path/filepath"
 	"strings"
@@ -312,13 +313,42 @@ func TestMaxInFlightUpstream(t *testing.T) {
 func TestLogSalt(t *testing.T) {
 	var buf bytes.Buffer
 	log := slog.New(slog.NewJSONHandler(&buf, nil))
-	const secret = "s3cret-from-the-host-env"
+	const secret = "s3cret-from-the-host-env-0123456789"
 	require.Equal(t, secret, logSalt(env(map[string]string{"DATAAPI_LOG_SALT": secret}), log))
 	require.Equal(t, 1, strings.Count(buf.String(), "\n"), "one startup line: %s", buf.String())
 	require.Contains(t, buf.String(), `"env":"DATAAPI_LOG_SALT"`)
 	require.NotContains(t, buf.String(), "random secret per process")
+	require.NotContains(t, buf.String(), `"level":"WARN"`, "a secret of 32 bytes or more is not short")
 	require.NotContains(t, buf.String(), secret, "the secret is never logged")
 	require.NotContains(t, buf.String(), "s3cret", "no part of the secret is logged")
+
+	// Under 32 bytes after trimming: still used, with one warning that names only the variable.
+	for value, want := range map[string]string{
+		"short-s3cret":                           "short-s3cret",
+		strings.Repeat("k", 31):                  strings.Repeat("k", 31),
+		" \t" + strings.Repeat("k", 31) + " \n ": strings.Repeat("k", 31),
+	} {
+		buf.Reset()
+		require.Equal(t, want, logSalt(env(map[string]string{"DATAAPI_LOG_SALT": value}), log))
+		lines := strings.Split(strings.TrimSpace(buf.String()), "\n")
+		require.Len(t, lines, 2, "the startup line and one warning: %s", buf.String())
+		var warn map[string]any
+		require.NoError(t, json.Unmarshal([]byte(lines[1]), &warn))
+		require.Equal(t, "WARN", warn["level"])
+		require.Equal(t, "DATAAPI_LOG_SALT", warn["env"])
+		require.Contains(t, warn["msg"], "shorter than 32 bytes")
+		require.Len(t, warn, 4, "time, level, msg and env only: no value, no length: %v", warn)
+		require.NotContains(t, buf.String(), want, "the secret is never logged")
+		require.NotContains(t, buf.String(), "s3cret")
+		require.NotContains(t, buf.String(), "kkk")
+	}
+	// Exactly 32 bytes, also with white space around it, is not short.
+	for _, value := range []string{strings.Repeat("k", 32), "  " + strings.Repeat("k", 32) + "\t"} {
+		buf.Reset()
+		require.Equal(t, strings.Repeat("k", 32), logSalt(env(map[string]string{"DATAAPI_LOG_SALT": value}), log))
+		require.Equal(t, 1, strings.Count(buf.String(), "\n"), "no warning: %s", buf.String())
+		require.NotContains(t, buf.String(), `"level":"WARN"`)
+	}
 
 	for _, unset := range []map[string]string{nil, {"DATAAPI_LOG_SALT": ""}, {"DATAAPI_LOG_SALT": " \t "}} {
 		buf.Reset()
@@ -326,7 +356,83 @@ func TestLogSalt(t *testing.T) {
 		require.Equal(t, 1, strings.Count(buf.String(), "\n"), "one notice: %s", buf.String())
 		require.Contains(t, buf.String(), "random secret per process")
 		require.Contains(t, buf.String(), `"env":"DATAAPI_LOG_SALT"`)
+		require.NotContains(t, buf.String(), `"level":"WARN"`, "the random secret is 32 bytes: not short")
 	}
+}
+
+// lookupEnv is env for a reader that tells an unset variable from an empty one.
+func lookupEnv(kv map[string]string) func(string) (string, bool) {
+	return func(k string) (string, bool) {
+		v, ok := kv[k]
+		return v, ok
+	}
+}
+
+func TestAnthropicRanges(t *testing.T) {
+	str := func(ps []netip.Prefix) []string {
+		var out []string
+		for _, p := range ps {
+			out = append(out, p.String())
+		}
+		return out
+	}
+	// Unset: Anthropic's two outbound IPv4 ranges, as the compose default.
+	got, err := anthropicRanges(lookupEnv(nil))
+	require.NoError(t, err)
+	require.Equal(t, []string{"160.79.104.0/21", "153.61.208.0/20"}, str(got))
+
+	// Set but blank: the label is off.
+	for _, blank := range []string{"", " ", "\t\n"} {
+		got, err = anthropicRanges(lookupEnv(map[string]string{"DATAAPI_ANTHROPIC_RANGES": blank}))
+		require.NoError(t, err, "%q", blank)
+		require.Empty(t, got, "%q", blank)
+	}
+
+	got, err = anthropicRanges(lookupEnv(map[string]string{"DATAAPI_ANTHROPIC_RANGES": " 203.0.113.0/24 , 2001:db8::/32 "}))
+	require.NoError(t, err)
+	require.Equal(t, []string{"203.0.113.0/24", "2001:db8::/32"}, str(got))
+
+	// Another variable does not count as this one.
+	got, err = anthropicRanges(lookupEnv(map[string]string{"DATAAPI_ANTHROPIC_RANGE": ""}))
+	require.NoError(t, err)
+	require.Len(t, got, 2)
+
+	for _, bad := range []string{"160.79.104.0", "160.79.104.0/21,garbage", "160.79.104.0/21,"} {
+		_, err = anthropicRanges(lookupEnv(map[string]string{"DATAAPI_ANTHROPIC_RANGES": bad}))
+		require.ErrorContains(t, err, "DATAAPI_ANTHROPIC_RANGES:", bad)
+		require.NotContains(t, err.Error(), "160.79", "the error names the variable, not the value: %q", bad)
+		require.NotContains(t, err.Error(), "garbage", bad)
+	}
+}
+
+// The exposure's ranges reach the access line: a caller inside is labelled, one outside is not,
+// and the log holds neither address.
+func TestNewHandler_AnthropicRangesLabelTheAccessLine(t *testing.T) {
+	ranges, err := anthropicRanges(lookupEnv(nil))
+	require.NoError(t, err)
+	var buf bytes.Buffer
+	h, err := newHandler(&bootstrap.Deps{Tools: &tools.Deps{}}, exposure{toolAPI: true, anthropicRanges: ranges}, slog.New(slog.NewJSONHandler(&buf, nil)))
+	require.NoError(t, err)
+	var lines []map[string]any
+	for _, ip := range []string{"160.79.104.9", "203.0.113.7"} {
+		req := httptest.NewRequest(http.MethodPost, "/v1/tool/get_jumps_between", strings.NewReader(`{"from_system":"Jita","to_system":"Amarr"}`))
+		req.Header.Set("CF-Connecting-IP", ip)
+		h.ServeHTTP(httptest.NewRecorder(), req)
+	}
+	for _, line := range strings.Split(strings.TrimSpace(buf.String()), "\n") {
+		var m map[string]any
+		require.NoError(t, json.Unmarshal([]byte(line), &m), line)
+		if m["msg"] == "request" {
+			lines = append(lines, m)
+		}
+	}
+	require.Len(t, lines, 2)
+	require.Equal(t, "anthropic", lines[0]["range"])
+	require.Equal(t, "v4", lines[0]["ipf"])
+	require.NotContains(t, lines[1], "range")
+	require.Equal(t, "v4", lines[1]["ipf"])
+	require.NotContains(t, buf.String(), "160.79")
+	require.NotContains(t, buf.String(), "203.0.113")
 }
 
 // accessToken makes one tool call through h from one IPv4 address and returns the caller token

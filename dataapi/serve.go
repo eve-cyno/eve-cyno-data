@@ -74,6 +74,10 @@ func validRequestID(s string) bool {
 // the access log, the in-flight gate of the route, the daily quota of keyed callers and the
 // daily cap of callers without a key around the route mux.
 //
+// The access line ("request") never holds the client address: on tool and MCP routes it
+// carries an opaque per-day caller token, and on every line the client's address family (ipf)
+// and, inside Config.AnthropicRanges, range="anthropic" (clientLabels).
+//
 // The gate runs before every charge (the key's quota, the anonymous daily cap and, inside
 // the mux, the route limiter and the upstream limiter): a busy refusal has spent nothing. A
 // full route first runs three checks that record nothing (gateRefusal): the per-IP route
@@ -104,6 +108,9 @@ func (a *API) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// exemption and, when a refusal stops the request before the mux runs, the access line's
 	// route. r.Pattern itself is left to the mux (the usage labels read it).
 	_, pattern := a.mux.Handler(r)
+	// The address family and the range of the client, matched once: labels only, never the
+	// address (clientLabels).
+	client := a.clientLabels(r)
 
 	quotaRefused := false
 	muxRan := false
@@ -145,6 +152,7 @@ func (a *API) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			// up in the logs without the logs holding IPs.
 			attrs = append(attrs, "caller", a.hasher.hash(a.keys.Key(r)))
 		}
+		attrs = append(attrs, client...)
 		if busyPool != "" {
 			attrs = append(attrs, "busy_pool", busyPool)
 		}

@@ -248,6 +248,21 @@ func TestCallerToken_EmptySecretIsRandomPerProcess(t *testing.T) {
 	require.NotEqual(t, first, tokenOf(t, a, abuf, fromIP("203.0.113.7")...), "the random secret still rotates per UTC day")
 }
 
+// A secret of white space only is no secret: a random one per process, as empty. White space
+// around a set secret is ignored, as cmd/dataapi ignores it in DATAAPI_LOG_SALT.
+func TestCallerToken_BlankSecretIsRandomPerProcess(t *testing.T) {
+	c := &clock{t: time.Date(2026, 11, 12, 12, 0, 0, 0, time.UTC)}
+	for _, blank := range []string{" ", " \t\n "} {
+		a, abuf := tokenAPI(t, blank, c.now, nil)
+		b, bbuf := tokenAPI(t, blank, c.now, nil)
+		first := tokenOf(t, a, abuf, fromIP("203.0.113.7")...)
+		require.NotEqual(t, first, tokenOf(t, b, bbuf, fromIP("203.0.113.7")...), "%q: another process, another random secret", blank)
+		require.NotEqual(t, wantToken(blank, "2026-11-12", "203.0.113.7"), first, "%q is never the secret", blank)
+	}
+	a, buf := tokenAPI(t, " \ttest-secret\n", c.now, nil)
+	require.Equal(t, wantToken("test-secret", "2026-11-12", "203.0.113.7"), tokenOf(t, a, buf, fromIP("203.0.113.7")...))
+}
+
 // Fixed secret, day and caller key give fixed tokens, so no refactor changes them silently. The
 // values were computed outside Go (openssl dgst -mac HMAC).
 func TestCallerToken_KnownVector(t *testing.T) {
