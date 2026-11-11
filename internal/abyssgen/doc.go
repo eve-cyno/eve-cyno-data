@@ -137,31 +137,18 @@ func RenderDoc(ds *abyss.Dataset) string {
 		"from `abyss/abyss_data.json`. Every number is a Fenris Creations static-data value or a documented derivation of one; "+
 		"the kill priorities are this project's own heuristic, not Fenris Creations data.\n\n", ds.SDEBuild, docDate(ds.SDEBuild))
 
-	w("## Weather types and filament tiers\n\n")
+	// The old "Weather types and filament tiers" section is gone on purpose: see
+	// removedFilamentFacts in doc_test.go for each fact it carried and where that fact
+	// still lives. Only the two facts that live nowhere else stay, in one short section.
+	w("## Abyssal weather names in the static data\n\n")
 	names := make([]string, 0, len(ds.Weather))
 	for _, wt := range ds.Weather {
 		names = append(names, fmt.Sprintf("%s (%s)", wt.Name, wt.SDEName))
 	}
-	w("Abyssal Deadspace has %d weather environments: %s. ", len(ds.Weather), strings.Join(names, ", "))
-	w("Each Abyssal Filament sets one weather and one difficulty tier. There are %d tiers, from tier 0 to tier %d: ", len(ds.Tiers), len(ds.Tiers)-1)
-	tn := make([]string, 0, len(ds.Tiers))
-	for _, t := range ds.Tiers {
-		tn = append(tn, fmt.Sprintf("%d %s", t.Index, t.Name))
-	}
-	w("%s. A filament is named \"<Tier> <Weather> Filament\", so %d tiers times %d weathers gives %d filament types.\n\n",
-		strings.Join(tn, ", "), len(ds.Tiers), len(ds.Weather), len(ds.Tiers)*len(ds.Weather))
-	w("The static data does not carry numeric weather modifiers: the five environment types have no attributes or effects in it, " +
-		"so the resistance penalties and bonuses per weather and per tier are not stated here. " +
-		"See the separate damage-profile document for the documented values. " +
-		"The static data also does not say which NPCs appear in which tier or weather.\n\n")
-	for _, t := range ds.Tiers {
-		var fs []string
-		for _, f := range t.Filaments {
-			fs = append(fs, fmt.Sprintf("%s (type %d)", f.Name, f.TypeID))
-		}
-		w("Tier %d, %s: %s.\n", t.Index, t.Name, strings.Join(fs, "; "))
-	}
-	w("\n")
+	w("The static data names the %d abyssal weather environments: %s. "+
+		"It carries no numeric weather modifiers and does not say which NPCs appear in which tier or weather; "+
+		"the weather resist penalties and bonuses are in the separate damage-profile document.\n\n",
+		len(ds.Weather), strings.Join(names, ", "))
 
 	if len(ds.Hazards) > 0 {
 		w("## Hazard clouds\n\nThe static data has these ambient and deployable cloud types in the Abyssal Hazards group. " +
@@ -199,11 +186,15 @@ func RenderDoc(ds *abyss.Dataset) string {
 	}
 	sort.Strings(fams)
 
+	for _, sec := range indexSections(ds) {
+		w("%s\n\n", sec)
+	}
+
 	w("## NPC families\n\nThe static data lists %d NPC types in the Abyssal Spaceship Entities and Abyssal Drone Entities groups, in %d name families: %s.\n\n",
 		len(ds.NPCs), len(fams), strings.Join(fams, ", "))
 	for _, f := range fams {
 		npcs := byFamily[f]
-		w("## %s\n\n", f)
+		w("## %s\n\n", killOrderHeading(f))
 		ranked := abyss.RankByPriority(npcs)
 		var key []string
 		for _, r := range ranked {
