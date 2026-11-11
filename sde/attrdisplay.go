@@ -9,8 +9,8 @@ import (
 // AttrDisplay is the player-facing label of a dogma attribute: its display name and unit.
 type AttrDisplay struct {
 	Name      string // dgmAttributeTypes.displayName; empty when the SDE has none
-	UnitID    int    // dgmAttributeTypes.unitID; 0 when the attribute has no unit
-	Unit      string // eveUnits.displayName of UnitID ("%", "x", "+"); empty when none
+	UnitID    int    // dgmAttributeTypes.unitID; 0 when the attribute has no unit. It decides how a value is shown
+	Unit      string // eveUnits.displayName of UnitID ("%", "x", "+"); a label only: 105 and 121 are both "%" but 121 is a real percent and 104 a multiplier; empty when none
 	Published bool   // dgmAttributeTypes.published
 }
 

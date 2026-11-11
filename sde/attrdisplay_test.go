@@ -1,6 +1,7 @@
 package sde
 
 import (
+	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -59,7 +60,7 @@ func TestAttributeDisplays_Chunks(t *testing.T) {
 	s := openWithInvTypes(t,
 		`CREATE TABLE dgmAttributeTypes (attributeID INTEGER, displayName TEXT, unitID INTEGER, published INTEGER)`,
 		inserts[0],
-		`WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i+1 FROM n WHERE i < 1003) INSERT INTO dgmAttributeTypes SELECT i, 'A', NULL, 1 FROM n`)
+		`WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i+1 FROM n WHERE i < `+strconv.Itoa(attrDisplayChunk*2+3)+`) INSERT INTO dgmAttributeTypes SELECT i, 'A', NULL, 1 FROM n`)
 	got, err := s.AttributeDisplays(ids)
 	require.NoError(t, err)
 	require.Len(t, got, len(ids))

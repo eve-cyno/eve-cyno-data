@@ -67,11 +67,11 @@ func TestImplantBonuses_Structured(t *testing.T) {
 			10: {shipMod(opPostPercent, 40)},
 			11: {{Domain: "spaceID", Func: "ItemModifier", ModifiedAttr: 40, ModifyingAttr: 50, Operation: opPostPercent}},
 		})
-	r, err := New(f).ImplantBonuses(context.Background(), []int{700, 701, 702, 999, 703, 704, 999, 705})
+	r, err := New(f).ImplantBonuses(context.Background(), []int{700, 701, 702, 999, 703, 704, 999, 705, 704})
 	require.NoError(t, err)
 
 	require.Equal(t, []int{999, 703}, r.Unknown, "no dogma data, and a ship: once each, input order")
-	require.Equal(t, []int{701}, r.Ignored, "the second implant of slot 1")
+	require.Equal(t, []int{701, 704}, r.Ignored, "the second implant of slot 1, and the repeat of an unmodelled id")
 	var got []int
 	for _, it := range r.Items {
 		got = append(got, it.TypeID)
@@ -137,11 +137,35 @@ func TestImplantBonuses_TotalsNeedOneTuple(t *testing.T) {
 			require.Empty(t, r.Unknown)
 		})
 	}
+	// Same tuples on every carrier, but not one operation: no total.
+	f := bonusFake(map[int][]int{700: {10}, 702: {10}},
+		map[int][]sde.Modifier{10: {shipMod(opPostPercent, 40), shipMod(opModAdd, 41)}})
+	r, err := New(f).ImplantBonuses(context.Background(), []int{700, 702})
+	require.NoError(t, err)
+	_, ok := totalOf(r, 50)
+	require.False(t, ok, "two operations on one carrier")
+	// Carriers that differ only by skill or only by domain.
+	skill := func(id int) sde.Modifier {
+		return sde.Modifier{Domain: "charID", Func: "LocationRequiredSkillModifier", ModifiedAttr: 40, ModifyingAttr: 50, Operation: opPostPercent, SkillTypeID: &id}
+	}
+	domain := func(d string) sde.Modifier {
+		return sde.Modifier{Domain: d, Func: "ItemModifier", ModifiedAttr: 40, ModifyingAttr: 50, Operation: opPostPercent}
+	}
+	for name, mods := range map[string]map[int][]sde.Modifier{
+		"another skill":  {10: {skill(3300)}, 12: {skill(3301)}},
+		"another domain": {10: {domain("shipID")}, 12: {domain("charID")}},
+	} {
+		f = bonusFake(map[int][]int{700: {10}, 702: {12}}, mods)
+		r, err = New(f).ImplantBonuses(context.Background(), []int{700, 702})
+		require.NoError(t, err, name)
+		_, ok = totalOf(r, 50)
+		require.False(t, ok, name)
+	}
 	// Several modifiers on one attribute (the Savior shape): the same set on every carrier gives
 	// one total, counting each carrier once.
-	f := bonusFake(map[int][]int{700: {10}, 702: {10}},
+	f = bonusFake(map[int][]int{700: {10}, 702: {10}},
 		map[int][]sde.Modifier{10: {shipMod(opPostPercent, 40), shipMod(opPostPercent, 41)}})
-	r, err := New(f).ImplantBonuses(context.Background(), []int{700, 702})
+	r, err = New(f).ImplantBonuses(context.Background(), []int{700, 702})
 	require.NoError(t, err)
 	tot, ok := totalOf(r, 50)
 	require.True(t, ok)
@@ -247,6 +271,10 @@ func TestImplantBonuses_MidGradeCrystal(t *testing.T) {
 	require.True(t, ok)
 	require.InEpsilon(t, 1.1, t1.Value, 1e-9, "the Alpha alone moves shield boost by 1.011")
 	require.Len(t, one.Sets, 1)
+	for _, a := range []int{175, 176, 177, 179} {
+		_, ok = totalOf(one, a)
+		require.False(t, ok, "attribute %d is 0 on the Alpha: no total", a)
+	}
 }
 
 // Low-grade Grail x6: five carriers of 1565 (the Omega holds none), each 1.0 x the key 1.4; the
@@ -289,6 +317,7 @@ func TestImplantBonuses_RealTotals(t *testing.T) {
 	tot, ok := totalOf(r, 3024)
 	require.True(t, ok, "Savior 3024")
 	require.Equal(t, opPostPercent, tot.Op)
+	require.InDelta(t, -26.8369, tot.Value, 1e-3)
 
 	_, wedge := familyIDs(t, "Wedge", "Low")
 	r, err = eng.ImplantBonuses(ctx, wedge)
@@ -296,6 +325,7 @@ func TestImplantBonuses_RealTotals(t *testing.T) {
 	tot, ok = totalOf(r, 5799)
 	require.True(t, ok, "Wedge 5799")
 	require.Equal(t, opModAdd, tot.Op)
+	require.InDelta(t, 21.0, tot.Value, 1e-9)
 	_, ok = totalOf(r, 5800)
 	require.False(t, ok, "no effect reads 5800")
 	_, ok = totalOf(r, 5798)
@@ -344,4 +374,132 @@ func TestImplantBonuses_RealInputErrors(t *testing.T) {
 	require.Equal(t, []int{28670, 999999999}, r.Unknown)
 	require.Len(t, r.Items, 1)
 	require.Equal(t, ids[0], r.Items[0].TypeID)
+}
+
+// A carrier whose value changes nothing is no carrier: it is not in TypeIDs, does not block the
+// match, and an attribute with no other carrier gets no total.
+func TestImplantBonuses_IdentityCarriers(t *testing.T) {
+	f := bonusFake(map[int][]int{700: {10}, 702: {10}, 706: {12}}, map[int][]sde.Modifier{
+		10: {shipMod(opPostPercent, 40)},
+		12: {shipMod(opModAdd, 41)}, // another tuple, but 706 holds 50 = 0
+	})
+	f.dogma[706][50] = 0
+	r, err := New(f).ImplantBonuses(context.Background(), []int{700, 702, 706})
+	require.NoError(t, err)
+	tot, ok := totalOf(r, 50)
+	require.True(t, ok)
+	require.Equal(t, []int{700, 702}, tot.TypeIDs)
+	require.InDelta(t, (1.1*1.2-1)*100, tot.Value, 1e-9)
+
+	r, err = New(f).ImplantBonuses(context.Background(), []int{706})
+	require.NoError(t, err)
+	require.Empty(t, r.Totals)
+	require.Len(t, r.Items, 1, "the implant itself is still listed")
+
+	// PreMul: 1 is the identity.
+	f = bonusFake(map[int][]int{700: {10}, 702: {10}}, map[int][]sde.Modifier{10: {shipMod(opPreMul, 40)}})
+	f.dogma[700][50] = 1
+	r, err = New(f).ImplantBonuses(context.Background(), []int{700, 702})
+	require.NoError(t, err)
+	tot, _ = totalOf(r, 50)
+	require.Equal(t, []int{702}, tot.TypeIDs)
+	require.InDelta(t, 20.0, tot.Value, 1e-9)
+}
+
+func TestImplantBonuses_ContextAndLimitFirst(t *testing.T) {
+	f := bonusFake(nil, nil)
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	_, err := New(f).ImplantBonuses(ctx, []int{700})
+	require.ErrorIs(t, err, context.Canceled)
+	_, err = New(f).ImplantBonuses(ctx, nil)
+	require.ErrorIs(t, err, context.Canceled)
+	// Past the limit, with no Capsule in the SDE: the limit error comes before any work.
+	delete(f.dogma, 670)
+	_, err = New(f).ImplantBonuses(context.Background(), make([]int, maxImplantInput+1))
+	require.ErrorIs(t, err, fit.ErrFitTooLarge)
+}
+
+// An implant slot outside 1-10 (AU-79 holds 79) reports slot 0 and claims no exclusive slot.
+func TestImplantBonuses_OddSlot(t *testing.T) {
+	f := bonusFake(map[int][]int{700: {10}}, map[int][]sde.Modifier{10: {shipMod(opPostPercent, 40)}})
+	f.dogma[707] = map[int]float64{331: 79, 50: 2}
+	f.categoryID[707], f.groupID[707] = 20, 300
+	f.effects[707] = []int{10}
+	r, err := New(f).ImplantBonuses(context.Background(), []int{707, 700})
+	require.NoError(t, err)
+	require.Empty(t, r.Ignored)
+	require.Equal(t, 0, itemOf(t, r, 707).Slot)
+	require.Equal(t, 1, itemOf(t, r, 700).Slot)
+}
+
+// A repeated modelled id keeps the first; the rest are Ignored. The result is the same on
+// every call (Items in input order, Totals and Sets sorted).
+func TestImplantBonuses_RepeatsAndDeterminism(t *testing.T) {
+	skipHeavyRace(t)
+	s := openRealSDE(t)
+	defer s.Close()
+	eng := New(s)
+	a := 22107
+	r, err := eng.ImplantBonuses(context.Background(), []int{a, a, a})
+	require.NoError(t, err)
+	require.Equal(t, []int{a, a}, r.Ignored)
+	require.Len(t, r.Items, 1)
+
+	_, ids := familyIDs(t, "Snake", "High")
+	_, ask := familyIDs(t, "Asklepian", "High")
+	mix := append(append([]int{}, ids...), ask...)
+	first, err := eng.ImplantBonuses(context.Background(), mix)
+	require.NoError(t, err)
+	for i := 0; i < 3; i++ {
+		again, err := eng.ImplantBonuses(context.Background(), mix)
+		require.NoError(t, err)
+		require.Equal(t, first, again)
+	}
+	for i := 1; i < len(first.Totals); i++ {
+		require.Less(t, first.Totals[i-1].Attr, first.Totals[i].Attr)
+	}
+	for i := 1; i < len(first.Sets); i++ {
+		require.Less(t, first.Sets[i-1].Key, first.Sets[i].Key)
+	}
+}
+
+// Snake's effect scales the Asklepian key 803 on the resolved implant: the factor is the
+// product of the resolved key values, not of the SDE's.
+func TestImplantBonuses_FactorUsesResolvedKey(t *testing.T) {
+	skipHeavyRace(t)
+	s := openRealSDE(t)
+	defer s.Close()
+	const snakeAlpha, asklepianBeta = 19540, 42211
+	r, err := New(s).ImplantBonuses(context.Background(), []int{snakeAlpha, asklepianBeta})
+	require.NoError(t, err)
+	ask := itemOf(t, r, asklepianBeta)
+	require.NotEqual(t, ask.Base[803], ask.Value[803], "the Snake scales the Asklepian key")
+	var f803 *ImplantSetFactor
+	for i := range r.Sets {
+		if r.Sets[i].Key == 803 {
+			f803 = &r.Sets[i]
+		}
+	}
+	require.NotNil(t, f803)
+	require.Equal(t, []int{asklepianBeta}, f803.TypeIDs)
+	require.InEpsilon(t, ask.Value[803], f803.Factor, 1e-12)
+	require.NotEqual(t, ask.Base[803], f803.Factor)
+}
+
+// Guards on the totals, real data: attributes whose carriers act differently get none.
+func TestImplantBonuses_RealNoTotals(t *testing.T) {
+	skipHeavyRace(t)
+	s := openRealSDE(t)
+	defer s.Close()
+	eng := New(s)
+	_, snake := familyIDs(t, "Snake", "High")
+	r, err := eng.ImplantBonuses(context.Background(), snake)
+	require.NoError(t, err)
+	_, ok := totalOf(r, 447)
+	require.False(t, ok, "447 on the Snake set")
+	r, err = eng.ImplantBonuses(context.Background(), []int{27197, 27260})
+	require.NoError(t, err)
+	_, ok = totalOf(r, 1915)
+	require.False(t, ok, "1915 on Hacking plus Environmental Analysis")
 }

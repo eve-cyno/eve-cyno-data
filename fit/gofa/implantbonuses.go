@@ -2,6 +2,7 @@ package gofa
 
 import (
 	"context"
+	"fmt"
 	"sort"
 
 	"eve-cyno.dev/go/data/fit"
@@ -17,9 +18,14 @@ const capsuleHullID = 670
 
 // ImplantBonus is one implant of the input.
 type ImplantBonus struct {
-	TypeID, Slot int
+	TypeID int
+	// Slot is the implant's slot (attribute 331) when it is 1-10, else 0: Genolution 'Auroral'
+	// AU-79 holds 79 and reports slot 0 (ImplantSlot says the same). Two implants with slot 0
+	// do not compete; only a real slot is exclusive.
+	Slot int
 	// Modelled is false for a known implant whose modifiers the engine cannot apply; its Value
-	// is then its Base and it is left out of the totals and the set factors.
+	// is then its Base and it is left out of the totals and the set factors. Such an implant
+	// claims no slot: it never makes another implant of the same slot an Ignored one.
 	Modelled bool
 	Base     map[int]float64 // the SDE attributes
 	Value    map[int]float64 // after the resolve: set multipliers applied, beside the other implants
@@ -29,11 +35,18 @@ type ImplantBonus struct {
 type ImplantTotal struct {
 	Attr, Op int
 	Value    float64 // ModAdd: the sum; PostPercent: the compounded percent; PreMul/PostMul: the product
-	TypeIDs  []int   // the carriers, in input order
+	// TypeIDs are the carriers, in input order. A carrier whose value changes nothing (0 for
+	// ModAdd and PostPercent, 1 for PreMul and PostMul) is not one: it is left out here and
+	// from the match, and an attribute with no other carrier gets no total.
+	TypeIDs []int
 }
 
-// ImplantSetFactor is the multiplier one set key gives: the product of the key values of the
-// chosen members (Mid-grade Crystal x6 = 1.1^5 x 1.25).
+// ImplantSetFactor is the multiplier one set key gives: the product of the RESOLVED key values
+// (Item.Value, not the SDE's Base) of the chosen implants that hold the key (Mid-grade Crystal
+// x6 = 1.1^5 x 1.25). Another set can scale a key (Snake's effect scales the Asklepian key 803),
+// so the factor is the engine's number, not a product of SDE constants. The factor also reaches
+// implants outside the set: Rapture's key 3107 scales 314 on 606-type implants and Amulet's key
+// 864 scales 335 on drone tuners, whatever the grade or family of the carrier.
 type ImplantSetFactor struct {
 	Key     int
 	TypeIDs []int
@@ -48,6 +61,10 @@ type ImplantBonusResult struct {
 	// Unknown lists ids the SDE does not know or that are no implant (a booster, a ship), in
 	// input order and once each. Ignored lists the implants dropped because an earlier one
 	// holds their slot (the first per slot wins, as in Stats).
+	//
+	// Ignored also lists the later repeats of an implant the engine cannot model (the first one
+	// is an Item with Modelled false): a repeated unmodelled id is listed once in Items and once
+	// more in Ignored for each repeat.
 	Unknown, Ignored []int
 }
 
@@ -71,53 +88,60 @@ type modTuple struct {
 // other operation gives no total. Set keys get none (their effect is in Value).
 func (e *Engine) ImplantBonuses(ctx context.Context, ids []int) (ImplantBonusResult, error) {
 	var res ImplantBonusResult
+	if err := ctx.Err(); err != nil {
+		return res, err
+	}
+	if len(ids) > maxImplantInput {
+		return res, fmt.Errorf("%w: more than %d implants", fit.ErrFitTooLarge, maxImplantInput)
+	}
 	if len(ids) == 0 {
 		return res, nil
 	}
-	_, items, _, _, notes, err := e.resolveCore(ctx, fit.Fit{HullID: capsuleHullID}, fit.StatsOpts{Implants: ids}, false)
+	// One SDE view for the whole call: the resolve and the classification below must not
+	// straddle a hot reload.
+	view := e.reader()
+	pinned := *e
+	pinned.sde, pinned.reads = view, nil
+	_, items, _, _, _, err := pinned.resolveCore(ctx, fit.Fit{HullID: capsuleHullID}, fit.StatsOpts{Implants: ids}, false)
 	if err != nil {
 		return res, err
 	}
-	view := e.reader()
 	var built []*Item // the implants the engine applies, in input order
 	for _, it := range items {
 		if it.Kind == KindImplant {
 			built = append(built, it)
 		}
 	}
-	unmodelled := map[int]bool{}
-	for _, id := range UnmodelledImplants(fit.FitStats{Unmodelled: notes.unmodelled}) {
-		unmodelled[id] = true
-	}
-	seenUnmodelled := map[int]bool{}
+	seenOdd := map[int]bool{} // ids that are unknown or unmodelled: reported once
 	qi := 0
 	var modelled []*Item
 	for _, id := range ids {
-		if unmodelled[id] {
-			if seenUnmodelled[id] {
-				continue
-			}
-			seenUnmodelled[id] = true
-			base := view.GetDogma(id)
-			if !isImplantType(view, id, base) {
+		base := view.GetDogma(id)
+		switch {
+		case !isImplantType(view, id, base):
+			if !seenOdd[id] {
+				seenOdd[id] = true
 				res.Unknown = append(res.Unknown, id)
+			}
+		case !isModelledImplant(view, id, base):
+			if seenOdd[id] {
+				res.Ignored = append(res.Ignored, id)
 				continue
 			}
+			seenOdd[id] = true
 			slot, _ := slotOf(base)
 			res.Items = append(res.Items, ImplantBonus{TypeID: id, Slot: slot, Base: base, Value: copyAttrs(base)})
-			continue
-		}
-		// buildImplants keeps input order, and an id has one slot: it is dropped every time or
-		// never, so the next built item has this id exactly when this entry was kept.
-		if qi < len(built) && built[qi].TypeID == id {
+		case qi < len(built) && built[qi].TypeID == id:
+			// buildImplants keeps input order, and an id has one slot: it is dropped every time
+			// or never, so the next built item has this id exactly when this entry was kept.
 			it := built[qi]
 			qi++
 			slot, _ := slotOf(it.Attrs)
 			modelled = append(modelled, it)
-			res.Items = append(res.Items, ImplantBonus{TypeID: id, Slot: slot, Modelled: true, Base: view.GetDogma(id), Value: copyAttrs(it.Attrs)})
-			continue
+			res.Items = append(res.Items, ImplantBonus{TypeID: id, Slot: slot, Modelled: true, Base: base, Value: copyAttrs(it.Attrs)})
+		default:
+			res.Ignored = append(res.Ignored, id)
 		}
-		res.Ignored = append(res.Ignored, id)
 	}
 	res.Totals = implantTotals(view, modelled)
 	res.Sets = implantSetFactors(modelled)
@@ -163,6 +187,9 @@ func implantTotals(s SDE, items []*Item) []ImplantTotal {
 			}
 		}
 		for attr, ts := range tuples {
+			if isIdentityBonus(it.Attrs[attr], ts) {
+				continue
+			}
 			byAttr[attr] = append(byAttr[attr], carrier{it, ts})
 		}
 	}
@@ -180,19 +207,23 @@ func implantTotals(s SDE, items []*Item) []ImplantTotal {
 	var out []ImplantTotal
 	for _, a := range attrs {
 		cs := byAttr[a]
-		op, ok := -2, true
+		ops := map[int]bool{}
+		ok := true
 		for _, c := range cs {
 			if !sameTuples(c.tuples, cs[0].tuples) {
 				ok = false
 				break
 			}
 			for t := range c.tuples {
-				if op == -2 {
-					op = t.op
-				} else if op != t.op {
-					ok = false
-				}
+				ops[t.op] = true
 			}
+		}
+		if len(ops) != 1 { // one operation across every tuple, or no total
+			ok = false
+		}
+		op := -2
+		for o := range ops { // one entry at most: no map order involved
+			op = o
 		}
 		if !ok {
 			continue
@@ -223,6 +254,27 @@ func implantTotals(s SDE, items []*Item) []ImplantTotal {
 		out = append(out, total)
 	}
 	return out
+}
+
+// isIdentityBonus reports whether value changes nothing under every operation of ts: 0 for
+// ModAdd and PostPercent, 1 for PreMul and PostMul. An operation with no total counts as not
+// identity, so the attribute stays visible to the match.
+func isIdentityBonus(value float64, ts map[modTuple]bool) bool {
+	for t := range ts {
+		switch t.op {
+		case opModAdd, opPostPercent:
+			if value != 0 {
+				return false
+			}
+		case opPreMul, opPostMul:
+			if value != 1 {
+				return false
+			}
+		default:
+			return false
+		}
+	}
+	return true
 }
 
 func sameTuples(a, b map[modTuple]bool) bool {
