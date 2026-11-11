@@ -66,7 +66,8 @@ func slotStatus(used, cap int) string {
 }
 
 // validateFitting is the validate_fitting tool: it reads the EFT block, resolves its
-// names (SDE first, ESI as the fallback for items newer than the SDE), then hands every
+// names (SDE first, ESI as the fallback for items newer than the SDE; the fallback runs
+// only when c is non-nil, and validateFittingWithStats passes nil on a public surface), then hands every
 // check — slots, CPU / PG, group limits, unknown and unfittable names, the Alpha-name
 // backstop — to fit (fit.CheckRaw) and renders the Report in the text format the
 // chat guards and the eval assertions parse. The FitValidation is nil for the

@@ -115,7 +115,14 @@ func validateFittingWithStats(ctx context.Context, deps *Deps, args map[string]a
 		eft, _ = args["eft_block"].(string)
 	}
 	alpha, _ := args["alpha_clone"].(bool)
-	out, v, err := validateFitting(ctx, deps.Client, deps.SDE, deps.AlphaLegality(), eft, alpha)
+	// A public surface reads only the SDE: a nil client turns off every ESI fallback
+	// (name resolution, missing dogma), so an unknown name is reported unknown and the
+	// caller cannot spend upstream ESI budget.
+	client := deps.Client
+	if deps.Public {
+		client = nil
+	}
+	out, v, err := validateFitting(ctx, client, deps.SDE, deps.AlphaLegality(), eft, alpha)
 	if err != nil || !fromModel || v == nil || !v.Valid {
 		return out, v, err
 	}
