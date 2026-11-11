@@ -118,7 +118,7 @@ func TestStats_AbsentHullSkillAtIIsAnExplicitOption(t *testing.T) {
 	s := openRealSDE(t)
 	defer s.Close()
 	eng := New(s)
-	for _, name := range []string{"caracal-missile"} {      // a weapon hull whose hull skill moves the numbers (a drone hull with the drone skills at 0 does not)
+	for _, name := range []string{"caracal-missile"} { // a weapon hull whose hull skill moves the numbers (a drone hull with the drone skills at 0 does not)
 		f := loadPerfFits(t, s, name)[0].fit
 		allZero := string(statsJSON(t, eng, f, fit.StatsOpts{Skills: completeMap(eng, nil)}))
 		// option off (the zero value): an empty profile with MissingAsZero is every skill at 0

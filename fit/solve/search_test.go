@@ -901,3 +901,25 @@ func TestUncertainOf_ModuleEffectIsNotListedTwice(t *testing.T) {
 	st.Flags.NotModelled = []fit.NotModelledFlag{{What: "Module effect 38", Affects: []fit.StatBlock{fit.BlockDPS}}}
 	require.Equal(t, []string{"Module effect 38"}, uncertainOf(st))
 }
+
+// The level-I floor of an absent hull skill is a real character's: the request says so (AbsentHullSkillAtI). An "all skills 0"
+// pilot (an empty, non-nil map and no floor) stays every skill at 0, as evaluate does (review finding M1 of the allZero change).
+func TestSetup_AbsentHullSkillAtIFollowsTheRequest(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		skills fit.SkillProfile
+		floor  bool
+		want   bool
+	}{
+		{"all skills 0: empty profile, no floor", fit.SkillProfile{}, false, false},
+		{"a real character: empty profile with the floor", fit.SkillProfile{}, true, true},
+		{"all V: a nil profile never has it", nil, true, false},
+	} {
+		sub := fakeSubset(plate(2000, 1, 0, 100, nil))
+		c := NewCatalog(sub)
+		s := &search{cat: c, ev: &fakeEngine{store: c.Store(), workers: 1}, req: Request{Kind: KindRefit, Fit: fit.Fit{HullID: hullS}, Skills: tc.skills, AbsentHullSkillAtI: tc.floor}, kind: KindRefit}
+		require.NoError(t, s.setup(), tc.name)
+		require.Equal(t, tc.want, s.pilot.AbsentHullSkillAtI, tc.name)
+		require.Equal(t, tc.skills != nil, s.pilot.MissingAsZero, tc.name)
+	}
+}

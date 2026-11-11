@@ -91,6 +91,9 @@ type Request struct {
 	// Skills is the pilot's skill map. A skill missing from it is level 0, never V. nil is
 	// the all-V pilot.
 	Skills fit.SkillProfile
+	// AbsentHullSkillAtI counts a hull or subsystem skill the map does not list at level I, like the game does for a real character (fit.StatsOpts.AbsentHullSkillAtI);
+	// false for an "all skills 0" pilot, which stays every skill at 0.
+	AbsentHullSkillAtI bool
 	// Implants are the pilot's implants (fit.StatsOpts.Implants). The fit's own implant lines
 	// never apply.
 	Implants []int
@@ -582,7 +585,7 @@ func (s *search) setup() error {
 		}
 	}
 	s.pol = p
-	s.pilot = fit.StatsOpts{Skills: r.Skills, MissingAsZero: r.Skills != nil, AbsentHullSkillAtI: r.Skills != nil, Implants: r.Implants, DamagePattern: r.DamagePattern}
+	s.pilot = fit.StatsOpts{Skills: r.Skills, MissingAsZero: r.Skills != nil, AbsentHullSkillAtI: r.Skills != nil && r.AbsentHullSkillAtI, Implants: r.Implants, DamagePattern: r.DamagePattern}
 	s.cap = r.MaxEvaluations
 	if s.cap <= 0 {
 		s.cap = CapInteractive
