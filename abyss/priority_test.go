@@ -92,3 +92,16 @@ func TestRankByPriority_OrderAndDataset(t *testing.T) {
 	require.Greater(t, KillPriority(spear).Score, KillPriority(lancer).Score)
 	require.Equal(t, BandFirst, KillPriority(spear).Band)
 }
+
+// A chain-lightning NPC with no extracted weapon damage is unrated, not "kill last": the
+// DPS of 0 is missing data (the SDE gives effect 8088 damage), not a harmless NPC.
+func TestKillPriority_ChainLightningWithoutDamageIsUnrated(t *testing.T) {
+	n := NPC{EHP: 43875, Damage: Damage{Kind: DamageNone},
+		Effects: []Effect{{Kind: EffChainLightning}}}
+	require.Equal(t, BandUnrated, KillPriority(n).Band)
+	// A genuinely damageless NPC without the chain-lightning weapon keeps its band.
+	require.Equal(t, BandLast, KillPriority(NPC{EHP: 43875, Damage: Damage{Kind: DamageNone}}).Band)
+	// With extracted damage the band is computed as usual.
+	n.Damage = Damage{Kind: DamageTurret, DPS: 165}
+	require.NotEqual(t, BandUnrated, KillPriority(n).Band)
+}

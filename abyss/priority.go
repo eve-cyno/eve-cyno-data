@@ -11,6 +11,9 @@ const (
 	BandFirst = "kill first"
 	BandNext  = "kill next"
 	BandLast  = "kill last"
+	// BandUnrated marks an NPC whose damage the dataset does not extract (a chain-lightning
+	// weapon with DamageNone): a DPS of 0 there is missing data, not a harmless NPC.
+	BandUnrated = "unrated"
 )
 
 // Thresholds between the bands (Score >= value).
@@ -85,6 +88,8 @@ func KillPriority(n NPC) Priority {
 	p.Effort = 1 + math.Sqrt(math.Max(n.EHP, 0)/ehpScale)
 	p.Score = p.Threat / p.Effort
 	switch {
+	case n.Damage.Kind == DamageNone && n.Has(EffChainLightning):
+		p.Band = BandUnrated
 	case p.Score >= BandFirstMin:
 		p.Band = BandFirst
 	case p.Score >= BandNextMin:
