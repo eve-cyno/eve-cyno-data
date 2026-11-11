@@ -315,3 +315,138 @@ func TestChatSchemasKeepTheChatDescription(t *testing.T) {
 	}
 	t.Fatal("get_fits missing from ToolSchemas")
 }
+
+// WaitsOnUpstream is the in-flight class of a call (the dataapi gate puts a call that waits on a
+// third party into the route's upstream pool): the live calls SpendsUpstream counts, a Janice
+// appraisal with the caller's own key, and the tools that wait on a third party on every call
+// without spending the live budget (analyze_battle).
+func TestWaitsOnUpstream(t *testing.T) {
+	lookup := func(name string) catalog.Tool {
+		tl, ok := catalog.Lookup(name)
+		require.True(t, ok, name)
+		return tl
+	}
+	for _, tl := range catalog.Tools() {
+		if tl.Upstream && len(tl.UpstreamArgs) == 0 {
+			require.True(t, tl.WaitsOnUpstream(nil, false), "%s: an Upstream tool live on every call", tl.Name)
+		}
+	}
+	jump := lookup("plan_jump_route")
+	chain := lookup("get_production_chain")
+	appraise := lookup("appraise_items")
+	for _, c := range []struct {
+		tool   catalog.Tool
+		args   map[string]any
+		janice bool
+		want   bool
+	}{
+		{jump, map[string]any{}, false, false},
+		{jump, map[string]any{"live_info": false}, false, false},
+		{jump, map[string]any{"live_info": true}, false, true},
+		{jump, map[string]any{"avoid_incursions": true}, false, true},
+		{jump, map[string]any{}, true, false},
+		{chain, map[string]any{"system": "Jita"}, false, true},
+		{chain, map[string]any{"system": "  "}, false, false},
+		{chain, map[string]any{"include_cost": true}, false, false},
+		{appraise, map[string]any{"items": "Tritanium 100"}, false, false},
+		{appraise, map[string]any{"items": "Tritanium 100"}, true, true},
+		{lookup("analyze_battle"), map[string]any{"battle_url": "https://zkillboard.com/related/30000142/202611111200/"}, false, true},
+		{lookup("analyze_battle"), nil, false, true},
+		{lookup("validate_fitting"), map[string]any{"eft_text": "[Rifter, x]\nNo Such Module"}, false, false},
+		{lookup("validate_fitting"), nil, true, false},
+		{lookup("search_item_by_name"), map[string]any{"names": []any{"Tritanium"}}, false, false},
+		{lookup("search_item_by_name"), nil, true, false},
+		{lookup("get_market_price"), map[string]any{"type_id": 34}, false, true},
+	} {
+		require.Equal(t, c.want, c.tool.WaitsOnUpstream(c.args, c.janice), "%s %v janice=%v", c.tool.Name, c.args, c.janice)
+	}
+}
+
+// inflightClass names how a tool's in-flight class is decided (see Tool.WaitsOnUpstream).
+type inflightClass int
+
+const (
+	// classWork: never waits on a third party on a public surface (SDE, Gofa, local Qdrant,
+	// or one of the accepted work-class waits on the shared price snapshot).
+	classWork inflightClass = iota
+	// classUpstream: waits on a third party on every call.
+	classUpstream
+	// classLiveArgs: waits only when one of its UpstreamArgs is set (the body decides).
+	classLiveArgs
+	// classJaniceKey: waits only when the caller sends a Janice key (the header decides).
+	classJaniceKey
+)
+
+// Every registry tool has an in-flight class decided here, so a new tool cannot reach the
+// dataapi gate without one: add it to the table with the class its outbound calls need.
+func TestWaitsOnUpstream_EveryToolIsClassified(t *testing.T) {
+	want := map[string]inflightClass{
+		// SDE, Gofa and local Qdrant only.
+		"get_jumps_between":      classWork,
+		"get_jump_distances":     classWork,
+		"get_systems_in_region":  classWork,
+		"get_npc_stations":       classWork,
+		"find_systems":           classWork,
+		"get_system_info":        classWork,
+		"get_reprocessing_yield": classWork,
+		"get_required_skills":    classWork,
+		"find_canonical_module":  classWork,
+		"search_item_by_name":    classWork,
+		"get_ship_stats":         classWork,
+		"get_hull_facts":         classWork,
+		"get_ship_bonuses":       classWork,
+		"compute_fit_stats":      classWork,
+		"get_fits":               classWork,
+		"list_fits":              classWork,
+		// No ESI fallback on a public surface (names and dogma from the SDE only).
+		"validate_fitting": classWork,
+		// Accepted work-class wait: the shared price snapshot (single flight, at most 20 s, only
+		// when no copy is fresh).
+		"get_average_prices": classWork,
+		// Live ESI, EvE-Scout or zKillboard on every call.
+		"get_market_price":      classUpstream,
+		"get_type_info":         classUpstream,
+		"get_sovereignty":       classUpstream,
+		"get_system_activity":   classUpstream,
+		"get_market_history":    classUpstream,
+		"get_thera_connections": classUpstream,
+		"get_recent_kills":      classUpstream,
+		"get_lp_offers":         classUpstream,
+		// zKillboard, WarBeacon, br.evetools.org and ESI on every call (keyed).
+		"analyze_battle": classUpstream,
+		// ESI's PLEX orders on every call (not offered on a public surface).
+		"convert_isk_to_real": classUpstream,
+		// Live ESI only with live_info or avoid_incursions.
+		"plan_jump_route": classLiveArgs,
+		// Live ESI only with system (the cost index); include_cost is the accepted price-snapshot wait.
+		"get_production_chain": classLiveArgs,
+		// Janice with the caller's own key; else the accepted price-snapshot estimate.
+		"appraise_items": classJaniceKey,
+	}
+	all := catalog.Tools()
+	for _, tl := range all {
+		class, ok := want[tl.Name]
+		require.True(t, ok, "%s has no in-flight class: add it to this table", tl.Name)
+		live := map[string]any{}
+		props, _ := tl.Parameters["properties"].(map[string]any)
+		for _, a := range tl.UpstreamArgs {
+			p, _ := props[a].(map[string]any)
+			if p["type"] == "boolean" {
+				live[a] = true
+			} else {
+				live[a] = "Jita"
+			}
+		}
+		require.Equal(t, class == classLiveArgs, tl.BodyDependentClass(), "%s: BodyDependentClass", tl.Name)
+		require.Equal(t, class == classUpstream, tl.WaitsOnUpstream(nil, false), "%s: no args, no key", tl.Name)
+		require.Equal(t, class == classUpstream || class == classLiveArgs, tl.WaitsOnUpstream(live, false), "%s: live args", tl.Name)
+		require.Equal(t, class == classUpstream || class == classJaniceKey, tl.WaitsOnUpstream(nil, true), "%s: Janice key", tl.Name)
+		if !tl.BodyDependentClass() {
+			for _, key := range []bool{false, true} {
+				require.Equal(t, tl.WaitsOnUpstream(nil, key), tl.WaitsOnUpstream(live, key),
+					"%s: the class of a tool without UpstreamArgs never depends on the body", tl.Name)
+			}
+		}
+	}
+	require.Len(t, want, len(all), "the table names only registry tools")
+}

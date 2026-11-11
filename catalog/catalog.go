@@ -101,6 +101,25 @@ func (t Tool) SpendsUpstream(args map[string]any) bool {
 // LiveESI reports whether the tool's live upstream is ESI (the shared ESI error budget applies).
 func (t Tool) LiveESI() bool { return t.UpstreamName == UpstreamESI }
 
+// WaitsOnUpstream reports whether a call with args, sent with (janiceKey) or without the caller's
+// own Janice key, can wait on a third party: a live call SpendsUpstream counts, a Janice appraisal
+// of a tool that AcceptsJaniceKey, or a call of a tool in slowUpstreamTools. It is the in-flight
+// class of the call: a public surface runs such a call in its own, smaller pool, so slow
+// upstreams cannot starve SDE work.
+//
+// It is false for the accepted work-class waits: the shared ESI price snapshot behind
+// get_average_prices, the appraise_items estimate and get_production_chain include_cost makes a
+// caller wait (single flight, bounded) only when no copy is fresh, and no caller can force it.
+// validate_fitting reads only the SDE on a public surface.
+func (t Tool) WaitsOnUpstream(args map[string]any, janiceKey bool) bool {
+	return t.SpendsUpstream(args) || (t.AcceptsJaniceKey && janiceKey) || slowUpstreamTools[t.Name]
+}
+
+// BodyDependentClass reports whether WaitsOnUpstream depends on the call's arguments (the tool
+// has UpstreamArgs), so a surface must read the request body to class a call. For every other
+// tool the name and the Janice key header decide.
+func (t Tool) BodyDependentClass() bool { return len(t.UpstreamArgs) > 0 }
+
 // Tools returns every registered tool in tool_schemas.json order. The slice is the
 // caller's; the values it points into are shared (see Tool).
 func Tools() []Tool { return slices.Clone(registry()) }
@@ -313,6 +332,12 @@ func upstreamArgs() map[string][]string {
 
 // janiceKeyTools are the tools that take the caller's own Janice key (Tool.AcceptsJaniceKey).
 var janiceKeyTools = map[string]bool{"appraise_items": true}
+
+// slowUpstreamTools wait on a third party on every call without being Upstream (they spend no
+// per-caller live budget), so Tool.WaitsOnUpstream is true for every call of them.
+// analyze_battle reads zKillboard, WarBeacon or br.evetools.org and ESI (keyed);
+// convert_isk_to_real reads ESI's PLEX orders (not offered on a public surface).
+var slowUpstreamTools = map[string]bool{"analyze_battle": true, "convert_isk_to_real": true}
 
 // summaryTable holds the one-line human summary of each tool (Tool.Summary). Keep each
 // to one sentence without a trailing period issue: it is shown in lists and the site search.
