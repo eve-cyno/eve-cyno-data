@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
@@ -279,6 +280,7 @@ func TestMaxInFlight(t *testing.T) {
 	for _, bad := range []string{"-1", "10001", "x", "1.5"} {
 		_, err = maxInFlight(env(map[string]string{"DATAAPI_MAX_INFLIGHT": bad}))
 		require.ErrorContains(t, err, "DATAAPI_MAX_INFLIGHT", bad)
+		require.ErrorContains(t, err, fmt.Sprintf("%q", bad), "the error names the bad value")
 	}
 }
 

@@ -363,6 +363,21 @@ func TestAccessLog_PreMuxRefusalsCarryRouteToolAndCaller(t *testing.T) {
 		require.Equal(t, "get_jumps_between", l["tool"])
 		require.Regexp(t, `^[0-9a-f]{16}$`, l["caller"])
 	})
+	t.Run("anonymous daily cap on a route without tools", func(t *testing.T) {
+		// Served requests on GET /v1/items/search carry no caller token; a daily-cap refusal
+		// does, so the refused caller shows up in the logs.
+		log, buf := logSink()
+		api := newAPI(t, dataapi.Config{Docs: true, Auth: keyedFixture(t, key), Limits: &dataapi.Limits{}, AnonDailyCap: 1, Logger: log})
+		do(api, http.MethodGet, "/v1/items/search?q=x", "", append(fromIP("203.0.113.9"), dataapi.HeaderRequestID, "served-items")...)
+		requireError(t, do(api, http.MethodGet, "/v1/items/search?q=x", "", append(fromIP("203.0.113.9"), dataapi.HeaderRequestID, "cap-items")...),
+			http.StatusTooManyRequests, "daily_quota_exceeded")
+		lines := logLines(t, buf)
+		require.NotContains(t, requestLine(t, lines, "served-items"), "caller", "a route without tools logs no caller token")
+		l := requestLine(t, lines, "cap-items")
+		require.Equal(t, "GET /v1/items/search", l["route"])
+		require.Regexp(t, `^[0-9a-f]{16}$`, l["caller"])
+		require.NotContains(t, l, "tool")
+	})
 	t.Run("key quota on REST", func(t *testing.T) {
 		log, buf := logSink()
 		api := newAPI(t, dataapi.Config{
