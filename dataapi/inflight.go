@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"strings"
@@ -20,6 +21,9 @@ const (
 	// poolUpstream holds the requests that wait on a third party (catalog.Tool.WaitsOnUpstream,
 	// a free-text fit search, a fit detail priced by Janice).
 	poolUpstream = "upstream"
+	// poolBoth names a refusal while both pools were full: the request was not classed (its body
+	// was not read), so it belongs to neither.
+	poolBoth = "both"
 )
 
 // routeGate is the in-flight cap of one route: non-blocking semaphores that ServeHTTP tries
@@ -71,6 +75,12 @@ func newRouteGate(work, upstream int, postOnly bool, classify classifier, limit 
 		g.upstream = make(chan struct{}, upstream)
 	}
 	return g
+}
+
+// bothFull reports whether the gate has a split and both of its pools are full right now. The
+// class of a request only chooses the pool, so then it decides nothing and is not computed.
+func (g *routeGate) bothFull() bool {
+	return g.split() && len(g.work) == cap(g.work) && len(g.upstream) == cap(g.upstream)
 }
 
 // split reports whether the gate has an upstream pool.
@@ -148,6 +158,10 @@ func UpstreamHook(u *UpstreamLimiter) func(r *http.Request, tool string) (bool, 
 // replayed to the handler after the bytes that were read, and returned. A request without a
 // body is left alone.
 func peekBody(r *http.Request, max int64) ([]byte, error) {
+	if denied, _ := r.Context().Value(peekDeniedKey{}).(*bool); denied != nil {
+		*denied = true // the caller only names a busy pool: the body stays unread
+		return nil, errPeekDenied
+	}
 	if r.Body == nil || r.Body == http.NoBody {
 		return nil, nil
 	}
@@ -159,6 +173,13 @@ func peekBody(r *http.Request, max int64) ([]byte, error) {
 	r.Body = peekedBody{Reader: io.MultiReader(bytes.NewReader(body), rest), Closer: r.Body}
 	return body, err
 }
+
+// peekDeniedKey marks a request whose body a classifier must not read (the value is a *bool the
+// refused peek sets); errPeekDenied is what peekBody then returns, which every classifier treats
+// as work.
+type peekDeniedKey struct{}
+
+var errPeekDenied = errors.New("peek denied")
 
 // peekedBody is a body put back together by peekBody; Close closes the original.
 type peekedBody struct {
@@ -177,11 +198,18 @@ func (e errorReader) Read([]byte) (int, error) { return 0, e.err }
 // serves this caller and the arguments must pass the same check. Then the class is the
 // catalog's WaitsOnUpstream, with the Janice key the transport hands the tool (trimmed, absent
 // when longer than maxCredentialLen, the transport's own limit). Anything that does not parse,
-// or a body over the transport's limit, is work: it is refused at once.
+// or a body over the transport's limit, or a request with an invalid API key, is work: it is
+// refused at once.
 func (a *API) mcpWaitsOnUpstream(r *http.Request, _ string) bool {
+	if authErrorFrom(r.Context()) != nil {
+		return false // mcpTransport answers 401 at once, before any tool runs
+	}
 	body, err := peekBody(r, toolBodyMax+1)
 	if err != nil || len(body) > toolBodyMax {
 		return false
+	}
+	if jsonTooDeep(body, maxJSONDepth) {
+		return false // the SDK's decoder refuses it before any tool runs
 	}
 	// The SDK decodes the first JSON value of the body (trailing data is ignored) and serves a
 	// tools/call only as a JSON-RPC 2.0 call: a string or numeric id.
@@ -229,6 +257,36 @@ func (a *API) mcpWaitsOnUpstream(r *http.Request, _ string) bool {
 	}
 	janice := catalog.JaniceKeyFrom(r.Header)
 	return t.WaitsOnUpstream(args, janice != "" && len(janice) <= maxCredentialLen)
+}
+
+// maxJSONDepth is the nesting depth the MCP SDK's JSON decoder accepts (encoding/json, used for the
+// arguments and the REST body, allows 10000).
+const maxJSONDepth = 1000
+
+// jsonTooDeep reports whether b nests objects or arrays deeper than max, counting brackets outside
+// strings (a body that is not valid JSON is refused by the decoder anyway).
+func jsonTooDeep(b []byte, max int) bool {
+	depth, inString := 0, false
+	for i := 0; i < len(b); i++ {
+		c := b[i]
+		switch {
+		case inString:
+			if c == '\\' {
+				i++
+			} else if c == '"' {
+				inString = false
+			}
+		case c == '"':
+			inString = true
+		case c == '{' || c == '[':
+			if depth++; depth > max {
+				return true
+			}
+		case c == '}' || c == ']':
+			depth--
+		}
+	}
+	return false
 }
 
 // toolWaitsOnUpstream classes a POST to the REST tool route. The name comes from the path; a

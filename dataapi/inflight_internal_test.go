@@ -219,6 +219,8 @@ func TestInflight_ClassificationMatchesTheHandler(t *testing.T) {
 		{"non-object arguments", "plan_jump_route", `["live_info"]`},
 		{"string arguments", "plan_jump_route", `"live_info"`},
 		{"null arguments", "plan_jump_route", `null`},
+		{"escaped key", "plan_jump_route", `{` + route + `,"live\u005finfo":true}`},
+		{"escaped key name", "plan_jump_route", `{"\u006frigin":"Jita","destination":"Amarr","ship":"Rhea","live_info":true}`},
 		{"always live", "get_sovereignty", `{"system_name":"Jita"}`},
 		{"SDE tool", "search_item_by_name", `{"names":["Tritanium"]}`},
 	}
@@ -244,6 +246,10 @@ func TestInflight_ClassificationMatchesTheHandler(t *testing.T) {
 			"name not a string":              `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":7,"arguments":{}}}`,
 			"tools/list":                     `{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{"name":"get_sovereignty"}}`,
 			"unknown tool":                   `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"no_such_tool","arguments":{}}}`,
+			"escaped tool-name key":          `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"\u006eame":"get_sovereignty","arguments":{}}}`,
+			"escaped method key":             `{"jsonrpc":"2.0","id":1,"\u006dethod":"tools/call","params":{"name":"get_sovereignty","arguments":{}}}`,
+			"id 1e400":                       `{"jsonrpc":"2.0","id":1e400,"method":"tools/call","params":{"name":"get_sovereignty","arguments":{}}}`,
+			"nested deeper than 1000":        `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"get_sovereignty","arguments":{"x":` + strings.Repeat("[", 1100) + strings.Repeat("]", 1100) + `}}}`,
 			"string id":                      `{"jsonrpc":"2.0","id":"a-1","method":"tools/call","params":{"name":"get_sovereignty","arguments":{}}}`,
 			"no id (a notification)":         `{"jsonrpc":"2.0","method":"tools/call","params":{"name":"get_sovereignty","arguments":{}}}`,
 			"null id":                        `{"jsonrpc":"2.0","id":null,"method":"tools/call","params":{"name":"get_sovereignty","arguments":{}}}`,
@@ -271,6 +277,9 @@ func TestInflight_ClassificationMatchesTheHandler(t *testing.T) {
 	})
 
 	t.Run("REST", func(t *testing.T) {
+		argsCases = append(argsCases,
+			argsCase{"nested deeper than 1000", "plan_jump_route", `{` + route + `,"live_info":true,"x":` + strings.Repeat("[", 1100) + strings.Repeat("]", 1100) + `}`},
+			argsCase{"number 1e400", "plan_jump_route", `{` + route + `,"live_info":true,"x":1e400}`})
 		for _, c := range append(argsCases, argsCase{"empty body", "get_production_chain", ``}) {
 			req := postReq("/v1/tool/"+c.tool, c.args)
 			class := a.toolWaitsOnUpstream(req, "POST /v1/tool/{name}")

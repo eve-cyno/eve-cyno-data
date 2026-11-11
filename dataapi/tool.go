@@ -153,7 +153,9 @@ func (a *API) tool(w http.ResponseWriter, r *http.Request) {
 		// A tool whose live options are off (plan_jump_route or get_production_chain without them) answers from the SDE and costs nothing here.
 		if !known || t.SpendsUpstream(args) {
 			if known {
-				noteLiveCall(r, name, "rest") // the in-flight backstop: logs a live call in a work slot
+				// The in-flight backstop of the REST route: it runs only in ToolAPIPublic mode, where
+				// the gate and the upstream limiter apply.
+				noteLiveCall(r, name, "rest")
 			}
 			if ok, retry := a.upstream.Allow(r, name); !ok {
 				use.Outcome = toolusage.RateLimited

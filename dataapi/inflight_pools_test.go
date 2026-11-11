@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -124,7 +125,8 @@ func TestInflight_SlowUpstreamCallsCannotStarveSDECalls(t *testing.T) {
 		require.Equal(t, http.StatusOK, do(api, http.MethodPost, "/v1/mcp", searchCall).Code)
 		l := lines()
 		requireBusyPool(t, l, "up-busy", "upstream")
-		requireBusyPool(t, l, "work-busy", "work")
+		// Both pools were full and an MCP call is classed only from its body, which is not read then.
+		requireBusyPool(t, l, "work-busy", "both")
 	})
 
 	t.Run("busy SDE calls leave the upstream pool free", func(t *testing.T) {
@@ -144,7 +146,7 @@ func TestInflight_SlowUpstreamCallsCannotStarveSDECalls(t *testing.T) {
 			require.Equal(t, http.StatusOK, <-d)
 		}
 		l := lines()
-		requireBusyPool(t, l, "up-busy", "upstream")
+		requireBusyPool(t, l, "up-busy", "both") // both pools full: the MCP body is not read
 		requireBusyPool(t, l, "work-busy", "work")
 	})
 }
@@ -272,52 +274,91 @@ func (b countingBody) Read(p []byte) (int, error) {
 	return b.r.Read(p)
 }
 
-// Only a body-dependent class is peeked: with both pools of the tool route (and the work pool of
-// fit detail) full, the SDE tool, an always-live tool, a Janice-key call and a fit detail on a
-// service without a Janice key are refused without one read of their body; plan_jump_route and
-// get_production_chain are read to be classed.
+// An invalid key is answered 401 by the MCP transport before any tool runs, so it is work: a live
+// call with a bad key on a full upstream pool gets that 401, not 503 busy (as the REST routes do).
+func TestInflight_MCPInvalidKeyIsWorkNotBusy(t *testing.T) {
+	mcp := newSlowMCP()
+	api := newAPI(t, dataapi.Config{MCP: mcp, Auth: testKeys(t), MaxInFlight: 2, MaxInFlightUpstream: 1})
+	done := start(api, http.MethodPost, "/v1/mcp", sovCall, dataapi.HeaderAPIKey, keyAlpha)
+	waitFor(t, mcp.entered, "the live call")
+	requireBusy(t, do(api, http.MethodPost, "/v1/mcp", sovCall, dataapi.HeaderAPIKey, keyAlpha))
+	requireError(t, do(api, http.MethodPost, "/v1/mcp", sovCall, dataapi.HeaderAPIKey, "ecd_not_a_key"), http.StatusUnauthorized, "invalid_api_key")
+	close(mcp.release)
+	require.Equal(t, http.StatusOK, <-done)
+}
+
+// With both pools of the tool route (and the work pool of fit detail) full, no body is read at
+// all: which pool the request would have taken no longer decides anything, so even
+// plan_jump_route and get_production_chain are refused unread (busy_pool "both").
 func TestInflight_PeekOnlyWhereTheClassDependsOnTheBody(t *testing.T) {
 	deps, entered, release := hangingESI(t)
+	log, buf := logSink()
 	api := newAPI(t, dataapi.Config{
 		Deps: dataapi.Deps{Tools: deps}, ToolAPI: dataapi.ToolAPIPublic, Limits: &dataapi.Limits{},
-		MaxInFlight: 1, MaxInFlightUpstream: 1,
+		MaxInFlight: 1, MaxInFlightUpstream: 1, Logger: log,
 	})
 	unholdWork := holdWriting(t, api, http.MethodPost, "/v1/tool/get_jumps_between", `{"from_system":"Jita","to_system":"Amarr"}`)
 	done := start(api, http.MethodPost, "/v1/tool/get_type_info", `{"type_id":587}`)
 	waitFor(t, entered, "the ESI request")
 	unholdDetail := holdWriting(t, api, http.MethodPost, "/v1/fits/detail", `{"eft":"[Rifter, x]"}`)
 
-	for _, c := range []struct {
+	ids := map[string]string{}
+	for i, c := range []struct {
 		target, body string
 		hdr          []string
-		peeked       bool
+		pool         string
 	}{
-		{"/v1/tool/get_jumps_between", `{"from_system":"Jita","to_system":"Amarr"}`, nil, false},
-		{"/v1/tool/get_sovereignty", `{"system_name":"Jita"}`, nil, false},
-		{"/v1/tool/appraise_items", `{"items":"Tritanium 1"}`, []string{dataapi.HeaderJaniceKey, "k"}, false},
-		{"/v1/tool/appraise_items", `{"items":"Tritanium 1"}`, nil, false},
-		{"/v1/fits/detail", `{"eft":"[Rifter, x]","cost":true}`, nil, false},
-		{"/v1/tool/plan_jump_route", `{"origin":"Jita","destination":"Amarr","ship":"Rhea","live_info":true}`, nil, true},
-		{"/v1/tool/get_production_chain", `{"item_name":"Rifter"}`, nil, true},
+		{"/v1/tool/get_jumps_between", `{"from_system":"Jita","to_system":"Amarr"}`, nil, "work"},
+		{"/v1/tool/get_sovereignty", `{"system_name":"Jita"}`, nil, "upstream"},
+		{"/v1/tool/appraise_items", `{"items":"Tritanium 1"}`, []string{dataapi.HeaderJaniceKey, "k"}, "upstream"},
+		{"/v1/tool/appraise_items", `{"items":"Tritanium 1"}`, nil, "work"},
+		{"/v1/fits/detail", `{"eft":"[Rifter, x]","cost":true}`, nil, "work"},
+		// Classed only from their body, which is not read: the pool stays unnamed.
+		{"/v1/tool/plan_jump_route", `{"origin":"Jita","destination":"Amarr","ship":"Rhea","live_info":true}`, nil, "both"},
+		{"/v1/tool/get_production_chain", `{"item_name":"Rifter"}`, nil, "both"},
 	} {
+		id := "full-" + strconv.Itoa(i)
 		var reads atomic.Int32
 		req := httptest.NewRequest(http.MethodPost, c.target, countingBody{strings.NewReader(c.body), &reads})
 		for i := 0; i+1 < len(c.hdr); i += 2 {
 			req.Header.Set(c.hdr[i], c.hdr[i+1])
 		}
+		req.Header.Set(dataapi.HeaderRequestID, id)
 		rec := httptest.NewRecorder()
 		api.ServeHTTP(rec, req)
 		requireBusy(t, rec)
-		if c.peeked {
-			require.NotZero(t, reads.Load(), "%s %s is classed from its body", c.target, c.body)
-		} else {
-			require.Zero(t, reads.Load(), "%s %s is classed without its body", c.target, c.body)
-		}
+		require.Zero(t, reads.Load(), "%s %s: no body is read while both pools are full", c.target, c.body)
+		ids[id] = c.pool
 	}
 	unholdWork()
 	unholdDetail()
 	release()
 	<-done
+	l := logLines(t, buf)
+	for id, pool := range ids {
+		requireBusyPool(t, l, id, pool)
+	}
+}
+
+// While only one pool is full, the body of a body-dependent tool is still read to choose the
+// pool, and the busy answer names the pool the request belongs to.
+func TestInflight_PeekStillHappensWhileAPoolIsFree(t *testing.T) {
+	log, buf := logSink()
+	api := newAPI(t, dataapi.Config{
+		Deps: dataapi.Deps{Tools: &tools.Deps{}}, ToolAPI: dataapi.ToolAPIPublic, Limits: &dataapi.Limits{},
+		MaxInFlight: 1, MaxInFlightUpstream: 1, Logger: log,
+	})
+	unholdWork := holdWriting(t, api, http.MethodPost, "/v1/tool/get_jumps_between", `{"from_system":"Jita","to_system":"Amarr"}`)
+	var reads atomic.Int32
+	req := httptest.NewRequest(http.MethodPost, "/v1/tool/plan_jump_route",
+		countingBody{strings.NewReader(`{"origin":"Jita","destination":"Amarr","ship":"Rhea"}`), &reads})
+	req.Header.Set(dataapi.HeaderRequestID, "peeked")
+	rec := httptest.NewRecorder()
+	api.ServeHTTP(rec, req)
+	requireBusy(t, rec)
+	require.NotZero(t, reads.Load(), "the upstream pool is free: the body decides the class")
+	unholdWork()
+	requireBusyPool(t, logLines(t, buf), "peeked", "work")
 }
 
 // offlineTransport answers every outbound request 404 without touching the network.

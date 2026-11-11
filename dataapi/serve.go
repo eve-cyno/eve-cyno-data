@@ -161,8 +161,26 @@ func (a *API) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}()
 	if gate := a.gateFor(r, pattern); gate != nil {
 		// The class is needed only to choose between two pools; a peeked body is restored.
-		upstream := gate.split() && gate.classify(a, r, pattern)
-		release, pool, ok := gate.tryAcquire(upstream)
+		// With both pools full the class only names the pool of the busy answer, so a body is
+		// never read for it (peekDenied); a request whose class needs the body is named "both".
+		var release func()
+		pool, ok := "", false
+		if gate.bothFull() {
+			var denied bool
+			cr := r.WithContext(context.WithValue(r.Context(), peekDeniedKey{}, &denied))
+			class := gate.classify(a, cr, pattern)
+			switch {
+			case denied:
+				pool = poolBoth
+			case class:
+				pool = poolUpstream
+			default:
+				pool = poolWork
+			}
+		} else {
+			upstream := gate.split() && gate.classify(a, r, pattern)
+			release, pool, ok = gate.tryAcquire(upstream)
+		}
 		if !ok {
 			// A caller the chain below would refuse gets that 429, not 503 busy: the checks
 			// record nothing, so the refusal still charges nothing.

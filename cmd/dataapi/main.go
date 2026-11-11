@@ -101,7 +101,7 @@
 //	                          Janice. They take these slots instead of DATAAPI_MAX_INFLIGHT ones,
 //	                          so calls hung on a slow upstream cannot starve the SDE calls, and the
 //	                          reverse. No effect without DATAAPI_MAX_INFLIGHT
-//	DATAAPI_ADMIN_TOKEN      bearer token of the admin API that issues, revokes and audits
+//	DATAAPI_ADMIN_TOKEN       bearer token of the admin API that issues, revokes and audits
 //	                          keys. Unset: no admin listener. Never logged
 //	DATAAPI_ADMIN_ADDR        admin listen address (default 127.0.0.1:8093; the container
 //	                          setup sets :8093 so the internal network reaches it); served only
