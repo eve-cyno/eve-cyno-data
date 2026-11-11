@@ -194,6 +194,15 @@ type CapStats struct {
 	Stable         bool
 	StablePct      float64
 	SecondsToEmpty float64
+	// DeltaGJps is the game's capacitor delta: peak recharge (2.5 * Capacity / RechargeSec)
+	// minus the use of the active modules plus the average injection of a loaded capacitor
+	// booster (charges * bonus / (charges * cycle + reload)), in GJ/s. Negative when the
+	// capacitor drains. Not the verdict: Stable comes from a discrete run, so a small positive
+	// delta can still run dry. For a fit with charge-fed ancillary reps (FitStats.Unmodelled) the use
+	// is that of the repairers with no charge loaded, so the delta is not meaningful there.
+	DeltaGJps float64
+	// DeltaPct is DeltaGJps as a percentage of the peak recharge (100 * DeltaGJps / peak).
+	DeltaPct float64
 }
 
 // NavStats holds navigation-related attributes.

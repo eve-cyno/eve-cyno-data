@@ -126,13 +126,13 @@
      "value": 0.0,
      "tol": "exact",
      "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
-     "formula": "use 10.666667 GJ/s (sum need/cycle), injection 0 GJ/s, peak 2.5*250/125 = 5 GJ/s; stable iff peak + injection >= use"
+     "formula": "use 10.666667 GJ/s (sum need/cycle), injection 0 GJ/s, peak 2.5*250/125 = 5 GJ/s; stable iff peak + injection >= use and the discrete run with unlimited charges survives 20,000 events"
     },
     "cap_seconds_to_empty": {
      "value": 30.0,
      "tol": "rel1e-6",
      "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
-     "formula": "discrete activations from t = 0 (stop at the first unpayable one), recharge C' = Cmax (1 + (sqrt(C/Cmax) - 1) exp(-5 dt/T))^2; the continuous closed form is an upper bound; net drain 10.666667 GJ/s"
+     "formula": "discrete activations from t = 0 (stop at the first unpayable one), recharge C' = Cmax (1 + (sqrt(C/Cmax) - 1) exp(-5 dt/T))^2; booster injects only its loaded charges; costs before injection at one instant; net drain 10.666667 GJ/s"
     },
     "speed": {
      "value": 733.8488576,
@@ -266,13 +266,13 @@
      "value": 0.0,
      "tol": "exact",
      "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
-     "formula": "use 11.871242 GJ/s (sum need/cycle), injection 0 GJ/s, peak 2.5*300/118.75 = 6.3157895 GJ/s; stable iff peak + injection >= use"
+     "formula": "use 11.871242 GJ/s (sum need/cycle), injection 0 GJ/s, peak 2.5*300/118.75 = 6.3157895 GJ/s; stable iff peak + injection >= use and the discrete run with unlimited charges survives 20,000 events"
     },
     "cap_seconds_to_empty": {
      "value": 36.0,
      "tol": "rel1e-6",
      "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
-     "formula": "discrete activations from t = 0 (stop at the first unpayable one), recharge C' = Cmax (1 + (sqrt(C/Cmax) - 1) exp(-5 dt/T))^2; the continuous closed form is an upper bound; net drain 11.871242 GJ/s"
+     "formula": "discrete activations from t = 0 (stop at the first unpayable one), recharge C' = Cmax (1 + (sqrt(C/Cmax) - 1) exp(-5 dt/T))^2; booster injects only its loaded charges; costs before injection at one instant; net drain 11.871242 GJ/s"
     },
     "speed": {
      "value": 949.0950181,
@@ -406,13 +406,13 @@
      "value": 0.0,
      "tol": "exact",
      "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
-     "formula": "use 11.54183 GJ/s (sum need/cycle), injection 0 GJ/s, peak 2.5*300/106.25 = 7.0588235 GJ/s; stable iff peak + injection >= use"
+     "formula": "use 11.54183 GJ/s (sum need/cycle), injection 0 GJ/s, peak 2.5*300/106.25 = 7.0588235 GJ/s; stable iff peak + injection >= use and the discrete run with unlimited charges survives 20,000 events"
     },
     "cap_seconds_to_empty": {
      "value": 45.0,
      "tol": "rel1e-6",
      "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
-     "formula": "discrete activations from t = 0 (stop at the first unpayable one), recharge C' = Cmax (1 + (sqrt(C/Cmax) - 1) exp(-5 dt/T))^2; the continuous closed form is an upper bound; net drain 11.54183 GJ/s"
+     "formula": "discrete activations from t = 0 (stop at the first unpayable one), recharge C' = Cmax (1 + (sqrt(C/Cmax) - 1) exp(-5 dt/T))^2; booster injects only its loaded charges; costs before injection at one instant; net drain 11.54183 GJ/s"
     },
     "speed": {
      "value": 997.4787042,
@@ -546,13 +546,13 @@
      "value": 0.0,
      "tol": "exact",
      "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
-     "formula": "use 12.135948 GJ/s (sum need/cycle), injection 0 GJ/s, peak 2.5*300/106.25 = 7.0588235 GJ/s; stable iff peak + injection >= use"
+     "formula": "use 12.135948 GJ/s (sum need/cycle), injection 0 GJ/s, peak 2.5*300/106.25 = 7.0588235 GJ/s; stable iff peak + injection >= use and the discrete run with unlimited charges survives 20,000 events"
     },
     "cap_seconds_to_empty": {
      "value": 40.5,
      "tol": "rel1e-6",
      "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
-     "formula": "discrete activations from t = 0 (stop at the first unpayable one), recharge C' = Cmax (1 + (sqrt(C/Cmax) - 1) exp(-5 dt/T))^2; the continuous closed form is an upper bound; net drain 12.135948 GJ/s"
+     "formula": "discrete activations from t = 0 (stop at the first unpayable one), recharge C' = Cmax (1 + (sqrt(C/Cmax) - 1) exp(-5 dt/T))^2; booster injects only its loaded charges; costs before injection at one instant; net drain 12.135948 GJ/s"
     },
     "speed": {
      "value": 949.1073529,
@@ -686,15 +686,15 @@
      "value": 1.0,
      "tol": "exact",
      "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
-     "formula": "use 25.886275 GJ/s (sum need/cycle), injection 33.333333 GJ/s, peak 2.5*1450/482.5 = 7.5129534 GJ/s; stable iff peak + injection >= use",
-     "estimated": "cap booster charge count and reload (10 s) not modelled: injection taken as continuous charge/cycle"
+     "formula": "use 25.886275 GJ/s (sum need/cycle), injection 26.086957 GJ/s, peak 2.5*1450/482.5 = 7.5129534 GJ/s; stable iff peak + injection >= use and the discrete run with unlimited charges survives 20,000 events",
+     "estimated": "cap booster: load size = floor(module capacity / charge volume), reload attr 1795; the cargo is not modelled (verdict with unlimited charges, time to empty with the loaded charges only)"
     },
     "cap_stable_pct": {
      "value": 100.0,
      "tol": "rel1e-6",
      "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
-     "formula": "net drain -7.4470588; k = net/peak = 0; pct = 100*((1+sqrt(1-k))/2)^2",
-     "estimated": "cap booster charge count and reload (10 s) not modelled: injection taken as continuous charge/cycle"
+     "formula": "net drain -0.20068201; k = net/peak = 0; pct = 100*((1+sqrt(1-k))/2)^2",
+     "estimated": "cap booster: load size = floor(module capacity / charge volume), reload attr 1795; the cargo is not modelled (verdict with unlimited charges, time to empty with the loaded charges only)"
     },
     "speed": {
      "value": 440.2639752,
@@ -828,15 +828,15 @@
      "value": 1.0,
      "tol": "exact",
      "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
-     "formula": "use 28.654441 GJ/s (sum need/cycle), injection 33.333333 GJ/s, peak 2.5*1450/482.5 = 7.5129534 GJ/s; stable iff peak + injection >= use",
-     "estimated": "cap booster charge count and reload (10 s) not modelled: injection taken as continuous charge/cycle"
+     "formula": "use 28.654441 GJ/s (sum need/cycle), injection 26.086957 GJ/s, peak 2.5*1450/482.5 = 7.5129534 GJ/s; stable iff peak + injection >= use and the discrete run with unlimited charges survives 20,000 events",
+     "estimated": "cap booster: load size = floor(module capacity / charge volume), reload attr 1795; the cargo is not modelled (verdict with unlimited charges, time to empty with the loaded charges only)"
     },
     "cap_stable_pct": {
-     "value": 100.0,
+     "value": 82.02305696,
      "tol": "rel1e-6",
      "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
-     "formula": "net drain -4.6788927; k = net/peak = 0; pct = 100*((1+sqrt(1-k))/2)^2",
-     "estimated": "cap booster charge count and reload (10 s) not modelled: injection taken as continuous charge/cycle"
+     "formula": "net drain 2.5674841; k = net/peak = 0.34174098; pct = 100*((1+sqrt(1-k))/2)^2",
+     "estimated": "cap booster: load size = floor(module capacity / charge volume), reload attr 1795; the cargo is not modelled (verdict with unlimited charges, time to empty with the loaded charges only)"
     },
     "speed": {
      "value": 440.2639752,
@@ -970,15 +970,15 @@
      "value": 1.0,
      "tol": "exact",
      "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
-     "formula": "use 29.286797 GJ/s (sum need/cycle), injection 33.333333 GJ/s, peak 2.5*1740/410.125 = 10.606522 GJ/s; stable iff peak + injection >= use",
-     "estimated": "cap booster charge count and reload (10 s) not modelled: injection taken as continuous charge/cycle"
+     "formula": "use 29.286797 GJ/s (sum need/cycle), injection 26.086957 GJ/s, peak 2.5*1740/410.125 = 10.606522 GJ/s; stable iff peak + injection >= use and the discrete run with unlimited charges survives 20,000 events",
+     "estimated": "cap booster: load size = floor(module capacity / charge volume), reload attr 1795; the cargo is not modelled (verdict with unlimited charges, time to empty with the loaded charges only)"
     },
     "cap_stable_pct": {
-     "value": 100.0,
+     "value": 84.24043406,
      "tol": "rel1e-6",
      "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
-     "formula": "net drain -4.0465359; k = net/peak = 0; pct = 100*((1+sqrt(1-k))/2)^2",
-     "estimated": "cap booster charge count and reload (10 s) not modelled: injection taken as continuous charge/cycle"
+     "formula": "net drain 3.1998409; k = net/peak = 0.30168615; pct = 100*((1+sqrt(1-k))/2)^2",
+     "estimated": "cap booster: load size = floor(module capacity / charge volume), reload attr 1795; the cargo is not modelled (verdict with unlimited charges, time to empty with the loaded charges only)"
     },
     "speed": {
      "value": 572.4642857,
@@ -1112,7 +1112,7 @@
      "value": 1.0,
      "tol": "exact",
      "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
-     "formula": "use 10.7 GJ/s (sum need/cycle), injection 0 GJ/s, peak 2.5*1575/161.26875 = 24.415766 GJ/s; stable iff peak + injection >= use"
+     "formula": "use 10.7 GJ/s (sum need/cycle), injection 0 GJ/s, peak 2.5*1575/161.26875 = 24.415766 GJ/s; stable iff peak + injection >= use and the discrete run with unlimited charges survives 20,000 events"
     },
     "cap_stable_pct": {
      "value": 76.51924185,
@@ -1252,7 +1252,7 @@
      "value": 1.0,
      "tol": "exact",
      "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
-     "formula": "use 10.7 GJ/s (sum need/cycle), injection 0 GJ/s, peak 2.5*1575/161.26875 = 24.415766 GJ/s; stable iff peak + injection >= use"
+     "formula": "use 10.7 GJ/s (sum need/cycle), injection 0 GJ/s, peak 2.5*1575/161.26875 = 24.415766 GJ/s; stable iff peak + injection >= use and the discrete run with unlimited charges survives 20,000 events"
     },
     "cap_stable_pct": {
      "value": 76.51924185,
@@ -1392,7 +1392,7 @@
      "value": 1.0,
      "tol": "exact",
      "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
-     "formula": "use 0 GJ/s (sum need/cycle), injection 0 GJ/s, peak 2.5*2187.5/134.4 = 40.690104 GJ/s; stable iff peak + injection >= use"
+     "formula": "use 0 GJ/s (sum need/cycle), injection 0 GJ/s, peak 2.5*2187.5/134.4 = 40.690104 GJ/s; stable iff peak + injection >= use and the discrete run with unlimited charges survives 20,000 events"
     },
     "cap_stable_pct": {
      "value": 100.0,
@@ -1532,13 +1532,13 @@
      "value": 0.0,
      "tol": "exact",
      "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
-     "formula": "use 51.025938 GJ/s (sum need/cycle), injection 0 GJ/s, peak 2.5*5760/977.5 = 14.731458 GJ/s; stable iff peak + injection >= use"
+     "formula": "use 51.025938 GJ/s (sum need/cycle), injection 0 GJ/s, peak 2.5*5760/977.5 = 14.731458 GJ/s; stable iff peak + injection >= use and the discrete run with unlimited charges survives 20,000 events"
     },
     "cap_seconds_to_empty": {
      "value": 140.0,
      "tol": "rel1e-6",
      "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
-     "formula": "discrete activations from t = 0 (stop at the first unpayable one), recharge C' = Cmax (1 + (sqrt(C/Cmax) - 1) exp(-5 dt/T))^2; the continuous closed form is an upper bound; net drain 51.025938 GJ/s"
+     "formula": "discrete activations from t = 0 (stop at the first unpayable one), recharge C' = Cmax (1 + (sqrt(C/Cmax) - 1) exp(-5 dt/T))^2; booster injects only its loaded charges; costs before injection at one instant; net drain 51.025938 GJ/s"
     },
     "speed": {
      "value": 1023.454784,
@@ -1672,13 +1672,13 @@
      "value": 0.0,
      "tol": "exact",
      "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
-     "formula": "use 52.259078 GJ/s (sum need/cycle), injection 0 GJ/s, peak 2.5*5760/977.5 = 14.731458 GJ/s; stable iff peak + injection >= use"
+     "formula": "use 52.259078 GJ/s (sum need/cycle), injection 0 GJ/s, peak 2.5*5760/977.5 = 14.731458 GJ/s; stable iff peak + injection >= use and the discrete run with unlimited charges survives 20,000 events"
     },
     "cap_seconds_to_empty": {
      "value": 131.0984444,
      "tol": "rel1e-6",
      "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
-     "formula": "discrete activations from t = 0 (stop at the first unpayable one), recharge C' = Cmax (1 + (sqrt(C/Cmax) - 1) exp(-5 dt/T))^2; the continuous closed form is an upper bound; net drain 52.259078 GJ/s"
+     "formula": "discrete activations from t = 0 (stop at the first unpayable one), recharge C' = Cmax (1 + (sqrt(C/Cmax) - 1) exp(-5 dt/T))^2; booster injects only its loaded charges; costs before injection at one instant; net drain 52.259078 GJ/s"
     },
     "speed": {
      "value": 974.5330976,
@@ -1812,15 +1812,15 @@
      "value": 0.0,
      "tol": "exact",
      "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
-     "formula": "use 53.922215 GJ/s (sum need/cycle), injection 33.333333 GJ/s, peak 2.5*3335/443.7 = 18.79085 GJ/s; stable iff peak + injection >= use",
-     "estimated": "cap booster charge count and reload (10 s) not modelled: injection taken as continuous charge/cycle"
+     "formula": "use 53.922215 GJ/s (sum need/cycle), injection 26.086957 GJ/s, peak 2.5*3335/443.7 = 18.79085 GJ/s; stable iff peak + injection >= use and the discrete run with unlimited charges survives 20,000 events",
+     "estimated": "cap booster: load size = floor(module capacity / charge volume), reload attr 1795; the cargo is not modelled (verdict with unlimited charges, time to empty with the loaded charges only)"
     },
     "cap_seconds_to_empty": {
-     "value": 658.92,
+     "value": 100.0,
      "tol": "rel1e-6",
      "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
-     "formula": "discrete activations from t = 0 (stop at the first unpayable one), recharge C' = Cmax (1 + (sqrt(C/Cmax) - 1) exp(-5 dt/T))^2; the continuous closed form is an upper bound; net drain 20.588881 GJ/s",
-     "estimated": "cap booster charge count and reload (10 s) not modelled: injection taken as continuous charge/cycle"
+     "formula": "discrete activations from t = 0 (stop at the first unpayable one), recharge C' = Cmax (1 + (sqrt(C/Cmax) - 1) exp(-5 dt/T))^2; booster injects only its loaded charges; costs before injection at one instant; net drain 27.835258 GJ/s",
+     "estimated": "cap booster: load size = floor(module capacity / charge volume), reload attr 1795; the cargo is not modelled (verdict with unlimited charges, time to empty with the loaded charges only)"
     },
     "speed": {
      "value": 310.8898305,
@@ -1954,15 +1954,15 @@
      "value": 0.0,
      "tol": "exact",
      "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
-     "formula": "use 54.031103 GJ/s (sum need/cycle), injection 33.333333 GJ/s, peak 2.5*2900/493 = 14.705882 GJ/s; stable iff peak + injection >= use",
-     "estimated": "cap booster charge count and reload (10 s) not modelled: injection taken as continuous charge/cycle"
+     "formula": "use 54.031103 GJ/s (sum need/cycle), injection 26.086957 GJ/s, peak 2.5*2900/493 = 14.705882 GJ/s; stable iff peak + injection >= use and the discrete run with unlimited charges survives 20,000 events",
+     "estimated": "cap booster: load size = floor(module capacity / charge volume), reload attr 1795; the cargo is not modelled (verdict with unlimited charges, time to empty with the loaded charges only)"
     },
     "cap_seconds_to_empty": {
-     "value": 251.43,
+     "value": 86.7,
      "tol": "rel1e-6",
      "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
-     "formula": "discrete activations from t = 0 (stop at the first unpayable one), recharge C' = Cmax (1 + (sqrt(C/Cmax) - 1) exp(-5 dt/T))^2; the continuous closed form is an upper bound; net drain 20.69777 GJ/s",
-     "estimated": "cap booster charge count and reload (10 s) not modelled: injection taken as continuous charge/cycle"
+     "formula": "discrete activations from t = 0 (stop at the first unpayable one), recharge C' = Cmax (1 + (sqrt(C/Cmax) - 1) exp(-5 dt/T))^2; booster injects only its loaded charges; costs before injection at one instant; net drain 27.944147 GJ/s",
+     "estimated": "cap booster: load size = floor(module capacity / charge volume), reload attr 1795; the cargo is not modelled (verdict with unlimited charges, time to empty with the loaded charges only)"
     },
     "speed": {
      "value": 310.8898305,
@@ -2096,7 +2096,7 @@
      "value": 1.0,
      "tol": "exact",
      "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
-     "formula": "use 14.370588 GJ/s (sum need/cycle), injection 0 GJ/s, peak 2.5*1512/204.27375 = 18.50458 GJ/s; stable iff peak + injection >= use"
+     "formula": "use 14.370588 GJ/s (sum need/cycle), injection 0 GJ/s, peak 2.5*1512/204.27375 = 18.50458 GJ/s; stable iff peak + injection >= use and the discrete run with unlimited charges survives 20,000 events"
     },
     "cap_stable_pct": {
      "value": 54.21789415,
@@ -2236,13 +2236,13 @@
      "value": 0.0,
      "tol": "exact",
      "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
-     "formula": "use 54.498878 GJ/s (sum need/cycle), injection 0 GJ/s, peak 2.5*5760/1092.5 = 13.180778 GJ/s; stable iff peak + injection >= use"
+     "formula": "use 54.498878 GJ/s (sum need/cycle), injection 0 GJ/s, peak 2.5*5760/1092.5 = 13.180778 GJ/s; stable iff peak + injection >= use and the discrete run with unlimited charges survives 20,000 events"
     },
     "cap_seconds_to_empty": {
      "value": 120.0,
      "tol": "rel1e-6",
      "source": "EVE University \"Capacitor\" (page read 2026-11-09): dC/dt = 10*Cmax/T*(sqrt(C/Cmax)-C/Cmax), peak 2.5*Cmax/T, equilibrium fraction ((1+sqrt(1-D/peak))/2)^2; SDE attrs 482, 55, 6, 73/51, 67",
-     "formula": "discrete activations from t = 0 (stop at the first unpayable one), recharge C' = Cmax (1 + (sqrt(C/Cmax) - 1) exp(-5 dt/T))^2; the continuous closed form is an upper bound; net drain 54.498878 GJ/s"
+     "formula": "discrete activations from t = 0 (stop at the first unpayable one), recharge C' = Cmax (1 + (sqrt(C/Cmax) - 1) exp(-5 dt/T))^2; booster injects only its loaded charges; costs before injection at one instant; net drain 54.498878 GJ/s"
     },
     "speed": {
      "value": 946.4825318,

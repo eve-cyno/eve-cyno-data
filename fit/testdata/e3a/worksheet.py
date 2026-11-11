@@ -19,6 +19,7 @@ AN = {a: n for a, n in c.execute('select attributeID,attributeName from dgmAttri
 STACKABLE = {a: s for a, s in c.execute('select attributeID,stackable from dgmAttributeTypes')}
 DEFAULT = {a: d for a, d in c.execute('select attributeID,defaultValue from dgmAttributeTypes')}
 VOLUME = {t: v for t, v in c.execute('select typeID,volume from invTypes')}
+CAPACITY = {t: v for t, v in c.execute('select typeID,capacity from invTypes')}
 MASS = {t: v for t, v in c.execute('select typeID,mass from invTypes')}
 _attrs = {}
 def attrs(t):
@@ -221,35 +222,49 @@ PAIRS = [  # (hull ref, profile)
  (3, 'missiler'), (3, 'fitIII'), (4, 'fitIII'),
  (5, 'allIII'), (5, 'alpha'), (6, 'tanker'), (6, 'droner'), (3, 'allI'), (5, 'allI')]
 
-def cap_simulate(C, T, evs):
-    """Discrete model: every module fires at t = 0 and at each cycle start, takes its full cost up front, a booster charge
-    injects right after, recharge between events C' = Cmax*(1+(sqrt(C/Cmax)-1)*exp(-5 dt/T))^2 (EVE University wiki,
-    "Capacitor"); the run ends at the first activation the capacitor cannot pay. evs = [(need, inject, cycle_s)]."""
+def cap_at(ev, j):
+    """Instant of activation j (from 0). A booster with a known load (charges > 0) fires in loads of that many cycles with a reload gap after each."""
+    need, inj, cy, ch, rl = ev
+    if ch > 0: return (j // ch) * (ch * cy + rl) + (j % ch) * cy
+    return j * cy
+
+def cap_simulate(C, T, evs, loaded_only=False, bound=2000000):
+    """Discrete model (M3): every module fires at t = 0 and at each cycle start; at one instant all costs are paid first (item order),
+    then the booster injections are added (capped at the capacity); recharge between events C' = Cmax*(1+(sqrt(C/Cmax)-1)*exp(-5 dt/T))^2
+    (EVE University wiki, "Capacitor"); the run ends at the first activation the capacitor cannot pay. loaded_only: a booster fires only
+    its loaded charges (no refill; the cargo is not modelled). evs = [(need, inject, cycle_s, charges, reload_s)]. Returns None at the bound."""
     n = [0] * len(evs); c = C; t = 0.0
-    for _ in range(2000000):
-        nxt = min(n[i] * evs[i][2] for i in range(len(evs)))
+    def live(i): return not (loaded_only and evs[i][3] > 0 and n[i] >= evs[i][3])
+    for _ in range(bound):
+        cand = [cap_at(evs[i], n[i]) for i in range(len(evs)) if live(i)]
+        if not cand: return None
+        nxt = min(cand)
         if nxt > t:
             r = 1 + (math.sqrt(c / C) - 1) * math.exp(-5 * (nxt - t) / T); c = C * r * r; t = nxt
-        for i, (need, inj, cy) in enumerate(evs):
-            if n[i] * cy == nxt:
-                if c < need: return t
-                c = min(C, c - need + inj); n[i] += 1
+        fired = []
+        for i, ev in enumerate(evs):
+            if live(i) and cap_at(ev, n[i]) == nxt:
+                if c < ev[0]: return t
+                c -= ev[0]; n[i] += 1; fired.append(i)
+        for i in fired:
+            if evs[i][1] > 0: c = min(C, c + evs[i][1])
     return None
 
 def cap_equilibrium(C, T, use, inj, evs):
     peak = 2.5 * C / T
     net = use - inj
-    if net <= 0: return True, 100.0, 0.0
-    if net <= peak:
+    # verdict: the discrete run with unlimited charges (20,000 events), not the sign of the delta
+    stable = peak + inj >= use and cap_simulate(C, T, evs, False, 20000) is None
+    if stable:
+        if net <= 0: return True, 100.0, 0.0
         k = net / peak
         return True, ((1 + math.sqrt(1 - k)) / 2) ** 2 * 100.0, 0.0
-    # unstable (k > 1): the game's discrete simulation. The continuous closed form (substitute s = sqrt(c), dc/dt = a (s - c) - d with
-    # a = 10/T, d = net/C: t = (2/a) atan(1/(2w))/w, w = sqrt(q - 1/4), q = d/a) is the upper bound it stays below.
-    a = 10.0 / T; q = net / C / a; w = math.sqrt(q - 0.25)
-    t_closed = 2.0 / a * math.atan(1.0 / (2.0 * w)) / w
-    t = cap_simulate(C, T, evs)
-    if t is None: return False, 0.0, t_closed
-    assert t <= t_closed + 1e-6, (t, t_closed)
+    # unstable: time to empty from the run with only the loaded charges. The continuous closed form (substitute s = sqrt(c),
+    # dc/dt = a (s - c) - d with a = 10/T, d = net/C: t = (2/a) atan(1/(2w))/w, w = sqrt(q - 1/4), q = d/a) stands in at the bound.
+    t = cap_simulate(C, T, evs, True)
+    if t is None:
+        a = 10.0 / T; q = net / C / a; w = math.sqrt(q - 0.25)
+        return False, 0.0, 2.0 / a * math.atan(1.0 / (2.0 * w)) / w
     return False, 0.0, t
 
 def numbers(f):
@@ -290,16 +305,22 @@ def numbers(f):
     # capacitor
     C = f.val(sh, 482); T = f.val(sh, 55) / 1000.0
     use = inj = 0.0; evs = []
-    # activation order at the same instant: high, mid, low, rig, subsystem slots (the engine's item order); it matters only through a
-    # booster charge that overfills the capacitor
+    # activation order at the same instant: high, mid, low, rig, subsystem slots (the engine's item order); costs first, then injections
     SLOT_RANK = {'high': 0, 'mid': 1, 'low': 2}
     for m in sorted(mods, key=lambda m: SLOT_RANK.get(getattr(m, 'slot', None), 3)):
         need = f.val(m, 6); dur = f.val(m, 73) or f.val(m, 51)
         if dur <= 0: continue
         ev_need = need if (need > 0 and m.state == 'active') else 0.0
-        ev_inj = f.val(m.charge, 67) if (m.charge is not None and f.val(m.charge, 67) > 0) else 0.0
-        use += ev_need / (dur / 1000.0); inj += ev_inj / (dur / 1000.0)
-        if ev_need > 0 or ev_inj > 0: evs.append((ev_need, ev_inj, dur / 1000.0))
+        ev_inj = f.val(m.charge, 67) if (m.charge is not None and f.val(m.charge, 67) > 0 and GROUP[m.tid] == 76) else 0.0
+        ch = 0; rl = 0.0
+        if ev_inj > 0 and CAPACITY.get(m.tid, 0) > 0 and VOLUME.get(m.charge.tid, 0) > 0:
+            ch = int(CAPACITY[m.tid] / VOLUME[m.charge.tid] + 1e-9)  # charges per load: module capacity / charge volume
+            rl = f.val(m, 1795) / 1000.0
+            if ch == 0: ev_inj = 0.0
+            elif rl <= 0: ch = 0
+        use += ev_need / (dur / 1000.0)
+        inj += (ch * ev_inj / (ch * dur / 1000.0 + rl)) if ch > 0 else ev_inj / (dur / 1000.0)
+        if ev_need > 0 or ev_inj > 0: evs.append((ev_need, ev_inj, dur / 1000.0, ch, rl))
     st, pct, tte = cap_equilibrium(C, T, use, inj, evs)
     n.update(cap_capacity=C, cap_recharge_s=T, cap_peak=2.5 * C / T, cap_use=use, cap_inject=inj, cap_stable=st, cap_stable_pct=pct, cap_seconds_to_empty=tte)
     v = f.val(sh, 37)
@@ -401,16 +422,16 @@ def build_case(ref, pid):
     add('ehp', n['ehp'], REL, SRC['ehp'], 'shield %g/mean(%s) + armor %g/mean(%s) + hull %g/mean(%s)' % (
         f.val(sh, 263), ','.join('%.6g' % f.val(sh, i) for i in RES4_SHIELD), f.val(sh, 265), ','.join('%.6g' % f.val(sh, i) for i in RES4_ARMOR), f.val(sh, 9), ','.join('%.6g' % f.val(sh, i) for i in RES4_HULL)))
     boost = ref in (2, 6)
-    est = 'cap booster charge count and reload (10 s) not modelled: injection taken as continuous charge/cycle' if boost else None
+    est = 'cap booster: load size = floor(module capacity / charge volume), reload attr 1795; the cargo is not modelled (verdict with unlimited charges, time to empty with the loaded charges only)' if boost else None
     add('cap_capacity', n['cap_capacity'], REL, SRC['cap'], ex(f, sh, 482))
     add('cap_recharge_s', n['cap_recharge_s'], REL, SRC['cap'], ex(f, sh, 55) + ' (ms)')
-    cf = 'use %.8g GJ/s (sum need/cycle), injection %.8g GJ/s, peak 2.5*%.8g/%.8g = %.8g GJ/s; stable iff peak + injection >= use' % (n['cap_use'], n['cap_inject'], n['cap_capacity'], n['cap_recharge_s'], n['cap_peak'])
+    cf = 'use %.8g GJ/s (sum need/cycle), injection %.8g GJ/s, peak 2.5*%.8g/%.8g = %.8g GJ/s; stable iff peak + injection >= use and the discrete run with unlimited charges survives 20,000 events' % (n['cap_use'], n['cap_inject'], n['cap_capacity'], n['cap_recharge_s'], n['cap_peak'])
     add('cap_stable', n['cap_stable'], EX, SRC['cap'], cf, est)
     net = n['cap_use'] - n['cap_inject']
     if n['cap_stable']:
         add('cap_stable_pct', n['cap_stable_pct'], REL, SRC['cap'], 'net drain %.8g; k = net/peak = %.8g; pct = 100*((1+sqrt(1-k))/2)^2' % (net, net / n['cap_peak'] if net > 0 else 0), est)
     else:
-        add('cap_seconds_to_empty', n['cap_seconds_to_empty'], REL, SRC['cap'], 'discrete activations from t = 0 (stop at the first unpayable one), recharge C\' = Cmax (1 + (sqrt(C/Cmax) - 1) exp(-5 dt/T))^2; the continuous closed form is an upper bound; net drain %.8g GJ/s' % net, est)
+        add('cap_seconds_to_empty', n['cap_seconds_to_empty'], REL, SRC['cap'], 'discrete activations from t = 0 (stop at the first unpayable one), recharge C\' = Cmax (1 + (sqrt(C/Cmax) - 1) exp(-5 dt/T))^2; booster injects only its loaded charges; costs before injection at one instant; net drain %.8g GJ/s' % net, est)
     add('speed', n['speed'], REL, SRC['speed'], 'passive max velocity %.10g x (1 + speedFactor/100 x thrust/mass) for each active propulsion module, mass %.10g; no propulsion module: passive value' % (n['speed_passive'], n['mass_total']))
     return cases, doc
 
@@ -424,7 +445,7 @@ if __name__ == '__main__':
           '- Effects the SDE carries no modifier data for are applied by hand from the skill descriptions: `droneDmgBonus` (drone damage, attr 292 per level for drones requiring the skill), `missile*DmgBonus` (missile damage, same attribute), `selfRof` (rate of fire, attr 293). Propulsion modules (effects 6730/6731): speed x (1 + speedFactor/100 x thrust/mass).',
           '- States: every module active (EFT default). Skills not named in a profile are the profile level; a unusable module is still evaluated.',
           '- Missile damage: sum of the four damage attributes x pilot missileDamageMultiplier (attr 212, raised by Ballistic Control System attr 213, stacking penalised) / launcher cycle.',
-          '- Capacitor: see the formulas in `cases.json` sources. Stable percent is the stable equilibrium root; time to empty is the discrete simulation of the game (activations from t = 0, first unpayable activation ends the run; asserted to stay below the continuous closed form).',
+          '- Capacitor: see the formulas in `cases.json` sources. Stable percent is the stable equilibrium root; a cap booster fires in loads of floor(module capacity / charge volume) charges with its reload gap, and its average injection is charges x bonus / (charges x cycle + reload); the stable verdict is the discrete run with unlimited charges, the time to empty is the run with only the loaded charges (costs before injection at one instant), the first unpayable activation ends the run.',
           '- Hand check of the method (done on paper, not by the script): Rifter allIII, 200mm AutoCannon I cycle = 3750 ms x (1 - 7.5% x Minmatar Frigate) x (1 - 2% x Gunnery) x (1 - 4% x Rapid Firing) x Gyrostabilizer 0.92 (SDE attr 204) x Burst Aerator 0.9 (stack-penalised, second one); see the hand check below.',
           '  Rifter allIII (Minmatar Frigate III, Gunnery V, Rapid Firing III, Surgical Strike III, Small Projectile Turret V): skill factors 0.775 x 0.90 x 0.88 = 0.6138; penalised chain 0.90, 0.91309, 0.95434 (0.9 and 0.9 aerators, 0.92 gyrostabilizer) = 0.78425; cycle 3750 x 0.6138 x 0.78425 = 1805.1 ms. Damage multiplier 2.8875 x 1.25 (SPT V) x 1.09 (SS III) x 1.07 (gyro, alone) = 4.2095. DPS per gun 12 x 4.2095 / 1.8051 = 27.98; three guns 83.95, the figure of the Rifter allIII section.',
           '']

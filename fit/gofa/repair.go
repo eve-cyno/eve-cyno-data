@@ -13,7 +13,7 @@ import "eve-cyno.dev/go/data/fit"
 //     formula cap.go cites (EVE University wiki, "Capacitor").
 //
 // The sustained figure scales the peak repair by how much of the capacitor use the peak
-// recharge (plus cap-booster injection) can supply: sustained = rep x min(1, supply /
+// recharge (plus the cap-booster average injection, reload included) can supply: sustained = rep x min(1, supply /
 // use). It is an estimate: it ignores that a cap-starved fit pulses its repairers and
 // that an ancillary repairer's real draw depends on its charges.
 
@@ -100,7 +100,8 @@ func repairSummary(ship *Item, items []*Item, groupOf func(int) *int) fit.Repair
 	return rs
 }
 
-// sustainedFactor is min(1, (peak recharge + cap-booster injection) / capacitor use). No
+// sustainedFactor is min(1, (peak recharge + cap-booster average injection) / capacitor use); the
+// booster average is charges * bonus / (charges * cycle + reload), see capacitor. No
 // use gives 1. Use with no recharge data (a zero recharge time) gives 0.
 func sustainedFactor(ship *Item, items []*Item) float64 {
 	use, inject := capDraw(items)

@@ -272,6 +272,8 @@ func TestCapacitor_DiscreteStaysBelowClosedForm(t *testing.T) {
 
 // The 27 fits at all V: stable flag, stable level (percent) and time to empty (s). Stable fits stay
 // stable and unstable ones stay unstable against the old engine; only the two figures moved.
+// Cap booster fits (maller-cap-heavy, harbinger-laser) settle at 93.88 % and 90.13 % since the booster average
+// includes its reload (model M3 of the capacitor with a cap booster, TestCapacitor_M3_*); they were 100 %.
 // Time to empty is the discrete simulation since M3 (fit parity); the hawks run dry at t = 0.
 // Stable level check by hand, from the old figure o (= (1-sqrt(1-k))*100): the correct level is
 // ((1+sqrt(1-k))/2)^2 = (1-o/200)^2, e.g. maller-armor o=70.546725 -> (1-0.352734)^2 = 41.8954 %.
@@ -298,8 +300,8 @@ func TestCapacitor_AllV27Table(t *testing.T) {
 		{"maller-armor", true, 41.895376, 0.000000},
 		{"vexor-drone", true, 97.049635, 0.000000},
 		{"firetail-mwd", false, 0.000000, 130.000000},
-		{"maller-cap-heavy", true, 100.000000, 0.000000},
-		{"harbinger-laser", true, 100.000000, 0.000000},
+		{"maller-cap-heavy", true, 93.882080, 0.000000},
+		{"harbinger-laser", true, 90.134182, 0.000000},
 		{"thorax-blaster", false, 0.000000, 267.469879},
 		{"raven-cruise", true, 100.000000, 0.000000},
 		{"tengu-t3", true, 100.000000, 0.000000},
@@ -338,7 +340,7 @@ func TestCapacitor_AllV27Table(t *testing.T) {
 // such a fit was not observed (no source): the 0 is the brief's rule, "stop at the first activation
 // it cannot pay". The old closed form said 2.83 s.
 func TestCapacitor_HawkThreeBoostersUnpayableAtStart(t *testing.T) {
-	evs := []capEvent{{33.75, 0, 6}, {178.2, 0, 3}, {178.2, 0, 3}, {178.2, 0, 3}, {3.75, 0, 5}, {5.5, 0, 7.5}}
+	evs := []capEvent{{need: 33.75, cycleSec: 6}, {need: 178.2, cycleSec: 3}, {need: 178.2, cycleSec: 3}, {need: 178.2, cycleSec: 3}, {need: 3.75, cycleSec: 5}, {need: 5.5, cycleSec: 7.5}}
 	sum := 0.0
 	for _, e := range evs {
 		sum += e.need
@@ -448,4 +450,88 @@ func TestCapEvents_OnlyCapBoosterModulesInject(t *testing.T) {
 	evs := capEvents([]*Item{booster, charge})
 	require.Len(t, evs, 1)
 	require.InDelta(t, 150.0, evs[0].inject, 1e-9)
+}
+
+// Model M3 (capacitor with a cap booster), checked against the owner's game screenshots at all V.
+// A Medium Capacitor Booster II holds floor(40 m3 / 12 m3) = 3 Navy Cap Booster 400, cycle 7.65 s,
+// reload 10 s: average injection 1200 / (3 * 7.65 + 10) = 26.087 GJ/s. The game shows a delta
+// (peak recharge - use + injection) of +13.8 GJ/s (110.2 %) on the Vexor.
+func TestCapacitor_M3_Vexor(t *testing.T) {
+	s := openRealSDE(t)
+	defer s.Close()
+	c := statsOf(t, New(s), parityFit(t, s, 2), fit.StatsOpts{}).Capacitor
+	require.True(t, c.Stable)
+	require.InDelta(t, 100.0, c.StablePct, 1e-9)
+	require.InDelta(t, 0.0, c.SecondsToEmpty, 1e-9)
+	require.InDelta(t, 13.7935, c.DeltaGJps, 5e-5)
+	require.InDelta(t, 110.158, c.DeltaPct, 5e-4)
+}
+
+// Myrmidon: the delta is +0.18 % but the run empties (the game says "Depletes"): the verdict is the
+// discrete run, not the sign of the delta. The time to empty counts only the 3 loaded charges and
+// is 17 cycles of 7.65 s.
+func TestCapacitor_M3_Myrmidon(t *testing.T) {
+	s := openRealSDE(t)
+	defer s.Close()
+	c := statsOf(t, New(s), parityFit(t, s, 6), fit.StatsOpts{}).Capacitor
+	require.False(t, c.Stable)
+	require.InDelta(t, 0.0, c.StablePct, 1e-9)
+	require.InDelta(t, 130.05, c.SecondsToEmpty, 1e-6)
+	require.InDelta(t, 0.0445, c.DeltaGJps, 5e-4)
+	require.InDelta(t, 0.181, c.DeltaPct, 5e-3)
+	require.Greater(t, c.DeltaGJps, 0.0, "the delta is positive although the fit is unstable")
+}
+
+// Vexor with the booster module empty (no charge): no injection, the capacitor empties at 107.10 s,
+// delta -12.29 GJ/s (-98.2 %).
+func TestCapacitor_M3_VexorEmptyBooster(t *testing.T) {
+	s := openRealSDE(t)
+	defer s.Close()
+	f := parityFitWith(t, s, 2, "Medium Capacitor Booster II, Navy Cap Booster 400", "Medium Capacitor Booster II")
+	c := statsOf(t, New(s), f, fit.StatsOpts{}).Capacitor
+	require.False(t, c.Stable)
+	require.InDelta(t, 107.10, c.SecondsToEmpty, 1e-6)
+	require.InDelta(t, -12.29, c.DeltaGJps, 5e-3)
+	require.InDelta(t, -98.2, c.DeltaPct, 5e-2)
+}
+
+// Unit pins of the load model on a synthetic booster (no SDE).
+func TestCapEvents_BoosterLoadAverage(t *testing.T) {
+	charge := &Item{TypeID: 1, Kind: KindCharge, Attrs: map[int]float64{attrCapacitorBonus: 400, attrCapChargeVolume: 12}}
+	booster := &Item{TypeID: 3, Kind: KindModule, CapBooster: true, Attrs: map[int]float64{
+		attrModuleDuration: 12_000, attrCapModuleCapacity: 40, attrCapReloadMs: 10_000}}
+	evs := capEvents([]*Item{booster, charge})
+	require.Len(t, evs, 1)
+	require.Equal(t, 3, evs[0].charges)
+	require.InDelta(t, 1200.0/(3*12+10), evs[0].injectPerSec(), 1e-9)
+	_, inj := capDraw([]*Item{booster, charge})
+	require.InDelta(t, 26.0869565, inj, 1e-6)
+	// Activation instants: 0, 12, 24, then the reload gap after the third: 3 * 12 + 10 = 46.
+	require.InDelta(t, 24.0, evs[0].at(2), 1e-9)
+	require.InDelta(t, 46.0, evs[0].at(3), 1e-9)
+	// A charge that does not fit the module injects nothing.
+	big := &Item{TypeID: 1, Kind: KindCharge, Attrs: map[int]float64{attrCapacitorBonus: 400, attrCapChargeVolume: 50}}
+	require.Empty(t, capEvents([]*Item{booster, big}))
+}
+
+// With only the loaded charges the time to empty is shorter than with unlimited charges.
+func TestCapSimulate_LoadedChargesOnly(t *testing.T) {
+	evs := []capEvent{{need: 10, cycleSec: 1}, {inject: 25, cycleSec: 5, charges: 2, reloadSec: 5}}
+	// Unlimited: 25 GJ per 15 s load, 10 GJ/s use: still drains, but later than with two charges only.
+	unl, ok1 := capSimulate(300, 1e12, evs)
+	one, ok2 := capSimulate(300, 1e12, capLoadedOnly(evs))
+	require.True(t, ok1)
+	require.True(t, ok2)
+	require.Less(t, one, unl)
+}
+
+// At one instant the costs are paid before the injection (M3). Capacitor 100, a cost of 80 and an
+// injection of 60 every second, no recharge. Costs first: 100 -> 20 -> 80 at t = 0; 80 -> 0 -> 60 at
+// t = 1; at t = 2 the cost 80 finds 60 and fails. Injection first would give min(100, 160) - 80 = 20
+// at t = 0 and fail at t = 1.
+func TestCapSimulate_CostsBeforeInjectionAtOneInstant(t *testing.T) {
+	evs := []capEvent{{need: 80, cycleSec: 1}, {inject: 60, cycleSec: 1}}
+	got, ok := capSimulate(100, 1e12, evs)
+	require.True(t, ok)
+	require.InDelta(t, 2, got, 1e-9)
 }
