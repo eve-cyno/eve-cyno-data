@@ -89,8 +89,10 @@ func buildImplants(s SDE, ids []int) ([]*Item, implantNotes, error) {
 	return items, notes, nil
 }
 
-// isModelledImplant reports whether the engine can apply the type as an implant.
-func isModelledImplant(s SDE, id int, attrs map[int]float64) bool {
+// isImplantType reports whether the type is a known implant: it has dogma data, is in category
+// 20 and is no booster or DNA mutator. Whether the engine can apply its modifiers is
+// isModelledImplant.
+func isImplantType(s SDE, id int, attrs map[int]float64) bool {
 	if len(attrs) == 0 {
 		return false
 	}
@@ -99,6 +101,14 @@ func isModelledImplant(s SDE, id int, attrs map[int]float64) bool {
 		return false
 	}
 	if g := s.GetGroupID(id); g != nil && (*g == groupBooster || *g == groupDNAMutator) {
+		return false
+	}
+	return true
+}
+
+// isModelledImplant reports whether the engine can apply the type as an implant.
+func isModelledImplant(s SDE, id int, attrs map[int]float64) bool {
+	if !isImplantType(s, id, attrs) {
 		return false
 	}
 	for _, eff := range s.GetTypeEffectIDs(id) {

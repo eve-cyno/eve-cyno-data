@@ -484,31 +484,48 @@ func TestImplants_SetBonusLowGradeNavy(t *testing.T) {
 	base := ship(fit.StatsOpts{})
 	require.NotZero(t, base)
 	// The low-grade members carry scanRadarStrengthModifier (1565 = 1.0 on Alpha..Epsilon, none on
-	// the Omega), applied by effect 4451 as a ModAdd on the ship's 208. Effect 4460 is a
-	// PreAssign (operation 0) of the set key 1569 onto every member's 1565, the Omega included.
-	// The Omega's key (1.4) is the largest, so each of the six members counts K = 1.4. Hand
-	// formula: 208 = base + members x K, here + 6 x 1.4. (The resolved Omega item reads 1565 = 0
-	// because the attribute is absent from its map, yet the ship total includes its K: so only
-	// the five members that carry the attribute are checked item by item.)
-	k := 0.0
+	// the Omega), applied by effect 4451 as a ModAdd on the ship's 208. Effect 4460 is a PreMul
+	// (operation 0) of the set key 1569 onto the 1565 of every member that carries it. The
+	// Omega carries no 1565, so the five others each give b x P (P = the product of the six
+	// keys, 1.4: only the Omega's differs from 1.0): the sum is over the five carriers, not over
+	// the six members. The pilot's own skill (Radar Sensor Compensation, effect 5183)
+	// then scales the ship's 208 by a factor f; f is read off the fit without implants
+	// (resolved over raw), not hard-coded.
+	p := 1.0
 	for _, id := range ids {
-		k = max(k, s.GetDogma(id)[set.Key])
+		p *= s.GetDogma(id)[set.Key]
 	}
-	require.Greater(t, k, 1.0)
+	require.InDelta(t, 1.4, p, 1e-12)
 	_, items, _, _, err := eng.resolveForStats(context.Background(), f, fit.StatsOpts{Implants: ids})
 	require.NoError(t, err)
-	n := 0
+	n, sum := 0, 0.0
 	for _, it := range items {
 		if it.Kind != KindImplant {
 			continue
 		}
 		n++
-		if _, has := s.GetDogma(it.TypeID)[1565]; has {
-			require.InDelta(t, k, it.Attrs[1565], 1e-9, "%d", it.TypeID)
+		if b, has := s.GetDogma(it.TypeID)[1565]; has {
+			require.InDelta(t, b*p, it.Attrs[1565], 1e-9, "%d", it.TypeID)
+			sum += it.Attrs[1565]
+		} else {
+			require.NotContains(t, it.Attrs, 1565, "%d", it.TypeID)
 		}
 	}
 	require.Equal(t, len(ids), n)
-	want := base + float64(n)*k
+	carriers := 0
+	for _, id := range ids {
+		if _, has := s.GetDogma(id)[1565]; has {
+			carriers++
+		}
+	}
+	require.Equal(t, 5, carriers, "the Omega holds no 1565")
+	require.Less(t, carriers, len(ids), "so the sum is not over the six members")
+	require.InDelta(t, 7.0, sum, 1e-9, "five carriers, 1.0 x 1.4 each")
+	raw := s.GetDogma(f.HullID)[208]
+	require.NotZero(t, raw)
+	factor := base / raw // the pilot's own factor on 208, from the fit without implants
+	require.Greater(t, factor, 1.0)
+	want := (raw + sum) * factor
 	require.InDelta(t, want, ship(fit.StatsOpts{Implants: ids}), 1e-9)
 }
 
