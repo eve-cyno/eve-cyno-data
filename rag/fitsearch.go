@@ -165,7 +165,8 @@ func buildFitSearchConditions(q FitSearchQuery) (essential []QdrantCondition, fa
 
 // abyssTag is the fit_tags value every abyssal fit carries (abysstracker,
 // caldarijoans and gustavmannfred points are 100 % abyss-tagged; workbench
-// points never are — measured on the prod mirror, 2026-10-06).
+// points carry it only when the fit name says abyss — the ingest derives the tag
+// since 2026-11-11, before that workbench points never had it).
 const abyssTag = corpus.TagAbyss
 
 // abyssSources are the fit sources that only ever hold abyssal fits. Asking for
@@ -190,9 +191,11 @@ func wantsAbyss(q FitSearchQuery) bool {
 
 // excludesAbyss reports whether the request must never be answered with an
 // abyss fit: any pvp / hauler / exploration / mining request, and a pve request
-// that names no filament, tier or other abyss intent. 93 % of `pve`-tagged fits
-// are abyss fits (1,437 of 1,544), so without this "Vexor for L3 missions" or
-// "Caracal for C4 ratting" is answered with an abysstracker/caldarijoans fit.
+// that names no filament, tier or other abyss intent. On 2026-10-06 93 % of
+// `pve`-tagged fits were abyss fits (1,437 of 1,544); the workbench non-abyss
+// pve searches added since then dilute that, but abyss fits still dominate some
+// hulls, so without this "Vexor for L3 missions" or "Caracal for C4 ratting"
+// can be answered with an abysstracker/caldarijoans fit.
 // Abyss intent always wins, whatever the activity.
 func excludesAbyss(q FitSearchQuery) bool {
 	switch strings.ToLower(strings.TrimSpace(q.Activity)) {
