@@ -319,7 +319,7 @@ func TestChatSchemasKeepTheChatDescription(t *testing.T) {
 // WaitsOnUpstream is the in-flight class of a call (the dataapi gate puts a call that waits on a
 // third party into the route's upstream pool): the live calls SpendsUpstream counts, a Janice
 // appraisal with the caller's own key, and the tools that wait on a third party on every call
-// without spending the live budget (analyze_battle).
+// without spending the live budget (analyze_battle, convert_isk_to_real).
 func TestWaitsOnUpstream(t *testing.T) {
 	lookup := func(name string) catalog.Tool {
 		tl, ok := catalog.Lookup(name)

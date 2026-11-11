@@ -79,7 +79,8 @@ func validRequestID(s string) bool {
 // full route first runs three checks that record nothing (gateRefusal): the per-IP route
 // limiter, the anonymous daily cap and the key's quota. A caller over one of them gets that
 // limit's 429 instead of 503 busy. The upstream limiter is deliberately not pre-checked, so
-// a caller that only it would refuse still gets 503 busy.
+// a caller that only it would refuse still gets 503 busy. On a route with an upstream pool the
+// request is classed first (routeGate, classifierFor), which may peek at and restore its body.
 func (a *API) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	id := r.Header.Get(HeaderRequestID)
 	if !validRequestID(id) {
@@ -159,7 +160,9 @@ func (a *API) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 	if gate := a.gateFor(r, pattern); gate != nil {
-		release, pool, ok := gate.tryAcquire()
+		// The class is needed only to choose between two pools; a peeked body is restored.
+		upstream := gate.split() && gate.classify(a, r, pattern)
+		release, pool, ok := gate.tryAcquire(upstream)
 		if !ok {
 			// A caller the chain below would refuse gets that 429, not 503 busy: the checks
 			// record nothing, so the refusal still charges nothing.
@@ -177,6 +180,9 @@ func (a *API) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		// Registered after the access-log defer, so it runs first: on a normal return, on a
 		// handler panic and on http.ErrAbortHandler alike.
 		defer release()
+		if gate.split() {
+			r = withPool(r, pool)
+		}
 	}
 	if c := CallerFrom(r.Context()); c.Authenticated() && a.quota != nil {
 		if ok, retry := a.quota.Spend(c.ID); !ok {

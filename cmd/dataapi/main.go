@@ -90,7 +90,14 @@
 //	                          its 429 with the real Retry-After instead. The upstream limiter
 //	                          is deliberately not pre-checked, so a caller that only the
 //	                          upstream limiter would refuse still gets 503 busy
-//	DATAAPI_ADMIN_TOKEN       bearer token of the admin API that issues, revokes and audits
+//	DATAAPI_MAX_INFLIGHT_UPSTREAM  a second pool per route for the requests that wait on a third
+//	                          party (integer 0-10000, default 0 = no split): on /v1/mcp and
+//	                          /v1/tool/{name} a call of a live tool (or a live option, a Janice key,
+//	                          a slow upstream tool), a free-text fit search, a fit detail priced by
+//	                          Janice. They take these slots instead of DATAAPI_MAX_INFLIGHT ones,
+//	                          so calls hung on a slow upstream cannot starve the SDE calls, and the
+//	                          reverse. No effect without DATAAPI_MAX_INFLIGHT
+//	DATAAPI_ADMIN_TOKEN      bearer token of the admin API that issues, revokes and audits
 //	                          keys. Unset: no admin listener. Never logged
 //	DATAAPI_ADMIN_ADDR        admin listen address (default 127.0.0.1:8093; the container
 //	                          setup sets :8093 so the internal network reaches it); served only
@@ -204,6 +211,20 @@ func maxInFlight(getenv func(string) string) (int, error) {
 	n, err := strconv.Atoi(v)
 	if err != nil || n < 0 || n > maxInFlightLimit {
 		return 0, fmt.Errorf("DATAAPI_MAX_INFLIGHT: want an integer 0-%d, got %q", maxInFlightLimit, v)
+	}
+	return n, nil
+}
+
+// maxInFlightUpstream resolves DATAAPI_MAX_INFLIGHT_UPSTREAM: an integer 0..maxInFlightLimit (0 =
+// no upstream pool, the default).
+func maxInFlightUpstream(getenv func(string) string) (int, error) {
+	v := strings.TrimSpace(getenv("DATAAPI_MAX_INFLIGHT_UPSTREAM"))
+	if v == "" {
+		return 0, nil
+	}
+	n, err := strconv.Atoi(v)
+	if err != nil || n < 0 || n > maxInFlightLimit {
+		return 0, fmt.Errorf("DATAAPI_MAX_INFLIGHT_UPSTREAM: want an integer 0-%d, got %q", maxInFlightLimit, v)
 	}
 	return n, nil
 }
@@ -378,6 +399,9 @@ type exposure struct {
 	anonDailyCap int
 	// maxInFlight is DATAAPI_MAX_INFLIGHT: requests each capped route runs at once (0 = no cap).
 	maxInFlight int
+	// maxInFlightUpstream is DATAAPI_MAX_INFLIGHT_UPSTREAM: the upstream pool of the routes that
+	// can wait on a third party (0 = no split).
+	maxInFlightUpstream int
 	// sdeBuild yields the SDE build id /v1/health reports at request time ("" when unknown).
 	sdeBuild func() string
 }
@@ -430,18 +454,19 @@ func newHandler(d *bootstrap.Deps, ex exposure, log *slog.Logger) (http.Handler,
 	// both does not double a caller's allowance.
 	upstream := dataapi.NewUpstreamLimiter(limits.UpstreamTool, nil)
 	cfg := dataapi.Config{
-		Deps:             dataapi.NewDeps(d.Tools, d.Retriever),
-		Docs:             true,
-		Auth:             auth,
-		AnonDailyCap:     ex.anonDailyCap,
-		PublicURL:        ex.publicURL,
-		Limits:           &limits,
-		Upstream:         upstream,
-		LogSalt:          ex.logSalt,
-		Logger:           log,
-		KeyedLimitFactor: ex.keyedFactor,
-		MaxInFlight:      ex.maxInFlight,
-		SDEBuildFunc:     ex.sdeBuild,
+		Deps:                dataapi.NewDeps(d.Tools, d.Retriever),
+		Docs:                true,
+		Auth:                auth,
+		AnonDailyCap:        ex.anonDailyCap,
+		PublicURL:           ex.publicURL,
+		Limits:              &limits,
+		Upstream:            upstream,
+		LogSalt:             ex.logSalt,
+		Logger:              log,
+		KeyedLimitFactor:    ex.keyedFactor,
+		MaxInFlight:         ex.maxInFlight,
+		MaxInFlightUpstream: ex.maxInFlightUpstream,
+		SDEBuildFunc:        ex.sdeBuild,
 	}
 	if ex.store != nil {
 		cfg.SelfServe = true
@@ -461,7 +486,7 @@ func newHandler(d *bootstrap.Deps, ex exposure, log *slog.Logger) (http.Handler,
 		opts := mcpserver.HTTPOptions{
 			DisableLocalhostProtection: true,
 			Keyed:                      dataapi.KeyedTier,
-			Upstream:                   upstream.Allow,
+			Upstream:                   dataapi.UpstreamHook(upstream),
 			Logger:                     log,
 		}
 		if auth != nil {
@@ -548,6 +573,10 @@ func run(log *slog.Logger) error {
 	if err != nil {
 		return err
 	}
+	maxIFUp, err := maxInFlightUpstream(os.Getenv)
+	if err != nil {
+		return err
+	}
 	var store *keys.Store
 	if path := os.Getenv("DATAAPI_KEYS_DB"); path != "" {
 		store, err = keys.Open(path, keys.Options{DailyCap: dayCap, Logger: log})
@@ -565,7 +594,7 @@ func run(log *slog.Logger) error {
 	ex := exposure{
 		toolAPI: exposeToolAPI(os.Getenv), mcp: exposeMCP(os.Getenv), auth: auth, publicURL: pub,
 		upstream: &upstream, logSalt: os.Getenv("DATAAPI_LOG_SALT"),
-		store: store, keyedFactor: factor, dailyCap: dayCap, anonDailyCap: anonCap, maxInFlight: maxIF, sdeBuild: followSDEBuild(cfg.SDEPath, deps.Tools.SDE, log),
+		store: store, keyedFactor: factor, dailyCap: dayCap, anonDailyCap: anonCap, maxInFlight: maxIF, maxInFlightUpstream: maxIFUp, sdeBuild: followSDEBuild(cfg.SDEPath, deps.Tools.SDE, log),
 	}
 	log.Info("ESI pass-through tools: shared Expires cache, fail-fast budget guard",
 		"upstream_tool_limit_per_min", upstream.Max, "upstream_tool_limit_per_min_keyed", upstream.KeyedMax, "esi_guard_percent", guard)

@@ -284,6 +284,29 @@ func TestMaxInFlight(t *testing.T) {
 	}
 }
 
+func TestMaxInFlightUpstream(t *testing.T) {
+	n, err := maxInFlightUpstream(env(nil))
+	require.NoError(t, err)
+	require.Equal(t, 0, n, "unset: no split")
+	for v, want := range map[string]int{"0": 0, "4": 4, " 6 ": 6, "10000": 10000} {
+		n, err = maxInFlightUpstream(env(map[string]string{"DATAAPI_MAX_INFLIGHT_UPSTREAM": v}))
+		require.NoError(t, err, v)
+		require.Equal(t, want, n, v)
+	}
+	for _, bad := range []string{"-1", "10001", "x", "1.5"} {
+		_, err = maxInFlightUpstream(env(map[string]string{"DATAAPI_MAX_INFLIGHT_UPSTREAM": bad}))
+		require.ErrorContains(t, err, "DATAAPI_MAX_INFLIGHT_UPSTREAM", bad)
+		require.ErrorContains(t, err, fmt.Sprintf("%q", bad), "the error names the bad value")
+	}
+	// The work cap's variable is a prefix of this one: neither reads the other.
+	n, err = maxInFlight(env(map[string]string{"DATAAPI_MAX_INFLIGHT_UPSTREAM": "4"}))
+	require.NoError(t, err)
+	require.Equal(t, 0, n)
+	n, err = maxInFlightUpstream(env(map[string]string{"DATAAPI_MAX_INFLIGHT": "8"}))
+	require.NoError(t, err)
+	require.Equal(t, 0, n)
+}
+
 func TestAnonDailyCap(t *testing.T) {
 	c, err := anonDailyCap(env(nil))
 	require.NoError(t, err)

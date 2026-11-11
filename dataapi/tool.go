@@ -152,6 +152,9 @@ func (a *API) tool(w http.ResponseWriter, r *http.Request) {
 		// charged after the gate and the argument check, so a refused call costs nothing.
 		// A tool whose live options are off (plan_jump_route or get_production_chain without them) answers from the SDE and costs nothing here.
 		if !known || t.SpendsUpstream(args) {
+			if known {
+				noteLiveCall(r, name, "rest") // the in-flight backstop: logs a live call in a work slot
+			}
 			if ok, retry := a.upstream.Allow(r, name); !ok {
 				use.Outcome = toolusage.RateLimited
 				w.Header().Set("Retry-After", strconv.Itoa(retrySeconds(retry)))

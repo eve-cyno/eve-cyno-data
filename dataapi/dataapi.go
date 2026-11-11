@@ -254,6 +254,13 @@ type Config struct {
 	// no cap.
 	MaxInFlight int
 
+	// MaxInFlightUpstream gives the four routes that can wait on a third party (MCP, the tool
+	// route, fit search, fit detail) a second pool of this many slots for the requests that do
+	// (see routeGate and the classifiers in inflight.go), so calls hung on a slow upstream cannot
+	// take the slots of the SDE work, and the reverse. Zero or below means no split: every
+	// request takes a MaxInFlight slot. It has no effect when MaxInFlight is off.
+	MaxInFlightUpstream int
+
 	// AnonDailyCap is the number of requests a client without an API key may make per UTC
 	// day (counted per rate-limit key, see KeyResolver, in memory only); over it the API
 	// answers 429 daily_quota_exceeded until 00:00 UTC. The documentation routes, the
@@ -350,6 +357,9 @@ type API struct {
 	auth        Authenticator
 	keyedFactor int
 	maxInFlight int
+	// maxInFlightUpstream is the upstream pool of the routes that can wait on a third party
+	// (0: no split).
+	maxInFlightUpstream int
 	// gates maps the mux pattern of every capped route to its in-flight gate (empty when
 	// MaxInFlight is off).
 	gates       map[string]*routeGate
@@ -413,25 +423,26 @@ func New(cfg Config) (*API, error) {
 		limits = limits.WithoutKeys()
 	}
 	a := &API{
-		deps:        cfg.Deps,
-		prefix:      prefix,
-		keys:        cfg.Keys,
-		auth:        cfg.Auth,
-		keyedFactor: cfg.KeyedLimitFactor,
-		maxInFlight: cfg.MaxInFlight,
-		quota:       cfg.Quota,
-		usage:       cfg.Usage,
-		sdeBuild:    sdeBuildSource(cfg),
-		toolMode:    cfg.ToolAPI,
-		toolFormat:  cfg.ToolFormat,
-		toolTimeout: cfg.ToolTimeout,
-		mcp:         cfg.MCP,
-		upstream:    cfg.Upstream,
-		hasher:      newCallerHasher(cfg.LogSalt),
-		log:         cfg.Logger,
-		mux:         http.NewServeMux(),
-		trialFree:   map[string]bool{},
-		gates:       map[string]*routeGate{},
+		deps:                cfg.Deps,
+		prefix:              prefix,
+		keys:                cfg.Keys,
+		auth:                cfg.Auth,
+		keyedFactor:         cfg.KeyedLimitFactor,
+		maxInFlight:         cfg.MaxInFlight,
+		maxInFlightUpstream: cfg.MaxInFlightUpstream,
+		quota:               cfg.Quota,
+		usage:               cfg.Usage,
+		sdeBuild:            sdeBuildSource(cfg),
+		toolMode:            cfg.ToolAPI,
+		toolFormat:          cfg.ToolFormat,
+		toolTimeout:         cfg.ToolTimeout,
+		mcp:                 cfg.MCP,
+		upstream:            cfg.Upstream,
+		hasher:              newCallerHasher(cfg.LogSalt),
+		log:                 cfg.Logger,
+		mux:                 http.NewServeMux(),
+		trialFree:           map[string]bool{},
+		gates:               map[string]*routeGate{},
 	}
 	if p, ok := cfg.Deps.Retriever.(Pinger); ok && p != nil {
 		a.corpusProbe = newCorpusProbe(p, cfg.CorpusProbeTTL)
@@ -500,13 +511,13 @@ func (a *API) register(rt route) {
 	gate := !rt.trialFree && a.maxInFlight > 0
 	if rt.anyMethod {
 		if gate {
-			a.gates[full] = newRouteGate(a.maxInFlight, true, limit, rt.cache)
+			a.gates[full] = newRouteGate(a.maxInFlight, a.maxInFlightUpstream, true, classifierFor(rt.path), limit, rt.cache)
 		}
 		a.mux.HandleFunc(full, h)
 		return
 	}
 	if gate {
-		a.gates[rt.method+" "+full] = newRouteGate(a.maxInFlight, false, limit, rt.cache)
+		a.gates[rt.method+" "+full] = newRouteGate(a.maxInFlight, a.maxInFlightUpstream, false, classifierFor(rt.path), limit, rt.cache)
 	}
 	a.mux.HandleFunc(rt.method+" "+full, h)
 	a.mux.HandleFunc(full, func(w http.ResponseWriter, r *http.Request) {
