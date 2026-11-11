@@ -277,11 +277,11 @@ func (a *API) toolWaitsOnUpstream(r *http.Request, pattern string) bool {
 }
 
 // fitsSearchWaitsOnUpstream classes a fit search: one with a q the retriever embeds (any
-// non-empty q) waits on the embedder, unless the handler refuses it first (no corpus, a paging
-// parameter, or on a service with keys a non-blank q without a valid key).
+// non-blank q) waits on the embedder, unless the handler refuses it first (no corpus, a paging
+// parameter, or on a service with keys a q without a valid key).
 func (a *API) fitsSearchWaitsOnUpstream(r *http.Request, _ string) bool {
 	qp := r.URL.Query()
-	q := qp.Get("q")
+	q := strings.TrimSpace(qp.Get("q"))
 	if q == "" || a.deps.Retriever == nil {
 		return false
 	}
@@ -290,7 +290,7 @@ func (a *API) fitsSearchWaitsOnUpstream(r *http.Request, _ string) bool {
 			return false
 		}
 	}
-	if a.surface.Auth && strings.TrimSpace(q) != "" &&
+	if a.surface.Auth &&
 		(authErrorFrom(r.Context()) != nil || !CallerFrom(r.Context()).Authenticated()) {
 		return false
 	}

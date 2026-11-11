@@ -19,7 +19,10 @@ var pagingParams = []string{"offset", "page", "cursor", "skip", "start"}
 func (a *API) fitsSearch(w http.ResponseWriter, r *http.Request) {
 	// Free-text search embeds the query (a paid call), so on a service that issues keys it is
 	// for key holders; the filters scroll the corpus by payload and stay open.
-	if a.surface.Auth && strings.TrimSpace(r.URL.Query().Get("q")) != "" {
+	// q is trimmed once: the gate, the retriever (which embeds any non-empty q) and the in-flight
+	// classifier all see the same value, so a blank q is no q.
+	q := strings.TrimSpace(r.URL.Query().Get("q"))
+	if a.surface.Auth && q != "" {
 		if authErrorFrom(r.Context()) != nil {
 			writeError(w, r, http.StatusUnauthorized, "invalid_api_key", "the API key is not valid")
 			return
@@ -60,7 +63,7 @@ func (a *API) fitsSearch(w http.ResponseWriter, r *http.Request) {
 		CostClass:    qp.Get("cost"),
 		Source:       qp.Get("source"),
 		Clone:        qp.Get("clone"),
-		Q:            qp.Get("q"),
+		Q:            q,
 		Limit:        atoiDefault(qp.Get("limit"), 24),
 	})
 	if err != nil {

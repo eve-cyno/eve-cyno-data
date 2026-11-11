@@ -373,8 +373,49 @@ func (fitSearcher) SearchFits(context.Context, rag.FitSearchQuery) (rag.FitSearc
 	return rag.FitSearchResult{}, nil
 }
 
-// Fit search waits on the embedding exactly when the retriever embeds (a non-empty q, blank or
-// not) and the handler lets the request get that far.
+// embedCounter stands in for the retriever: like rag's runFitSearch it embeds whenever the q it
+// is handed is non-empty.
+type embedCounter struct{ embeds, calls int }
+
+func (e *embedCounter) SearchFits(_ context.Context, q rag.FitSearchQuery) (rag.FitSearchResult, error) {
+	e.calls++
+	if q.Q != "" {
+		e.embeds++
+	}
+	return rag.FitSearchResult{}, nil
+}
+
+// A blank q must not skip the key gate and still reach the embedder: the handler trims q once,
+// so a blank q is no q at all (no key needed, nothing embedded), and the in-flight classifier
+// agrees with the handler for blank, empty and real queries.
+func TestFitSearch_BlankQNeverEmbedsAndClassifierAgrees(t *testing.T) {
+	keys, err := ParseKeyFile(strings.NewReader("k1:" + HashKey("ecd_test_key_one") + "\n"))
+	require.NoError(t, err)
+	for _, c := range []struct {
+		query  string
+		embeds int
+		status int
+	}{
+		{"q=%20", 0, http.StatusOK},
+		{"q=%20%09", 0, http.StatusOK},
+		{"q=", 0, http.StatusOK},
+		{"q=x", 0, http.StatusUnauthorized}, // anonymous: the key gate stops it before the embedder
+	} {
+		ec := &embedCounter{}
+		a, err := New(Config{Deps: NewDeps(&tools.Deps{}, nil), Auth: keys})
+		require.NoError(t, err)
+		a.deps.Retriever = ec
+		rec := httptest.NewRecorder()
+		r := httptest.NewRequest(http.MethodGet, "/v1/fits/search?"+c.query, nil)
+		a.ServeHTTP(rec, r)
+		require.Equal(t, c.status, rec.Code, c.query)
+		require.Equal(t, c.embeds, ec.embeds, "%s: embeds", c.query)
+		wantClass := ec.embeds > 0
+		require.Equal(t, wantClass, a.fitsSearchWaitsOnUpstream(withAuth(a, httptest.NewRequest(http.MethodGet, "/v1/fits/search?"+c.query, nil)), ""), c.query)
+	}
+}
+
+// Fit search waits on the embedding exactly when the retriever embeds (a non-blank q) and the handler lets the request get that far.
 func TestInflight_FitSearchClass(t *testing.T) {
 	const key = "ecd_test_key_one"
 	keys, err := ParseKeyFile(strings.NewReader("k1:" + HashKey(key) + "\n"))
@@ -390,13 +431,13 @@ func TestInflight_FitSearchClass(t *testing.T) {
 		{false, true, "ship=Rifter", "", false},
 		{false, true, "q=", "", false},
 		{false, true, "q=kite", "", true},
-		{false, true, "q=%20", "", true},
+		{false, true, "q=%20", "", false},            // blank: the handler trims it away, nothing is embedded
 		{false, false, "q=kite", "", false},          // 503 unavailable at once
 		{false, true, "q=kite&offset=24", "", false}, // 400 at once
 		{true, true, "q=kite", "", false},            // 401 api_key_required at once
 		{true, true, "q=kite", "ecd_wrong", false},   // 401 invalid_api_key at once
 		{true, true, "q=kite", key, true},
-		{true, true, "q=%20", "", true}, // blank: no key needed, and the retriever still embeds it
+		{true, true, "q=%20", "", false}, // blank: no key needed and nothing embedded
 	} {
 		cfg := Config{Deps: NewDeps(&tools.Deps{}, nil)}
 		if c.retriever {
