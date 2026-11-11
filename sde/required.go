@@ -28,7 +28,7 @@ import (
 //
 // Keep it in step with the CREATE TABLE statements in
 // sde/build/builder.go and with the queries in effects.go, dogma.go, typebasics.go,
-// industry.go, systems.go, jumps.go, typefacts.go, ships.go, modules.go and stationsearch.go.
+// industry.go, systems.go, jumps.go, typefacts.go, ships.go, modules.go, stationsearch.go and attrdisplay.go.
 var RequiredColumns = map[string][]string{
 	"invTypes": {"typeID", "groupID", "typeName", "description", "published", "mass", "volume", "capacity", "portionSize", "marketGroupID", "metaLevel", "techLevel", "basePrice", "packagedVolume"},
 	// The item facts (TypeFacts): group, category, meta group and market group path.
@@ -36,11 +36,13 @@ var RequiredColumns = map[string][]string{
 	"invCategories": {"categoryID", "categoryName"},
 	// The meta tier (generic tables): item facts, module search, the fit detail and the
 	// desktop pack's meta groups. Without it GetItemMetaTier reads every item as "Tech I".
-	"invMetaTypes":      {"typeID", "metaGroupID"},
-	"invMetaGroups":     {"metaGroupID", "metaGroupName"},
-	"invMarketGroups":   {"marketGroupID", "parentGroupID", "marketGroupName"},
-	"dgmEffects":        {"effectID", "effectName", "effectCategory", "modifierInfo"},
-	"dgmAttributeTypes": {"attributeID", "attributeName", "defaultValue", "stackable", "highIsGood"},
+	"invMetaTypes":    {"typeID", "metaGroupID"},
+	"invMetaGroups":   {"metaGroupID", "metaGroupName"},
+	"invMarketGroups": {"marketGroupID", "parentGroupID", "marketGroupName"},
+	"dgmEffects":      {"effectID", "effectName", "effectCategory", "modifierInfo"},
+	// displayName, unitID and published: AttributeDisplays (the desktop pack's implant labels).
+	"dgmAttributeTypes": {"attributeID", "attributeName", "defaultValue", "stackable", "highIsGood", "displayName", "unitID", "published"},
+	"eveUnits":          {"unitID", "displayName"},
 	// The jump planner: light-year distances.
 	"mapSolarSystems": {"solarSystemID", "regionID", "security", "x", "y", "z"},
 	// The production chain: the blueprint that makes a type, and the units one run
