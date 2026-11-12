@@ -164,9 +164,10 @@ type limitRowView struct {
 // (Surface.Ranges); On is false, and the rest empty, where the tier is not on.
 type rangeView struct {
 	On bool
-	// LimitsHTML and RefusalHTML are the two paragraphs both pages print, built once so the
-	// numbers and the wording cannot differ between the access and the MCP page.
-	LimitsHTML, RefusalHTML template.HTML
+	// Limits and Refusal are the two paragraphs both pages print as plain text (the template
+	// escapes them), built once so the numbers and the wording cannot differ between the access
+	// and the MCP page.
+	Limits, Refusal string
 }
 
 type paramRow struct {
