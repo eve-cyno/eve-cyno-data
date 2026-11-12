@@ -390,7 +390,7 @@ section.s { padding: 88px 0 0; }
   :root { --top-h: 56px; }
   .topbar-in { gap: 10px; padding: 0 12px; }
   .icon-btn.topbar-menu { display: grid; }
-  .lockup-img { height: 19px; }
+  .lockup-img { height: 20px; }
   /* landing: top nav becomes the left drawer */
   .topnav { position: fixed; top: 0; left: 0; bottom: 0; z-index: 80; width: min(320px, 86vw); flex-direction: column; align-items: stretch; gap: 0; padding: 0 12px 20px; background: var(--c-void-2); border-right: 1px solid var(--c-line); transform: translateX(-102%); transition: transform .25s var(--ease-out); visibility: hidden; }
   .drawer-open .topnav { transform: none; visibility: visible; }

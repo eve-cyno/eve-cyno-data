@@ -188,8 +188,9 @@ func TestPortal_AssetsAreVersionedAndVerbatim(t *testing.T) {
 }
 
 // snapshotSourceRE is line 1 of a design snapshot: the Claude Design file and its etag, in a
-// CSS or JS comment.
-var snapshotSourceRE = regexp.MustCompile(`^(/\*|//) source: claude-design eve-cyno/project/[a-z-]+\.(css|js) etag [0-9]+( \*/)?$`)
+// CSS or JS comment. Since the design moved to an Artifact (2026-10-27) a sync writes the Artifact version
+// and the sha256 instead of the etag; older snapshots keep the etag form.
+var snapshotSourceRE = regexp.MustCompile(`^(/\*|//) source: (claude-design eve-cyno/project/[a-z-]+\.(css|js) etag [0-9]+|claude-design-artifact version [0-9]+-[0-9a-f]+ project/eve-cyno/project/[a-z-]+\.(css|js) sha256 [0-9a-f]{64})( \*/)?$`)
 
 func versionOf(t *testing.T, urls [][]string) string {
 	t.Helper()
@@ -683,4 +684,21 @@ func TestPortal_MCPPageCoversEveryClientAndTheSkill(t *testing.T) {
 
 	rest := page(publicConfig(), "https://data.example.test", "/docs/rest")
 	require.Contains(t, rest, `<a href="/docs/mcp#mcp-skill">eve-data skill</a>`)
+}
+
+// TestPortal_LockupAndFaviconsFollowTheCynoWordmark guards the 2026-11-12 CYNO wordmark sync: the data
+// lockup image is 172x32 with the alt "EVE-Cyno Data" on every page, and the head links the 16 px favicon.
+func TestPortal_LockupAndFaviconsFollowTheCynoWordmark(t *testing.T) {
+	api := portalAPI(t)
+	for _, path := range []string{"/", "/docs/"} {
+		page := do(api, http.MethodGet, path, "").Body.String()
+		require.Contains(t, page, `alt="EVE-Cyno Data" width="172" height="32"`, path)
+		require.NotContains(t, page, `alt="EVE-CYNO DATA"`, path)
+	}
+	page := do(api, http.MethodGet, "/", "").Body.String()
+	m := regexp.MustCompile(`href="(/assets/[^"]+/favicon-small\.svg)"`).FindStringSubmatch(page)
+	require.NotNil(t, m, "the head links favicon-small.svg")
+	rec := do(api, http.MethodGet, m[1], "")
+	require.Equal(t, http.StatusOK, rec.Code)
+	require.Contains(t, rec.Body.String(), `stroke-width="8"`, "the thicker 16 px cut")
 }
