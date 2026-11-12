@@ -218,6 +218,9 @@ type rangeLimiter struct {
 	// unit names what the ceiling counts in its refusal message: "requests" on a route,
 	// "live-upstream calls" for the live tools (NewRangeUpstreamLimiter).
 	unit string
+	// live marks the live tools' pair (NewRangeUpstreamLimiter), for the access line's
+	// range_refused label.
+	live bool
 }
 
 // newRangeLimiter returns the pair for the per-address rate and the shared ceiling, reading the
@@ -348,8 +351,12 @@ func (l *rangeLimiter) sharedLimit() string {
 // writeRangeCeilingRefusal answers 429 rate_limited for the full ceiling of the range pair l: the
 // code of every per-minute refusal (the code list is stable), its own message, which names the
 // shared limit (rangeLimiter.sharedLimit) and the way out (a free key), and Retry-After in whole
-// seconds (at least 1).
+// seconds (at least 1). A POST of one JSON-RPC message to the MCP route is answered in the
+// protocol instead (writeMCPCeilingRefusal): a connector reads that, not an HTTP 429.
 func (a *API) writeRangeCeilingRefusal(w http.ResponseWriter, r *http.Request, retry time.Duration, l *rangeLimiter) {
+	if a.writeMCPCeilingRefusal(w, r, retry, l) {
+		return
+	}
 	msg := l.sharedLimit() + " is reached; retry after Retry-After seconds, or use a free API key for a budget of your own"
 	if a.surface.PublicURL != "" {
 		msg += ": " + a.surface.PublicURL + "/docs/access#access-keys"

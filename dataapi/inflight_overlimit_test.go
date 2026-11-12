@@ -250,7 +250,7 @@ func TestInflight_BusyAnswersTheRangeCeilingToARangeCaller(t *testing.T) {
 		release := hold(t, api, mcp, fromIP(outside)...)
 		defer release()
 		rec := do(api, http.MethodPost, "/v1/mcp", mcpCall, fromIP(x)...)
-		requireCeilingRefusal(t, rec, 2, "the ceiling is checked before the daily cap")
+		requireCeilingToolResult(t, rec, `1`, "the ceiling is checked before the daily cap")
 		require.Equal(t, 50, retryAfter(t, rec))
 	})
 	t.Run("no daily cap", func(t *testing.T) {
@@ -258,7 +258,7 @@ func TestInflight_BusyAnswersTheRangeCeilingToARangeCaller(t *testing.T) {
 		release := hold(t, api, mcp, fromIP(outside)...)
 		defer release()
 		rec := do(api, http.MethodPost, "/v1/mcp", mcpCall, fromIP(x)...)
-		requireCeilingRefusal(t, rec, 2, "the route's range pair")
+		requireCeilingToolResult(t, rec, `1`, "the route's range pair")
 		require.Equal(t, 50, retryAfter(t, rec))
 	})
 }

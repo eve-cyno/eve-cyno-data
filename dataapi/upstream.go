@@ -61,6 +61,7 @@ func NewRangeUpstreamLimiter(rate Rate, rng RangeLimits, keys KeyResolver, now f
 		return u
 	}
 	pair.unit = "live-upstream calls"
+	pair.live = true
 	if u == nil {
 		// The plain rate is off: every caller outside the tier is unlimited.
 		if keys == nil {

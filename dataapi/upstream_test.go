@@ -511,9 +511,15 @@ func requireOwnLiveRefusal(t *testing.T, rec *httptest.ResponseRecorder, msg str
 	require.Contains(t, fmt.Sprint(res["content"]), "rate_limited: get_type_info reads live ESI data and has a lower per-caller limit", msg)
 }
 
-// requireLiveCeilingRefusal asserts the HTTP 429 of the shared live-tool ceiling.
-func requireLiveCeilingRefusal(t *testing.T, rec *httptest.ResponseRecorder, msg string) {
+// requireLiveCeilingRefusal asserts the refusal of the shared live-tool ceiling: on REST the
+// HTTP 429 that names it, on MCP (mcp, a tools/call with id 1) the isError result with the busy
+// text.
+func requireLiveCeilingRefusal(t *testing.T, rec *httptest.ResponseRecorder, mcp bool, msg string) {
 	t.Helper()
+	if mcp {
+		requireCeilingToolResult(t, rec, `1`, msg)
+		return
+	}
 	requireError(t, rec, http.StatusTooManyRequests, "rate_limited")
 	require.Equal(t, liveCeilingMessage, errorMessage(t, rec), msg)
 	require.NotEmpty(t, rec.Header().Get("Retry-After"), msg)
@@ -538,8 +544,8 @@ func TestRangeUpstream_FifteenPerAddressThirtyShared(t *testing.T) {
 	for i := range 15 {
 		requireLiveServed(t, liveCall(t, api, addrs[1], i), fmt.Sprintf("call %d of the second address", i+1))
 	}
-	requireLiveCeilingRefusal(t, liveREST(api, addrs[2]), "the 31st live call of the ranges, REST")
-	requireLiveCeilingRefusal(t, liveMCP(t, api, addrs[2]), "the 31st live call of the ranges, MCP")
+	requireLiveCeilingRefusal(t, liveREST(api, addrs[2]), false, "the 31st live call of the ranges, REST")
+	requireLiveCeilingRefusal(t, liveMCP(t, api, addrs[2]), true, "the 31st live call of the ranges, MCP")
 
 	// Outside the ranges the full ceiling refuses nobody: the plain keyless budget of 5.
 	for i := range 5 {
@@ -576,7 +582,7 @@ func TestRangeUpstream_LiveCeilingRefusalSpendsNoDailyCap(t *testing.T) {
 		requireLiveServed(t, liveCall(t, api, addrs[1], i), addrs[1])
 	}
 	for i := range 50 {
-		requireLiveCeilingRefusal(t, liveCall(t, api, addrs[2], i), fmt.Sprintf("ceiling refusal %d", i+1))
+		requireLiveCeilingRefusal(t, liveCall(t, api, addrs[2], i), i%2 == 1, fmt.Sprintf("ceiling refusal %d", i+1))
 	}
 
 	clk.advance(time.Minute + time.Second) // the same UTC day
@@ -597,9 +603,9 @@ func TestRangeUpstream_LiveCeilingRefusalSpendsNoDailyCap(t *testing.T) {
 	requireError(t, postMCP(t, api, search, fromIP(addrs[0])...), http.StatusTooManyRequests, "daily_quota_exceeded")
 }
 
-// The refusal of the shared live ceiling says it is shared and states its number, on REST (a 429
-// before or inside the tool handler) and on MCP (an isError result), unlike the caller's own
-// limit.
+// The refusal of the shared live ceiling says it is shared and states its number on REST (a 429
+// before or inside the tool handler) and in the MCP handler's isError result, unlike the caller's
+// own limit; before the daily cap MCP answers the connector busy text (an isError result).
 func TestRangeUpstream_SharedRefusalMessageNamesTheSharedBudget(t *testing.T) {
 	for name, anonCap := range map[string]int{
 		"checked before the daily cap": dataapi.DefaultAnonDailyCap,
@@ -615,17 +621,17 @@ func TestRangeUpstream_SharedRefusalMessageNamesTheSharedBudget(t *testing.T) {
 				}
 			}
 			rec := liveREST(api, addrs[2])
-			requireLiveCeilingRefusal(t, rec, "REST")
+			requireLiveCeilingRefusal(t, rec, false, "REST")
 			require.Equal(t, "60", rec.Header().Get("Retry-After"), "the oldest counted call leaves the window in a minute")
 			if anonCap > 0 {
-				requireLiveCeilingRefusal(t, liveMCP(t, api, addrs[2]), "MCP, before the daily cap")
+				requireLiveCeilingRefusal(t, liveMCP(t, api, addrs[2]), true, "MCP, before the daily cap")
 				return
 			}
 			res := rpcResult(t, liveMCP(t, api, addrs[2]))
 			require.Equal(t, true, res["isError"], fmt.Sprint(res))
 			content := res["content"].([]any)
-			require.Equal(t, "rate_limited: "+liveCeilingText+"; retry in 60 seconds, or use a free API key for a budget of your own: "+
-				rangeTierURL+"/docs/access#access-keys", content[0].(map[string]any)["text"])
+			// No key hint: a connector cannot send one.
+			require.Equal(t, "rate_limited: "+liveCeilingText+"; retry in 60 seconds", content[0].(map[string]any)["text"])
 		})
 	}
 }
@@ -660,7 +666,7 @@ func TestRangeUpstream_NonLiveCallsAreNotCharged(t *testing.T) {
 	for i := range 15 {
 		requireLiveServed(t, liveCall(t, api, addrs[1], i), "second address")
 	}
-	requireLiveCeilingRefusal(t, liveMCP(t, api, addrs[2]), "the 31st live call of the ranges")
+	requireLiveCeilingRefusal(t, liveMCP(t, api, addrs[2]), true, "the 31st live call of the ranges")
 	// A Janice appraisal with the caller's own key waits on a third party but spends no live
 	// budget, so the full ceiling does not refuse it either.
 	janice := []string{"X-Janice-Key", "caller-janice"}

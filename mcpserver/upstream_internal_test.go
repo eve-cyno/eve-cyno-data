@@ -52,7 +52,8 @@ func TestHTTPHandler_UpstreamToolsHaveTheirOwnPerCallerBudget(t *testing.T) {
 }
 
 // A refusal by a limit that many callers share (dataapi's range ceiling of keyless connector
-// calls) says so and names that limit, instead of the per-caller text, and points at a key.
+// calls) says so and names that limit, instead of the per-caller text. It points at no key, even
+// when the service has a key hint: the callers it refuses are connectors, which cannot send one.
 func TestHTTPHandler_SharedUpstreamRefusalNamesTheSharedBudget(t *testing.T) {
 	exec := func(_ context.Context, _ *tools.Deps, name string, _ map[string]any) (tools.Result, error) {
 		return tools.Result{Tool: name, Text: "ok"}, nil
@@ -72,12 +73,14 @@ func TestHTTPHandler_SharedUpstreamRefusalNamesTheSharedBudget(t *testing.T) {
 	h := httpHandler(&tools.Deps{}, HTTPOptions{DisableLocalhostProtection: true, Upstream: upstream, KeyHint: hint}, exec)
 	got := call(h, "shared")
 	require.Contains(t, got, `"isError":true`)
-	require.Contains(t, got, `"text":"rate_limited: `+shared+` is reached; retry in 60 seconds, or use a free API key for a budget of your own: `+hint+`"`)
+	require.Contains(t, got, `"text":"rate_limited: `+shared+` is reached; retry in 60 seconds"`)
+	require.NotContains(t, got, hint)
+	require.NotContains(t, got, "API key")
 	own := call(h, "own")
 	require.Contains(t, own, `"text":"rate_limited: get_sovereignty reads live ESI data and has a lower per-caller limit; retry in 2 seconds"`)
 	require.NotContains(t, own, "shared")
 
-	// Without a key hint the shared refusal ends at the wait.
+	// Without a key hint the shared refusal is the same.
 	h = httpHandler(&tools.Deps{}, HTTPOptions{DisableLocalhostProtection: true, Upstream: upstream}, exec)
 	require.Contains(t, call(h, "shared"), `"text":"rate_limited: `+shared+` is reached; retry in 60 seconds"`)
 }

@@ -21,7 +21,10 @@
 //     key id and an anonymous one on the client IP, taken from Cloudflare's
 //     CF-Connecting-IP header and falling back to the TCP peer, never from
 //     X-Forwarded-For / X-Real-IP. A refused request is a 429 with a
-//     Retry-After header. CF-Connecting-IP is trusted as-is, so the service must
+//     Retry-After header, except a refusal by a shared range ceiling of one JSON-RPC
+//     message POSTed to {prefix}/mcp, which is answered in the protocol (HTTP 200: an
+//     isError result for tools/call, error -32000 otherwise; 202 for a notification)
+//     with the same Retry-After. CF-Connecting-IP is trusted as-is, so the service must
 //     only be reachable through the Cloudflare tunnel (or loopback). An IPv6 client is
 //     one caller per /64 network, for the limits and the daily cap.
 //   - A route at its in-flight cap answers 503 busy with Retry-After: 1 before

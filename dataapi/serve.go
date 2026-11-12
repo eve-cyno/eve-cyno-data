@@ -33,6 +33,10 @@ type meta struct {
 	// range tier's inside the ranges, else Config.AnonDailyCap; 0 when the API has no
 	// anonymous daily cap (anonCapOf).
 	anonCap int
+	// rangeRefused is set to the label of the range ceiling whose refusal was answered as
+	// JSON-RPC on the MCP route (writeMCPCeilingRefusal), so the access line can tell that 200
+	// from a served request; nil outside ServeHTTP.
+	rangeRefused *string
 }
 
 // markToolLogged records that the usage line of the request was written.
@@ -89,6 +93,11 @@ func validRequestID(s string) bool {
 // The anonymous daily cap a keyless caller is held to is its own (AnonDailyCapFor): the range
 // tier's inside the ranges, Config.AnonDailyCap elsewhere.
 //
+// A range ceiling refusal of one JSON-RPC message POSTed to the MCP route is answered in the
+// protocol (writeMCPCeilingRefusal: HTTP 200, or 202 for a notification), and its access line
+// carries range_refused="mcp_ceiling" or "live_ceiling". It is never usage: only a keyless caller
+// meets a range ceiling.
+//
 // The gate runs before every charge (the key's quota, the anonymous daily cap and, inside
 // the mux, the route limiter and the upstream limiter): a busy refusal has spent nothing. For a
 // keyless caller inside the ranges, a full range ceiling is answered before the anonymous daily
@@ -107,6 +116,7 @@ func (a *API) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set(HeaderRequestID, id)
 	log := a.log.With("request_id", id)
 	toolLogged := false
+	rangeRefused := ""
 	// The address family and the range of the client, matched once: labels only, never the
 	// address (clientLabels). On an API with the range tier the range also chooses the tier
 	// (rangeFrom), for the route limiters and the live-upstream limiter alike.
@@ -114,7 +124,7 @@ func (a *API) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if !a.rangeTier {
 		rng = ""
 	}
-	ctx := context.WithValue(r.Context(), metaKey{}, meta{id: id, log: log, toolLogged: &toolLogged, rng: rng, anonCap: a.anonCapOf(rng)})
+	ctx := context.WithValue(r.Context(), metaKey{}, meta{id: id, log: log, toolLogged: &toolLogged, rng: rng, anonCap: a.anonCapOf(rng), rangeRefused: &rangeRefused})
 	if a.auth != nil {
 		// The credential is read here, once: the limiter keys on the result and the tool and
 		// MCP handlers enforce the tiers with it. Nothing about the key is logged.
@@ -173,6 +183,10 @@ func (a *API) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		attrs = append(attrs, client...)
 		if busyPool != "" {
 			attrs = append(attrs, "busy_pool", busyPool)
+		}
+		if rangeRefused != "" {
+			// A range ceiling refusal answered as JSON-RPC (status 200 or 202): not served.
+			attrs = append(attrs, "range_refused", rangeRefused)
 		}
 		log.Info("request", attrs...)
 		a.logRefusedToolCall(r, rec.statusCode(), toolLogged, time.Since(start))
