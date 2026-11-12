@@ -121,6 +121,8 @@ func TestRangeCeilingMCP_NonMessagesKeepTheHTTP429(t *testing.T) {
 		"object id":    `{"jsonrpc":"2.0","id":{"a":1},"method":"tools/list"}`,
 		"bool id":      `{"jsonrpc":"2.0","id":true,"method":"tools/list"}`,
 		"fraction id":  `{"jsonrpc":"2.0","id":1.5,"method":"tools/list"}`,
+		"exp id":       `{"jsonrpc":"2.0","id":1e2,"method":"tools/list"}`,
+		"float zero":   `{"jsonrpc":"2.0","id":1.0,"method":"tools/list"}`,
 		"int64 over":   `{"jsonrpc":"2.0","id":9223372036854775808,"method":"tools/list"}`,
 		"huge id":      `{"jsonrpc":"2.0","id":99999999999999999999,"method":"tools/list"}`,
 		"number name":  `{"jsonrpc":"2.0","id":1,"method":7}`,

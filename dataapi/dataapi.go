@@ -166,8 +166,8 @@ type RangeLimits struct {
 	Upstream, UpstreamCeiling Rate
 	// DailyCap is the anonymous daily cap of an address in the ranges (Config.AnonDailyCap for
 	// everyone else), counted per client key like that cap; there is no daily ceiling shared by
-	// the ranges. It applies only where the anonymous daily cap is on (Config.AnonDailyCap above
-	// zero); zero leaves the addresses in the ranges at Config.AnonDailyCap.
+	// the ranges. The daily cap of such a caller is the larger of DailyCap and Config.AnonDailyCap,
+	// and it applies only where the anonymous daily cap is on (Config.AnonDailyCap above zero).
 	DailyCap int
 }
 
@@ -310,7 +310,7 @@ type Config struct {
 	// portal assets and /health are not counted. 0 means no cap, and the cap, like the
 	// trial limits and the key-only fit search, applies only when Auth is set: a service
 	// that issues no keys has nothing to point the client at. A keyless address inside
-	// AnthropicRanges gets Limits.Range.DailyCap instead (AnonDailyCapFor), and its refusal of
+	// AnthropicRanges gets the larger of Limits.Range.DailyCap and AnonDailyCap (AnonDailyCapFor), and its refusal of
 	// one JSON-RPC message on {prefix}/mcp is answered in the protocol (see the package doc).
 	AnonDailyCap int
 

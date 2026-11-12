@@ -294,7 +294,7 @@ func TestInflight_BusyAnswersARangeCallersOwnLimitsInJSONRPC(t *testing.T) {
 	t.Run("daily cap", func(t *testing.T) {
 		limits := dataapi.DefaultLimits()
 		limits.Range.DailyCap = 1
-		api, mcp := rangeAPI(t, limits, 1) // the range cap is the larger one, so the anonymous cap stays below it
+		api, mcp := rangeAPI(t, limits, 1) // equal caps, so the range cap of 1 is the one in force
 		release := hold(t, api, mcp, fromIP(outside)...)
 		defer release()
 		rec := do(api, http.MethodPost, "/v1/mcp", mcpCall, fromIP(x)...)

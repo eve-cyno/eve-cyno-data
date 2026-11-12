@@ -631,10 +631,14 @@ func keyConventions(s Surface) string {
 	if s.AnonDailyCap > 0 {
 		fmt.Fprintf(&b, "- Without an API key the API is for trying it out: %d requests per UTC day per client (counted per client IP; the documentation routes are not counted) and the lower per-minute limits stated on the operations. Over the day's budget a client gets `429` `daily_quota_exceeded` with `Retry-After` set to the seconds until 00:00 UTC. A free API key is for real use.\n", s.AnonDailyCap)
 	}
-	if s.AnonDailyCap > 0 && s.rangeTierDocs() && s.MCP {
+	if s.rangeTierDocs() && s.MCP {
 		r := s.Limits.Range
-		fmt.Fprintf(&b, "- Keyless connector calls from Anthropic's published ranges (claude.ai and Claude Desktop connectors) have limits of their own: on `%s/mcp` %d requests per minute per address and %d per minute shared by all of them, for the live tools %d and %d, and %s requests per UTC day per address; see `/docs/access`.\n",
-			s.prefix(), r.MCP.Max, r.MCPCeiling.Max, r.Upstream.Max, r.UpstreamCeiling.Max, thousands(s.rangeDailyCap()))
+		daily := ""
+		if s.AnonDailyCap > 0 {
+			daily = fmt.Sprintf(", and %s requests per UTC day per address", thousands(s.rangeDailyCap()))
+		}
+		fmt.Fprintf(&b, "- Keyless connector calls from Anthropic's published ranges (claude.ai and Claude Desktop connectors) have limits of their own: on `%s/mcp` %d requests per minute per address and %d per minute shared by all of them, for the live tools %d and %d%s; see `/docs/access`.\n",
+			s.prefix(), r.MCP.Max, r.MCPCeiling.Max, r.Upstream.Max, r.UpstreamCeiling.Max, daily)
 	}
 	if s.keysRaise() {
 		b.WriteString("- An API key raises the per-minute budgets: every operation states its limit without a key and with one, counted in the key's own window. The live-data tools keep a lower limit than the route.\n")
