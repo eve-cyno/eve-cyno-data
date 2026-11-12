@@ -412,8 +412,13 @@ type HTTPOptions struct {
 	KeyHint string
 	// AnonDailyCap is the requests per UTC day a client without an API key gets (the
 	// embedding service's Config.AnonDailyCap); the keyless instructions state it. 0: the
-	// instructions do not state a daily number.
+	// instructions do not state a daily number. AnonDailyCapFor, when set, takes its place.
 	AnonDailyCap int
+	// AnonDailyCapFor, when set, returns the requests per UTC day the keyless caller of the
+	// request gets (dataapi.AnonDailyCapFor: a caller inside dataapi's connector ranges has
+	// its own number), and the keyless instructions state that number instead of
+	// AnonDailyCap; 0: no daily number. Nil: AnonDailyCap for everyone.
+	AnonDailyCapFor func(*http.Request) int
 	// Timeout bounds one tool execution; zero means DefaultTimeout.
 	Timeout time.Duration
 	// Logger receives the transport's and the tools' diagnostics. Nil discards.
@@ -449,7 +454,11 @@ func httpHandler(deps *tools.Deps, o HTTPOptions, exec executor) http.Handler {
 			}
 			cfg := serverConfig{timeout: o.Timeout, log: o.Logger, janiceFromHeader: true, keyed: keyed, userAgent: r.UserAgent()}
 			if !keyed && o.KeyHint != "" {
-				cfg.instructions = keylessInstructions(o.AnonDailyCap, o.KeyHint)
+				daily := o.AnonDailyCap
+				if o.AnonDailyCapFor != nil {
+					daily = o.AnonDailyCapFor(r)
+				}
+				cfg.instructions = keylessInstructions(daily, o.KeyHint)
 			}
 			if o.Upstream != nil {
 				cfg.allow = func(tool string) (bool, time.Duration, string) { return o.Upstream(r, tool) }

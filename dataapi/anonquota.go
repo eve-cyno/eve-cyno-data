@@ -19,10 +19,10 @@ const DefaultAnonDailyCap = 200
 const maxAnonClients = 100_000
 
 // anonQuota counts the requests of callers without an API key per UTC day, in memory: the
-// counters are never persisted and nothing per client is logged. It is safe for concurrent
-// use.
+// counters are never persisted and nothing per client is logged. The cap is given per call, so
+// one table counts clients with different caps (the range tier's, Limits.Range.DailyCap, and
+// everyone else's). It is safe for concurrent use.
 type anonQuota struct {
-	cap        int
 	maxClients int
 	now        func() time.Time
 	log        *slog.Logger
@@ -33,19 +33,20 @@ type anonQuota struct {
 	warned bool // the table-full warning was logged for the current day
 }
 
-func newAnonQuota(cap, maxClients int, now func() time.Time, log *slog.Logger) *anonQuota {
+func newAnonQuota(maxClients int, now func() time.Time, log *slog.Logger) *anonQuota {
 	if now == nil {
 		now = time.Now
 	}
 	if log == nil {
 		log = slog.New(slog.DiscardHandler)
 	}
-	return &anonQuota{cap: cap, maxClients: maxClients, now: now, log: log, counts: map[string]int{}}
+	return &anonQuota{maxClients: maxClients, now: now, log: log, counts: map[string]int{}}
 }
 
-// Spend records one request of the client key and reports whether it is within today's cap;
-// when it is not, retryAfter is the time until 00:00 UTC. A refused request is not counted.
-func (q *anonQuota) Spend(key string) (ok bool, retryAfter time.Duration) {
+// Spend records one request of the client key and reports whether it is within cap, the
+// client's requests for today; when it is not, retryAfter is the time until 00:00 UTC. A
+// refused request is not counted.
+func (q *anonQuota) Spend(key string, cap int) (ok bool, retryAfter time.Duration) {
 	now := q.now().UTC()
 	day := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
 
@@ -64,18 +65,18 @@ func (q *anonQuota) Spend(key string) (ok bool, retryAfter time.Duration) {
 		}
 		return true, 0
 	}
-	if n >= q.cap {
+	if n >= cap {
 		return false, day.Add(24 * time.Hour).Sub(now)
 	}
 	q.counts[key] = n + 1
 	return true, 0
 }
 
-// Check reports what Spend would answer for the client key now and records nothing: no
+// Check reports what Spend would answer for the client key and cap now and records nothing: no
 // count, no day reset, no table-full warning. On a UTC day the counters are not on yet it
 // answers ok (the next Spend starts the day at zero); a client the table never counted is ok
 // too (Spend counts it or, with the table full, serves it uncounted).
-func (q *anonQuota) Check(key string) (ok bool, retryAfter time.Duration) {
+func (q *anonQuota) Check(key string, cap int) (ok bool, retryAfter time.Duration) {
 	now := q.now().UTC()
 	day := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
 
@@ -84,7 +85,7 @@ func (q *anonQuota) Check(key string) (ok bool, retryAfter time.Duration) {
 	if !day.Equal(q.day) {
 		return true, 0
 	}
-	if q.counts[key] >= q.cap {
+	if q.counts[key] >= cap {
 		return false, day.Add(24 * time.Hour).Sub(now)
 	}
 	return true, 0

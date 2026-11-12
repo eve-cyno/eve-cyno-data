@@ -29,6 +29,10 @@ type meta struct {
 	// the API has no range tier (see clientLabels, rangeFrom). The access line's range label
 	// does not read it.
 	rng string
+	// anonCap is the anonymous daily cap of the client when it calls without a valid key: the
+	// range tier's inside the ranges, else Config.AnonDailyCap; 0 when the API has no
+	// anonymous daily cap (anonCapOf).
+	anonCap int
 }
 
 // markToolLogged records that the usage line of the request was written.
@@ -82,6 +86,9 @@ func validRequestID(s string) bool {
 // carries an opaque per-day caller token, and on every line the client's address family (ipf)
 // and, inside Config.AnthropicRanges, range="anthropic" (clientLabels).
 //
+// The anonymous daily cap a keyless caller is held to is its own (AnonDailyCapFor): the range
+// tier's inside the ranges, Config.AnonDailyCap elsewhere.
+//
 // The gate runs before every charge (the key's quota, the anonymous daily cap and, inside
 // the mux, the route limiter and the upstream limiter): a busy refusal has spent nothing. For a
 // keyless caller inside the ranges, a full range ceiling is answered before the anonymous daily
@@ -107,7 +114,7 @@ func (a *API) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if !a.rangeTier {
 		rng = ""
 	}
-	ctx := context.WithValue(r.Context(), metaKey{}, meta{id: id, log: log, toolLogged: &toolLogged, rng: rng})
+	ctx := context.WithValue(r.Context(), metaKey{}, meta{id: id, log: log, toolLogged: &toolLogged, rng: rng, anonCap: a.anonCapOf(rng)})
 	if a.auth != nil {
 		// The credential is read here, once: the limiter keys on the result and the tool and
 		// MCP handlers enforce the tiers with it. Nothing about the key is logged.
@@ -236,14 +243,39 @@ func (a *API) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		// The same client key the per-minute limiter uses for a caller without a key. An
 		// invalid key is an anonymous caller too.
-		if ok, retry := a.anon.Spend(a.keys.Key(r)); !ok {
+		daily := AnonDailyCapFor(r)
+		if ok, retry := a.anon.Spend(a.keys.Key(r), daily); !ok {
 			quotaRefused = true
-			writeAnonQuotaRefusal(rec, r, retry, a.anon.cap, a.surface.PublicURL)
+			writeAnonQuotaRefusal(rec, r, retry, daily, a.surface.PublicURL)
 			return
 		}
 	}
 	muxRan = true
 	a.mux.ServeHTTP(rec, r)
+}
+
+// anonCapOf is the anonymous daily cap of a keyless client whose address matched the range rng
+// ("" none, and always "" on an API without the range tier): the range tier's daily cap inside
+// the ranges when there is one, else Config.AnonDailyCap; 0 when the API has no anonymous daily
+// cap (both caps are 0 then).
+func (a *API) anonCapOf(rng string) int {
+	if rng != "" && a.rangeCap > 0 {
+		return a.rangeCap
+	}
+	return a.anonCap
+}
+
+// AnonDailyCapFor returns the number of requests per UTC day the caller of r has without an API
+// key on this API: Limits.Range.DailyCap for an address inside Config.AnthropicRanges on an API
+// with the range tier, Config.AnonDailyCap otherwise, and 0 when the API counts no keyless
+// requests (or outside a request it serves). It answers for the client address whatever key
+// the request carries. Give it to mcpserver.HTTPOptions.AnonDailyCapFor, so the keyless
+// instructions state the number this API enforces.
+func AnonDailyCapFor(r *http.Request) int {
+	if m, ok := r.Context().Value(metaKey{}).(meta); ok {
+		return m.anonCap
+	}
+	return 0
 }
 
 // countsAnon reports whether the anonymous daily cap counts the request: a caller without a
@@ -281,8 +313,9 @@ func (a *API) gateRefusal(w http.ResponseWriter, r *http.Request, pattern string
 		if a.rangeCeilingRefusal(w, r, pattern) {
 			return refusedRate
 		}
-		if ok, retry := a.anon.Check(a.keys.Key(r)); !ok {
-			writeAnonQuotaRefusal(w, r, retry, a.anon.cap, a.surface.PublicURL)
+		daily := AnonDailyCapFor(r)
+		if ok, retry := a.anon.Check(a.keys.Key(r), daily); !ok {
+			writeAnonQuotaRefusal(w, r, retry, daily, a.surface.PublicURL)
 			return refusedDaily
 		}
 	}

@@ -160,7 +160,9 @@ type RangeLimits struct {
 	// (Limits.UpstreamTool).
 	Upstream, UpstreamCeiling Rate
 	// DailyCap is the anonymous daily cap of an address in the ranges (Config.AnonDailyCap for
-	// everyone else).
+	// everyone else), counted per client key like that cap; there is no daily ceiling shared by
+	// the ranges. It applies only where the anonymous daily cap is on (Config.AnonDailyCap above
+	// zero); zero leaves the addresses in the ranges at Config.AnonDailyCap.
 	DailyCap int
 }
 
@@ -302,7 +304,8 @@ type Config struct {
 	// answers 429 daily_quota_exceeded until 00:00 UTC. The documentation routes, the
 	// portal assets and /health are not counted. 0 means no cap, and the cap, like the
 	// trial limits and the key-only fit search, applies only when Auth is set: a service
-	// that issues no keys has nothing to point the client at.
+	// that issues no keys has nothing to point the client at. A keyless address inside
+	// AnthropicRanges gets Limits.Range.DailyCap instead (AnonDailyCapFor).
 	AnonDailyCap int
 
 	// Now returns the current time (nil means time.Now). It is a test seam for the daily
@@ -410,23 +413,26 @@ type API struct {
 	maxInFlightUpstream int
 	// gates maps the mux pattern of every capped route to its in-flight gate (empty when
 	// MaxInFlight is off).
-	gates       map[string]*routeGate
-	quota       Quota
-	anon        *anonQuota
-	usage       Usage
-	sdeBuild    func() string
-	toolMode    ToolAPIMode
-	toolFormat  ToolFormat
-	toolTimeout time.Duration
-	mcp         http.Handler
-	upstream    *UpstreamLimiter
-	hasher      *callerHasher
-	surface     Surface
-	docs        renderedDocs
-	pages       renderedPages
-	portal      *portalSite
-	log         *slog.Logger
-	mux         *http.ServeMux
+	gates map[string]*routeGate
+	quota Quota
+	anon  *anonQuota
+	// anonCap is the anonymous daily cap of a keyless caller outside the ranges and rangeCap
+	// the one of a keyless caller inside them (0 or below: anonCap); both are 0 when anon is nil.
+	anonCap, rangeCap int
+	usage             Usage
+	sdeBuild          func() string
+	toolMode          ToolAPIMode
+	toolFormat        ToolFormat
+	toolTimeout       time.Duration
+	mcp               http.Handler
+	upstream          *UpstreamLimiter
+	hasher            *callerHasher
+	surface           Surface
+	docs              renderedDocs
+	pages             renderedPages
+	portal            *portalSite
+	log               *slog.Logger
+	mux               *http.ServeMux
 	// anthropic are the networks whose access lines carry range="anthropic" (see clientLabels).
 	anthropic []netip.Prefix
 	// rangeTier is set when keyless callers inside anthropic get the range tier: ranges are
@@ -529,7 +535,10 @@ func New(cfg Config) (*API, error) {
 		a.log = slog.New(slog.DiscardHandler)
 	}
 	if anonCap > 0 {
-		a.anon = newAnonQuota(anonCap, maxAnonClients, cfg.Now, a.log)
+		a.anon = newAnonQuota(maxAnonClients, cfg.Now, a.log)
+		a.anonCap = anonCap
+		// Read only for a request whose range matched, which needs the range tier.
+		a.rangeCap = limits.Range.DailyCap
 	}
 
 	for _, rt := range routeTable() {

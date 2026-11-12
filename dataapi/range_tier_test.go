@@ -211,6 +211,7 @@ func TestRangeTier_CeilingRefusalSpendsNoDailyCap(t *testing.T) {
 	limits := dataapi.DefaultLimits()
 	limits.Range.MCPCeiling = dataapi.Rate{Max: 25, Window: time.Minute}
 	const daily = 20 // below the ceiling: the address alone can never fill it
+	limits.Range.DailyCap = daily
 	api := rangeTierAPI(t, anthropicOutbound, &limits, daily, clk)
 
 	for _, ip := range rangeAddrs(25) {
@@ -267,6 +268,7 @@ func TestRangeTier_BothFullAnswersTheCeilingWhenItsWaitIsAsLong(t *testing.T) {
 	limits.Range.MCP = dataapi.Rate{Max: 2, Window: time.Minute}
 	limits.Range.MCPCeiling = dataapi.Rate{Max: 2, Window: time.Minute}
 	const daily = 3
+	limits.Range.DailyCap = daily
 	api := rangeTierAPI(t, anthropicOutbound, &limits, daily, clk)
 	const x = "160.79.104.9"
 

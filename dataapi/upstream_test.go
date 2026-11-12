@@ -450,11 +450,12 @@ const liveCeilingMessage = liveCeilingText + "; retry after Retry-After seconds,
 // liveRangeAPI serves the public REST tools and the real MCP transport over offline deps, with
 // API keys, the given Anthropic ranges ("" none) and the default limits, and one live-tool
 // limiter with the range pair shared by both surfaces, on the clock clk (Config.Now and the
-// limiter read the same clock, as cmd/dataapi wires them). anonCap 0 turns the anonymous daily
-// cap off.
+// limiter read the same clock, as cmd/dataapi wires them). anonCap is the anonymous daily cap of
+// every keyless caller, the range addresses' included (Limits.Range.DailyCap); 0 turns it off.
 func liveRangeAPI(t *testing.T, ranges string, anonCap int, clk *testClock) *dataapi.API {
 	t.Helper()
 	limits := dataapi.DefaultLimits()
+	limits.Range.DailyCap = anonCap
 	deps := &tools.Deps{Client: tools.WithTransport(offlineTransport{})}
 	lim := dataapi.NewRangeUpstreamLimiter(limits.UpstreamTool, limits.Range, nil, clk.now)
 	return newAPI(t, dataapi.Config{

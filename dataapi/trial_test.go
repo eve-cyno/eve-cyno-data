@@ -393,3 +393,205 @@ func TestAnonDailyCap_IPv6SlashSixtyFourIsOneClient(t *testing.T) {
 	require.Equal(t, http.StatusNotFound, counted(api, fromIP("2001:db8:1:3::1")...).Code)
 	require.Equal(t, http.StatusNotFound, counted(api, fromIP("203.0.113.9")...).Code)
 }
+
+// --- the range tier's daily cap ------------------------------------------------------
+
+// capEcho is an MCP handler that answers the daily cap the request's caller has
+// (dataapi.AnonDailyCapFor), the number mcpserver states in the keyless instructions.
+var capEcho = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	_, _ = w.Write([]byte(strconv.Itoa(dataapi.AnonDailyCapFor(r))))
+})
+
+// rangeCapAPI serves the counted routes and capEcho with API keys, the per-minute limits off,
+// the anonymous daily cap anonCap, the range tier's daily cap rangeCap and the ranges ("" none).
+func rangeCapAPI(t *testing.T, anonCap, rangeCap int, ranges string, c *clock) *dataapi.API {
+	t.Helper()
+	return newAPI(t, dataapi.Config{
+		PublicURL: "https://data.example", Auth: keyedFixture(t, trialKey), MCP: capEcho,
+		Limits:       &dataapi.Limits{Range: dataapi.RangeLimits{DailyCap: rangeCap}},
+		AnonDailyCap: anonCap, Now: c.now, AnthropicRanges: mustRanges(t, ranges),
+	})
+}
+
+// dailyCapOf is the daily cap the API gives the caller of hdr (capEcho).
+func dailyCapOf(t *testing.T, api http.Handler, hdr ...string) string {
+	t.Helper()
+	rec := do(api, http.MethodPost, "/v1/mcp", `{}`, hdr...)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	return rec.Body.String()
+}
+
+// countedUntilRefused makes up to 50 counted requests with hdr and returns how many were served
+// before the first refusal, which must be the daily cap's.
+func countedUntilRefused(t *testing.T, api http.Handler, hdr ...string) (int, *httptest.ResponseRecorder) {
+	t.Helper()
+	allowed, refused := allowedBeforeRefusal(50, func() *httptest.ResponseRecorder { return counted(api, hdr...) })
+	require.NotNil(t, refused, "no refusal in 50 requests")
+	requireError(t, refused, http.StatusTooManyRequests, "daily_quota_exceeded")
+	return allowed, refused
+}
+
+// With the default limits, a keyless address inside the Anthropic ranges has 2,000 requests a
+// UTC day; every other keyless caller keeps the ordinary cap. The cap is enforced at the number
+// the caller is given (small injected caps, so the test makes no 2,000 requests).
+func TestAnonDailyCap_RangeAddressGetsTwoThousand(t *testing.T) {
+	require.Equal(t, 2000, dataapi.DefaultLimits().Range.DailyCap)
+	c := &clock{t: time.Date(2026, 11, 12, 12, 0, 0, 0, time.UTC)}
+	api := newAPI(t, dataapi.Config{
+		Auth: keyedFixture(t, trialKey), MCP: capEcho, AnonDailyCap: dataapi.DefaultAnonDailyCap, Now: c.now,
+		AnthropicRanges: mustRanges(t, anthropicOutbound), // Limits nil: DefaultLimits
+	})
+	require.Equal(t, "2000", dailyCapOf(t, api, fromIP("160.79.104.9")...))
+	require.Equal(t, "2000", dailyCapOf(t, api, fromIP("153.61.223.250")...))
+	require.Equal(t, "200", dailyCapOf(t, api, fromIP("192.0.2.9")...), "outside the ranges: the ordinary cap")
+	require.Equal(t, "200", dailyCapOf(t, api, fromIP("2001:db8::9")...))
+
+	api = rangeCapAPI(t, 3, 5, anthropicOutbound, c)
+	n, _ := countedUntilRefused(t, api, fromIP("160.79.104.9")...)
+	require.Equal(t, 5, n, "a range address is refused past the range cap")
+	n, _ = countedUntilRefused(t, api, fromIP("192.0.2.9")...)
+	require.Equal(t, 3, n, "an address outside is refused past the ordinary cap")
+}
+
+// The 429 of the daily cap states the number the refused caller really has, and the wait to
+// 00:00 UTC.
+func TestAnonDailyCap_RangeRefusalStatesItsOwnCap(t *testing.T) {
+	c := &clock{t: time.Date(2026, 11, 12, 22, 30, 0, 0, time.UTC)}
+	api := rangeCapAPI(t, 3, 5, anthropicOutbound, c)
+	_, rec := countedUntilRefused(t, api, fromIP("153.61.208.9")...)
+	require.Equal(t, strconv.Itoa(90*60), rec.Header().Get("Retry-After"))
+	require.Contains(t, rec.Body.String(),
+		"without an API key the API allows 5 requests a day per client; a free key raises this: https://data.example/docs/access#access-keys")
+	_, rec = countedUntilRefused(t, api, fromIP("192.0.2.9")...)
+	require.Contains(t, rec.Body.String(), "without an API key the API allows 3 requests a day per client; a free key raises this")
+}
+
+// Each range address has its own count; a caller with a key is never counted, inside the ranges
+// as elsewhere; an invalid key is a keyless caller of its address.
+func TestAnonDailyCap_RangeAddressesHaveSeparateCounters(t *testing.T) {
+	c := &clock{t: time.Date(2026, 11, 12, 12, 0, 0, 0, time.UTC)}
+	api := rangeCapAPI(t, 1, 2, anthropicOutbound, c)
+	for range 10 {
+		require.Equal(t, http.StatusNotFound, counted(api, append(fromIP("160.79.104.9"), "X-API-Key", trialKey)...).Code)
+	}
+	for _, ip := range []string{"160.79.104.9", "160.79.104.10", "153.61.208.9"} {
+		n, _ := countedUntilRefused(t, api, fromIP(ip)...)
+		require.Equal(t, 2, n, ip)
+	}
+	for _, ip := range []string{"192.0.2.9", "192.0.2.10"} {
+		n, _ := countedUntilRefused(t, api, fromIP(ip)...)
+		require.Equal(t, 1, n, ip)
+	}
+	n, _ := countedUntilRefused(t, api, append(fromIP("160.79.104.11"), "X-API-Key", "nope")...)
+	require.Equal(t, 2, n, "an invalid key is counted by its address")
+}
+
+// Inside a range, two addresses of one IPv6 /64 are still one client for the range cap; another
+// /64 of the range is another client.
+func TestAnonDailyCap_RangeIPv6SlashSixtyFourIsOneClient(t *testing.T) {
+	c := &clock{t: time.Date(2026, 11, 12, 12, 0, 0, 0, time.UTC)}
+	api := rangeCapAPI(t, 1, 4, "2001:db8::/32", c)
+	require.Equal(t, "4", dailyCapOf(t, api, fromIP("2001:db8:9::1")...))
+	for i := range 4 {
+		require.Equal(t, http.StatusNotFound, counted(api, fromIP("2001:db8:1:2::"+strconv.Itoa(i+1))...).Code, "request %d", i+1)
+	}
+	rec := counted(api, fromIP("2001:db8:1:2:ffff::7")...)
+	requireError(t, rec, http.StatusTooManyRequests, "daily_quota_exceeded")
+	require.Contains(t, rec.Body.String(), "allows 4 requests a day per client")
+	n, _ := countedUntilRefused(t, api, fromIP("2001:db8:1:3::1")...)
+	require.Equal(t, 4, n)
+	n, _ = countedUntilRefused(t, api, fromIP("192.0.2.9")...)
+	require.Equal(t, 1, n, "an IPv4 address outside the range")
+}
+
+// The range cap exists only with the range tier and the anonymous daily cap: without ranges or
+// with a zero range cap a range address has the ordinary cap, and with the anonymous cap off
+// nobody has a daily cap.
+func TestAnonDailyCap_RangeCapOnlyWithTheTier(t *testing.T) {
+	c := &clock{t: time.Date(2026, 11, 12, 12, 0, 0, 0, time.UTC)}
+	n, _ := countedUntilRefused(t, rangeCapAPI(t, 2, 5, "", c), fromIP("160.79.104.9")...)
+	require.Equal(t, 2, n, "no ranges")
+	n, _ = countedUntilRefused(t, rangeCapAPI(t, 2, 0, anthropicOutbound, c), fromIP("160.79.104.9")...)
+	require.Equal(t, 2, n, "a zero range cap")
+
+	off := rangeCapAPI(t, 0, 5, anthropicOutbound, c)
+	require.Equal(t, "0", dailyCapOf(t, off, fromIP("160.79.104.9")...))
+	for range 20 {
+		require.Equal(t, http.StatusNotFound, counted(off, fromIP("160.79.104.9")...).Code, "the anonymous cap is off")
+	}
+
+	nokeys := newAPI(t, dataapi.Config{
+		MCP: capEcho, Limits: &dataapi.Limits{Range: dataapi.RangeLimits{DailyCap: 5}}, AnonDailyCap: 2, Now: c.now,
+		AnthropicRanges: mustRanges(t, anthropicOutbound),
+	})
+	require.Equal(t, "0", dailyCapOf(t, nokeys, fromIP("160.79.104.9")...))
+	for range 20 {
+		require.Equal(t, http.StatusNotFound, counted(nokeys, fromIP("160.79.104.9")...).Code, "no keys, no daily cap")
+	}
+}
+
+// On a full route the check that stands in for the daily cap uses the caller's own cap too: a
+// range address under its range cap (but over the ordinary one) is busy, one over its range cap
+// gets the daily 429 with its number.
+func TestAnonDailyCap_FullRouteChecksTheRangeCap(t *testing.T) {
+	c := &clock{t: time.Date(2026, 11, 12, 12, 0, 0, 0, time.UTC)}
+	build := func() (*dataapi.API, *holdMCP) {
+		mcp := newHoldMCP()
+		return newAPI(t, dataapi.Config{
+			MCP: mcp, Auth: keyedFixture(t, trialKey), Limits: &dataapi.Limits{Range: dataapi.RangeLimits{DailyCap: 2}},
+			AnonDailyCap: 1, Now: c.now, MaxInFlight: 1, PublicURL: "https://data.example",
+			AnthropicRanges: mustRanges(t, anthropicOutbound),
+		}), mcp
+	}
+	call := func(api http.Handler, ip string) *httptest.ResponseRecorder {
+		return do(api, http.MethodPost, "/v1/mcp", mcpCall, fromIP(ip)...)
+	}
+	const x = "160.79.104.9"
+
+	api, mcp := build()
+	require.Equal(t, http.StatusOK, call(api, x).Code)
+	require.Equal(t, http.StatusOK, call(api, "192.0.2.9").Code)
+	release := hold(t, api, mcp, fromIP("192.0.2.200")...)
+	requireError(t, call(api, x), http.StatusServiceUnavailable, "busy")
+	rec := call(api, "192.0.2.9")
+	requireError(t, rec, http.StatusTooManyRequests, "daily_quota_exceeded")
+	require.Contains(t, rec.Body.String(), "allows 1 requests a day per client")
+	require.Equal(t, http.StatusOK, release())
+	require.Equal(t, http.StatusOK, call(api, x).Code, "the busy refusal spent nothing")
+
+	api, mcp = build()
+	for range 2 {
+		require.Equal(t, http.StatusOK, call(api, x).Code)
+	}
+	release = hold(t, api, mcp, fromIP("192.0.2.200")...)
+	defer release()
+	rec = call(api, x)
+	requireError(t, rec, http.StatusTooManyRequests, "daily_quota_exceeded")
+	require.Contains(t, rec.Body.String(), "allows 2 requests a day per client")
+}
+
+// The keyless MCP instructions state the daily number of the caller who asks: 2,000 inside the
+// ranges, the ordinary cap outside them, nothing about a trial for a caller with a key.
+func TestMCPInstructions_RangeCallerSeesItsDailyNumber(t *testing.T) {
+	deps := &tools.Deps{}
+	api := newAPI(t, dataapi.Config{
+		Deps: dataapi.NewDeps(deps, nil), Auth: keyedFixture(t, trialKey), AnonDailyCap: dataapi.DefaultAnonDailyCap,
+		AnthropicRanges: mustRanges(t, anthropicOutbound),
+		MCP: mcpserver.HTTPHandler(deps, mcpserver.HTTPOptions{
+			DisableLocalhostProtection: true, AnonDailyCapFor: dataapi.AnonDailyCapFor, Keyed: dataapi.KeyedTier,
+			KeyHint: "https://data.example/docs/access#access-keys",
+		}),
+	})
+	init := `{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"t","version":"0"}}}`
+	rec := postMCP(t, api, init, fromIP("160.79.104.9")...)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	require.Contains(t, rec.Body.String(), "Without an API key this server is for trying it out: 2000 requests a day per client and lower per-minute limits;")
+
+	rec = postMCP(t, api, init, fromIP("192.0.2.9")...)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	require.Contains(t, rec.Body.String(), "Without an API key this server is for trying it out: 200 requests a day per client and lower per-minute limits;")
+
+	rec = postMCP(t, api, init, append(fromIP("160.79.104.9"), "X-API-Key", trialKey)...)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	require.NotContains(t, rec.Body.String(), "trying it out")
+}

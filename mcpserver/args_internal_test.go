@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -94,6 +95,24 @@ func TestHTTPHandler_KeylessCallersAreToldItIsATrial(t *testing.T) {
 
 	o.KeyHint = ""
 	require.Equal(t, instructions, initInstructions(t, httpHandler(&tools.Deps{}, o, nil)), "no hint, no sentence")
+}
+
+// AnonDailyCapFor, when set, gives each keyless caller its own daily number in the instructions
+// and takes precedence over AnonDailyCap; a caller it gives 0 is told no number.
+func TestHTTPHandler_AnonDailyCapForStatesTheCallersOwnNumber(t *testing.T) {
+	o := HTTPOptions{
+		DisableLocalhostProtection: true,
+		KeyHint:                    "hint",
+		AnonDailyCap:               200,
+		AnonDailyCapFor: func(r *http.Request) int {
+			n, _ := strconv.Atoi(r.Header.Get("X-Test-Cap"))
+			return n
+		},
+	}
+	h := httpHandler(&tools.Deps{}, o, nil)
+	require.Contains(t, initInstructions(t, h, "X-Test-Cap", "2000"), "trying it out: 2000 requests a day per client and lower per-minute limits;")
+	require.Contains(t, initInstructions(t, h, "X-Test-Cap", "200"), "trying it out: 200 requests a day per client and lower per-minute limits;")
+	require.Contains(t, initInstructions(t, h, "X-Test-Cap", "0"), "trying it out: lower per-minute limits;")
 }
 
 func jsonUnmarshal(s string, v any) error { return json.Unmarshal([]byte(s), v) }

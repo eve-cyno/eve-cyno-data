@@ -816,3 +816,28 @@ func TestNewHandler_RangeCallersGetTheLiveRangeBudget(t *testing.T) {
 	}
 	require.Equal(t, http.StatusTooManyRequests, live("192.0.2.9").Code)
 }
+
+// With keys, the anonymous daily cap and the Anthropic ranges, the keyless MCP instructions state
+// the caller's own daily number: the range tier's 2,000 inside the ranges, the ordinary cap
+// outside them.
+func TestNewHandler_KeylessMCPInstructionsStateTheCallersDailyNumber(t *testing.T) {
+	ranges, err := anthropicRanges(lookupEnv(nil))
+	require.NoError(t, err)
+	h, err := newHandler(&bootstrap.Deps{Tools: &tools.Deps{}}, exposure{
+		mcp: true, store: openStore(t, 0), anonDailyCap: 200, anthropicRanges: ranges, publicURL: "https://data.example.test",
+	}, slog.Default())
+	require.NoError(t, err)
+	instructions := func(ip string) string {
+		req := httptest.NewRequest(http.MethodPost, "/v1/mcp", strings.NewReader(
+			`{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"t","version":"0"}}}`))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Accept", "application/json, text/event-stream")
+		req.Header.Set("CF-Connecting-IP", ip)
+		rec := httptest.NewRecorder()
+		h.ServeHTTP(rec, req)
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		return rec.Body.String()
+	}
+	require.Contains(t, instructions("160.79.104.9"), "trying it out: 2000 requests a day per client")
+	require.Contains(t, instructions("192.0.2.9"), "trying it out: 200 requests a day per client")
+}
