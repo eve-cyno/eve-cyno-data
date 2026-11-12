@@ -21,6 +21,12 @@
 --   killmail_window_start  Unix seconds; killmails dated before it never count.
 --                          Absent while the collector has no start set: PvP
 --                          killmails are then not collected yet.
+--
+-- how_samples and baseline never include the latest hour (the hour that
+-- latest_hour_start begins), in any group, killmails too, so a reader compares that
+-- hour with them as they are. The collector folds an hour into its sums once that
+-- endpoint's next snapshot arrives, which can be before the other endpoint's; this
+-- file then leaves the hour out.
 CREATE TABLE meta (
   key   TEXT PRIMARY KEY,
   value TEXT NOT NULL
@@ -31,8 +37,8 @@ CREATE TABLE meta (
 --   map_jumps  jumps
 --   map_kills  ship_kills, npc_kills, pod_kills
 --   killmails  pvp_km, isk
--- An hour the collector missed adds nothing here (it is missing, never zero). A
--- missing row means n = 0.
+-- An hour the collector missed adds nothing here (it is missing, never zero), nor does
+-- the latest hour. A missing row means n = 0.
 CREATE TABLE how_samples (
   metric_group TEXT    NOT NULL,
   how          INTEGER NOT NULL,
@@ -40,9 +46,10 @@ CREATE TABLE how_samples (
   PRIMARY KEY (metric_group, how)
 ) WITHOUT ROWID;
 
--- Additive integer sums per (system, how) over the group's n sampled hours. A system
--- absent from a sampled hour adds 0 and still counts in n. Rows whose sums are all 0
--- are left out: a missing row means every sum is 0 with the group's n.
+-- Additive integer sums per (system, how) over the group's n sampled hours, the latest
+-- hour excluded. A system absent from a sampled hour adds 0 and still counts in n. Rows
+-- whose sums are all 0 are left out: a missing row means every sum is 0 with the
+-- group's n.
 --   mean     = sum / n
 --   variance = (n * sumsq - sum * sum) / (n * (n - 1)) for n >= 2 (sample), else 0
 -- pvp_km counts killmails of player losses (NPC losses excluded); isk_sum is the

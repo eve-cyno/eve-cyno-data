@@ -72,9 +72,9 @@ func TestGoldenV1_Numbers(t *testing.T) {
 	b, err := st.Hours(ctx, sysTama, []int{43, 44, 100})
 	require.NoError(t, err)
 	require.Equal(t, time.Unix(1792555200, 0).UTC(), b.Meta.GeneratedAt)
-	require.Equal(t, 6, b.Samples.MapJumps) // 3 weeks of how 43 and 44
-	require.Equal(t, 5, b.Samples.MapKills) // 2 + 3
-	require.Equal(t, 3*48+2*120, b.Samples.Killmails)
+	require.Equal(t, 6, b.Samples.MapJumps)           // 3 weeks of how 43 and 44
+	require.Equal(t, 5, b.Samples.MapKills)           // 2 + 3
+	require.Equal(t, 3*47+2*121, b.Samples.Killmails) // how 45 is 2: the latest hour is left out
 	require.Len(t, b.Hours, 3)
 
 	h := b.Hours[0]
@@ -101,6 +101,14 @@ func TestGoldenV1_Numbers(t *testing.T) {
 	requireStat(t, Stat{}, h.Jumps, "jumps 100")
 	requireStat(t, Stat{N: 2}, h.PvPKillmails, "pvp 100")
 
+	// how 45 is the latest hour of the golden file: week 2's killmails (Tama 2, 500M;
+	// Thera 1; Jita 10 background) are left out, so n is 2 and the sums are weeks 0, 1.
+	b, err = st.Hours(ctx, sysTama, []int{45})
+	require.NoError(t, err)
+	requireStat(t, Stat{}, b.Hours[0].Jumps, "tama jumps 45: no sample, n 0")
+	requireStat(t, Stat{Mean: 0.5, SD: math.Sqrt(0.5), N: 2}, b.Hours[0].PvPKillmails, "tama pvp 45 without week 2") // (2*1-1)/2
+	require.InDelta(t, 3e8/2, b.Hours[0].ISKMean, 1e-6)
+
 	b, err = st.Hours(ctx, sysThera, []int{43, 44})
 	require.NoError(t, err)
 	requireStat(t, Stat{Mean: 50, SD: math.Sqrt(200), N: 2}, b.Hours[0].NPCKills, "thera npc 43")
@@ -110,9 +118,10 @@ func TestGoldenV1_Numbers(t *testing.T) {
 	require.InDelta(t, 5e8/3, b.Hours[1].ISKMean, 1e-6)
 
 	// Jita: 10 background killmails in every sampled killmail hour: sd 0.
-	b, err = st.Hours(ctx, sysJita, []int{100})
+	b, err = st.Hours(ctx, sysJita, []int{100, 45})
 	require.NoError(t, err)
 	requireStat(t, Stat{Mean: 10, SD: 0, N: 2}, b.Hours[0].PvPKillmails, "jita")
+	requireStat(t, Stat{Mean: 10, SD: 0, N: 2}, b.Hours[1].PvPKillmails, "jita 45: sums 20/200 over n 2")
 
 	// A system the file never lists: zeros with the group's n.
 	b, err = st.Hours(ctx, sysAmamake, []int{43})
@@ -134,11 +143,22 @@ func TestGoldenV1_Latest(t *testing.T) {
 	require.Equal(t, SystemLatest{SystemID: sysTama, Jumps: 500, ShipKills: 7, NPCKills: 2, PodKills: 1}, withoutUsual(l.Systems[0]))
 	require.Equal(t, SystemLatest{SystemID: sysThera, NPCKills: 15}, withoutUsual(l.Systems[1]))
 	require.Equal(t, SystemLatest{SystemID: sysAmamake}, withoutUsual(l.Systems[2]), "absent from latest means 0")
-	// The usual numbers are for the hour of week of the latest hour (45): the golden
-	// map groups hold no sample there, the killmail group holds 3.
+	// The usual numbers are for the hour of week of the latest hour (45) and never
+	// include that hour: the golden map groups hold no sample there (n 0), the
+	// killmail group holds 2 (weeks 0 and 1; week 2 is the latest hour).
 	require.Equal(t, 45, l.Systems[0].Usual.How)
 	requireStat(t, Stat{}, l.Systems[0].Usual.Jumps, "usual jumps at how 45")
-	requireStat(t, Stat{N: 3}, l.Systems[0].Usual.PvPKillmails, "usual pvp at how 45")
+	requireStat(t, Stat{Mean: 0.5, SD: math.Sqrt(0.5), N: 2}, l.Systems[0].Usual.PvPKillmails, "usual pvp at how 45")
+	// A system with no baseline row at its latest how (Thera, Amamake): a missing row
+	// is "no baseline" for the map metrics (n 0), zeros with the group's n for killmails.
+	for _, i := range []int{1, 2} {
+		u := l.Systems[i].Usual
+		require.Equal(t, 45, u.How)
+		requireStat(t, Stat{}, u.Jumps, "no row: jumps n 0")
+		requireStat(t, Stat{}, u.ShipKills, "no row: ship n 0")
+		requireStat(t, Stat{N: 2}, u.PvPKillmails, "no row: pvp zeros with n 2")
+		require.False(t, u.Jumps.HasSD())
+	}
 }
 
 func withoutUsual(s SystemLatest) SystemLatest { s.Usual = HourStats{}; return s }

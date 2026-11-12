@@ -13,6 +13,12 @@ import (
 // N counts the hours the collector sampled for that hour of the week; an hour it
 // missed is missing, never zero. SD is 0 when N < 2 (one sample has no spread): use
 // HasSD to tell that apart from a spread of exactly 0.
+//
+// The samples never include the latest collected hour: the baseline is computed
+// without it, so a z-score z = (latest - Mean) / max(SD, 1) compares the latest hour
+// with a baseline that does not contain that point. N == 0 means no baseline (the
+// file has no sample of this metric at this hour of week); Mean and SD are then 0
+// and the caller must not score against them.
 type Stat struct {
 	Mean, SD float64
 	N        int

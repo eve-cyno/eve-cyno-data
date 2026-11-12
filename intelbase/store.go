@@ -10,6 +10,14 @@
 // the contract in schema_v1.sql, which is a byte copy of the writer's text and is
 // hash-pinned on both sides.
 //
+// The baseline NEVER includes the latest hour (the hour Latest reports): the writer
+// leaves it out of the sums and of the sample counts, in every group. A comparison of
+// the latest counts with the usual numbers, z = (latest - mean) / max(sd, 1), is
+// therefore made against a baseline without the point itself. A missing baseline row
+// means every sum is 0 with the group's n; when that n is 0 as well (an hour of week
+// the group never sampled, for example the map groups at the hour of the latest
+// hour in a young file) the result is "no baseline": a Stat with N 0, not an error.
+//
 // Every read runs all its queries in one transaction on ONE pooled connection
 // taken while the handle is held: the pool of a handle opens the path again for
 // every new connection, so after a swap a second connection of the same read could
