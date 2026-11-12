@@ -330,3 +330,82 @@ func TestBaseline_NotUpstream(t *testing.T) {
 	text, data := runBaseline(t, d, map[string]any{"system_name": "Tama", "day": "Tuesday", "hour": 19})
 	require.NotNil(t, data, text)
 }
+
+// corruptJumps makes the jumps sums of Tama Tuesday 19:00 impossible (sum^2 above n*sumsq).
+func corruptJumps() []string {
+	return append(tamaFiveWeeks(), fmt.Sprintf(`UPDATE baseline SET jumps_sum = 9999 WHERE system_id = %d AND how = %d`, blTama, blTuesday19))
+}
+
+func TestBaseline_CorruptJumpsSaysUnavailable(t *testing.T) {
+	d := baselineDeps(t, corruptJumps()...)
+	text, data := runBaseline(t, d, map[string]any{"system_name": "Tama", "day": "Tuesday", "hour": 19})
+	require.Contains(t, text, "- jumps: "+unavailableText)
+	require.NotContains(t, text, "no samples")
+	// The other metrics keep answering and the weeks come from the kill samples only.
+	require.Contains(t, text, "usual activity (5 weeks sampled):")
+	require.NotContains(t, text, "Not enough history")
+	require.Contains(t, text, "- ship kills: mean 9.4, sd 3.2 (n 5)")
+	require.Equal(t, []string{"jumps"}, data.Hours[0].Unavailable)
+
+	// Day and hour-on-every-day rows say it too.
+	text, data = runBaseline(t, d, map[string]any{"system_name": "Tama", "day": "Tuesday"})
+	require.Contains(t, strings.Split(text, "\n")[20], "jumps unavailable;")
+	require.Equal(t, []string{"jumps"}, data.Hours[19].Unavailable)
+	require.Equal(t, []string{}, data.Hours[18].Unavailable)
+	require.NotContains(t, text, "jumps no samples; ship kills mean")
+}
+
+func TestBaseline_CorruptPvPIsNotNotCollected(t *testing.T) {
+	d := baselineDeps(t, append(tamaFiveWeeks(), fmt.Sprintf(`UPDATE baseline SET pvp_km_sum = 9999 WHERE system_id = %d AND how = %d`, blTama, blTuesday19))...)
+	text, data := runBaseline(t, d, map[string]any{"system_name": "Tama", "day": "Tuesday", "hour": 19})
+	require.Contains(t, text, "- PvP killmails on zKillboard: "+unavailableText)
+	require.NotContains(t, text, "not collected yet")
+	require.Contains(t, text, "- jumps: mean 412, sd 41 (n 5)")
+	require.Nil(t, data.Hours[0].PvPKillmails)
+	require.Equal(t, []string{"pvp_killmails"}, data.Hours[0].Unavailable)
+
+	text, _ = runBaseline(t, d, map[string]any{"system_name": "Tama", "day": "Tuesday"})
+	require.Contains(t, strings.Split(text, "\n")[20], "PvP killmails unavailable")
+	require.NotContains(t, strings.Split(text, "\n")[20], "not collected yet")
+}
+
+func TestBaseline_UnavailableLeavesWeeksSampled(t *testing.T) {
+	// Jumps corrupt, ship kills sampled 5 times: the hour has 5 weeks, never 0.
+	require.Equal(t, 5, weeksSampled(hourWith(t, corruptJumps(), blTuesday19)))
+}
+
+func hourWith(t *testing.T, edit []string, how int) intelbase.HourStats {
+	t.Helper()
+	st := baselineStore(t, baselineFile(t, edit...))
+	b, err := st.Hours(context.Background(), blTama, []int{how})
+	require.NoError(t, err)
+	return b.Hours[0]
+}
+
+func TestBaseline_ThinWeekHistoryCaveat(t *testing.T) {
+	// The golden file has at most three jump samples per hour: the week view says so.
+	d := baselineDeps(t)
+	text, _ := runBaseline(t, d, map[string]any{"system_name": "Tama"})
+	require.Contains(t, text, "fewer than 4 weeks sampled; read as rough")
+	d = baselineDeps(t, tamaFiveWeeks()...)
+	text, _ = runBaseline(t, d, map[string]any{"system_name": "Tama"})
+	require.NotContains(t, text, "read as rough")
+}
+
+func TestHourEndWrapsToMidnight(t *testing.T) {
+	require.Equal(t, "00:00", hourEnd(23))
+	require.Equal(t, "20:00", hourEnd(19))
+	require.Equal(t, "Sunday 2026-11-15 23:00-00:00 UTC", hourLabelWithDate(time.Date(2026, 11, 15, 23, 0, 0, 0, time.UTC), 167)[:len("Sunday 2026-11-15 23:00-00:00 UTC")])
+	d := baselineDeps(t, tamaFiveWeeks()...)
+	text, _ := runBaseline(t, d, map[string]any{"system_name": "Tama", "day": "Sunday", "hour": 23})
+	require.Contains(t, text, "Sunday 23:00-00:00 UTC")
+	require.NotContains(t, text, "24:00")
+}
+
+func TestBaseline_UnreadableFileText(t *testing.T) {
+	d := testDeps(t)
+	d.Baselines = failingBaselines{err: fmt.Errorf("x: %w", intelbase.ErrUnreadable)}
+	text, data := runBaseline(t, d, map[string]any{"system_name": "Tama"})
+	require.Equal(t, "The activity baseline file exists but could not be read; the operator was notified by the log.", text)
+	require.Nil(t, data)
+}

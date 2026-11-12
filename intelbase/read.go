@@ -192,6 +192,12 @@ func (r *reader) hourStats(how int, row baselineRow) HourStats {
 	if h.unavailable[MetricPvPKillmails] {
 		return h
 	}
+	if row.isk < 0 {
+		slog.Warn("intelbase: metric unavailable, negative isk sum", "system", row.systemID, "how", how, "isk_sum", row.isk)
+		h.unavailable[MetricPvPKillmails] = true
+		h.PvPKillmails = Stat{}
+		return h
+	}
 	h.ISKMean = float64(row.isk) / float64(nM)
 	h.KillmailsCollected = true
 	return h

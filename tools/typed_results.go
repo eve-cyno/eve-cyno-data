@@ -621,6 +621,10 @@ type BaselineHour struct {
 	PvPKillmails *BaselineStat `json:"pvp_killmails"`
 	// ISKDestroyedMean is the mean ISK value destroyed on those killmails; null with PvPKillmails.
 	ISKDestroyedMean *float64 `json:"isk_destroyed_mean"`
+	// Unavailable names the metrics ("jumps", "ship_kills", "pod_kills", "npc_kills",
+	// "pvp_killmails") whose stored data in the baseline file was inconsistent; their stats
+	// are zero and mean "no figure", not "no samples". Empty when all are readable.
+	Unavailable []string `json:"unavailable"`
 }
 
 // BaselineStat is the mean and sample standard deviation of one metric over N sampled

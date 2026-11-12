@@ -444,3 +444,11 @@ func TestAttribution_ActivityComparison(t *testing.T) {
 }
 
 var _ = intelbase.ErrNotPublished
+
+func TestCompare_UnreadableFileText(t *testing.T) {
+	d := testDeps(t)
+	d.Baselines = failingBaselines{err: fmt.Errorf("x: %w", intelbase.ErrUnreadable)}
+	res, err := ExecuteToolResult(context.Background(), d, "compare_activity_to_baseline", map[string]any{"systems": []any{"Tama"}})
+	require.NoError(t, err)
+	require.Equal(t, "The activity baseline file exists but could not be read; the operator was notified by the log.", res.Text)
+}

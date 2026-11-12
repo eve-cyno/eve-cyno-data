@@ -48,12 +48,16 @@ const SchemaVersion = 1
 const DefaultInterval = sqlitero.DefaultReloadInterval
 
 // HoursPerWeek is the number of hour-of-week slots; a "how" is 0 (Monday
-// 00:00-01:00 UTC) to 167 (Sunday 23:00-24:00 UTC).
+// 00:00-01:00 UTC) to 167 (Sunday 23:00-00:00 UTC).
 const HoursPerWeek = 168
 
 // ErrNotPublished means the baseline file does not exist yet or cannot be opened
 // as a SQLite file (the ingest has not published one on this server yet).
 var ErrNotPublished = errors.New("intel baselines not published yet")
+
+// ErrUnreadable means the baseline file exists but this process cannot open it
+// (permissions). It is an operator problem, not "not published yet".
+var ErrUnreadable = errors.New("intel baseline file exists but cannot be read")
 
 // UnknownFormatError means the file is there but is not a schema version 1 file
 // this package can read (a newer ingest image published it, or it is damaged).
@@ -76,6 +80,8 @@ const (
 	StateReady
 	// StateUnknownFormat: the file is of a format this version cannot read.
 	StateUnknownFormat
+	// StateUnreadable: the file exists but cannot be opened (permissions).
+	StateUnreadable
 )
 
 // Status says whether reads can work and, if not, why.
@@ -129,6 +135,8 @@ func (s *Store) acquire() (*sqlitero.Handle, error) {
 	switch {
 	case errors.As(err, &uf):
 		return nil, uf
+	case errors.Is(err, sqlitero.ErrUnreadable):
+		return nil, fmt.Errorf("%w: %w", ErrUnreadable, err)
 	case errors.Is(err, sqlitero.ErrNotOpen):
 		return nil, fmt.Errorf("%w: %w", ErrNotPublished, err)
 	}
@@ -143,6 +151,9 @@ func (s *Store) Status() Status {
 		var uf *UnknownFormatError
 		if errors.As(err, &uf) {
 			return Status{State: StateUnknownFormat, Version: uf.Version, Err: err}
+		}
+		if errors.Is(err, ErrUnreadable) {
+			return Status{State: StateUnreadable, Err: err}
 		}
 		return Status{State: StateNotPublished, Err: err}
 	}

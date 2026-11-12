@@ -297,9 +297,12 @@ func TestNewStat_CorruptSums(t *testing.T) {
 		_, err := newStat(c.sum, c.sumsq, c.n)
 		require.ErrorIs(t, err, errCorrupt, "%+v", c)
 	}
-	st, err := newStat(-6, 14, 3) // -1, -2, -3
-	require.NoError(t, err)
-	requireStat(t, Stat{Mean: -2, SD: 1, N: 3}, st, "negative values")
+	// A count is never negative, so a negative sum cannot come from a real file even
+	// when the variance numerator is fine (-1, -2, -3).
+	_, err := newStat(-6, 14, 3)
+	require.ErrorIs(t, err, errCorrupt, "negative sum")
+	_, err = newStat(-1, 1, 1)
+	require.ErrorIs(t, err, errCorrupt, "negative sum, one sample")
 }
 
 func TestKillmailsNotCollectedYet(t *testing.T) {
@@ -490,4 +493,35 @@ func TestCorruptMetricDegradesOnlyThatMetric(t *testing.T) {
 	require.NoError(t, err)
 	require.True(t, l.Systems[0].Usual.Unavailable(MetricPvPKillmails))
 	require.False(t, l.Systems[1].Usual.Unavailable(MetricPvPKillmails))
+}
+
+// A negative ISK sum is as impossible as a negative count: PvP killmails degrade to
+// unavailable instead of reporting a negative mean ISK.
+func TestNegativeISKSumDegradesPvP(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "f.sqlite")
+	publishVariant(t, path, `UPDATE baseline SET isk_sum = -5 WHERE system_id = 30002813 AND how = 43`)
+	st := Open(path, time.Minute)
+	defer st.Close()
+	b, err := st.Hours(context.Background(), sysTama, []int{43})
+	require.NoError(t, err)
+	require.True(t, b.Hours[0].Unavailable(MetricPvPKillmails))
+	require.False(t, b.Hours[0].KillmailsCollected)
+	require.Equal(t, 0.0, b.Hours[0].ISKMean)
+}
+
+// A file that exists but cannot be opened is not "not published yet".
+func TestOpen_UnreadableFileIsNotNotPublished(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("root reads a mode 000 file")
+	}
+	path := filepath.Join(t.TempDir(), "intel-baselines.sqlite")
+	copyGolden(t, path)
+	require.NoError(t, os.Chmod(path, 0))
+	t.Cleanup(func() { _ = os.Chmod(path, 0o644) })
+	st := Open(path, time.Minute)
+	defer st.Close()
+	_, err := st.Hours(context.Background(), sysTama, []int{43})
+	require.ErrorIs(t, err, ErrUnreadable)
+	require.NotErrorIs(t, err, ErrNotPublished)
+	require.Equal(t, StateUnreadable, st.Status().State)
 }

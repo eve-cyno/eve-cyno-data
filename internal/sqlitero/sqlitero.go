@@ -36,6 +36,10 @@ var ErrClosed = errors.New("database is closed")
 // failed open) by a lazy DB that has not opened its file yet.
 var ErrNotOpen = errors.New("database file not open")
 
+// ErrUnreadable is wrapped into the open error when the file exists but the process
+// cannot open it (permissions), as opposed to a missing or damaged file.
+var ErrUnreadable = errors.New("database file exists but cannot be read")
+
 // Options configures a DB.
 type Options struct {
 	// Name labels log lines and errors ("<Name> reload: ...", "<Name>: database is
@@ -174,6 +178,14 @@ func (r *DB) openHandle() (*sql.DB, os.FileInfo, error) {
 	if err != nil {
 		return nil, nil, err
 	}
+	f, err := os.Open(r.path)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return nil, nil, err
+		}
+		return nil, nil, fmt.Errorf("%w: %w", ErrUnreadable, err)
+	}
+	_ = f.Close()
 	db, err := sql.Open("sqlite", DSN(r.path))
 	if err != nil {
 		return nil, nil, err

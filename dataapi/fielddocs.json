@@ -274,6 +274,7 @@
   "tools.BaselineHour.PodKills": "PodKills is the pods killed in the system.",
   "tools.BaselineHour.PvPKillmails": "PvPKillmails is the player-loss killmails on zKillboard; null while killmails are not collected yet (never zero).",
   "tools.BaselineHour.ShipKills": "ShipKills is the ships killed in the system.",
+  "tools.BaselineHour.Unavailable": "Unavailable names the metrics (\"jumps\", \"ship_kills\", \"pod_kills\", \"npc_kills\", \"pvp_killmails\") whose stored data in the baseline file was inconsistent; their stats are zero and mean \"no figure\", not \"no samples\". Empty when all are readable.",
   "tools.BaselineSamples.Killmails": "Killmails is the number of killmail hours folded.",
   "tools.BaselineSamples.MapJumps": "MapJumps is the number of hourly jump snapshots folded.",
   "tools.BaselineSamples.MapKills": "MapKills is the number of hourly kill snapshots folded.",

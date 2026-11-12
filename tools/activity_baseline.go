@@ -164,7 +164,7 @@ func baselineHourArg(v any) (hour int, present, ok bool) {
 
 func hourEnd(h int) string {
 	if h == 23 {
-		return "24:00"
+		return "00:00"
 	}
 	return fmt.Sprintf("%02d:00", h+1)
 }
@@ -172,7 +172,21 @@ func hourEnd(h int) string {
 // weeksSampled is the number of weeks behind an hour of the week: the smaller of the
 // jump and the kill sample counts, so a half-sampled hour does not look better than
 // it is.
-func weeksSampled(h intelbase.HourStats) int { return min(h.Jumps.N, h.ShipKills.N) }
+//
+// A metric whose stored data was inconsistent has no sample count to offer and is left
+// out; with both unavailable the hour has no weeks.
+func weeksSampled(h intelbase.HourStats) int {
+	jumpsOK, killsOK := !h.Unavailable(intelbase.MetricJumps), !h.Unavailable(intelbase.MetricShipKills)
+	switch {
+	case jumpsOK && killsOK:
+		return min(h.Jumps.N, h.ShipKills.N)
+	case jumpsOK:
+		return h.Jumps.N
+	case killsOK:
+		return h.ShipKills.N
+	}
+	return 0
+}
 
 func weeksText(n int) string { return fmt.Sprintf("%d %s", n, plural(n, "week", "weeks")) }
 
@@ -200,6 +214,45 @@ func fmtISKShort(v float64) string {
 		return fmt.Sprintf("%.1fk", v/1e3)
 	}
 	return fmt.Sprintf("%.0f", v)
+}
+
+// unavailableText is what an answer says for a metric the reader degraded.
+const unavailableText = "unavailable (inconsistent data in the baseline file)"
+
+// metricKeys are the typed names of the metrics, in the order of BaselineHour.
+var metricKeys = [...]struct {
+	m   intelbase.Metric
+	key string
+}{
+	{intelbase.MetricJumps, "jumps"}, {intelbase.MetricShipKills, "ship_kills"}, {intelbase.MetricPodKills, "pod_kills"},
+	{intelbase.MetricNPCKills, "npc_kills"}, {intelbase.MetricPvPKillmails, "pvp_killmails"},
+}
+
+// unavailableMetrics lists the typed names of the degraded metrics of h; never nil.
+func unavailableMetrics(h intelbase.HourStats) []string {
+	out := []string{}
+	for _, k := range metricKeys {
+		if h.Unavailable(k.m) {
+			out = append(out, k.key)
+		}
+	}
+	return out
+}
+
+// hourStatText is statText for metric m of h; a degraded metric says so.
+func hourStatText(h intelbase.HourStats, m intelbase.Metric, whole bool) string {
+	if h.Unavailable(m) {
+		return unavailableText
+	}
+	return statText(h.Stat(m), whole)
+}
+
+// hourCompactText is compactStat for metric m of h; a degraded metric says so.
+func hourCompactText(h intelbase.HourStats, m intelbase.Metric, whole bool) string {
+	if h.Unavailable(m) {
+		return "unavailable"
+	}
+	return compactStat(h.Stat(m), whole)
 }
 
 // statText is "mean 412, sd 41 (n 5)"; a single sample has no spread and says so by
@@ -231,7 +284,7 @@ func baselineHour(h intelbase.HourStats) BaselineHour {
 	out := BaselineHour{
 		Day: weekdayNames[h.How/24], Hour: h.How % 24,
 		Jumps: baselineStat(h.Jumps), ShipKills: baselineStat(h.ShipKills), PodKills: baselineStat(h.PodKills),
-		NPCKills: baselineStat(h.NPCKills),
+		NPCKills: baselineStat(h.NPCKills), Unavailable: unavailableMetrics(h),
 	}
 	if h.KillmailsCollected {
 		pvp := baselineStat(h.PvPKillmails)
@@ -273,11 +326,13 @@ func baselineOneHour(name string, b intelbase.Baseline, res *ActivityBaseline) s
 	}
 	out = append(out,
 		fmt.Sprintf("%s, %s-%s UTC, usual activity (%s sampled):", name, label, hourEnd(h.How%24), weeksText(n)),
-		"- jumps: "+statText(h.Jumps, true),
-		"- ship kills: "+statText(h.ShipKills, false),
-		"- pod kills: "+statText(h.PodKills, false),
-		"- NPC kills: "+statText(h.NPCKills, false))
-	if h.KillmailsCollected {
+		"- jumps: "+hourStatText(h, intelbase.MetricJumps, true),
+		"- ship kills: "+hourStatText(h, intelbase.MetricShipKills, false),
+		"- pod kills: "+hourStatText(h, intelbase.MetricPodKills, false),
+		"- NPC kills: "+hourStatText(h, intelbase.MetricNPCKills, false))
+	if h.Unavailable(intelbase.MetricPvPKillmails) {
+		out = append(out, "- PvP killmails on zKillboard: "+unavailableText)
+	} else if h.KillmailsCollected {
 		out = append(out, fmt.Sprintf("- PvP killmails on zKillboard: %s; mean ISK destroyed %s", statText(h.PvPKillmails, false), fmtISKShort(h.ISKMean)))
 	} else {
 		out = append(out, "- PvP killmails on zKillboard: not collected yet.")
@@ -302,8 +357,11 @@ func baselineHourRows(head string, b intelbase.Baseline, res *ActivityBaseline) 
 			thin++
 		}
 		row := fmt.Sprintf("- %s-%s UTC: jumps %s; ship kills %s; pod kills %s; NPC kills %s; ",
-			hourLabel(h), hourEnd(h.How%24), compactStat(h.Jumps, true), compactStat(h.ShipKills, false), compactStat(h.PodKills, false), compactStat(h.NPCKills, false))
-		if h.KillmailsCollected {
+			hourLabel(h), hourEnd(h.How%24), hourCompactText(h, intelbase.MetricJumps, true), hourCompactText(h, intelbase.MetricShipKills, false),
+			hourCompactText(h, intelbase.MetricPodKills, false), hourCompactText(h, intelbase.MetricNPCKills, false))
+		if h.Unavailable(intelbase.MetricPvPKillmails) {
+			row += "PvP killmails unavailable"
+		} else if h.KillmailsCollected {
 			row += fmt.Sprintf("PvP killmails %s, mean ISK destroyed %s", compactStat(h.PvPKillmails, false), fmtISKShort(h.ISKMean))
 		} else {
 			row += "PvP killmails not collected yet"
@@ -376,6 +434,9 @@ func baselineWeek(name string, b intelbase.Baseline, res *ActivityBaseline) stri
 		res.MostShipKills = baselineHours(top)
 		out = append(out, "- most ship kills: "+rankedList(top, intelbase.MetricShipKills))
 	}
+	if maxWeeks < minBaselineWeeks {
+		out = append(out, fmt.Sprintf("fewer than %d weeks sampled; read as rough.", minBaselineWeeks))
+	}
 	out = append(out, baselineMissedNote, "Ask with day and hour for the full numbers of one hour.")
 	if w := baselineWindowNote(res); w != "" {
 		out = append(out, w)
@@ -397,6 +458,9 @@ func baselineFailureText(ctx context.Context, tool string, err error) (string, e
 	switch {
 	case ctx.Err() != nil:
 		return "", ctx.Err()
+	case errors.Is(err, intelbase.ErrUnreadable):
+		slog.Error("activity baseline file exists but cannot be read", "tool", tool, "err", err)
+		return "The activity baseline file exists but could not be read; the operator was notified by the log.", nil
 	case errors.Is(err, intelbase.ErrNotPublished):
 		return "Activity baselines are not published on this server yet. Try again in an hour.", nil
 	case errors.As(err, &uf):

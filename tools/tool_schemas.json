@@ -1050,7 +1050,7 @@
     "type": "function",
     "function": {
       "name": "get_activity_baseline",
-      "description": "Usual activity of one EVE solar system by hour of the week (UTC), from hourly ESI snapshots and zKillboard killmails collected since October 2026: mean and spread (sample standard deviation) of jumps, ship, pod and NPC kills, PvP killmails and ISK destroyed, with the number of weeks sampled. Pass day and hour for one hour, day for a whole day, hour for that hour on every day, or neither for the busiest and quietest hours of the week. Hours the collector missed are left out, not counted as zero; PvP killmails answer 'not collected yet' until killmail collection has data. Use for 'how busy is X usually on Tuesday evening', 'when is Y quiet', 'is this normal for Z'.",
+      "description": "Usual activity of one EVE solar system by hour of the week (UTC), from hourly ESI snapshots and zKillboard killmails: mean and spread (sample standard deviation) of jumps, ship, pod and NPC kills, PvP killmails and ISK destroyed, with the number of weeks sampled. Pass day and hour for one hour, day for a whole day, hour for that hour on every day, or neither for the busiest and quietest hours of the week. Hours the collector missed are left out, not counted as zero; PvP killmails answer 'not collected yet' until killmail collection has data. Use for 'how busy is X usually on Tuesday evening', 'when is Y quiet', 'is this normal for Z'.",
       "parameters": {
         "type": "object",
         "properties": {

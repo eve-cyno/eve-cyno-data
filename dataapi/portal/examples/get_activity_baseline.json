@@ -73,7 +73,8 @@
               "sd": 1.816590212458495,
               "n": 5
             },
-            "isk_destroyed_mean": 1420000000
+            "isk_destroyed_mean": 1420000000,
+            "unavailable": []
           }
         ],
         "ranked_by": "",
