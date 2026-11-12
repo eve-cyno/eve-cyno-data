@@ -61,7 +61,7 @@ func rpc(id, method, params string) string {
 // id (numeric, zero and string alike), a result with isError and one text that says the service
 // is busy for Claude connectors and when to retry and ends with the key hint, Retry-After kept.
 func TestRangeCeilingMCP_ToolsCallIsAnIsErrorResult(t *testing.T) {
-	for _, id := range []string{`42`, `0`, `"call-7"`, `""`} {
+	for _, id := range []string{`42`, `0`, `"call-7"`, `""`, `9223372036854775807`, `-9223372036854775808`} {
 		t.Run(id, func(t *testing.T) {
 			api, _, _ := fullMCPCeiling(t, dataapi.DefaultAnonDailyCap)
 			rec := postMCP(t, api, rpc(id, "tools/call", `{"name":"get_jumps_between","arguments":{}}`), fromIP(connectorX)...)
@@ -109,7 +109,7 @@ func TestRangeCeilingMCP_NotificationIsAcceptedWithNoBody(t *testing.T) {
 
 // What is not one JSON-RPC 2.0 request or notification keeps the HTTP 429 of the ceiling: a
 // batch, a body that does not parse, a message without the version, without a method or with an
-// id that is neither a string nor a number, a body over the limit, and every method but POST.
+// id that is neither a string nor an exact int64 (1.5 and 2^63 would be echoed wrongly), a body over the limit, and every method but POST.
 func TestRangeCeilingMCP_NonMessagesKeepTheHTTP429(t *testing.T) {
 	api, _, _ := fullMCPCeiling(t, dataapi.DefaultAnonDailyCap)
 	for name, body := range map[string]string{
@@ -120,6 +120,9 @@ func TestRangeCeilingMCP_NonMessagesKeepTheHTTP429(t *testing.T) {
 		"no method":    `{"jsonrpc":"2.0","id":1,"result":{}}`,
 		"object id":    `{"jsonrpc":"2.0","id":{"a":1},"method":"tools/list"}`,
 		"bool id":      `{"jsonrpc":"2.0","id":true,"method":"tools/list"}`,
+		"fraction id":  `{"jsonrpc":"2.0","id":1.5,"method":"tools/list"}`,
+		"int64 over":   `{"jsonrpc":"2.0","id":9223372036854775808,"method":"tools/list"}`,
+		"huge id":      `{"jsonrpc":"2.0","id":99999999999999999999,"method":"tools/list"}`,
 		"number name":  `{"jsonrpc":"2.0","id":1,"method":7}`,
 		"over limit":   rpc("1", "tools/call", `{"name":"x","arguments":{"pad":"`+strings.Repeat("a", 64<<10)+`"}}`),
 		"empty body":   "",

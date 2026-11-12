@@ -159,7 +159,8 @@ func (a *API) writeAnonDailyRefusal(w http.ResponseWriter, r *http.Request, retr
 // rpcMessage decodes the body of a POST to the MCP transport as one JSON-RPC 2.0 request or
 // notification, as the SDK decodes a message (the first JSON value; exact, case-sensitive keys;
 // "jsonrpc" "2.0" and a string "method" required): its method and id, a string or an int64 (the
-// SDK makes a numeric id an int64), nil for a notification (no id, or null). ok is false for
+// SDK makes a numeric id an int64; a number that is not an exact int64 is not a message here),
+// nil for a notification (no id, or null). ok is false for
 // anything else: a batch, a body that does not parse, a message without a method (a response), an
 // id of another type, a body over the transport's limit or nested deeper than the SDK accepts, and
 // a body that must not be read (peekDeniedKey: both pools of the route are full). A peeked body is
@@ -185,7 +186,9 @@ func rpcMessage(r *http.Request) (id any, method string, ok bool) {
 		return nil, method, true
 	}
 	var v any
-	if json.Unmarshal(raw, &v) != nil {
+	dec := json.NewDecoder(bytes.NewReader(raw))
+	dec.UseNumber() // a numeric id stays exact: a float64 would round it
+	if dec.Decode(&v) != nil {
 		return nil, "", false
 	}
 	switch v := v.(type) {
@@ -193,8 +196,14 @@ func rpcMessage(r *http.Request) (id any, method string, ok bool) {
 		return nil, method, true
 	case string:
 		return v, method, true
-	case float64:
-		return int64(v), method, true
+	case json.Number:
+		// Only an exact int64 is echoed as it came; 1.5, 1e2 and 2^63 are not (the caller then
+		// answers the plain HTTP 429 rather than a reply with another id).
+		n, err := strconv.ParseInt(v.String(), 10, 64)
+		if err != nil {
+			return nil, "", false
+		}
+		return n, method, true
 	}
 	return nil, "", false
 }
