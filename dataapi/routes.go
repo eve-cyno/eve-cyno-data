@@ -100,9 +100,12 @@ type route struct {
 	// 405s); method is then only the one the OpenAPI document describes.
 	anyMethod bool
 	// when reports whether the route exists on a Surface; nil means always.
-	when   func(Surface) bool
-	rate   func(Surface) Rate
-	handle func(*API, http.ResponseWriter, *http.Request)
+	when func(Surface) bool
+	rate func(Surface) Rate
+	// rangeRate, when set, gives the route a range tier: the per-address rate and the shared
+	// ceiling of keyless callers inside Config.AnthropicRanges (see rangeLimiter).
+	rangeRate func(Surface) (perAddr, ceiling Rate)
+	handle    func(*API, http.ResponseWriter, *http.Request)
 	// trialFree marks the routes the anonymous daily cap does not count: browsing the
 	// documentation (and the portal assets) never spends the trial, and a health probe must
 	// not be locked out.
@@ -302,9 +305,10 @@ func routeTable() []route {
 		},
 		{
 			method: http.MethodPost, path: "/mcp", anyMethod: true, when: mcpOn,
-			rate:   func(s Surface) Rate { return s.Limits.MCP },
-			handle: (*API).mcpTransport,
-			cache:  cacheNone,
+			rate:      func(s Surface) Rate { return s.Limits.MCP },
+			rangeRate: func(s Surface) (Rate, Rate) { return s.Limits.Range.MCP, s.Limits.Range.MCPCeiling },
+			handle:    (*API).mcpTransport,
+			cache:     cacheNone,
 			doc: &opDoc{
 				id: "mcp", tag: "mcp", summary: "Model Context Protocol endpoint",
 				description: "Streamable-HTTP MCP server (stateless, JSON responses): the same tools as `/tool/{name}`, for MCP clients such as " +

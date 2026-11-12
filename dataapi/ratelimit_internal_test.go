@@ -2,6 +2,8 @@ package dataapi
 
 import (
 	"net/http/httptest"
+	"strconv"
+	"sync"
 	"testing"
 	"time"
 
@@ -67,12 +69,12 @@ func TestWindowLimiter_SweepDropsIdleKeys(t *testing.T) {
 	for _, k := range []string{"a", "b", "c"} {
 		_, _ = l.Allow(k)
 	}
-	require.Len(t, l.hits, 3)
+	require.Len(t, l.win.hits, 3)
 
 	clk.advance(2 * time.Minute)
 	_, _ = l.Allow("d") // triggers the sweep: a, b, c are idle past the window
-	require.Len(t, l.hits, 1)
-	require.Contains(t, l.hits, "d")
+	require.Len(t, l.win.hits, 1)
+	require.Contains(t, l.win.hits, "d")
 }
 
 func TestLimiterFor_DisabledRates(t *testing.T) {
@@ -245,4 +247,199 @@ func TestIPKeys_KeysByTheSlash64(t *testing.T) {
 	req := httptest.NewRequest("GET", "/x", nil)
 	req.Header.Set("CF-Connecting-IP", "2001:db8:1:2::5")
 	require.Equal(t, "2001:db8:1:2::/64", IPKeys{}.Key(req))
+}
+
+func newTestRangeLimiter(per, ceiling int) (*rangeLimiter, *fakeClock) {
+	clk := &fakeClock{t: time.Unix(1_700_000_000, 0)}
+	l := newRangeLimiter(Rate{Max: per, Window: time.Minute}, Rate{Max: ceiling, Window: time.Minute}, clk.now)
+	return l, clk
+}
+
+// Both buckets are checked before either is recorded: the ceiling refuses without spending the
+// address's budget, and the address limit refuses without taking a place in the ceiling.
+func TestRangeLimiter_ChecksBothBeforeRecordingEither(t *testing.T) {
+	l, clk := newTestRangeLimiter(2, 3)
+	for range 2 {
+		ok, _, _ := l.allow("a")
+		require.True(t, ok)
+	}
+	ok, retry, shared := l.allow("a")
+	require.False(t, ok)
+	require.False(t, shared, "a's own limit")
+	require.Positive(t, retry)
+
+	ok, _, _ = l.allow("b") // the ceiling's third place: a's refusal took none
+	require.True(t, ok)
+	ok, retry, shared = l.allow("b")
+	require.False(t, ok)
+	require.True(t, shared, "the ceiling")
+	require.Positive(t, retry)
+	binds, _ := l.ceilingBinds("b")
+	require.True(t, binds)
+
+	clk.advance(time.Minute)
+	binds, _ = l.ceilingBinds("b")
+	require.False(t, binds)
+	for range 2 {
+		ok, _, _ = l.allow("b") // the ceiling refusal spent none of b's 2
+		require.True(t, ok)
+	}
+}
+
+// A ceiling refusal spends nothing of the address's own budget, even while the address's
+// earlier requests are still in its window.
+func TestRangeLimiter_CeilingRefusalSpendsNoAddressBudget(t *testing.T) {
+	l, clk := newTestRangeLimiter(3, 4)
+	for range 3 {
+		ok, _, _ := l.allow("a")
+		require.True(t, ok)
+	}
+	clk.advance(10 * time.Second)
+	ok, _, _ := l.allow("b") // b: 1 of 3; the ceiling is full (4 of 4)
+	require.True(t, ok)
+	clk.advance(10 * time.Second)
+	for range 5 {
+		ok, retry, shared := l.allow("b")
+		require.False(t, ok)
+		require.True(t, shared)
+		require.Equal(t, 40*time.Second, retry, "until a's first request leaves the ceiling")
+	}
+	clk.advance(41 * time.Second) // a's requests leave; b's first one stays
+	for i := range 2 {
+		ok, _, _ := l.allow("b")
+		require.True(t, ok, "b's request %d: the refusals took none of its 3", i+2)
+	}
+	ok, _, shared := l.allow("b") // the ceiling holds 3 of 4: only b's own limit is full
+	require.False(t, ok)
+	require.False(t, shared, "b's own limit")
+}
+
+// check answers what allow would, and records nothing.
+func TestRangeLimiter_CheckRecordsNothing(t *testing.T) {
+	l, _ := newTestRangeLimiter(1, 2)
+	for range 50 {
+		ok, _, _ := l.check("a")
+		require.True(t, ok)
+		binds, _ := l.ceilingBinds("a")
+		require.False(t, binds)
+	}
+	ok, _, _ := l.allow("a")
+	require.True(t, ok)
+	ok, _, shared := l.check("a")
+	require.False(t, ok)
+	require.False(t, shared)
+	ok, _, _ = l.allow("b")
+	require.True(t, ok)
+	ok, _, shared = l.check("c")
+	require.False(t, ok)
+	require.True(t, shared)
+}
+
+// With both buckets full the refusal is the one with the longer wait, so Retry-After never sends
+// the caller back before it can be served: the address's when its wait is longer (the ceiling's
+// is then not the binding limit), the ceiling's when its wait is as long or longer. allow, check
+// and ceilingBinds agree, and none of them records anything.
+func TestRangeLimiter_BothFullAnswersTheLongerWait(t *testing.T) {
+	t.Run("the address waits longer", func(t *testing.T) {
+		clk := &fakeClock{t: time.Unix(1_700_000_000, 0)}
+		l := newRangeLimiter(Rate{Max: 2, Window: time.Minute}, Rate{Max: 3, Window: time.Minute}, clk.now)
+		ok, _, _ := l.allow("b") // t+0: the ceiling's oldest
+		require.True(t, ok)
+		clk.advance(20 * time.Second)
+		for range 2 { // t+20s: a's oldest; a and the ceiling are full
+			ok, _, _ = l.allow("a")
+			require.True(t, ok)
+		}
+		clk.advance(10 * time.Second) // t+30s: the ceiling frees in 30 s, a in 50 s
+		for range 3 {
+			ok, retry, shared := l.allow("a")
+			require.False(t, ok)
+			require.False(t, shared, "a's own limit binds")
+			require.Equal(t, 50*time.Second, retry)
+			ok, retry, shared = l.check("a")
+			require.False(t, ok)
+			require.False(t, shared)
+			require.Equal(t, 50*time.Second, retry)
+			binds, _ := l.ceilingBinds("a")
+			require.False(t, binds, "the ceiling is full but does not bind a")
+		}
+		binds, retry := l.ceilingBinds("c") // c has room of its own: the ceiling binds it
+		require.True(t, binds)
+		require.Equal(t, 30*time.Second, retry)
+
+		clk.advance(30 * time.Second) // b's request leaves the ceiling: c fits, a does not
+		ok, _, _ = l.allow("c")
+		require.True(t, ok, "a's refusals took no place in the ceiling")
+	})
+	t.Run("the ceiling waits longer", func(t *testing.T) {
+		clk := &fakeClock{t: time.Unix(1_700_000_000, 0)}
+		l := newRangeLimiter(Rate{Max: 1, Window: 10 * time.Second}, Rate{Max: 1, Window: time.Minute}, clk.now)
+		ok, _, _ := l.allow("a")
+		require.True(t, ok)
+		clk.advance(5 * time.Second) // a frees in 5 s, the ceiling in 55 s
+		ok, retry, shared := l.allow("a")
+		require.False(t, ok)
+		require.True(t, shared)
+		require.Equal(t, 55*time.Second, retry)
+		binds, retry := l.ceilingBinds("a")
+		require.True(t, binds)
+		require.Equal(t, 55*time.Second, retry)
+	})
+	t.Run("equal waits are the ceiling's", func(t *testing.T) {
+		l, _ := newTestRangeLimiter(2, 2)
+		for range 2 {
+			ok, _, _ := l.allow("a")
+			require.True(t, ok)
+		}
+		ok, retry, shared := l.allow("a")
+		require.False(t, ok)
+		require.True(t, shared)
+		require.Equal(t, time.Minute, retry)
+		binds, _ := l.ceilingBinds("a")
+		require.True(t, binds)
+	})
+}
+
+// 64 goroutines over 16 addresses never get more than the ceiling in all, nor more than the
+// per-address budget for any one address (run with -race).
+func TestRangeLimiter_ConcurrentCallsNeverOvershoot(t *testing.T) {
+	const per, ceiling, keys, workers, tries = 10, 100, 16, 64, 20
+	l, _ := newTestRangeLimiter(per, ceiling)
+	var (
+		mu       sync.Mutex
+		total    int
+		perKey   = map[string]int{}
+		wg       sync.WaitGroup
+		start    = make(chan struct{})
+		refusals [2]int // [own limit, ceiling]
+	)
+	for w := range workers {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			key := "k" + strconv.Itoa(w%keys)
+			<-start
+			for range tries {
+				ok, _, shared := l.allow(key)
+				mu.Lock()
+				switch {
+				case ok:
+					total++
+					perKey[key]++
+				case shared:
+					refusals[1]++
+				default:
+					refusals[0]++
+				}
+				mu.Unlock()
+			}
+		}()
+	}
+	close(start)
+	wg.Wait()
+	require.Equal(t, ceiling, total, "the ceiling binds (16 x 10 > 100) and is never exceeded")
+	for k, n := range perKey {
+		require.LessOrEqual(t, n, per, k)
+	}
+	require.Equal(t, workers*tries-ceiling, refusals[0]+refusals[1])
 }

@@ -1,6 +1,9 @@
 package dataapi
 
-import "net/http"
+import (
+	"net/http"
+	"time"
+)
 
 // scaled is r with Max multiplied by factor (factor < 2: r unchanged). KeyedMax is dropped:
 // the result is a plain budget.
@@ -26,9 +29,13 @@ func (r Rate) forKey(factor int) Rate {
 // forAnon is the plain budget of a caller without an API key.
 func (r Rate) forAnon() Rate { return Rate{Max: r.Max, Window: r.Window} }
 
-// tieredLimiter holds the limiter of anonymous callers and the one of authenticated
-// callers (Rate.forKey, its own buckets via CallerKeys).
-type tieredLimiter struct{ anon, keyed *WindowLimiter }
+// tieredLimiter holds the limiter of anonymous callers, the one of authenticated callers
+// (Rate.forKey, its own buckets via CallerKeys) and, on a route with a range tier, the range pair
+// of anonymous callers inside Config.AnthropicRanges (nil: no tier).
+type tieredLimiter struct {
+	anon, keyed *WindowLimiter
+	rng         *rangeLimiter
+}
 
 func newTieredLimiter(r Rate, factor int) tieredLimiter {
 	t := tieredLimiter{anon: limiterFor(r.forAnon())}
@@ -40,9 +47,54 @@ func newTieredLimiter(r Rate, factor int) tieredLimiter {
 	return t
 }
 
-func (t tieredLimiter) pick(r *http.Request) *WindowLimiter {
+// off reports whether the route has no limit for anyone. A route whose own rate is disabled
+// (say Limits.MCP zero) with a range pair set is not off: keyless callers in the ranges keep
+// the range pair, everyone else is unlimited.
+func (t tieredLimiter) off() bool { return t.anon == nil && t.keyed == nil && t.rng == nil }
+
+// pick returns the bucket the caller of r counts against: the key's for a valid key, the range
+// pair for a caller without one whose address matched the ranges (rangeFrom), else the
+// anonymous one.
+func (t tieredLimiter) pick(r *http.Request) bucket {
 	if CallerFrom(r.Context()).Authenticated() {
-		return t.keyed
+		return bucket{plain: t.keyed}
 	}
-	return t.anon
+	if t.rng != nil && rangeFrom(r.Context()) != "" {
+		return bucket{pair: t.rng}
+	}
+	return bucket{plain: t.anon}
+}
+
+// bucket is the limit one request counts against: a plain window, or a range pair. The zero
+// bucket limits nothing.
+type bucket struct {
+	plain *WindowLimiter
+	pair  *rangeLimiter
+}
+
+func (b bucket) none() bool { return b.plain == nil && b.pair == nil }
+
+// allow spends one request of key (see WindowLimiter.Allow, rangeLimiter.allow); shared is true
+// when the range ceiling refused it.
+func (b bucket) allow(key string) (ok bool, retryAfter time.Duration, shared bool) {
+	switch {
+	case b.pair != nil:
+		return b.pair.allow(key)
+	case b.plain != nil:
+		ok, retryAfter = b.plain.Allow(key)
+		return ok, retryAfter, false
+	}
+	return true, 0, false
+}
+
+// check reports what allow would answer and records nothing.
+func (b bucket) check(key string) (ok bool, retryAfter time.Duration, shared bool) {
+	switch {
+	case b.pair != nil:
+		return b.pair.check(key)
+	case b.plain != nil:
+		ok, retryAfter = b.plain.Check(key)
+		return ok, retryAfter, false
+	}
+	return true, 0, false
 }

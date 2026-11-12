@@ -221,6 +221,48 @@ func TestInflight_OverLimitAnswerAtAFullRouteIsRecordedLikeTheRealOne(t *testing
 	require.NotContains(t, got, "busy_pool")
 }
 
+// While the route is full, a keyless caller inside the ranges whose shared ceiling is full gets
+// the ceiling's 429 with its wait, as the chain would answer: with a daily cap the ceiling is
+// checked before the cap (so a spent cap still answers the ceiling, not daily_quota_exceeded),
+// and without one the route's range pair answers it.
+func TestInflight_BusyAnswersTheRangeCeilingToARangeCaller(t *testing.T) {
+	const x, y, outside = "160.79.104.9", "153.61.208.20", "192.0.2.200"
+	rangeAPI := func(t *testing.T, anonCap int) (*dataapi.API, *holdMCP, *clock) {
+		t.Helper()
+		c := &clock{t: time.Date(2026, 11, 12, 10, 0, 0, 0, time.UTC)}
+		limits := dataapi.DefaultLimits()
+		limits.Range.MCPCeiling = dataapi.Rate{Max: 2, Window: time.Minute}
+		mcp := newHoldMCP()
+		api := newAPI(t, dataapi.Config{
+			MCP: mcp, Auth: keyedFixture(t, "ecd_test_key_one"), Limits: &limits, AnonDailyCap: anonCap,
+			Now: c.now, MaxInFlight: 1, PublicURL: rangeTierURL, AnthropicRanges: mustRanges(t, anthropicOutbound),
+		})
+		// x and y fill the ceiling of 2; x has 59 of its own 60 left.
+		for _, ip := range []string{x, y} {
+			require.Equal(t, http.StatusOK, do(api, http.MethodPost, "/v1/mcp", mcpCall, fromIP(ip)...).Code, ip)
+		}
+		c.t = c.t.Add(10 * time.Second)
+		return api, mcp, c
+	}
+
+	t.Run("daily cap spent", func(t *testing.T) {
+		api, mcp, _ := rangeAPI(t, 1) // x's one request spent its whole daily cap
+		release := hold(t, api, mcp, fromIP(outside)...)
+		defer release()
+		rec := do(api, http.MethodPost, "/v1/mcp", mcpCall, fromIP(x)...)
+		requireCeilingRefusal(t, rec, 2, "the ceiling is checked before the daily cap")
+		require.Equal(t, 50, retryAfter(t, rec))
+	})
+	t.Run("no daily cap", func(t *testing.T) {
+		api, mcp, _ := rangeAPI(t, 0)
+		release := hold(t, api, mcp, fromIP(outside)...)
+		defer release()
+		rec := do(api, http.MethodPost, "/v1/mcp", mcpCall, fromIP(x)...)
+		requireCeilingRefusal(t, rec, 2, "the route's range pair")
+		require.Equal(t, 50, retryAfter(t, rec))
+	})
+}
+
 // A caller that filled yesterday's anonymous daily cap is not over the cap after 00:00 UTC:
 // at a full route it gets 503 busy, not the stale daily-cap 429, and the next request that
 // the route serves starts the new day and succeeds.

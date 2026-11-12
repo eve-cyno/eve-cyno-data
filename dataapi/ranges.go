@@ -1,6 +1,7 @@
 package dataapi
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"net/netip"
@@ -33,6 +34,9 @@ func ParseRanges(s string) ([]netip.Prefix, error) {
 	return out, nil
 }
 
+// rangeAnthropic is the name of Config.AnthropicRanges in the access line and the request meta.
+const rangeAnthropic = "anthropic"
+
 // clientLabels are the attributes the access line carries about the client address, never the
 // address itself. Both read clientAddr, the address ClientKey buckets, so a label always describes
 // the caller the limits counted:
@@ -40,11 +44,12 @@ func ParseRanges(s string) ([]netip.Prefix, error) {
 //     block Cloudflare's Pseudo IPv4 draws from when it stands in for an IPv6 client;
 //   - range: "anthropic" when the address lies in Config.AnthropicRanges, absent otherwise.
 //
-// No attribute when no address parses.
-func (a *API) clientLabels(r *http.Request) []any {
+// No attribute when no address parses. rng is the range the address matched ("" none): the
+// match the range tier reads too (rangeFrom), so the label and the tier never disagree.
+func (a *API) clientLabels(r *http.Request) (labels []any, rng string) {
 	addr, ok := clientAddr(r)
 	if !ok {
-		return nil
+		return nil, ""
 	}
 	ipf := "v6"
 	if addr.Is4() {
@@ -53,12 +58,50 @@ func (a *API) clientLabels(r *http.Request) []any {
 			ipf = "pseudo"
 		}
 	}
-	labels := make([]any, 0, 4)
+	labels = make([]any, 0, 4)
 	labels = append(labels, "ipf", ipf)
 	for _, p := range a.anthropic {
 		if p.Contains(addr) {
-			return append(labels, "range", "anthropic")
+			return append(labels, "range", rangeAnthropic), rangeAnthropic
 		}
 	}
-	return labels
+	return labels, ""
+}
+
+// rangeFrom is the range the client address of the request matched ("" none, or outside a
+// request served by this package).
+func rangeFrom(ctx context.Context) string {
+	if m, ok := ctx.Value(metaKey{}).(meta); ok {
+		return m.rng
+	}
+	return ""
+}
+
+// rangeRoute is the range pair of a route with a range tier and the route's cache policy.
+type rangeRoute struct {
+	limit *rangeLimiter
+	cache string
+}
+
+// rangeCeilingRefusal runs, for a caller without a valid key inside the ranges, a check of the
+// route's range pair that records nothing. When the shared ceiling is what refuses the caller
+// (rangeLimiter.ceilingBinds) it writes the ceiling's 429 (under the route's cache policy, as
+// the route limiter writes it) and reports true. ServeHTTP runs it before the anonymous daily
+// cap, so load caused by other addresses never spends a caller's daily cap (one daily unit is
+// spent only when the ceiling fills between this check and the route limiter). When the
+// caller's own address limit has the longer wait it reports false: that 429 is the route
+// limiter's, and it spends the daily cap like every per-address refusal.
+func (a *API) rangeCeilingRefusal(w http.ResponseWriter, r *http.Request, pattern string) bool {
+	rr, ok := a.rangeRoutes[pattern]
+	if !ok || rangeFrom(r.Context()) == "" || CallerFrom(r.Context()).Authenticated() {
+		return false
+	}
+	binds, retry := rr.limit.ceilingBinds(a.keys.Key(r))
+	if !binds {
+		return false
+	}
+	cached(rr.cache, func(w http.ResponseWriter, r *http.Request) {
+		a.writeRangeCeilingRefusal(w, r, retry, rr.limit.ceilingRate)
+	})(w, r)
+	return true
 }

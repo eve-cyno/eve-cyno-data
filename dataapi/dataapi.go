@@ -141,6 +141,27 @@ type Limits struct {
 	UpstreamTool Rate
 	// Docs covers the description routes (OpenAPI, llms.txt).
 	Docs Rate
+	// Range are the budgets of callers without a valid API key whose address lies in
+	// Config.AnthropicRanges (claude.ai and Claude Desktop connectors), on a service that
+	// accepts keys. WithoutKeys leaves them alone.
+	Range RangeLimits
+}
+
+// RangeLimits are the budgets of keyless callers inside Config.AnthropicRanges. Each route pair
+// is a per-address budget (keyed like every other limit, see KeyResolver) plus one ceiling that
+// every address of the ranges shares; a request counts in both or in neither. KeyedMax is
+// ignored: a caller with a key keeps its key's budgets wherever it calls from. A zero pair means
+// no range tier on that route.
+type RangeLimits struct {
+	// MCP replaces Limits.MCP's keyless budget for a caller in the ranges; MCPCeiling is the
+	// shared ceiling of all of them on the MCP endpoint.
+	MCP, MCPCeiling Rate
+	// Upstream and UpstreamCeiling are the same pair for the live-upstream tools
+	// (Limits.UpstreamTool).
+	Upstream, UpstreamCeiling Rate
+	// DailyCap is the anonymous daily cap of an address in the ranges (Config.AnonDailyCap for
+	// everyone else).
+	DailyCap int
 }
 
 // DefaultLimits are the budgets of the public service. Without an API key a caller gets the
@@ -160,11 +181,21 @@ func DefaultLimits() Limits {
 		// and ESI's error budget is shared by the whole project, so each caller gets a fraction
 		// of the route limit.
 		UpstreamTool: Rate{Max: 5, KeyedMax: 10, Window: time.Minute},
+		// Keyless connector calls from Anthropic's ranges: many users behind few addresses, so
+		// a larger per-address budget, bounded for all of them together by a shared ceiling.
+		Range: RangeLimits{
+			MCP:             Rate{Max: 60, Window: time.Minute},
+			MCPCeiling:      Rate{Max: 300, Window: time.Minute},
+			Upstream:        Rate{Max: 15, Window: time.Minute},
+			UpstreamCeiling: Rate{Max: 30, Window: time.Minute},
+			DailyCap:        2000,
+		},
 	}
 }
 
 // WithoutKeys returns l as a service that accepts no API keys must serve it: nobody can get
-// a key there, so every KeyedMax becomes the budget of everyone. New does this itself when
+// a key there, so every KeyedMax becomes the budget of everyone. Range is left as it is (the
+// range tier applies only on a service that accepts keys). New does this itself when
 // Config.Auth is nil; call it for a limiter built outside New (NewUpstreamLimiter) on such
 // a service.
 func (l Limits) WithoutKeys() Limits {
@@ -275,7 +306,8 @@ type Config struct {
 	AnonDailyCap int
 
 	// Now returns the current time (nil means time.Now). It is a test seam for the daily
-	// caps and the UTC day of the caller token.
+	// caps, the UTC day of the caller token and the windows of the range tier (Limits.Range);
+	// every other per-minute limiter reads time.Now.
 	Now func() time.Time
 
 	// Quota, when non-nil, is spent once per request of an authenticated caller; a refused
@@ -323,8 +355,10 @@ type Config struct {
 	// AnthropicRanges are the networks Anthropic's connector calls come from (claude.ai and
 	// Claude Desktop custom connectors): the two outbound IPv4 ranges 160.79.104.0/21 and
 	// 153.61.208.0/20, no outbound IPv6 (https://platform.claude.com/docs/en/api/ip-addresses). The access line of a client inside one, by the address
-	// ClientKey buckets, carries range="anthropic", never the address. Nil or empty means no
-	// range label. Build it with ParseRanges (an IPv4-mapped IPv6 prefix would never match).
+	// ClientKey buckets, carries range="anthropic", never the address. On a service with Auth a
+	// caller inside one without a valid key also gets the range tier (Limits.Range). Nil or empty
+	// means no range label and no tier. Build it with ParseRanges (an IPv4-mapped IPv6 prefix
+	// would never match).
 	AnthropicRanges []netip.Prefix
 
 	// ToolFormat selects the body of a successful tool call; zero is the JSON
@@ -395,6 +429,14 @@ type API struct {
 	mux         *http.ServeMux
 	// anthropic are the networks whose access lines carry range="anthropic" (see clientLabels).
 	anthropic []netip.Prefix
+	// rangeTier is set when keyless callers inside anthropic get the range tier: ranges are
+	// configured and the service accepts keys.
+	rangeTier bool
+	// rangeRoutes maps the mux pattern of every route with a range tier to its range pair, for
+	// the ceiling check that runs before the anonymous daily cap (ServeHTTP).
+	rangeRoutes map[string]rangeRoute
+	// now is Config.Now (nil: time.Now).
+	now func() time.Time
 	// trialFree holds the mux patterns whose requests the anonymous daily cap does not count.
 	trialFree map[string]bool
 	// corpusProbe is nil unless Deps.Retriever implements Pinger.
@@ -456,6 +498,9 @@ func New(cfg Config) (*API, error) {
 		upstream:            cfg.Upstream,
 		hasher:              newCallerHasher(cfg.LogSalt, cfg.Now),
 		anthropic:           slices.Clone(cfg.AnthropicRanges),
+		rangeTier:           len(cfg.AnthropicRanges) > 0 && cfg.Auth != nil,
+		rangeRoutes:         map[string]rangeRoute{},
+		now:                 cfg.Now,
 		log:                 cfg.Logger,
 		mux:                 http.NewServeMux(),
 		trialFree:           map[string]bool{},
@@ -516,6 +561,10 @@ func (a *API) register(rt route) {
 		full = a.prefix + rt.path
 	}
 	limit := newTieredLimiter(rt.rate(a.surface), a.keyedFactor)
+	if rt.rangeRate != nil && a.rangeTier {
+		perAddr, ceiling := rt.rangeRate(a.surface)
+		limit.rng = newRangeLimiter(perAddr, ceiling, a.now)
+	}
 	h := cached(rt.cache, a.limited(limit, func(w http.ResponseWriter, r *http.Request) {
 		rt.handle(a, w, r)
 	}))
@@ -526,6 +575,13 @@ func (a *API) register(rt route) {
 	// The in-flight gate (ServeHTTP) keys on the pattern of the handler that does the work:
 	// documentation, assets and /health stay uncapped, and so does the 405 fallback below.
 	gate := !rt.trialFree && a.maxInFlight > 0
+	pattern := rt.method + " " + full
+	if rt.anyMethod {
+		pattern = full
+	}
+	if limit.rng != nil {
+		a.rangeRoutes[pattern] = rangeRoute{limit: limit.rng, cache: rt.cache}
+	}
 	if rt.anyMethod {
 		if gate {
 			a.gates[full] = newRouteGate(a.maxInFlight, a.maxInFlightUpstream, true, classifierFor(rt.path), limit, rt.cache)

@@ -25,6 +25,8 @@ type meta struct {
 	// toolLogged is set once the tool handler wrote the request's usage line, so the
 	// access-log wrapper does not write a second one for a refusal.
 	toolLogged *bool
+	// rng is the range the client address matched ("" none; see clientLabels, rangeFrom).
+	rng string
 }
 
 // markToolLogged records that the usage line of the request was written.
@@ -79,11 +81,13 @@ func validRequestID(s string) bool {
 // and, inside Config.AnthropicRanges, range="anthropic" (clientLabels).
 //
 // The gate runs before every charge (the key's quota, the anonymous daily cap and, inside
-// the mux, the route limiter and the upstream limiter): a busy refusal has spent nothing. A
-// full route first runs three checks that record nothing (gateRefusal): the per-IP route
-// limiter, the anonymous daily cap and the key's quota. A caller over one of them gets that
-// limit's 429 instead of 503 busy. The upstream limiter is deliberately not pre-checked, so
-// a caller that only it would refuse still gets 503 busy. On a route with an upstream pool the
+// the mux, the route limiter and the upstream limiter): a busy refusal has spent nothing. For a
+// keyless caller inside the ranges, a full range ceiling is answered before the anonymous daily
+// cap is spent (rangeCeilingRefusal). A full route first runs the checks that record nothing
+// (gateRefusal): the per-IP route limiter, the range ceiling, the anonymous daily cap and the
+// key's quota. A caller over one of them gets that limit's 429 instead of 503 busy. The
+// upstream limiter is deliberately not pre-checked, so a caller that only it would refuse still
+// gets 503 busy. On a route with an upstream pool the
 // request is classed first (routeGate, classifierFor), which may peek at and restore its body.
 func (a *API) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	id := r.Header.Get(HeaderRequestID)
@@ -93,7 +97,10 @@ func (a *API) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set(HeaderRequestID, id)
 	log := a.log.With("request_id", id)
 	toolLogged := false
-	ctx := context.WithValue(r.Context(), metaKey{}, meta{id: id, log: log, toolLogged: &toolLogged})
+	// The address family and the range of the client, matched once: labels only, never the
+	// address (clientLabels). The range also chooses the range tier (rangeFrom).
+	client, rng := a.clientLabels(r)
+	ctx := context.WithValue(r.Context(), metaKey{}, meta{id: id, log: log, toolLogged: &toolLogged, rng: rng})
 	if a.auth != nil {
 		// The credential is read here, once: the limiter keys on the result and the tool and
 		// MCP handlers enforce the tiers with it. Nothing about the key is logged.
@@ -108,9 +115,6 @@ func (a *API) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// exemption and, when a refusal stops the request before the mux runs, the access line's
 	// route. r.Pattern itself is left to the mux (the usage labels read it).
 	_, pattern := a.mux.Handler(r)
-	// The address family and the range of the client, matched once: labels only, never the
-	// address (clientLabels).
-	client := a.clientLabels(r)
 
 	quotaRefused := false
 	muxRan := false
@@ -218,6 +222,11 @@ func (a *API) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if a.countsAnon(r, pattern) {
+		// A full range ceiling that binds the caller is answered before the daily cap is
+		// spent: other addresses filled it, so it must not cost this caller a daily unit.
+		if a.rangeCeilingRefusal(rec, r, pattern) {
+			return
+		}
 		// The same client key the per-minute limiter uses for a caller without a key. An
 		// invalid key is an anonymous caller too.
 		if ok, retry := a.anon.Spend(a.keys.Key(r)); !ok {
@@ -246,8 +255,8 @@ const (
 )
 
 // gateRefusal runs, while the route is full, the checks of the chain the request would have
-// passed, in its order (the key's quota, the anonymous daily cap, the route's per-minute
-// limiter), and records nothing. When one of them refuses, it writes that check's 429 with
+// passed, in its order (the key's quota, the range ceiling of a keyless caller in the ranges,
+// the anonymous daily cap, the route's per-minute limiter), and records nothing. When one of them refuses, it writes that check's 429 with
 // the writer the chain uses (same code, body and Retry-After) and names it; otherwise it
 // writes nothing and the caller answers busy. The upstream limiter is not checked: its 429
 // comes after the argument check and only for a live call. A Quota without QuotaChecker is
@@ -262,15 +271,24 @@ func (a *API) gateRefusal(w http.ResponseWriter, r *http.Request, pattern string
 		}
 	}
 	if a.countsAnon(r, pattern) {
+		if a.rangeCeilingRefusal(w, r, pattern) {
+			return refusedRate
+		}
 		if ok, retry := a.anon.Check(a.keys.Key(r)); !ok {
 			writeAnonQuotaRefusal(w, r, retry, a.anon.cap, a.surface.PublicURL)
 			return refusedDaily
 		}
 	}
-	if l := g.limit.pick(r); l != nil {
-		if ok, retry := l.Check(a.keys.Key(r)); !ok {
+	if b := g.limit.pick(r); !b.none() {
+		if ok, retry, shared := b.check(a.keys.Key(r)); !ok {
 			// Under the route's cache policy, as the limiter inside the mux writes it.
-			cached(g.cache, func(w http.ResponseWriter, r *http.Request) { writeRateLimited(w, r, retry) })(w, r)
+			cached(g.cache, func(w http.ResponseWriter, r *http.Request) {
+				if shared {
+					a.writeRangeCeilingRefusal(w, r, retry, b.pair.ceilingRate)
+					return
+				}
+				writeRateLimited(w, r, retry)
+			})(w, r)
 			return refusedRate
 		}
 	}
