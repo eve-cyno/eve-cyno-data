@@ -28,7 +28,11 @@ func publicConfig() dataapi.Config {
 }
 
 func TestDocs_ServedBytesAreTheCommittedFiles(t *testing.T) {
-	api := newAPI(t, publicConfig())
+	cfg := publicConfig()
+	var err error
+	cfg.AnthropicRanges, err = dataapi.ParseRanges(dataapi.DefaultAnthropicRanges) // the committed files describe the range tier too
+	require.NoError(t, err)
+	api := newAPI(t, cfg)
 
 	for _, c := range []struct{ path, file, contentType string }{
 		{"/v1/openapi.yaml", "../api/openapi.yaml", "application/yaml; charset=utf-8"},

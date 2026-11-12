@@ -74,6 +74,10 @@ const anthropicIPsURL = "https://platform.claude.com/docs/en/api/ip-addresses"
 // on a service that accepts keys and has ranges configured.
 func (s Surface) rangeTierDocs() bool { return s.Auth && len(s.Ranges) > 0 }
 
+// rangeDailyCap is the daily cap of a keyless address in the ranges: the larger of
+// Limits.Range.DailyCap and AnonDailyCap (see API.anonCapOf).
+func (s Surface) rangeDailyCap() int { return max(s.Limits.Range.DailyCap, s.AnonDailyCap) }
+
 // PublicSurface is what the internet-facing cmd/dataapi serves with every optional part
 // switched on, at the default prefix and default limits. The committed generated files
 // (api/openapi.yaml, llms.txt, llms-full.txt) describe it.

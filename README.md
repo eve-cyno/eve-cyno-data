@@ -213,6 +213,11 @@ The numbers:
 | `POST /v1/fits/detail`, `/v1/fit/stats`, `/v1/fit/suggest` | 60 | 120 |
 | `GET /`, `/docs/*`, `/terms*`, `/v1/openapi.*`, `/llms*.txt` (the static files under `/assets/` are not limited) | 60 | 120 |
 
+Keyless connector calls from Anthropic's published outbound ranges (claude.ai and Claude Desktop connectors, `DATAAPI_ANTHROPIC_RANGES`) have limits of
+their own, set in `Limits.Range`: on `POST /v1/mcp` 60 requests a minute per address and 300 a minute shared by all of them, for the live upstream tools 15 per
+address and 30 shared, and 2,000 requests a day per address (the larger of that and `DATAAPI_ANON_DAILY_CAP`); see `/docs/access`. The tier is on only on a
+service that accepts keys; a caller with a key keeps its key's limits wherever it calls from.
+
 The keyed number of a route is `Rate.KeyedMax` in `dataapi.Limits` (`dataapi.DefaultLimits()` holds the table); a route without
 one gets `DATAAPI_KEYED_LIMIT_FACTOR` times its limit. Daily caps, all in UTC days and answering `429 daily_quota_exceeded` with
 `Retry-After` set to the seconds until 00:00 UTC:
