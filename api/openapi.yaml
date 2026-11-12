@@ -16,7 +16,7 @@ info:
     - An API key raises the per-minute budgets: every operation states its limit without a key and with one, counted in the key's own window. The live-data tools keep a lower limit than the route.
     - A new API key has a daily cap of 10000 requests per UTC day by default (a cap can be changed per key, 0 meaning none). Over its cap a key gets `429` `daily_quota_exceeded` with `Retry-After` set to the seconds until 00:00 UTC.
     - Request bodies are capped (256 KiB on the fit routes, 64 KiB on tools and MCP); an oversize body is `413`.
-    - Tool tiers: each tool is *public* (no key), *keyed* (an API key) or *disabled*. Public: `get_market_price`, `get_type_info`, `search_item_by_name`, `get_ship_stats`, `get_ship_bonuses`, `find_canonical_module`, `get_hull_facts`, `get_fits`, `list_fits`, `validate_fitting`, `compute_fit_stats`, `appraise_items`, `get_production_chain`, `get_jumps_between`, `get_jump_distances`, `plan_jump_route`, `get_recent_kills`, `get_systems_in_region`, `get_lp_offers`, `get_npc_stations`, `get_reprocessing_yield`, `get_required_skills`, `get_average_prices`, `get_market_history`, `get_sovereignty`, `get_system_activity`, `find_systems`, `get_system_info`, `get_thera_connections`. Keyed (send the key as `Authorization: Bearer <key>` or `X-API-Key`; `401 api_key_required` without one, `401 invalid_api_key` for a key that is not valid, on every tool): `analyze_battle`. Optional: your own Janice key in the `X-Janice-Key` request header (used for that request only, never logged or stored) turns `appraise_items` into a Janice appraisal; without it the answer is an estimate from ESI average prices. Disabled tools are not offered on this service (`403 tool_disabled` over REST, absent from the MCP tool list).
+    - Tool tiers: each tool is *public* (no key), *keyed* (an API key) or *disabled*. Public: `get_market_price`, `get_type_info`, `search_item_by_name`, `get_ship_stats`, `get_ship_bonuses`, `find_canonical_module`, `get_hull_facts`, `get_fits`, `list_fits`, `validate_fitting`, `compute_fit_stats`, `appraise_items`, `get_production_chain`, `get_jumps_between`, `get_jump_distances`, `plan_jump_route`, `get_recent_kills`, `get_systems_in_region`, `get_lp_offers`, `get_npc_stations`, `get_reprocessing_yield`, `get_required_skills`, `get_average_prices`, `get_market_history`, `get_sovereignty`, `get_system_activity`, `get_activity_baseline`, `find_systems`, `get_system_info`, `get_thera_connections`. Keyed (send the key as `Authorization: Bearer <key>` or `X-API-Key`; `401 api_key_required` without one, `401 invalid_api_key` for a key that is not valid, on every tool): `analyze_battle`. Optional: your own Janice key in the `X-Janice-Key` request header (used for that request only, never logged or stored) turns `appraise_items` into a Janice appraisal; without it the answer is an estimate from ESI average prices. Disabled tools are not offered on this service (`403 tool_disabled` over REST, absent from the MCP tool list).
 
     ## Attribution and licences
 
@@ -2176,6 +2176,66 @@ paths:
           $ref: '#/components/responses/Unavailable'
         "504":
           $ref: '#/components/responses/Timeout'
+  /tool/get_activity_baseline:
+    post:
+      tags:
+        - tools
+      summary: Usual activity of one EVE solar system by hour of the week (UTC), from hourly ESI snapshots and zKillboard killmails…
+      description: |-
+        Usual activity of one EVE solar system by hour of the week (UTC), from hourly ESI snapshots and zKillboard killmails collected since October 2026: mean and spread (sample standard deviation) of jumps, ship, pod and NPC kills, PvP killmails and ISK destroyed, with the number of weeks sampled. Pass day and hour for one hour, day for a whole day, hour for that hour on every day, or neither for the busiest and quietest hours of the week. Hours the collector missed are left out, not counted as zero; PvP killmails answer 'not collected yet' until killmail collection has data. Use for 'how busy is X usually on Tuesday evening', 'when is Y quiet', 'is this normal for Z'.
+
+        Sources: EVE Static Data Export (via Fuzzwork); ESI (EVE Swagger Interface); zKillboard (killmail counts). `result.data` is a `ActivityBaseline` object when the call succeeds.
+
+        Access tier: **public**. No key needed.
+
+        Rate limit: 10 requests per minute per client IP without an API key, 60 per minute per API key with one.
+      operationId: get_activity_baseline
+      parameters:
+        - $ref: '#/components/parameters/RequestID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                day:
+                  type: string
+                  description: 'Weekday in UTC: Monday, Tuesday, Wednesday, Thursday, Friday, Saturday or Sunday (case-insensitive). With hour: that one hour. Alone: all 24 hours of that day.'
+                hour:
+                  type: integer
+                  description: 'Start of the UTC hour, 0 to 23 (19 means 19:00-20:00). With day: that one hour. Alone: that hour on every day of the week.'
+                  minimum: 0
+                  maximum: 23
+                system_name:
+                  type: string
+                  description: Solar system name, e.g. 'Tama' (case-insensitive)
+              required:
+                - system_name
+      responses:
+        "200":
+          description: The tool's answer.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActivityBaselineToolResponse'
+          headers:
+            X-Request-ID:
+              $ref: '#/components/headers/RequestID'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "413":
+          $ref: '#/components/responses/PayloadTooLarge'
+        "429":
+          $ref: '#/components/responses/RateLimited'
+        "500":
+          $ref: '#/components/responses/InternalError'
+        "503":
+          $ref: '#/components/responses/Unavailable'
+        "504":
+          $ref: '#/components/responses/Timeout'
   /tool/find_systems:
     post:
       tags:
@@ -2662,6 +2722,99 @@ components:
         - effects
         - kill_priority
         - kill_priority_note
+    ActivityBaseline:
+      type: object
+      properties:
+        system:
+          type: string
+          description: System is the system name as the SDE spells it.
+        system_id:
+          type: integer
+          description: SystemID is the solar system ID.
+        view:
+          type: string
+          description: 'View says what was asked: "hour" (day and hour), "day", "hour_every_day" or "week".'
+        samples:
+          $ref: '#/components/schemas/BaselineSamples'
+          description: Samples counts the hours folded per metric group over all 168 hours of the week.
+        killmail_window_start:
+          type:
+            - string
+            - "null"
+          description: KillmailWindowStart is the date (YYYY-MM-DD, UTC) from which killmails are counted; null while killmails are not collected yet.
+        generated_at:
+          type:
+            - string
+            - "null"
+          description: GeneratedAt is when the baseline file was built (RFC 3339, UTC); null when unknown.
+        hours:
+          type: array
+          description: Hours holds the hours asked for (one, 24 or 7), in week order; empty for the week view.
+          items:
+            $ref: '#/components/schemas/BaselineHour'
+        ranked_by:
+          type: string
+          description: 'RankedBy is the metric of the week view''s ranking: "jumps", or "npc_kills" for a system without gate jumps; empty for the other views.'
+        busiest:
+          type: array
+          description: Busiest lists the busiest hours of the week by RankedBy (week view only), busiest first.
+          items:
+            $ref: '#/components/schemas/BaselineHour'
+        quietest:
+          type: array
+          description: Quietest lists the quietest sampled hours of the week by RankedBy (week view only), quietest first.
+          items:
+            $ref: '#/components/schemas/BaselineHour'
+        most_ship_kills:
+          type: array
+          description: MostShipKills lists the hour with the most ship kills (week view only); empty when no hour had one.
+          items:
+            $ref: '#/components/schemas/BaselineHour'
+      required:
+        - system
+        - system_id
+        - view
+        - samples
+        - killmail_window_start
+        - generated_at
+        - hours
+        - ranked_by
+        - busiest
+        - quietest
+        - most_ship_kills
+    ActivityBaselineToolResponse:
+      type: object
+      properties:
+        tool:
+          type: string
+          description: The tool that ran.
+        version:
+          type: string
+          description: The build version of the service.
+        result:
+          type: object
+          properties:
+            text:
+              type: string
+              description: The answer as the chat assistant reads it.
+            data:
+              description: The typed answer, or null when the tool has none or the call ended in a text-only answer (an unknown id, a parse failure); `text` then says why.
+              oneOf:
+                - $ref: '#/components/schemas/ActivityBaseline'
+                - type: "null"
+          required:
+            - text
+            - data
+        attribution:
+          type: array
+          description: The upstreams behind the answer; attribution is a condition of several of their licences.
+          items:
+            $ref: '#/components/schemas/Source'
+      required:
+        - tool
+        - version
+        - result
+        - attribution
     ActivityList:
       type: object
       properties:
@@ -2845,6 +2998,78 @@ components:
         - version
         - result
         - attribution
+    BaselineHour:
+      type: object
+      properties:
+        day:
+          type: string
+          description: Day is the weekday, "Monday" to "Sunday" (UTC).
+        hour:
+          type: integer
+          description: Hour is the start of the UTC hour, 0 to 23.
+        jumps:
+          $ref: '#/components/schemas/BaselineStat'
+          description: Jumps is the gate jumps through the system's gates.
+        ship_kills:
+          $ref: '#/components/schemas/BaselineStat'
+          description: ShipKills is the ships killed in the system.
+        pod_kills:
+          $ref: '#/components/schemas/BaselineStat'
+          description: PodKills is the pods killed in the system.
+        npc_kills:
+          $ref: '#/components/schemas/BaselineStat'
+          description: NPCKills is the NPCs killed in the system.
+        pvp_killmails:
+          description: PvPKillmails is the player-loss killmails on zKillboard; null while killmails are not collected yet (never zero).
+          oneOf:
+            - $ref: '#/components/schemas/BaselineStat'
+            - type: "null"
+        isk_destroyed_mean:
+          type:
+            - number
+            - "null"
+          description: ISKDestroyedMean is the mean ISK value destroyed on those killmails; null with PvPKillmails.
+      required:
+        - day
+        - hour
+        - jumps
+        - ship_kills
+        - pod_kills
+        - npc_kills
+        - pvp_killmails
+        - isk_destroyed_mean
+    BaselineSamples:
+      type: object
+      properties:
+        map_jumps:
+          type: integer
+          description: MapJumps is the number of hourly jump snapshots folded.
+        map_kills:
+          type: integer
+          description: MapKills is the number of hourly kill snapshots folded.
+        killmails:
+          type: integer
+          description: Killmails is the number of killmail hours folded.
+      required:
+        - map_jumps
+        - map_kills
+        - killmails
+    BaselineStat:
+      type: object
+      properties:
+        mean:
+          type: number
+          description: Mean is the average per hour.
+        sd:
+          type: number
+          description: SD is the sample standard deviation.
+        n:
+          type: integer
+          description: N is the number of sampled hours (weeks) behind Mean and SD.
+      required:
+        - mean
+        - sd
+        - n
     BlockFlags:
       type: object
       properties:

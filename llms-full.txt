@@ -16,7 +16,7 @@ Machine-readable description: [/v1/openapi.yaml](/v1/openapi.yaml) (OpenAPI 3.1;
 - An API key raises the per-minute budgets: every operation states its limit without a key and with one, counted in the key's own window. The live-data tools keep a lower limit than the route.
 - A new API key has a daily cap of 10000 requests per UTC day by default (a cap can be changed per key, 0 meaning none). Over its cap a key gets `429` `daily_quota_exceeded` with `Retry-After` set to the seconds until 00:00 UTC.
 - Request bodies are capped: 256 KiB on the fit routes, 64 KiB on the tool and MCP endpoints (`413`).
-- Tool tiers: each tool is *public* (no key), *keyed* (an API key) or *disabled*. Public: `get_market_price`, `get_type_info`, `search_item_by_name`, `get_ship_stats`, `get_ship_bonuses`, `find_canonical_module`, `get_hull_facts`, `get_fits`, `list_fits`, `validate_fitting`, `compute_fit_stats`, `appraise_items`, `get_production_chain`, `get_jumps_between`, `get_jump_distances`, `plan_jump_route`, `get_recent_kills`, `get_systems_in_region`, `get_lp_offers`, `get_npc_stations`, `get_reprocessing_yield`, `get_required_skills`, `get_average_prices`, `get_market_history`, `get_sovereignty`, `get_system_activity`, `find_systems`, `get_system_info`, `get_thera_connections`. Keyed (send the key as `Authorization: Bearer <key>` or `X-API-Key`; `401 api_key_required` without one, `401 invalid_api_key` for a key that is not valid, on every tool): `analyze_battle`. Optional: your own Janice key in the `X-Janice-Key` request header (used for that request only, never logged or stored) turns `appraise_items` into a Janice appraisal; without it the answer is an estimate from ESI average prices. Disabled tools are not offered on this service (`403 tool_disabled` over REST, absent from the MCP tool list).
+- Tool tiers: each tool is *public* (no key), *keyed* (an API key) or *disabled*. Public: `get_market_price`, `get_type_info`, `search_item_by_name`, `get_ship_stats`, `get_ship_bonuses`, `find_canonical_module`, `get_hull_facts`, `get_fits`, `list_fits`, `validate_fitting`, `compute_fit_stats`, `appraise_items`, `get_production_chain`, `get_jumps_between`, `get_jump_distances`, `plan_jump_route`, `get_recent_kills`, `get_systems_in_region`, `get_lp_offers`, `get_npc_stations`, `get_reprocessing_yield`, `get_required_skills`, `get_average_prices`, `get_market_history`, `get_sovereignty`, `get_system_activity`, `get_activity_baseline`, `find_systems`, `get_system_info`, `get_thera_connections`. Keyed (send the key as `Authorization: Bearer <key>` or `X-API-Key`; `401 api_key_required` without one, `401 invalid_api_key` for a key that is not valid, on every tool): `analyze_battle`. Optional: your own Janice key in the `X-Janice-Key` request header (used for that request only, never logged or stored) turns `appraise_items` into a Janice appraisal; without it the answer is an estimate from ESI average prices. Disabled tools are not offered on this service (`403 tool_disabled` over REST, absent from the MCP tool list).
 
 ## Endpoints
 
@@ -516,6 +516,19 @@ Get the activity of EVE solar systems in the last hour from ESI. Pass systems (u
 - Typed result (`result.data`): ActivityList with fields `systems`, `unresolved`
 - Sources: EVE Static Data Export (via Fuzzwork); ESI (EVE Swagger Interface)
 
+### get_activity_baseline
+
+Usual activity of one EVE solar system by hour of the week (UTC), from hourly ESI snapshots and zKillboard killmails collected since October 2026: mean and spread (sample standard deviation) of jumps, ship, pod and NPC kills, PvP killmails and ISK destroyed, with the number of weeks sampled. Pass day and hour for one hour, day for a whole day, hour for that hour on every day, or neither for the busiest and quietest hours of the week. Hours the collector missed are left out, not counted as zero; PvP killmails answer 'not collected yet' until killmail collection has data. Use for 'how busy is X usually on Tuesday evening', 'when is Y quiet', 'is this normal for Z'.
+
+- Call: `POST /v1/tool/get_activity_baseline` or MCP tool `get_activity_baseline`
+- Access: public. No key needed.
+- Arguments:
+  - `system_name` (string, required): Solar system name, e.g. 'Tama' (case-insensitive)
+  - `day` (string): Weekday in UTC: Monday, Tuesday, Wednesday, Thursday, Friday, Saturday or Sunday (case-insensitive). With hour: that one hour. Alone: all 24 hours of that day.
+  - `hour` (integer): Start of the UTC hour, 0 to 23 (19 means 19:00-20:00). With day: that one hour. Alone: that hour on every day of the week.
+- Typed result (`result.data`): ActivityBaseline with fields `system`, `system_id`, `view`, `samples`, `killmail_window_start`, `generated_at`, `hours`, `ranked_by`, `busiest`, `quietest`, `most_ship_kills`
+- Sources: EVE Static Data Export (via Fuzzwork); ESI (EVE Swagger Interface); zKillboard (killmail counts)
+
 ### find_systems
 
 Find solar systems by filters and rank them: security band, region, constellation, faction, wormhole class, NPC station and its services, asteroid belts, planet types, ice belts (EVE University's list of highsec and lowsec ice systems) and distance from an origin (near). One line per system, up to 100 per call (page with offset), with the total. Example, the three nearest highsec Clear Icicle systems to C-N4OD: {"security":{"min":0.45},"ice_types":["Clear Icicle"],"near":{"origin":"C-N4OD"},"sort":"jumps","limit":3}. Set jump_range {origin, ship, jump_drive_calibration (default 5)} to keep the systems that ship can jump to from the origin (cyno-able: lowsec or nullsec, not wormhole space, Pochven or Zarzakh; 'Jump Bridge' = Ansiblex reach), with the light-years, sorted nearest first; e.g. the nearest lowsec NPC-station systems a Rorqual can reach from EC-P8R: {"jump_range":{"origin":"EC-P8R","ship":"Rorqual"},"security":{"min":0.1,"max":0.4},"has_npc_station":true,"limit":3}.
@@ -594,5 +607,6 @@ Sources behind the tool answers:
 - WarBeacon <https://warbeacon.net/>: No licence published; one report per user-supplied URL
 - br.evetools.org <https://br.evetools.org/>: No licence published; one report per user-supplied URL
 - Janice <https://janice.e-351.com/>: Private API used with a key granted by its creator
+- zKillboard (killmail counts) <https://zkillboard.com/>: Public R2Z2 API under zKillboard's usage etiquette; only per-system counts and ISK sums derived from it are published; killmails are Fenris Creations game data (EVE Developer License Agreement)
 - EVE University Wiki (ice belt systems) <https://wiki.eveuniversity.org/Ice_harvesting>: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/); credit EVE University; the dataset stays CC BY-SA
 - EvE-Scout / Signal Cartel <https://www.eve-scout.com/>: Public API without published terms, used with attribution; live scanning data by Signal Cartel

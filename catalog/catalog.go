@@ -269,6 +269,10 @@ func tierTable() map[string]Tier {
 		"compute_fit_stats":      TierPublic,
 		"validate_fitting":       TierPublic,
 
+		// Hour-of-week activity baselines: one local file the intel collector publishes
+		// (no upstream request), so public and work class.
+		"get_activity_baseline": TierPublic,
+
 		// Public ESI pass-throughs: public,
 		// unauthenticated ESI routes served from the shared Expires cache, behind a stricter
 		// per-IP limit (Tool.Upstream) and the upstream budget guard. Moving these four back
@@ -367,6 +371,7 @@ func summaryTable() map[string]string {
 		"get_recent_kills":       "The newest kills in one system from zKillboard: time, ship, value, attackers and a link, with no pilot names.",
 		"get_reprocessing_yield": "Materials produced by reprocessing an item.",
 		"get_required_skills":    "Skills to fly a ship or build an item, for up to 20 items at once, with SP and training time.",
+		"get_activity_baseline":  "Usual jumps, kills and PvP killmails of a system by hour of the week (UTC), with spread and weeks sampled.",
 		"get_sovereignty":        "Alliance, corporation or faction holding sovereignty over up to 50 solar systems.",
 		"get_system_activity":    "Jumps and ship, pod and NPC kills in up to 50 solar systems in the last hour.",
 		"appraise_items":         "Total ISK value of an item list: an estimate from ESI average prices, or a Janice appraisal with your own Janice key.",
@@ -462,6 +467,8 @@ func dataType(name string) reflect.Type {
 		return reflect.TypeFor[tools.SovereigntyList]()
 	case "get_system_activity":
 		return reflect.TypeFor[tools.ActivityList]()
+	case "get_activity_baseline":
+		return reflect.TypeFor[tools.ActivityBaseline]()
 	case "get_ship_stats":
 		return reflect.TypeFor[tools.ShipStats]()
 	case "validate_fitting":

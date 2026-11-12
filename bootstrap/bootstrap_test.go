@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"path/filepath"
 	"sync"
 	"testing"
 	"time"
@@ -225,4 +226,23 @@ func TestBuildDepsNoRetrieverMakesNoQdrantRequest(t *testing.T) {
 	mu.Lock()
 	defer mu.Unlock()
 	require.Zero(t, hits, "SDE-only mode must not talk to Qdrant")
+}
+
+// Baselines are off without a path and lazy with one: the file need not exist yet.
+func TestBuildDepsBaselines(t *testing.T) {
+	cfg := corpusAvailable(t)
+	cfg.IntelBaselinePath = ""
+	d, err := BuildDepsWith(context.Background(), cfg, offlineOptions())
+	require.NoError(t, err)
+	require.Nil(t, d.Tools.Baselines, "no path: a nil interface, not a nil store inside one")
+	require.NoError(t, d.Close())
+
+	cfg.IntelBaselinePath = filepath.Join(t.TempDir(), "intel-baselines.sqlite")
+	d, err = BuildDepsWith(context.Background(), cfg, offlineOptions())
+	require.NoError(t, err)
+	require.NotNil(t, d.Tools.Baselines)
+	out, err := tools.ExecuteTool(context.Background(), d.Tools, "get_activity_baseline", map[string]any{"system_name": "Tama"})
+	require.NoError(t, err)
+	require.Equal(t, "Activity baselines are not published on this server yet. Try again in an hour.", out)
+	require.NoError(t, d.Close())
 }

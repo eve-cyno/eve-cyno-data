@@ -9,7 +9,7 @@ import (
 
 // expectedToolCount is the number of tool definitions in tools/tool_schemas.json
 // (the source of truth; it was originally dumped from the deleted Python runtime).
-const expectedToolCount = 31
+const expectedToolCount = 32
 
 // executeToolSwitchNames is the set of tool names handled by ExecuteTool's
 // switch statement in tools.go. Kept in sync manually — any addition to the
@@ -43,6 +43,7 @@ var executeToolSwitchNames = map[string]bool{
 	"get_market_history":     true,
 	"get_sovereignty":        true,
 	"get_system_activity":    true,
+	"get_activity_baseline":  true,
 	"find_systems":           true,
 	"get_system_info":        true,
 	"get_thera_connections":  true,
@@ -65,7 +66,7 @@ func TestToolSchemasParse(t *testing.T) {
 //  2. Every schema name is handled by ExecuteTool's switch (no gaps).
 //  3. Every ExecuteTool switch name appears in the schemas (no orphan executors).
 //
-// All 29 schema names have executors.
+// All schema names have executors.
 func TestToolSchemasNamesMatchExecuteSwitch(t *testing.T) {
 	schemas := ToolSchemas()
 	require.NotEmpty(t, schemas)

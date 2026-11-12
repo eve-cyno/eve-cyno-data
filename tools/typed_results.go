@@ -559,6 +559,78 @@ type SystemActivity struct {
 	NPCKills int `json:"npc_kills"`
 }
 
+// ActivityBaseline is the result of get_activity_baseline: the usual activity of one
+// system by hour of the week (UTC), from the hourly ESI map statistics and zKillboard
+// killmail counts the collector keeps. The numbers never include the latest collected hour.
+type ActivityBaseline struct {
+	// System is the system name as the SDE spells it.
+	System string `json:"system"`
+	// SystemID is the solar system ID.
+	SystemID int `json:"system_id"`
+	// View says what was asked: "hour" (day and hour), "day", "hour_every_day" or "week".
+	View string `json:"view"`
+	// Samples counts the hours folded per metric group over all 168 hours of the week.
+	Samples BaselineSamples `json:"samples"`
+	// KillmailWindowStart is the date (YYYY-MM-DD, UTC) from which killmails are counted;
+	// null while killmails are not collected yet.
+	KillmailWindowStart *string `json:"killmail_window_start"`
+	// GeneratedAt is when the baseline file was built (RFC 3339, UTC); null when unknown.
+	GeneratedAt *string `json:"generated_at"`
+	// Hours holds the hours asked for (one, 24 or 7), in week order; empty for the week view.
+	Hours []BaselineHour `json:"hours"`
+	// RankedBy is the metric of the week view's ranking: "jumps", or "npc_kills" for a system
+	// without gate jumps; empty for the other views.
+	RankedBy string `json:"ranked_by"`
+	// Busiest lists the busiest hours of the week by RankedBy (week view only), busiest first.
+	Busiest []BaselineHour `json:"busiest"`
+	// Quietest lists the quietest sampled hours of the week by RankedBy (week view only), quietest first.
+	Quietest []BaselineHour `json:"quietest"`
+	// MostShipKills lists the hour with the most ship kills (week view only); empty when no hour had one.
+	MostShipKills []BaselineHour `json:"most_ship_kills"`
+}
+
+// BaselineSamples counts the hours folded into the baseline per metric group.
+type BaselineSamples struct {
+	// MapJumps is the number of hourly jump snapshots folded.
+	MapJumps int `json:"map_jumps"`
+	// MapKills is the number of hourly kill snapshots folded.
+	MapKills int `json:"map_kills"`
+	// Killmails is the number of killmail hours folded.
+	Killmails int `json:"killmails"`
+}
+
+// BaselineHour is the usual activity of one hour of the week in one system.
+type BaselineHour struct {
+	// Day is the weekday, "Monday" to "Sunday" (UTC).
+	Day string `json:"day"`
+	// Hour is the start of the UTC hour, 0 to 23.
+	Hour int `json:"hour"`
+	// Jumps is the gate jumps through the system's gates.
+	Jumps BaselineStat `json:"jumps"`
+	// ShipKills is the ships killed in the system.
+	ShipKills BaselineStat `json:"ship_kills"`
+	// PodKills is the pods killed in the system.
+	PodKills BaselineStat `json:"pod_kills"`
+	// NPCKills is the NPCs killed in the system.
+	NPCKills BaselineStat `json:"npc_kills"`
+	// PvPKillmails is the player-loss killmails on zKillboard; null while killmails are not
+	// collected yet (never zero).
+	PvPKillmails *BaselineStat `json:"pvp_killmails"`
+	// ISKDestroyedMean is the mean ISK value destroyed on those killmails; null with PvPKillmails.
+	ISKDestroyedMean *float64 `json:"isk_destroyed_mean"`
+}
+
+// BaselineStat is the mean and sample standard deviation of one metric over N sampled
+// hours (weeks); N 0 means no baseline, and SD is 0 below two samples.
+type BaselineStat struct {
+	// Mean is the average per hour.
+	Mean float64 `json:"mean"`
+	// SD is the sample standard deviation.
+	SD float64 `json:"sd"`
+	// N is the number of sampled hours (weeks) behind Mean and SD.
+	N int `json:"n"`
+}
+
 // AveragePrices is the result of get_average_prices: ESI's daily average price per item.
 type AveragePrices struct {
 	// AsOf is the date (YYYY-MM-DD, UTC) of the price list the numbers come from; null

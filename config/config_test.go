@@ -69,3 +69,11 @@ func TestEmbedQueryInstruction(t *testing.T) {
 	t.Setenv("EMBED_QUERY_INSTRUCTION", "  Given a web search query, retrieve relevant passages that answer the query \n")
 	require.Equal(t, "Given a web search query, retrieve relevant passages that answer the query", Load().EmbedQueryInstruction)
 }
+
+// EVE_CORE_INTEL_BASELINE_PATH switches get_activity_baseline on; unset or blank is off.
+func TestIntelBaselinePath(t *testing.T) {
+	t.Setenv("EVE_CORE_INTEL_BASELINE_PATH", "")
+	require.Empty(t, Load().IntelBaselinePath)
+	t.Setenv("EVE_CORE_INTEL_BASELINE_PATH", "  /data/intel-baselines.sqlite ")
+	require.Equal(t, "/data/intel-baselines.sqlite", Load().IntelBaselinePath)
+}

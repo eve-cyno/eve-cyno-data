@@ -20,6 +20,12 @@ type CoreConfig struct {
 	EmbedModel   string // EVE_CORE_EMBED_MODEL (default: nomic-embed-text) — Ollama model name
 	JaniceAPIKey string // JANICE_API_KEY       (default: "")
 
+	// IntelBaselinePath is the published intel baseline file behind get_activity_baseline:
+	// EVE_CORE_INTEL_BASELINE_PATH. Empty (the default) means baselines are off: the tool
+	// answers that they are not configured. The file may not exist yet; it is looked for
+	// again on every reload interval.
+	IntelBaselinePath string
+
 	// SDEReloadInterval is how often (at most) a running process checks whether the
 	// ingest replaced the SDE file and reopens it: EVE_CORE_SDE_RELOAD_INTERVAL as a
 	// Go duration ("5m"). 0 (unset) = the sde package default; < 0 ("0"/"off") =
@@ -52,6 +58,8 @@ func Load() CoreConfig {
 		OllamaURL:    envOr("EVE_CORE_OLLAMA_URL", "http://localhost:11434"),
 		EmbedModel:   envOr("EVE_CORE_EMBED_MODEL", "nomic-embed-text"),
 		JaniceAPIKey: os.Getenv("JANICE_API_KEY"),
+
+		IntelBaselinePath: strings.TrimSpace(os.Getenv("EVE_CORE_INTEL_BASELINE_PATH")),
 
 		SDEReloadInterval: parseReloadInterval(os.Getenv("EVE_CORE_SDE_RELOAD_INTERVAL")),
 

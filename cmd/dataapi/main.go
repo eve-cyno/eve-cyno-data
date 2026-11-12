@@ -45,6 +45,10 @@
 //	                          corpus is not configured. Unset (default): Qdrant is expected; if
 //	                          it is configured but down, fit search answers 502 "upstream_error"
 //	                          per request and /v1/health still reports corpus:true
+//	EVE_CORE_INTEL_BASELINE_PATH  the published intel baseline SQLite file behind
+//	                          get_activity_baseline (opened lazily; the file may not exist
+//	                          yet). Unset (default): the tool answers that baselines are not
+//	                          configured
 //	DATAAPI_UPSTREAM_TOOL_LIMIT  calls per minute per caller without an API key of the tools that
 //	                          read live data (get_market_price, get_type_info,
 //	                          get_sovereignty, get_system_activity, get_market_history from

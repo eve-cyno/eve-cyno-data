@@ -265,6 +265,8 @@ func TestExecuteToolResult_TextMatchesExecuteTool(t *testing.T) {
 		{"get_system_activity", map[string]any{"system_name": "Jita"}, stubDeps},
 		{"get_sovereignty", map[string]any{"systems": []any{"Jita", "Nope"}}, stubDeps},
 		{"get_system_activity", map[string]any{"systems": []any{"Jita"}}, stubDeps},
+		{"get_activity_baseline", map[string]any{"system_name": "Tama", "day": "Tuesday", "hour": 19}, sdeDeps},
+		{"get_activity_baseline", map[string]any{"system_name": "Nope"}, sdeDeps},
 		{"convert_isk_to_real", map[string]any{"isk_amount": 1e9, "currency": "BOTH"}, stubDeps},
 	}
 

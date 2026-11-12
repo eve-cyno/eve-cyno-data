@@ -36,6 +36,13 @@ var (
 		URL:     "https://zkillboard.com/",
 		License: fitLicense(corpus.SourceZkillboardMeta),
 	}
+	// sourceZKillboardKillmails is the killmail side of the activity baselines: only
+	// per-system counts and ISK sums of the R2Z2 stream are published, never a killmail.
+	sourceZKillboardKillmails = Source{
+		Name:    "zKillboard (killmail counts)",
+		URL:     "https://zkillboard.com/",
+		License: "Public R2Z2 API under zKillboard's usage etiquette; only per-system counts and ISK sums derived from it are published; killmails are Fenris Creations game data (EVE Developer License Agreement)",
+	}
 	sourceWarBeacon = Source{
 		Name:    "WarBeacon",
 		URL:     "https://warbeacon.net/",
@@ -136,6 +143,10 @@ var toolAttribution = map[string][]Source{
 	// The list from zKillboard, ship and system names from the SDE; ESI only for a list entry
 	// that holds no killmail.
 	"get_recent_kills": {sourceZKillboard, sourceESI, sourceSDE},
+
+	// Hour-of-week baselines: ESI's hourly map statistics (jumps, ship, pod and NPC kills) and
+	// per-system counts from the zKillboard R2Z2 stream, system names from the SDE.
+	"get_activity_baseline": {sourceSDE, sourceESI, sourceZKillboardKillmails},
 
 	// The community fit corpus.
 	"get_fits":  communityFits,

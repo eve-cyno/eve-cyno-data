@@ -5,6 +5,7 @@ package bootstrap
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"time"
@@ -12,6 +13,7 @@ import (
 	"eve-cyno.dev/go/data/config"
 	"eve-cyno.dev/go/data/fit"
 	"eve-cyno.dev/go/data/fit/gofa"
+	"eve-cyno.dev/go/data/intelbase"
 	"eve-cyno.dev/go/data/ports"
 	"eve-cyno.dev/go/data/rag"
 	"eve-cyno.dev/go/data/sde"
@@ -123,5 +125,13 @@ func BuildDepsWith(ctx context.Context, cfg config.CoreConfig, opts Options) (*D
 	} else {
 		td.Legality = fit.NewLegality(s, al)
 	}
-	return &Deps{Tools: td, Retriever: retr, close: s.Close}, nil
+	closeFn := s.Close
+	if cfg.IntelBaselinePath != "" {
+		// Lazy: the file may not be published yet; the store looks for it again on every
+		// reload interval and the tool answers "not published yet" until it appears.
+		bl := intelbase.Open(cfg.IntelBaselinePath, sdeReloadInterval(cfg))
+		td.Baselines = bl
+		closeFn = func() error { return errors.Join(bl.Close(), s.Close()) }
+	}
+	return &Deps{Tools: td, Retriever: retr, close: closeFn}, nil
 }

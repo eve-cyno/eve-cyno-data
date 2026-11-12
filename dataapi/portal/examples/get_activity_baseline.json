@@ -1,0 +1,90 @@
+{
+  "callouts": [
+    {
+      "kind": "note",
+      "text": "The numbers in this example come from a small synthetic test file, not from live data. A live answer names the real weeks sampled and the date from which killmails are counted.",
+      "title": "Example numbers"
+    }
+  ],
+  "prompt": "How busy is Tama usually on Tuesday evenings at 19:00 UTC?",
+  "recorded": "2026-11-12",
+  "request": {
+    "day": "Tuesday",
+    "hour": 19,
+    "system_name": "Tama"
+  },
+  "response": {
+    "attribution": [
+      {
+        "name": "EVE Static Data Export (via Fuzzwork)",
+        "url": "https://www.fuzzwork.co.uk/dump/",
+        "license": "Fenris Creations game data under the EVE Developer License Agreement; converted by Fuzzwork Enterprises"
+      },
+      {
+        "name": "ESI (EVE Swagger Interface)",
+        "url": "https://esi.evetech.net/",
+        "license": "EVE Developer License Agreement (Fenris Creations); non-commercial use"
+      },
+      {
+        "name": "zKillboard (killmail counts)",
+        "url": "https://zkillboard.com/",
+        "license": "Public R2Z2 API under zKillboard's usage etiquette; only per-system counts and ISK sums derived from it are published; killmails are Fenris Creations game data (EVE Developer License Agreement)"
+      }
+    ],
+    "result": {
+      "data": {
+        "system": "Tama",
+        "system_id": 30002813,
+        "view": "hour",
+        "samples": {
+          "map_jumps": 18,
+          "map_kills": 8,
+          "killmails": 385
+        },
+        "killmail_window_start": "2026-10-05",
+        "generated_at": "2026-10-21T04:00:00Z",
+        "hours": [
+          {
+            "day": "Tuesday",
+            "hour": 19,
+            "jumps": {
+              "mean": 412,
+              "sd": 41.012193308819754,
+              "n": 5
+            },
+            "ship_kills": {
+              "mean": 9.4,
+              "sd": 3.2093613071762426,
+              "n": 5
+            },
+            "pod_kills": {
+              "mean": 3,
+              "sd": 0.7071067811865476,
+              "n": 5
+            },
+            "npc_kills": {
+              "mean": 0.8,
+              "sd": 0.8366600265340756,
+              "n": 5
+            },
+            "pvp_killmails": {
+              "mean": 8.6,
+              "sd": 1.816590212458495,
+              "n": 5
+            },
+            "isk_destroyed_mean": 1420000000
+          }
+        ],
+        "ranked_by": "",
+        "busiest": [],
+        "quietest": [],
+        "most_ship_kills": []
+      },
+      "text": "Tama, Tuesday 19:00-20:00 UTC, usual activity (5 weeks sampled):\n- jumps: mean 412, sd 41 (n 5)\n- ship kills: mean 9.4, sd 3.2 (n 5)\n- pod kills: mean 3.0, sd 0.7 (n 5)\n- NPC kills: mean 0.8, sd 0.8 (n 5)\n- PvP killmails on zKillboard: mean 8.6, sd 1.8 (n 5); mean ISK destroyed 1.42b\nHours the collector missed are left out, not counted as zero. Jumps are gate jumps only.\nPvP killmails counted since 2026-10-05 (UTC). Sample standard deviation; the latest hour is not part of the usual numbers."
+    },
+    "tool": "get_activity_baseline",
+    "version": "sha-0d59efe"
+  },
+  "tool": "get_activity_baseline",
+  "trimmed": false
+}
