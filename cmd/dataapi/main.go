@@ -648,7 +648,7 @@ func run(log *slog.Logger) error {
 		return err
 	}
 	if len(ranges) > 0 {
-		log.Info("access log: lines from Anthropic's connector addresses carry range=anthropic (never the address)",
+		log.Info("access log: lines from addresses in DATAAPI_ANTHROPIC_RANGES carry range=anthropic (never the address)",
 			"env", "DATAAPI_ANTHROPIC_RANGES", "prefixes", len(ranges))
 	} else {
 		log.Info("access log: no range label, DATAAPI_ANTHROPIC_RANGES is blank", "env", "DATAAPI_ANTHROPIC_RANGES")

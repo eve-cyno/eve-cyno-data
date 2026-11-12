@@ -53,7 +53,8 @@ func (a *API) clientLabels(r *http.Request) []any {
 			ipf = "pseudo"
 		}
 	}
-	labels := []any{"ipf", ipf}
+	labels := make([]any, 0, 4)
+	labels = append(labels, "ipf", ipf)
 	for _, p := range a.anthropic {
 		if p.Contains(addr) {
 			return append(labels, "range", "anthropic")
