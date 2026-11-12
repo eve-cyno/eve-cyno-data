@@ -22,7 +22,10 @@
 //     CF-Connecting-IP header and falling back to the TCP peer, never from
 //     X-Forwarded-For / X-Real-IP. A refused request is a 429 with a
 //     Retry-After header. CF-Connecting-IP is trusted as-is, so the service must
-//     only be reachable through the Cloudflare tunnel (or loopback).
+//     only be reachable through the Cloudflare tunnel (or loopback). An IPv6 client is
+//     one caller per /64 network, for the limits and the daily cap.
+//   - A route at its in-flight cap answers 503 busy with Retry-After: 1 before
+//     authentication errors (503 before 401) and charges nothing.
 //   - Request bodies are capped (256 KiB for the fit routes, 64 KiB for the tool
 //     API); an oversize body is a 413.
 //   - Tool tiers (catalog): on an internet-facing service a tool is public
@@ -318,7 +321,8 @@ type Config struct {
 	LogSalt string
 
 	// AnthropicRanges are the networks Anthropic's connector calls come from (claude.ai and
-	// Claude Desktop custom connectors). The access line of a client inside one, by the address
+	// Claude Desktop custom connectors): the two outbound IPv4 ranges 160.79.104.0/21 and
+	// 153.61.208.0/20, no outbound IPv6 (https://platform.claude.com/docs/en/api/ip-addresses). The access line of a client inside one, by the address
 	// ClientKey buckets, carries range="anthropic", never the address. Nil or empty means no
 	// range label. Build it with ParseRanges (an IPv4-mapped IPv6 prefix would never match).
 	AnthropicRanges []netip.Prefix

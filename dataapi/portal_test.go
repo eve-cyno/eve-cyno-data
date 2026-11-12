@@ -237,7 +237,7 @@ func TestPortal_RendersTheCatalogAndLimits(t *testing.T) {
 	require.Contains(t, attribution, "https://www.fuzzwork.co.uk/dump/")
 	terms := do(api, http.MethodGet, "/docs/terms", "").Body.String()
 	require.Contains(t, terms, `/terms`)
-	require.Contains(t, terms, "2026-10-23", "the date comes from terms.md")
+	require.Contains(t, terms, "2026-11-12", "the date comes from terms.md")
 }
 
 // The live copy follows the kind of live data a tool reads: every call live ESI, every call
@@ -483,7 +483,7 @@ func TestPortal_LimiterCoversPagesNotAssets(t *testing.T) {
 // The terms say what an API key stores and that an account is needed only for a key.
 func TestTerms_DescribeKeyData(t *testing.T) {
 	md := do(portalAPI(t), http.MethodGet, "/terms.md", "").Body.String()
-	require.Contains(t, md, "Last updated: 2026-10-23")
+	require.Contains(t, md, "Last updated: 2026-11-12")
 	require.Contains(t, md, "The data API sets no cookies and runs no analytics. An account is needed only to create an API key")
 	require.Contains(t, md, "a hash of the key (never the key)")
 	require.NotContains(t, md, "no accounts")
@@ -663,7 +663,7 @@ func TestPortal_MCPPageCoversEveryClientAndTheSkill(t *testing.T) {
 		`<li><a href="#mcp-skill">Agent skill</a></li>`, `<h2 id="mcp-skill">`,
 		"https://raw.githubusercontent.com/eve-cyno/claude-plugins/main/plugins/eve-cyno/skills/eve-data/SKILL.md",
 		`href="` + cursorHref + `"`, `href="` + vscodeHref + `"`,
-		"Connector calls reach the server from Anthropic's addresses. Without a key they share one limit per client",
+		"Connector calls reach the server from Anthropic's published outbound IPv4 ranges, <code>160.79.104.0/21</code> and <code>153.61.208.0/20</code> (no outbound IPv6; source: <a href=\"https://platform.claude.com/docs/en/api/ip-addresses\">platform.claude.com/docs/en/api/ip-addresses</a>). When the server is at capacity it answers HTTP <code>503</code> with <code>Retry-After: 1</code> (code <code>busy</code>); retry after that many seconds. Without a key they share one limit per client",
 	} {
 		require.Contains(t, mcp, want)
 	}
@@ -675,7 +675,7 @@ func TestPortal_MCPPageCoversEveryClientAndTheSkill(t *testing.T) {
 
 	keyless := page(dataapi.Config{ToolAPI: dataapi.ToolAPIPublic, Docs: true, MCP: http.NotFoundHandler()}, "https://data.example.test", "/docs/mcp")
 	require.Contains(t, keyless, `href="`+cursorHref+`"`)
-	require.Contains(t, keyless, "Connector calls reach the server from Anthropic's addresses.")
+	require.Contains(t, keyless, "Connector calls reach the server from Anthropic's published outbound IPv4 ranges")
 	require.NotContains(t, keyless, "#ZgotmplZ")
 	for _, key := range []string{"X-API-Key", "x-api-key", "eve-cyno-key", "bearer-token-env-var", "Without a key they share", "free key"} {
 		require.NotContains(t, keyless, key)

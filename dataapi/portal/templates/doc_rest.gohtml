@@ -78,7 +78,7 @@ console.log((<span class="tk-kw">await</span> r.json()).result.text);</code></pr
         <tr><td><code>Authorization: Bearer &lt;key&gt;</code> or <code>X-API-Key</code></td><td>{{if .Auth}}The keyed {{plural .Stats.Keyed "tool" "tools"}}, free-text fit search and the higher limits.{{else}}Keyed tools.{{end}}{{if .Auth}} {{if .SelfServe}}Keys are free: see{{else}}See{{end}} <a href="/docs/access#access-keys">API keys</a>.{{else}} No keys are issued yet.{{end}}</td></tr>
         <tr><td><code>X-Janice-Key</code></td><td>Optional: your own Janice key; <code>appraise_items</code> then answers with a Janice appraisal instead of the ESI estimate. Used for that request only, never logged or stored.</td></tr>
         <tr><td><code>X-Request-ID</code></td><td>On every response: your value when it is a token of 1-64 characters from <code>[A-Za-z0-9._-]</code>, otherwise a generated one.</td></tr>
-        <tr><td><code>Retry-After</code></td><td>On <code>429</code> and <code>503 upstream_busy</code>: seconds to wait.</td></tr>
+        <tr><td><code>Retry-After</code></td><td>On <code>429</code>, <code>503 upstream_busy</code> and <code>503 busy</code>: seconds to wait (<code>Retry-After: 1</code> on <code>busy</code>).</td></tr>
       </tbody>
     </table></div>
 
@@ -96,7 +96,7 @@ console.log((<span class="tk-kw">await</span> r.json()).result.text);</code></pr
         <tr><td class="num">403</td><td><code>tool_disabled</code>, <code>key_not_permitted</code></td></tr>
         <tr><td class="num">413</td><td><code>payload_too_large</code>: 256 KiB on the fit routes, 64 KiB on the tool and MCP endpoints</td></tr>
         <tr><td class="num">429</td><td><code>rate_limited</code>, with <code>Retry-After</code>{{if or .KeyCap .AnonCap}}; or <code>daily_quota_exceeded</code> over the daily cap ({{if .AnonCap}}{{.AnonCap}} a day without a key{{if .KeyCap}}, {{.KeyCap}} per key{{end}}{{else}}{{.KeyCap}} per key{{end}}), where <code>Retry-After</code> is the seconds until 00:00 UTC{{end}}</td></tr>
-        <tr><td class="num">503</td><td><code>upstream_busy</code>, with <code>Retry-After</code></td></tr>
+        <tr><td class="num">503</td><td><code>upstream_busy</code>, with <code>Retry-After</code>; or <code>busy</code>, with <code>Retry-After: 1</code>: the route is at its concurrency cap. It is answered before authentication errors (<code>503</code> before <code>401</code> for an invalid or revoked key) and is never charged against any limit or daily cap</td></tr>
       </tbody>
     </table></div>
     <p>The full list: <code>not_found</code>, <code>method_not_allowed</code>, <code>invalid_request</code>, <code>payload_too_large</code>, <code>rate_limited</code>, {{if or .KeyCap .AnonCap}}<code>daily_quota_exceeded</code>, {{end}}<code>unavailable</code>, <code>upstream_error</code>, <code>upstream_busy</code>, <code>unknown_tool</code>, <code>tool_disabled</code>, <code>api_key_required</code>, <code>invalid_api_key</code>, <code>key_not_permitted</code>, <code>timeout</code>, <code>internal_error</code>.</p>

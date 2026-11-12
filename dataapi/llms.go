@@ -105,6 +105,8 @@ func llmsFullTxt(s Surface) string {
 		"`" + strings.Join(errorCodes(), "`, `") + "`.\n")
 	w.WriteString("- Every response carries `X-Request-ID`: your value when it is a token of 1-64 characters from `[A-Za-z0-9._-]`, otherwise a generated one.\n")
 	w.WriteString("- Requests are rate limited per caller (sliding window): per API key when one is sent, otherwise per client IP. A refused request is `429` with `Retry-After`.\n")
+	w.WriteString(ipv6Convention)
+	w.WriteString(busyConvention)
 	w.WriteString("- One call is one request against every limit, however long its list arguments; each list argument has its own cap (see the tool).\n")
 	w.WriteString(keyConventions(s))
 	w.WriteString("- Request bodies are capped: 256 KiB on the fit routes, 64 KiB on the tool and MCP endpoints (`413`).\n")

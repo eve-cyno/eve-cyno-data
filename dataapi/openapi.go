@@ -152,6 +152,13 @@ type oaComponents struct {
 	SecuritySchemes map[string]schema `json:"securitySchemes,omitempty"`
 }
 
+// busyConvention is the conventions line about the in-flight cap, shared by the OpenAPI
+// description and llms-full.txt.
+const busyConvention = "- A route at its concurrency cap answers `503` `busy` with `Retry-After: 1` at once instead of queueing. It does so before authentication errors (an invalid or revoked key gets `503` before `401`), and a `503` `busy` is never charged against any limit or daily quota.\n"
+
+// ipv6Convention says how IPv6 clients are counted.
+const ipv6Convention = "- An IPv6 client is counted per /64 network, not per address, for the rate limits and the daily quota.\n"
+
 // errorResponseNames maps a status to its shared component response.
 func errorResponseNames() map[int]struct{ name, description string } {
 	return map[int]struct{ name, description string }{
@@ -163,7 +170,7 @@ func errorResponseNames() map[int]struct{ name, description string } {
 		http.StatusTooManyRequests:       {"RateLimited", "The caller is over the rate limit; retry after the number of seconds in `Retry-After` (`rate_limited`)."},
 		http.StatusInternalServerError:   {"InternalError", "The operation failed inside the service (`internal_error`)."},
 		http.StatusBadGateway:            {"UpstreamError", "An upstream dependency failed (`upstream_error`)."},
-		http.StatusServiceUnavailable:    {"Unavailable", "A dependency this operation needs is not loaded, for example the SDE or the fit corpus (`unavailable`), or the upstream a live-data tool reads (EVE's ESI) is near its rate limit and nothing was sent (`upstream_busy`; retry after the number of seconds in `Retry-After`), or the route is at its concurrency cap (`busy`; retry after `Retry-After`)."},
+		http.StatusServiceUnavailable:    {"Unavailable", "A dependency this operation needs is not loaded, for example the SDE or the fit corpus (`unavailable`), or the upstream a live-data tool reads (EVE's ESI) is near its rate limit and nothing was sent (`upstream_busy`; retry after the number of seconds in `Retry-After`), or the route is at its concurrency cap (`busy`; `Retry-After: 1`; nothing was charged). A full route answers `busy` before authentication errors, so an invalid or revoked key gets `503` before `401`; a `503` `busy` is never charged against any limit or daily quota."},
 		http.StatusGatewayTimeout:        {"Timeout", "The operation ran past its time budget (`timeout`)."},
 	}
 }
@@ -683,6 +690,8 @@ func apiDescription(s Surface) string {
 	b.WriteString("- Errors are JSON, always: `{\"error\":{\"code\":\"...\",\"message\":\"...\"}}`. The codes are stable (see `ErrorDetail`).\n")
 	b.WriteString("- Every response carries `X-Request-ID`: your value when it is a token of 1-64 characters from `[A-Za-z0-9._-]`, otherwise a generated one.\n")
 	b.WriteString("- Requests are rate limited per caller (a sliding window; the budget is stated on each operation): per API key when one is sent, otherwise per client IP. A refused request is `429` with `Retry-After`.\n")
+	b.WriteString(ipv6Convention)
+	b.WriteString(busyConvention)
 	b.WriteString(keyConventions(s))
 	b.WriteString("- Request bodies are capped (256 KiB on the fit routes, 64 KiB on tools and MCP); an oversize body is `413`.\n")
 	if tiered(s) && (s.ToolAPI != ToolAPIOff || s.MCP) {

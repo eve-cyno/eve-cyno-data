@@ -67,8 +67,10 @@
 //	                          reverse a token
 //	DATAAPI_ANTHROPIC_RANGES  comma-separated CIDR prefixes; an access line whose client address
 //	                          (the one the limits key on) lies in one carries range="anthropic",
-//	                          never the address. Unset: Anthropic's outbound ranges
-//	                          160.79.104.0/21,153.61.208.0/20 (the compose default too); set but
+//	                          never the address. Unset: Anthropic's two outbound IPv4 ranges
+//	                          160.79.104.0/21,153.61.208.0/20 (no outbound IPv6; source
+//	                          https://platform.claude.com/docs/en/api/ip-addresses; the compose
+//	                          default too); set but
 //	                          blank: no label; an invalid item is a startup error. Every access
 //	                          line whose client address parses also carries ipf (v4, v6, or
 //	                          pseudo for class E, Cloudflare's pseudo-IPv4)

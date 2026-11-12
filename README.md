@@ -193,12 +193,13 @@ Errors are always `{"error":{"code":"...","message":"..."}}`:
 | 429 | `daily_quota_exceeded` | a key used its daily cap; wait `Retry-After` seconds (until 00:00 UTC) |
 | 502/503 | `upstream_error` / `unavailable` | an upstream (Qdrant, ESI) or a dependency is down |
 | 503 | `upstream_busy` | the ESI budget is nearly spent and nothing was sent; wait `Retry-After` seconds |
+| 503 | `busy` | the route is at its concurrency cap; `Retry-After: 1`. Answered before authentication errors (503 before 401 for an invalid or revoked key) and never charged against any limit or daily cap |
 
 Over MCP an invalid key is the same 401 before the protocol starts; a tool you may not use is simply not in `tools/list`.
 
 ### Rate limits
 
-Per caller (per API key when one is sent, otherwise per client IP), sliding window, per minute. Without a key the service is for
+Per caller (per API key when one is sent, otherwise per client IP; IPv6 clients are counted per /64), sliding window, per minute. Without a key the service is for
 trying it out; a free key is for real use (connecting Claude Code, a model or a bot) and tells the operator who sends what.
 The numbers:
 
@@ -216,7 +217,7 @@ The keyed number of a route is `Rate.KeyedMax` in `dataapi.Limits` (`dataapi.Def
 one gets `DATAAPI_KEYED_LIMIT_FACTOR` times its limit. Daily caps, all in UTC days and answering `429 daily_quota_exceeded` with
 `Retry-After` set to the seconds until 00:00 UTC:
 
-- a client without a key: 200 requests a day (`DATAAPI_ANON_DAILY_CAP`, `0` = none), counted in memory per client IP, never persisted
+- a client without a key: 200 requests a day (`DATAAPI_ANON_DAILY_CAP`, `0` = none), counted in memory per client IP (IPv6 per /64), never persisted
   or logged. The documentation pages, the portal assets and `/health` are not counted, so browsing the docs never spends the trial.
   The table is bounded (100,000 clients a day; beyond that new clients are served uncounted and a warning is logged once a day);
 - a key: 10,000 requests a day with a key store (`DATAAPI_KEY_DAILY_CAP`, default 10000, `0` = none).

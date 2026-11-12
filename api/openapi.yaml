@@ -10,6 +10,8 @@ info:
     - Errors are JSON, always: `{"error":{"code":"...","message":"..."}}`. The codes are stable (see `ErrorDetail`).
     - Every response carries `X-Request-ID`: your value when it is a token of 1-64 characters from `[A-Za-z0-9._-]`, otherwise a generated one.
     - Requests are rate limited per caller (a sliding window; the budget is stated on each operation): per API key when one is sent, otherwise per client IP. A refused request is `429` with `Retry-After`.
+    - An IPv6 client is counted per /64 network, not per address, for the rate limits and the daily quota.
+    - A route at its concurrency cap answers `503` `busy` with `Retry-After: 1` at once instead of queueing. It does so before authentication errors (an invalid or revoked key gets `503` before `401`), and a `503` `busy` is never charged against any limit or daily quota.
     - Without an API key the API is for trying it out: 200 requests per UTC day per client (counted per client IP; the documentation routes are not counted) and the lower per-minute limits stated on the operations. Over the day's budget a client gets `429` `daily_quota_exceeded` with `Retry-After` set to the seconds until 00:00 UTC. A free API key is for real use.
     - An API key raises the per-minute budgets: every operation states its limit without a key and with one, counted in the key's own window. The live-data tools keep a lower limit than the route.
     - A new API key has a daily cap of 10000 requests per UTC day by default (a cap can be changed per key, 0 meaning none). Over its cap a key gets `429` `daily_quota_exceeded` with `Retry-After` set to the seconds until 00:00 UTC.
@@ -2525,6 +2527,8 @@ paths:
           $ref: '#/components/responses/PayloadTooLarge'
         "429":
           $ref: '#/components/responses/RateLimited'
+        "503":
+          $ref: '#/components/responses/Unavailable'
   /health:
     get:
       tags:
@@ -6580,7 +6584,7 @@ components:
         X-Request-ID:
           $ref: '#/components/headers/RequestID'
     Unavailable:
-      description: A dependency this operation needs is not loaded, for example the SDE or the fit corpus (`unavailable`), or the upstream a live-data tool reads (EVE's ESI) is near its rate limit and nothing was sent (`upstream_busy`; retry after the number of seconds in `Retry-After`), or the route is at its concurrency cap (`busy`; retry after `Retry-After`).
+      description: 'A dependency this operation needs is not loaded, for example the SDE or the fit corpus (`unavailable`), or the upstream a live-data tool reads (EVE''s ESI) is near its rate limit and nothing was sent (`upstream_busy`; retry after the number of seconds in `Retry-After`), or the route is at its concurrency cap (`busy`; `Retry-After: 1`; nothing was charged). A full route answers `busy` before authentication errors, so an invalid or revoked key gets `503` before `401`; a `503` `busy` is never charged against any limit or daily quota.'
       content:
         application/json:
           schema:

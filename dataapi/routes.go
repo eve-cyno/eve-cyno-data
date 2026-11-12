@@ -333,7 +333,7 @@ func routeTable() []route {
 						{name: "error", schema: schema{"type": "object"}},
 					},
 				}},
-				errors: []int{http.StatusRequestEntityTooLarge, http.StatusTooManyRequests},
+				errors: []int{http.StatusRequestEntityTooLarge, http.StatusTooManyRequests, http.StatusServiceUnavailable},
 			},
 		},
 		{
