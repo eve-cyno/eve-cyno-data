@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -31,10 +30,20 @@ func ceilingMessage(max int) string {
 		"retry after Retry-After seconds, or use a free API key for a budget of your own: %s/docs/access#access-keys", max, rangeTierURL)
 }
 
-// connectorBusyText is the one text of a range ceiling refusal of a JSON-RPC message on /v1/mcp,
-// with the wait n in whole seconds.
+// connectorKeyHint is the clause every refusal text of a range caller ends with on the
+// range-tier fixtures (PublicURL rangeTierURL): the key page, for a client that can send a key.
+const connectorKeyHint = " Clients that can send an Authorization header can use a free API key: " + rangeTierURL + "/docs/access#access-keys"
+
+// connectorBusyText is the one text of a range caller's per-minute refusal (the shared ceiling or
+// its own address limit) of a JSON-RPC message on /v1/mcp, with the wait n in whole seconds.
 func connectorBusyText(n int) string {
-	return fmt.Sprintf("This service is busy for Claude connectors right now; try again in %d seconds.", n)
+	return fmt.Sprintf("This service is busy for Claude connectors right now; try again in %d seconds.", n) + connectorKeyHint
+}
+
+// connectorDailyText is the text of a range caller's daily cap refusal on /v1/mcp (no wait in it;
+// Retry-After carries the seconds until 00:00 UTC).
+func connectorDailyText(int) string {
+	return "Today's request limit for Claude connectors is used up; it resets at 00:00 UTC." + connectorKeyHint
 }
 
 // rpcReply is the strict shape of a JSON-RPC answer to a refused MCP message.
@@ -54,11 +63,10 @@ type rpcReply struct {
 	} `json:"error"`
 }
 
-// requireConnectorBusy asserts the parts every JSON-RPC answer of a ceiling refusal shares: HTTP
-// 200, application/json, Retry-After in whole seconds (at least 1), the id echoed as wantID (raw
-// JSON), and no pointer to an API key, which a connector cannot send. It returns the reply and
-// the wait.
-func requireConnectorBusy(t *testing.T, rec *httptest.ResponseRecorder, wantID, msg string) (rpcReply, int) {
+// requireConnectorReply asserts the parts every JSON-RPC answer of a range caller's refusal
+// shares: HTTP 200, application/json, Retry-After in whole seconds (at least 1), the id echoed as
+// wantID (raw JSON). It returns the reply and the wait.
+func requireConnectorReply(t *testing.T, rec *httptest.ResponseRecorder, wantID, msg string) (rpcReply, int) {
 	t.Helper()
 	require.Equal(t, http.StatusOK, rec.Code, "%s: %s", msg, rec.Body.String())
 	require.Equal(t, "application/json", rec.Header().Get("Content-Type"), msg)
@@ -70,11 +78,31 @@ func requireConnectorBusy(t *testing.T, rec *httptest.ResponseRecorder, wantID, 
 	require.NoError(t, dec.Decode(&reply), "%s: %s", msg, rec.Body.String())
 	require.Equal(t, "2.0", reply.JSONRPC, msg)
 	require.JSONEq(t, wantID, string(reply.ID), "%s: the request id is echoed", msg)
-	body := strings.ToLower(rec.Body.String())
-	for _, hint := range []string{"key", "docs/access", rangeTierURL} {
-		require.NotContains(t, body, strings.ToLower(hint), "%s: no key hint", msg)
-	}
 	return reply, secs
+}
+
+// requireConnectorRPCError asserts the JSON-RPC error -32000 of a range caller's refusal of a
+// request with the id wantID (raw JSON) that is not a tools/call, with the text text(wait).
+func requireConnectorRPCError(t *testing.T, rec *httptest.ResponseRecorder, wantID string, text func(int) string, msg string) {
+	t.Helper()
+	reply, secs := requireConnectorReply(t, rec, wantID, msg)
+	require.Nil(t, reply.Result, msg)
+	require.NotNil(t, reply.Error, msg)
+	require.Equal(t, -32000, reply.Error.Code, msg)
+	require.Equal(t, text(secs), reply.Error.Message, msg)
+}
+
+// requireConnectorToolResult asserts a range caller's refusal of a tools/call with the id wantID
+// (raw JSON): a result with isError and text(wait) as its one content item.
+func requireConnectorToolResult(t *testing.T, rec *httptest.ResponseRecorder, wantID string, text func(int) string, msg string) {
+	t.Helper()
+	reply, secs := requireConnectorReply(t, rec, wantID, msg)
+	require.Nil(t, reply.Error, msg)
+	require.NotNil(t, reply.Result, msg)
+	require.True(t, reply.Result.IsError, msg)
+	require.Len(t, reply.Result.Content, 1, msg)
+	require.Equal(t, "text", reply.Result.Content[0].Type, msg)
+	require.Equal(t, text(secs), reply.Result.Content[0].Text, msg)
 }
 
 // requireCeilingRefusal asserts the range ceiling's answer to an MCP request that is not a
@@ -84,28 +112,33 @@ func requireCeilingRefusal(t *testing.T, rec *httptest.ResponseRecorder, msg str
 	requireCeilingRPCError(t, rec, `1`, msg)
 }
 
+// requireAddressBusy asserts a range caller's own address limit refusing tools/list with id 1 on
+// /v1/mcp: the same JSON-RPC error and text as the ceiling's (only the access line tells them
+// apart).
+func requireAddressBusy(t *testing.T, rec *httptest.ResponseRecorder, msg string) {
+	t.Helper()
+	requireCeilingRPCError(t, rec, `1`, msg)
+}
+
+// requireDailyRefusal asserts a range caller's daily cap refusing tools/list with id 1 on
+// /v1/mcp: the JSON-RPC error -32000 with the daily text.
+func requireDailyRefusal(t *testing.T, rec *httptest.ResponseRecorder, msg string) {
+	t.Helper()
+	requireConnectorRPCError(t, rec, `1`, connectorDailyText, msg)
+}
+
 // requireCeilingRPCError asserts the JSON-RPC error answer of the range ceiling to a request
 // with the id wantID (raw JSON).
 func requireCeilingRPCError(t *testing.T, rec *httptest.ResponseRecorder, wantID, msg string) {
 	t.Helper()
-	reply, secs := requireConnectorBusy(t, rec, wantID, msg)
-	require.Nil(t, reply.Result, msg)
-	require.NotNil(t, reply.Error, msg)
-	require.Equal(t, -32000, reply.Error.Code, msg)
-	require.Equal(t, connectorBusyText(secs), reply.Error.Message, msg)
+	requireConnectorRPCError(t, rec, wantID, connectorBusyText, msg)
 }
 
 // requireCeilingToolResult asserts the range ceiling's answer to a tools/call with the id wantID
 // (raw JSON): a result with isError and the busy text as its one content item.
 func requireCeilingToolResult(t *testing.T, rec *httptest.ResponseRecorder, wantID, msg string) {
 	t.Helper()
-	reply, secs := requireConnectorBusy(t, rec, wantID, msg)
-	require.Nil(t, reply.Error, msg)
-	require.NotNil(t, reply.Result, msg)
-	require.True(t, reply.Result.IsError, msg)
-	require.Len(t, reply.Result.Content, 1, msg)
-	require.Equal(t, "text", reply.Result.Content[0].Type, msg)
-	require.Equal(t, connectorBusyText(secs), reply.Result.Content[0].Text, msg)
+	requireConnectorToolResult(t, rec, wantID, connectorBusyText, msg)
 }
 
 // requireRESTCeilingRefusal asserts the HTTP 429 of the shared range ceiling of max per minute,
@@ -218,7 +251,7 @@ func TestRangeTier_PerAddressSixtyPerMinute(t *testing.T) {
 	require.Equal(t, 60, dataapi.DefaultLimits().Range.MCP.Max)
 
 	spendOK(t, api, "160.79.104.9", 60)
-	requireAddressRefusal(t, mcpFrom(t, api, "160.79.104.9"), "the 61st request of one address")
+	requireAddressBusy(t, mcpFrom(t, api, "160.79.104.9"), "the 61st request of one address")
 
 	// Another address of the range has its own 60.
 	spendOK(t, api, "153.61.215.1", 60)
@@ -268,7 +301,7 @@ func TestRangeTier_CeilingRefusalSpendsNoAddressBudget(t *testing.T) {
 
 	clk.advance(time.Minute + time.Second) // the ceiling empties
 	spendOK(t, api, x, 60)
-	requireAddressRefusal(t, mcpFrom(t, api, x), "the address still had its whole 60")
+	requireAddressBusy(t, mcpFrom(t, api, x), "the address still had its whole 60")
 }
 
 // A request its own address limit refuses never takes a place in the shared ceiling.
@@ -277,7 +310,7 @@ func TestRangeTier_AddressRefusalDoesNotDrainTheCeiling(t *testing.T) {
 	addrs := rangeAddrs(6)
 	spendOK(t, api, addrs[0], 60)
 	for i := range 100 {
-		requireAddressRefusal(t, mcpFrom(t, api, addrs[0]), fmt.Sprintf("refusal %d", i+1))
+		requireAddressBusy(t, mcpFrom(t, api, addrs[0]), fmt.Sprintf("refusal %d", i+1))
 	}
 	for _, ip := range addrs[1:5] {
 		spendOK(t, api, ip, 60)
@@ -306,13 +339,14 @@ func TestRangeTier_CeilingRefusalSpendsNoDailyCap(t *testing.T) {
 
 	clk.advance(time.Minute + time.Second) // the ceiling empties, the UTC day does not change
 	spendOK(t, api, x, daily)
-	requireError(t, mcpFrom(t, api, x), http.StatusTooManyRequests, "daily_quota_exceeded")
+	requireDailyRefusal(t, mcpFrom(t, api, x), "the daily cap")
 }
 
 // With its own limit and the ceiling both full, an address whose own wait is the longer one gets
 // its own refusal and wait, not the ceiling's shorter one: Retry-After must not send it back
 // before it can be served. Its address is then the binding limit, so the refusal spends the
-// daily cap like every per-address 429. The same answer with and without a daily cap (the
+// daily cap like every per-address refusal (on /v1/mcp answered in JSON-RPC, the same text as the
+// ceiling's with the address's wait). The same answer with and without a daily cap (the
 // ceiling check before the cap, the route limiter).
 func TestRangeTier_BothFullAnswersTheAddressWaitWhenLonger(t *testing.T) {
 	for _, anonCap := range []int{dataapi.DefaultAnonDailyCap, 0} {
@@ -332,7 +366,7 @@ func TestRangeTier_BothFullAnswersTheAddressWaitWhenLonger(t *testing.T) {
 
 			// t=55s: the ceiling frees in 6 s, x's own limit in 35 s.
 			rec := mcpFrom(t, api, x)
-			requireAddressRefusal(t, rec, "x's own wait is the longer one")
+			requireAddressBusy(t, rec, "x's own wait is the longer one")
 			require.Equal(t, 35, retryAfter(t, rec))
 			// Another address of the ranges is held by the ceiling alone: its wait.
 			rec = mcpFrom(t, api, "153.61.208.30")
@@ -364,7 +398,7 @@ func TestRangeTier_BothFullAnswersTheCeilingWhenItsWaitIsAsLong(t *testing.T) {
 
 	clk.advance(51 * time.Second)
 	spendOK(t, api, x, 1) // the daily cap's third unit: the five refusals spent none
-	requireError(t, mcpFrom(t, api, x), http.StatusTooManyRequests, "daily_quota_exceeded")
+	requireDailyRefusal(t, mcpFrom(t, api, x), "the daily cap")
 }
 
 // Without API keys there is no range tier: an address of the ranges is served like every caller
@@ -463,8 +497,8 @@ func TestRangeTier_ActivityBaselineToolsShareTheMCPBucket(t *testing.T) {
 		require.Equal(t, http.StatusOK, rec.Code, "call %d: %s", i+1, rec.Body.String())
 		rpcResult(t, rec)
 	}
-	requireAddressRefusal(t, call(addrs[0], 60), "the 61st baseline call of one address")
-	requireAddressRefusal(t, mcpFrom(t, api, addrs[0]), "any MCP request after it: one bucket")
+	requireConnectorToolResult(t, call(addrs[0], 60), `7`, connectorBusyText, "the 61st baseline call of one address")
+	requireAddressBusy(t, mcpFrom(t, api, addrs[0]), "any MCP request after it: one bucket")
 	for _, ip := range addrs[1:5] {
 		for i := range 60 {
 			require.Equal(t, http.StatusOK, call(ip, i).Code, "%s call %d", ip, i+1)

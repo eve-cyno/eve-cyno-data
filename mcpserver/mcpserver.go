@@ -134,7 +134,7 @@ type serverConfig struct {
 	// or get_production_chain that means a live option is set) whether the caller is within its budget for it; a
 	// refusal carries the wait and, when a limit shared by many callers refused it, that limit's
 	// name (see HTTPOptions.Upstream).
-	allow func(tool string) (ok bool, retryAfter time.Duration, shared string)
+	allow func(tool string) (ok bool, retryAfter time.Duration, refusal string)
 	// called, when set, is told of every tools/call.
 	called func(tool string)
 	// instructions is the initialize text; empty means the package default.
@@ -263,9 +263,9 @@ func (h *handler) call(t catalog.Tool) mcp.ToolHandler {
 		}
 
 		if h.allow != nil && t.SpendsUpstream(args) {
-			if ok, retry, shared := h.allow(name); !ok {
+			if ok, retry, refusal := h.allow(name); !ok {
 				use.Outcome = toolusage.RateLimited
-				return failure(h.upstreamRefusal(name, t.UpstreamName, retry, shared)), nil
+				return failure(upstreamRefusal(name, t.UpstreamName, retry, refusal)), nil
 			}
 		}
 
@@ -289,16 +289,14 @@ func (h *handler) call(t catalog.Tool) mcp.ToolHandler {
 	}
 }
 
-// upstreamRefusal is the isError text of a live call the Upstream hook refused: the caller's own
-// lower limit, or, when shared names a limit that many callers share, that limit. A shared refusal
-// points at no API key: the callers such a limit holds are keyless connectors (claude.ai, Claude
-// Desktop), which cannot send one.
-func (h *handler) upstreamRefusal(tool, upstream string, retry time.Duration, shared string) string {
-	secs := max(1, int((retry+time.Second-1)/time.Second))
-	if shared == "" {
-		return fmt.Sprintf("rate_limited: %s reads live %s data and has a lower per-caller limit; retry in %d seconds", tool, upstream, secs)
+// upstreamRefusal is the isError text of a live call the Upstream hook refused: the hook's own
+// text (refusal) when it gave one, else the caller's own lower limit with the wait.
+func upstreamRefusal(tool, upstream string, retry time.Duration, refusal string) string {
+	if refusal != "" {
+		return refusal
 	}
-	return fmt.Sprintf("rate_limited: %s is reached; retry in %d seconds", shared, secs)
+	secs := max(1, int((retry+time.Second-1)/time.Second))
+	return fmt.Sprintf("rate_limited: %s reads live %s data and has a lower per-caller limit; retry in %d seconds", tool, upstream, secs)
 }
 
 // failure is a tool-level error: isError with the message as text.
@@ -388,12 +386,10 @@ type HTTPOptions struct {
 	// which catalog.Tool.SpendsUpstream is true; for plan_jump_route or get_production_chain that means a live
 	// option is set) whether the request's caller is within its budget for it
 	// (dataapi.UpstreamHook; the same limiter as the REST endpoint, so one budget covers both).
-	// A refusal is an isError result starting "rate_limited" with the wait. shared is empty when
-	// the caller's own limit refused the call; when a limit that many callers share refused it
-	// (dataapi's ceiling of all keyless connector calls), shared names that limit ("the shared
-	// limit of N ... calls per minute for ..."), and the result states it, "is reached", instead
-	// of the per-caller text, with no pointer to a key (connectors cannot send one). Nil: no limit.
-	Upstream func(r *http.Request, tool string) (ok bool, retryAfter time.Duration, shared string)
+	// A refusal is an isError result: refusal as given when the hook gives one (dataapi's text
+	// for a keyless connector caller, the same as its other refusals of such a caller), else the
+	// per-caller text, starting "rate_limited", with the wait. Nil: no limit.
+	Upstream func(r *http.Request, tool string) (ok bool, retryAfter time.Duration, refusal string)
 	// ToolCalled, when set, is called once per tools/call with the HTTP request that carried
 	// it and the tool name, before the tool runs (also for a call that is then refused or
 	// fails). Nil: off. It must be cheap; the embedding service uses it for usage counting.

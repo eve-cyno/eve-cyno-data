@@ -511,6 +511,18 @@ func requireOwnLiveRefusal(t *testing.T, rec *httptest.ResponseRecorder, msg str
 	require.Contains(t, fmt.Sprint(res["content"]), "rate_limited: get_type_info reads live ESI data and has a lower per-caller limit", msg)
 }
 
+// requireRangeOwnLiveRefusal asserts the MCP handler's refusal of a range caller's own live-tool
+// budget (a tools/call with id 1): the isError result with the connector busy text and the wait of
+// secs seconds. The SDK writes that answer, so it carries no Retry-After header.
+func requireRangeOwnLiveRefusal(t *testing.T, rec *httptest.ResponseRecorder, secs int, msg string) {
+	t.Helper()
+	res := rpcResult(t, rec)
+	require.Equal(t, true, res["isError"], "%s: %v", msg, res)
+	content := res["content"].([]any)
+	require.Len(t, content, 1, msg)
+	require.Equal(t, connectorBusyText(secs), content[0].(map[string]any)["text"], msg)
+}
+
 // requireLiveCeilingRefusal asserts the refusal of the shared live-tool ceiling: on REST the
 // HTTP 429 that names it, on MCP (mcp, a tools/call with id 1) the isError result with the busy
 // text.
@@ -539,7 +551,7 @@ func TestRangeUpstream_FifteenPerAddressThirtyShared(t *testing.T) {
 		requireLiveServed(t, liveCall(t, api, addrs[0], i), fmt.Sprintf("call %d of the first address", i+1))
 	}
 	requireOwnLiveRefusal(t, liveREST(api, addrs[0]), "the 16th call of one address, REST")
-	requireOwnLiveRefusal(t, liveMCP(t, api, addrs[0]), "the 16th call of one address, MCP")
+	requireRangeOwnLiveRefusal(t, liveMCP(t, api, addrs[0]), 60, "the 16th call of one address, MCP")
 
 	for i := range 15 {
 		requireLiveServed(t, liveCall(t, api, addrs[1], i), fmt.Sprintf("call %d of the second address", i+1))
@@ -577,7 +589,7 @@ func TestRangeUpstream_LiveCeilingRefusalSpendsNoDailyCap(t *testing.T) {
 		requireLiveServed(t, liveCall(t, api, addrs[0], i), addrs[0])
 	}
 	// Refused by its own budget while the ceiling has room: a daily unit spent.
-	requireOwnLiveRefusal(t, liveMCP(t, api, addrs[0]), "the 16th call of the first address: a daily unit spent")
+	requireRangeOwnLiveRefusal(t, liveMCP(t, api, addrs[0]), 60, "the 16th call of the first address: a daily unit spent")
 	for i := range 15 {
 		requireLiveServed(t, liveCall(t, api, addrs[1], i), addrs[1])
 	}
@@ -594,18 +606,18 @@ func TestRangeUpstream_LiveCeilingRefusalSpendsNoDailyCap(t *testing.T) {
 		rec := postMCP(t, api, search, fromIP(addrs[2])...)
 		require.Equal(t, http.StatusOK, rec.Code, "request %d: %s", 16+i, rec.Body.String())
 	}
-	requireError(t, liveMCP(t, api, addrs[2]), http.StatusTooManyRequests, "daily_quota_exceeded")
+	requireConnectorToolResult(t, liveMCP(t, api, addrs[2]), `1`, connectorDailyText, "the third address over its daily cap")
 
 	for i := range daily - 16 {
 		rec := postMCP(t, api, search, fromIP(addrs[0])...)
 		require.Equal(t, http.StatusOK, rec.Code, "first address, request %d: %s", 17+i, rec.Body.String())
 	}
-	requireError(t, postMCP(t, api, search, fromIP(addrs[0])...), http.StatusTooManyRequests, "daily_quota_exceeded")
+	requireConnectorToolResult(t, postMCP(t, api, search, fromIP(addrs[0])...), `1`, connectorDailyText, "the first address over its daily cap")
 }
 
 // The refusal of the shared live ceiling says it is shared and states its number on REST (a 429
-// before or inside the tool handler) and in the MCP handler's isError result, unlike the caller's
-// own limit; before the daily cap MCP answers the connector busy text (an isError result).
+// before or inside the tool handler), unlike the caller's own limit; on MCP both the check before
+// the daily cap and the MCP handler answer the connector busy text (an isError result).
 func TestRangeUpstream_SharedRefusalMessageNamesTheSharedBudget(t *testing.T) {
 	for name, anonCap := range map[string]int{
 		"checked before the daily cap": dataapi.DefaultAnonDailyCap,
@@ -630,8 +642,8 @@ func TestRangeUpstream_SharedRefusalMessageNamesTheSharedBudget(t *testing.T) {
 			res := rpcResult(t, liveMCP(t, api, addrs[2]))
 			require.Equal(t, true, res["isError"], fmt.Sprint(res))
 			content := res["content"].([]any)
-			// No key hint: a connector cannot send one.
-			require.Equal(t, "rate_limited: "+liveCeilingText+"; retry in 60 seconds", content[0].(map[string]any)["text"])
+			// The one connector busy text, with the key hint, as before the daily cap.
+			require.Equal(t, connectorBusyText(60), content[0].(map[string]any)["text"])
 		})
 	}
 }
@@ -662,7 +674,7 @@ func TestRangeUpstream_NonLiveCallsAreNotCharged(t *testing.T) {
 		}
 		requireLiveServed(t, rec, fmt.Sprintf("live call %d after the SDE calls", i+1))
 	}
-	requireOwnLiveRefusal(t, liveMCP(t, api, addrs[0]), "the 16th live call")
+	requireRangeOwnLiveRefusal(t, liveMCP(t, api, addrs[0]), 60, "the 16th live call")
 	for i := range 15 {
 		requireLiveServed(t, liveCall(t, api, addrs[1], i), "second address")
 	}

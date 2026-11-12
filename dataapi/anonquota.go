@@ -102,8 +102,8 @@ func (q *anonQuota) clients() int {
 // Retry-After in whole seconds and the way out: a free key.
 func writeAnonQuotaRefusal(w http.ResponseWriter, r *http.Request, retry time.Duration, cap int, publicURL string) {
 	msg := fmt.Sprintf("without an API key the API allows %d requests a day per client; a free key raises this", cap)
-	if publicURL != "" {
-		msg += ": " + publicURL + "/docs/access#access-keys"
+	if u := accessKeysURL(publicURL); u != "" {
+		msg += ": " + u
 	}
 	w.Header().Set("Retry-After", strconv.Itoa(retrySeconds(retry)))
 	writeError(w, r, http.StatusTooManyRequests, "daily_quota_exceeded", msg)

@@ -532,7 +532,8 @@ func TestAnonDailyCap_RangeCapOnlyWithTheTier(t *testing.T) {
 
 // On a full route the check that stands in for the daily cap uses the caller's own cap too: a
 // range address under its range cap (but over the ordinary one) is busy, one over its range cap
-// gets the daily 429 with its number.
+// gets the daily refusal (on /v1/mcp a range caller's, in JSON-RPC); an ordinary caller over its
+// cap gets the daily 429 with its number.
 func TestAnonDailyCap_FullRouteChecksTheRangeCap(t *testing.T) {
 	c := &clock{t: time.Date(2026, 11, 12, 12, 0, 0, 0, time.UTC)}
 	build := func() (*dataapi.API, *holdMCP) {
@@ -565,9 +566,14 @@ func TestAnonDailyCap_FullRouteChecksTheRangeCap(t *testing.T) {
 	}
 	release = hold(t, api, mcp, fromIP("192.0.2.200")...)
 	defer release()
+	// x spent the range cap of 2 (not the ordinary 1): a range caller's daily refusal of a
+	// tools/call, answered in the protocol.
 	rec = call(api, x)
-	requireError(t, rec, http.StatusTooManyRequests, "daily_quota_exceeded")
-	require.Contains(t, rec.Body.String(), "allows 2 requests a day per client")
+	reply, _ := requireConnectorReply(t, rec, `1`, "the range cap at a full route")
+	require.NotNil(t, reply.Result, rec.Body.String())
+	require.True(t, reply.Result.IsError)
+	require.Equal(t, "Today's request limit for Claude connectors is used up; it resets at 00:00 UTC. "+
+		"Clients that can send an Authorization header can use a free API key: https://data.example/docs/access#access-keys", reply.Result.Content[0].Text)
 }
 
 // The keyless MCP instructions state the daily number of the caller who asks: 2,000 inside the

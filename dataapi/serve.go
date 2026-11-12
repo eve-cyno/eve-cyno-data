@@ -33,10 +33,13 @@ type meta struct {
 	// range tier's inside the ranges, else Config.AnonDailyCap; 0 when the API has no
 	// anonymous daily cap (anonCapOf).
 	anonCap int
-	// rangeRefused is set to the label of the range ceiling whose refusal was answered as
-	// JSON-RPC on the MCP route (writeMCPCeilingRefusal), so the access line can tell that 200
-	// from a served request; nil outside ServeHTTP.
+	// rangeRefused is set to the label of the limit whose refusal of a range caller was answered
+	// in the protocol on the MCP route (writeConnectorRefusal, UpstreamHook), so the access line
+	// can tell that 200 from a served request; nil outside ServeHTTP.
 	rangeRefused *string
+	// keyURL is the page on getting a free API key (accessKeysURL of Config.PublicURL; "" none),
+	// which the refusal texts of the MCP handler point at (UpstreamHook).
+	keyURL string
 }
 
 // markToolLogged records that the usage line of the request was written.
@@ -93,10 +96,12 @@ func validRequestID(s string) bool {
 // The anonymous daily cap a keyless caller is held to is its own (AnonDailyCapFor): the range
 // tier's inside the ranges, Config.AnonDailyCap elsewhere.
 //
-// A range ceiling refusal of one JSON-RPC message POSTed to the MCP route is answered in the
-// protocol (writeMCPCeilingRefusal: HTTP 200, or 202 for a notification), and its access line
-// carries range_refused="mcp_ceiling" or "live_ceiling". It is never usage: only a keyless caller
-// meets a range ceiling.
+// A range caller's refusal (a keyless caller in the ranges: the shared ceiling, its own address
+// limit, its daily cap) of one JSON-RPC message POSTed to the MCP route is answered in the protocol
+// (writeConnectorRefusal: HTTP 200, or 202 for a notification), and its access line carries
+// range_refused="mcp_ceiling", "live_ceiling", "address" or "daily"; the MCP handler's refusal of
+// a live call (UpstreamHook) carries "live_ceiling" or "address". It is never usage: only a
+// keyless caller is a range caller.
 //
 // The gate runs before every charge (the key's quota, the anonymous daily cap and, inside
 // the mux, the route limiter and the upstream limiter): a busy refusal has spent nothing. For a
@@ -124,7 +129,7 @@ func (a *API) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if !a.rangeTier {
 		rng = ""
 	}
-	ctx := context.WithValue(r.Context(), metaKey{}, meta{id: id, log: log, toolLogged: &toolLogged, rng: rng, anonCap: a.anonCapOf(rng), rangeRefused: &rangeRefused})
+	ctx := context.WithValue(r.Context(), metaKey{}, meta{id: id, log: log, toolLogged: &toolLogged, rng: rng, anonCap: a.anonCapOf(rng), rangeRefused: &rangeRefused, keyURL: accessKeysURL(a.surface.PublicURL)})
 	if a.auth != nil {
 		// The credential is read here, once: the limiter keys on the result and the tool and
 		// MCP handlers enforce the tiers with it. Nothing about the key is logged.
@@ -185,7 +190,7 @@ func (a *API) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			attrs = append(attrs, "busy_pool", busyPool)
 		}
 		if rangeRefused != "" {
-			// A range ceiling refusal answered as JSON-RPC (status 200 or 202): not served.
+			// A range caller's refusal answered in the protocol (status 200 or 202): not served.
 			attrs = append(attrs, "range_refused", rangeRefused)
 		}
 		log.Info("request", attrs...)
@@ -205,9 +210,14 @@ func (a *API) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		// never read for it (peekDenied); a request whose class needs the body is named "both".
 		var release func()
 		pool, ok := "", false
+		// gr is the request the gate's refusal (gateRefusal) reads: with both pools full it may
+		// not read the body either, so a range caller's refusal keeps the HTTP 429 there instead
+		// of reading a body to answer in JSON-RPC.
+		gr := r
 		if gate.bothFull() {
 			var denied bool
 			cr := r.WithContext(context.WithValue(r.Context(), peekDeniedKey{}, &denied))
+			gr = cr
 			class := gate.classify(a, cr, pattern)
 			switch {
 			case denied:
@@ -224,7 +234,7 @@ func (a *API) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if !ok {
 			// A caller the chain below would refuse gets that 429, not 503 busy: the checks
 			// record nothing, so the refusal still charges nothing.
-			switch a.gateRefusal(rec, r, pattern, gate) {
+			switch a.gateRefusal(rec, gr, pattern, gate) {
 			case refusedDaily:
 				quotaRefused = true
 			case refusedRate:
@@ -260,7 +270,7 @@ func (a *API) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		daily := AnonDailyCapFor(r)
 		if ok, retry := a.anon.Spend(a.keys.Key(r), daily); !ok {
 			quotaRefused = true
-			writeAnonQuotaRefusal(rec, r, retry, daily, a.surface.PublicURL)
+			a.writeAnonDailyRefusal(rec, r, retry, daily)
 			return
 		}
 	}
@@ -329,7 +339,7 @@ func (a *API) gateRefusal(w http.ResponseWriter, r *http.Request, pattern string
 		}
 		daily := AnonDailyCapFor(r)
 		if ok, retry := a.anon.Check(a.keys.Key(r), daily); !ok {
-			writeAnonQuotaRefusal(w, r, retry, daily, a.surface.PublicURL)
+			a.writeAnonDailyRefusal(w, r, retry, daily)
 			return refusedDaily
 		}
 	}
@@ -341,7 +351,7 @@ func (a *API) gateRefusal(w http.ResponseWriter, r *http.Request, pattern string
 					a.writeRangeCeilingRefusal(w, r, retry, b.pair)
 					return
 				}
-				writeRateLimited(w, r, retry)
+				a.writeAddressRefusal(w, r, retry)
 			})(w, r)
 			return refusedRate
 		}

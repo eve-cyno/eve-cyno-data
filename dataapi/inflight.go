@@ -145,18 +145,29 @@ func noteLiveCall(r *http.Request, tool, surface string) {
 
 // UpstreamHook wraps u.Allow (nil u allows everything) as the mcpserver.HTTPOptions.Upstream
 // hook, with the in-flight backstop: a live MCP call on a request admitted to the work pool is
-// logged as inflight_misclassified. A refusal by the shared live ceiling of the range tier
-// (NewRangeUpstreamLimiter) names that ceiling (shared), so the isError text says the limit is
-// shared; a refusal of the caller's own budget leaves shared empty. Pass the same limiter as
-// Config.Upstream.
-func UpstreamHook(u *UpstreamLimiter) func(r *http.Request, tool string) (ok bool, retryAfter time.Duration, shared string) {
+// logged as inflight_misclassified. A refusal of a range caller (no valid key, an address in the
+// ranges: the shared live ceiling or its own live budget) gives the isError text in place of the
+// per-caller one: the connector busy text with the key hint (connectorBusy), the text every
+// other refusal of a range caller on the MCP route has, and marks the access line
+// (range_refused "live_ceiling" or "address"). Any other refusal leaves the text to mcpserver.
+// Pass the same limiter as Config.Upstream.
+func UpstreamHook(u *UpstreamLimiter) func(r *http.Request, tool string) (ok bool, retryAfter time.Duration, refusal string) {
 	return func(r *http.Request, tool string) (bool, time.Duration, string) {
 		noteLiveCall(r, tool, "mcp")
 		ok, retry, shared := u.allow(r, tool)
-		if shared {
-			return false, retry, u.rng.sharedLimit()
+		if ok || !u.inTier(r) {
+			return ok, retry, ""
 		}
-		return ok, retry, ""
+		label := refusedAddress
+		if shared {
+			label = refusedLiveCeiling
+		}
+		markRangeRefused(r.Context(), label)
+		var keyURL string
+		if m, found := r.Context().Value(metaKey{}).(meta); found {
+			keyURL = m.keyURL
+		}
+		return false, retry, connectorBusy(retrySeconds(retry), keyURL)
 	}
 }
 

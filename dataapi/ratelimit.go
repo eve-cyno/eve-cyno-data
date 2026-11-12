@@ -317,7 +317,8 @@ func (l *rangeLimiter) checkLocked(key string, now time.Time) (ok bool, retryAft
 
 // limited wraps h with the limiter t picks for the caller (a disabled rate: no limit). A
 // refused request is a 429 with Retry-After (whole seconds, at least 1); a refusal of the range
-// ceiling says so (writeRangeCeilingRefusal).
+// ceiling says so (writeRangeCeilingRefusal). A range caller's refusal of one JSON-RPC message on
+// the MCP route is answered in the protocol instead (writeConnectorRefusal).
 func (a *API) limited(t tieredLimiter, h http.HandlerFunc) http.HandlerFunc {
 	if t.off() {
 		return h
@@ -334,7 +335,7 @@ func (a *API) limited(t tieredLimiter, h http.HandlerFunc) http.HandlerFunc {
 				a.writeRangeCeilingRefusal(w, r, retry, b.pair)
 				return
 			}
-			writeRateLimited(w, r, retry)
+			a.writeAddressRefusal(w, r, retry)
 			return
 		}
 		h(w, r)
@@ -358,8 +359,8 @@ func (a *API) writeRangeCeilingRefusal(w http.ResponseWriter, r *http.Request, r
 		return
 	}
 	msg := l.sharedLimit() + " is reached; retry after Retry-After seconds, or use a free API key for a budget of your own"
-	if a.surface.PublicURL != "" {
-		msg += ": " + a.surface.PublicURL + "/docs/access#access-keys"
+	if u := accessKeysURL(a.surface.PublicURL); u != "" {
+		msg += ": " + u
 	}
 	w.Header().Set("Retry-After", strconv.Itoa(retrySeconds(retry)))
 	writeError(w, r, http.StatusTooManyRequests, "rate_limited", msg)

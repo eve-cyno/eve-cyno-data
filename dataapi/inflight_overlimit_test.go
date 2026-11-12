@@ -263,6 +263,45 @@ func TestInflight_BusyAnswersTheRangeCeilingToARangeCaller(t *testing.T) {
 	})
 }
 
+// While the route is full (one pool, so the body may be read), a keyless caller inside the ranges
+// that its own address limit or its daily cap refuses gets that refusal in JSON-RPC on /v1/mcp,
+// as the chain would answer it, not 503 busy and not the HTTP 429.
+func TestInflight_BusyAnswersARangeCallersOwnLimitsInJSONRPC(t *testing.T) {
+	const x, outside = "160.79.104.9", "192.0.2.200"
+	rangeAPI := func(t *testing.T, limits dataapi.Limits) (*dataapi.API, *holdMCP) {
+		t.Helper()
+		c := &clock{t: time.Date(2026, 11, 12, 10, 0, 0, 0, time.UTC)}
+		mcp := newHoldMCP()
+		api := newAPI(t, dataapi.Config{
+			MCP: mcp, Auth: keyedFixture(t, "ecd_test_key_one"), Limits: &limits, AnonDailyCap: dataapi.DefaultAnonDailyCap,
+			Now: c.now, MaxInFlight: 1, PublicURL: rangeTierURL, AnthropicRanges: mustRanges(t, anthropicOutbound),
+		})
+		require.Equal(t, http.StatusOK, do(api, http.MethodPost, "/v1/mcp", mcpCall, fromIP(x)...).Code, "x's one request")
+		c.t = c.t.Add(10 * time.Second)
+		return api, mcp
+	}
+
+	t.Run("address", func(t *testing.T) {
+		limits := dataapi.DefaultLimits()
+		limits.Range.MCP = dataapi.Rate{Max: 1, Window: time.Minute}
+		api, mcp := rangeAPI(t, limits)
+		release := hold(t, api, mcp, fromIP(outside)...)
+		defer release()
+		rec := do(api, http.MethodPost, "/v1/mcp", mcpCall, fromIP(x)...)
+		requireConnectorToolResult(t, rec, `1`, connectorBusyText, "the address limit at a full route")
+		require.Equal(t, 50, retryAfter(t, rec))
+	})
+	t.Run("daily cap", func(t *testing.T) {
+		limits := dataapi.DefaultLimits()
+		limits.Range.DailyCap = 1
+		api, mcp := rangeAPI(t, limits)
+		release := hold(t, api, mcp, fromIP(outside)...)
+		defer release()
+		rec := do(api, http.MethodPost, "/v1/mcp", mcpCall, fromIP(x)...)
+		requireConnectorToolResult(t, rec, `1`, connectorDailyText, "the daily cap at a full route")
+	})
+}
+
 // A caller that filled yesterday's anonymous daily cap is not over the cap after 00:00 UTC:
 // at a full route it gets 503 busy, not the stale daily-cap 429, and the next request that
 // the route serves starts the new day and succeeds.
