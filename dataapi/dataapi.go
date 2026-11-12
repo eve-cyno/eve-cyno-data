@@ -531,6 +531,9 @@ func New(cfg Config) (*API, error) {
 		anonCap = 0
 	}
 	a.surface = Surface{Prefix: prefix, ToolAPI: cfg.ToolAPI, MCP: cfg.MCP != nil, Docs: cfg.Docs, Auth: cfg.Auth != nil, SelfServe: cfg.SelfServe, KeyedLimitFactor: cfg.KeyedLimitFactor, KeyDailyCap: cfg.KeyDailyCap, AnonDailyCap: anonCap, Limits: limits, PublicURL: publicURL}
+	if cfg.Auth != nil {
+		a.surface.Ranges = slices.Clone(cfg.AnthropicRanges)
+	}
 	if a.keys == nil {
 		a.keys = CallerKeys{}
 	}

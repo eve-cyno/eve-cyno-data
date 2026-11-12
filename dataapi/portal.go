@@ -156,6 +156,17 @@ type limitRowView struct {
 	KeyMax int // the budget with an API key; 0 when a key does not raise it
 	Window string
 	Code   bool
+	// Connector marks a row of the connector range tier: a key does not apply to it.
+	Connector bool
+}
+
+// rangeView is what the pages state about keyless connector calls from Anthropic's ranges
+// (Surface.Ranges); On is false, and the rest empty, where the tier is not on.
+type rangeView struct {
+	On bool
+	// LimitsHTML and RefusalHTML are the two paragraphs both pages print, built once so the
+	// numbers and the wording cannot differ between the access and the MCP page.
+	LimitsHTML, RefusalHTML template.HTML
 }
 
 type paramRow struct {
@@ -217,6 +228,7 @@ type pageData struct {
 	KeyCap             string // daily cap of a new key as "10,000"; "" unless keys are on and the cap is above 0
 	AnonCap            string // daily cap of a caller without a key as "200"; "" unless keys are on and the cap is above 0
 	KeyMCP             int    // the MCP request limit of a keyed caller (KeyLim.MCP)
+	Range              rangeView
 	TermsUpdated       string
 	SearchIndex        template.JS
 
@@ -478,6 +490,7 @@ func newPageData(in portalInput, assetVersion string) pageData {
 		d.FirstTool = d.Tools.Public[0].Name
 	}
 	d.KeyMCP = d.KeyLim.MCP
+	d.Range = rangeViewOf(s)
 	d.LimitCards = limitCards(s)
 	d.LimitRows = limitTable(s)
 	return d
@@ -509,7 +522,7 @@ func limitCards(s Surface) []limitCard {
 func limitTable(s Surface) []limitRowView {
 	var out []limitRowView
 	for _, r := range limitRows(s) {
-		out = append(out, limitRowView{Route: r.Route, Max: r.Max, KeyMax: r.KeyMax, Window: r.Window, Code: true})
+		out = append(out, limitRowView{Route: r.Route, Max: r.Max, KeyMax: r.KeyMax, Window: r.Window, Code: !r.connector, Connector: r.connector})
 	}
 	if u := s.Limits.UpstreamTool; u.Max > 0 && u.Window > 0 && (s.ToolAPI != ToolAPIOff || s.MCP) {
 		row := limitRowView{Route: "Live tools, REST and MCP together", Max: u.Max, Window: windowWord(u)}

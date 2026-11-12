@@ -2,6 +2,7 @@ package dataapi
 
 import (
 	"net/http"
+	"net/netip"
 	"reflect"
 
 	"eve-cyno.dev/go/data/fit"
@@ -43,6 +44,10 @@ type Surface struct {
 	Docs bool
 	// Limits are the per-route budgets stated in the documents.
 	Limits Limits
+	// Ranges are the networks of Anthropic's connector calls (Config.AnthropicRanges). The
+	// documents state the connector budgets (Limits.Range) only where this is set on a service
+	// that accepts keys, so they never describe a tier the server does not apply.
+	Ranges []netip.Prefix
 	// PublicURL, when set (validated, no trailing slash), makes the OpenAPI servers entry
 	// and the llms.txt links absolute. PublicSurface leaves it empty so the committed
 	// generated files stay host-independent.
@@ -56,11 +61,28 @@ const DefaultKeyedLimitFactor = 2
 // DefaultKeyDailyCap is the daily request cap a new API key gets on the public service.
 const DefaultKeyDailyCap = 10000
 
+// DefaultAnthropicRanges are Anthropic's outbound IPv4 ranges, the addresses its MCP tool calls to
+// external servers (claude.ai and Claude Desktop custom connectors) come from; Anthropic
+// publishes no outbound IPv6. Source: https://platform.claude.com/docs/en/api/ip-addresses
+// (outbound requests). The compose file passes the same default.
+const DefaultAnthropicRanges = "160.79.104.0/21,153.61.208.0/20"
+
+// anthropicIPsURL is the page that publishes DefaultAnthropicRanges; the documents link it.
+const anthropicIPsURL = "https://platform.claude.com/docs/en/api/ip-addresses"
+
+// rangeTierDocs reports whether the documents state the connector range tier: it exists only
+// on a service that accepts keys and has ranges configured.
+func (s Surface) rangeTierDocs() bool { return s.Auth && len(s.Ranges) > 0 }
+
 // PublicSurface is what the internet-facing cmd/dataapi serves with every optional part
 // switched on, at the default prefix and default limits. The committed generated files
 // (api/openapi.yaml, llms.txt, llms-full.txt) describe it.
 func PublicSurface() Surface {
-	return Surface{Prefix: DefaultPrefix, ToolAPI: ToolAPIPublic, MCP: true, Docs: true, Auth: true, SelfServe: true, KeyedLimitFactor: DefaultKeyedLimitFactor, KeyDailyCap: DefaultKeyDailyCap, AnonDailyCap: DefaultAnonDailyCap, Limits: DefaultLimits()}
+	ranges, err := ParseRanges(DefaultAnthropicRanges)
+	if err != nil {
+		panic("dataapi: DefaultAnthropicRanges: " + err.Error()) // a constant: unreachable
+	}
+	return Surface{Ranges: ranges, Prefix: DefaultPrefix, ToolAPI: ToolAPIPublic, MCP: true, Docs: true, Auth: true, SelfServe: true, KeyedLimitFactor: DefaultKeyedLimitFactor, KeyDailyCap: DefaultKeyDailyCap, AnonDailyCap: DefaultAnonDailyCap, Limits: DefaultLimits()}
 }
 
 // keyedRate is the plain budget a caller with an API key gets on route budget r. A service

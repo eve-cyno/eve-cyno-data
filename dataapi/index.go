@@ -113,6 +113,9 @@ type limitRow struct {
 	// KeyMax is the budget with an API key; omitted when a key does not raise it.
 	KeyMax int    `json:"max_with_key,omitempty"`
 	Window string `json:"window"`
+	// connector marks a row of the connector range tier: plain text on the access page, and a
+	// key does not apply to it (a caller with a key keeps its key's budgets).
+	connector bool
 }
 
 // limitRows are the configured budgets; unlimited routes are left out.
@@ -142,6 +145,28 @@ func limitRows(s Surface) []limitRow {
 			out = append(out, row)
 		}
 	}
+	return append(out, rangeLimitRows(s)...)
+}
+
+// rangeLimitRows are the budgets of keyless connector calls from the configured ranges: per
+// address and shared by all of them, for the MCP endpoint and for the live tools (calls over MCP and
+// over REST are counted together). They appear only where the range tier is on (Surface.Ranges),
+// and each pair only when both of its budgets are set.
+func rangeLimitRows(s Surface) []limitRow {
+	if !s.rangeTierDocs() {
+		return nil
+	}
+	r := s.Limits.Range
+	var out []limitRow
+	add := func(on bool, rate Rate, route string) {
+		if on && rate.Max > 0 && rate.Window > 0 {
+			out = append(out, limitRow{Route: route, Max: rate.Max, Window: windowWord(rate), connector: true})
+		}
+	}
+	add(s.MCP && r.MCPCeiling.Max > 0, r.MCP, "claude.ai / Claude Desktop connectors without a key, per address")
+	add(s.MCP && r.MCP.Max > 0, r.MCPCeiling, "the same, shared by all of them")
+	add(s.MCP && r.UpstreamCeiling.Max > 0, r.Upstream, "live tools for callers without a key in the connector ranges, per address")
+	add(s.MCP && r.Upstream.Max > 0, r.UpstreamCeiling, "the live tools, shared by all of them")
 	return out
 }
 

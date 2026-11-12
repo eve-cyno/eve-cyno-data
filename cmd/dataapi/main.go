@@ -272,20 +272,14 @@ func logSalt(getenv func(string) string, log *slog.Logger) string {
 	return s
 }
 
-// defaultAnthropicRanges are Anthropic's outbound IPv4 ranges, the addresses its MCP tool calls
-// to external servers (claude.ai and Claude Desktop custom connectors) come from; Anthropic
-// publishes no outbound IPv6. Source: https://platform.claude.com/docs/en/api/ip-addresses
-// (outbound requests). The compose file passes the same default.
-const defaultAnthropicRanges = "160.79.104.0/21,153.61.208.0/20"
-
 // anthropicRanges resolves DATAAPI_ANTHROPIC_RANGES, the networks whose access lines carry
-// range="anthropic": unset is defaultAnthropicRanges, set but blank is none (no label), anything
+// range="anthropic": unset is dataapi.DefaultAnthropicRanges, set but blank is none (no label), anything
 // else a comma-separated CIDR list (dataapi.ParseRanges). The error names the variable and the
 // position of the bad item, never the value.
 func anthropicRanges(lookup func(string) (string, bool)) ([]netip.Prefix, error) {
 	v, ok := lookup("DATAAPI_ANTHROPIC_RANGES")
 	if !ok {
-		v = defaultAnthropicRanges
+		v = dataapi.DefaultAnthropicRanges
 	}
 	ranges, err := dataapi.ParseRanges(v)
 	if err != nil {
