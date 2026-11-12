@@ -68,18 +68,18 @@ func (m *marketIndex) path(id int) []string {
 }
 
 func (s *SDE) ensureMarketIndex() *marketIndex {
-	h, err := s.db.acquire()
+	h, err := s.db.Acquire()
 	if err != nil {
 		return &marketIndex{parent: map[int]int{}, name: map[int]string{}}
 	}
-	defer h.release()
+	defer h.Release()
 	s.marketMu.Lock()
 	defer s.marketMu.Unlock()
-	if s.market != nil && s.market.gen == h.gen {
+	if s.market != nil && s.market.gen == h.Gen() {
 		return s.market
 	}
-	m := &marketIndex{gen: h.gen, parent: map[int]int{}, name: map[int]string{}}
-	eachRow(h.db, "market groups", `SELECT marketGroupID, parentGroupID, marketGroupName FROM invMarketGroups`, func(r *sql.Rows) error {
+	m := &marketIndex{gen: h.Gen(), parent: map[int]int{}, name: map[int]string{}}
+	eachRow(h.DB(), "market groups", `SELECT marketGroupID, parentGroupID, marketGroupName FROM invMarketGroups`, func(r *sql.Rows) error {
 		var id int
 		var parent sql.NullInt64
 		var name sql.NullString

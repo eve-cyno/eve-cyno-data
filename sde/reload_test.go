@@ -67,8 +67,7 @@ func openWithClock(t *testing.T, path string, interval time.Duration) (*SDE, *fa
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = s.Close() })
 	clk := newFakeClock()
-	s.db.now = clk.now
-	s.db.nextCheck.Store(clk.ns.Load() + int64(interval)) // re-arm against the fake clock
+	s.db.SetClock(clk.now) // re-arms the next check against the fake clock
 	return s, clk
 }
 
@@ -121,14 +120,14 @@ func TestReload_NoChangeKeepsSameHandle(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "sde.sqlite")
 	writeSDE(t, path, []string{"build_old"}, nil)
 	s, clk := openWithClock(t, path, time.Minute)
-	first := s.db.cur.Load()
+	first := s.db.Current()
 
 	for range 5 {
 		clk.advance(2 * time.Minute)
 		require.True(t, s.HasTable("build_old"))
 	}
 
-	require.Same(t, first, s.db.cur.Load(), "an unchanged file must not be reopened")
+	require.Same(t, first, s.db.Current(), "an unchanged file must not be reopened")
 }
 
 func TestReload_DisabledWhenIntervalNotPositive(t *testing.T) {
@@ -138,7 +137,7 @@ func TestReload_DisabledWhenIntervalNotPositive(t *testing.T) {
 	require.NoError(t, err)
 	defer s.Close()
 	clk := newFakeClock()
-	s.db.now = clk.now
+	s.db.SetClock(clk.now)
 
 	writeSDE(t, path, []string{"build_new"}, nil)
 	clk.advance(24 * time.Hour)
@@ -214,13 +213,13 @@ func TestReload_SwapBetweenChoosingAndUsingHandle(t *testing.T) {
 	s, clk := openWithClock(t, path, time.Minute)
 
 	var once sync.Once
-	s.db.beforeUse = func() {
+	s.db.SetBeforeUse(func() {
 		once.Do(func() {
 			writeSDE(t, path, []string{"build_new"}, nil)
 			clk.advance(2 * time.Minute)
-			s.db.handle() // performs the reload and retires the old handle
+			s.db.Gen() // performs the reload and retires the old handle
 		})
-	}
+	})
 
 	var n string
 	err := s.db.QueryRow(`SELECT name FROM sqlite_master WHERE name='build_old'`).Scan(&n)
@@ -240,7 +239,7 @@ func TestReload_RetiredHandleClosesWhenLastRowsDone(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "sde.sqlite")
 	writeSDE(t, path, []string{"build_old"}, nil)
 	s, clk := openWithClock(t, path, time.Minute)
-	old := s.db.cur.Load()
+	old := s.db.Current()
 
 	rows, err := s.db.Query(`SELECT name FROM sqlite_master`)
 	require.NoError(t, err)
@@ -248,12 +247,12 @@ func TestReload_RetiredHandleClosesWhenLastRowsDone(t *testing.T) {
 	writeSDE(t, path, []string{"build_new"}, nil)
 	clk.advance(2 * time.Minute)
 	require.True(t, s.HasTable("build_new"))
-	require.NotSame(t, old, s.db.cur.Load())
+	require.NotSame(t, old, s.db.Current())
 
-	require.False(t, old.isClosed(), "old handle must stay open while its rows are being read")
+	require.False(t, old.Closed(), "old handle must stay open while its rows are being read")
 	require.True(t, rows.Next())
 	require.NoError(t, rows.Close())
-	require.True(t, old.isClosed(), "old handle must close once the last rows are closed")
+	require.True(t, old.Closed(), "old handle must close once the last rows are closed")
 }
 
 // TestReload_RetiredHandleClosesWhenRowsExhausted: draining the rows to the end
@@ -262,7 +261,7 @@ func TestReload_RetiredHandleClosesWhenRowsExhausted(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "sde.sqlite")
 	writeSDE(t, path, []string{"build_old"}, nil)
 	s, clk := openWithClock(t, path, time.Minute)
-	old := s.db.cur.Load()
+	old := s.db.Current()
 
 	rows, err := s.db.Query(`SELECT name FROM sqlite_master`)
 	require.NoError(t, err)
@@ -273,7 +272,7 @@ func TestReload_RetiredHandleClosesWhenRowsExhausted(t *testing.T) {
 	for rows.Next() {
 	}
 	require.NoError(t, rows.Err())
-	require.True(t, old.isClosed())
+	require.True(t, old.Closed())
 }
 
 // TestClose_WaitsForInFlightRowsAndRejectsNewQueries: Close must not break an
@@ -339,7 +338,7 @@ func TestReload_ConcurrentQueriesAcrossSwaps(t *testing.T) {
 
 	require.Zero(t, failed.Load(), "queries failed while the SDE file was being swapped")
 	require.Greater(t, queries.Load(), int64(100))
-	require.Greater(t, s.db.cur.Load().gen, uint64(1), "at least one reload must have happened")
+	require.Greater(t, s.db.Current().Gen(), uint64(1), "at least one reload must have happened")
 }
 
 // TestReload_MapCachesRebuilt: the lazily built jump-graph cache is derived from
@@ -370,5 +369,5 @@ func TestOpenDefaultsToReloading(t *testing.T) {
 	s, err := Open(path)
 	require.NoError(t, err)
 	defer s.Close()
-	require.Equal(t, DefaultReloadInterval, s.db.interval, "Open must enable hot-reload by default")
+	require.Equal(t, DefaultReloadInterval, s.db.Interval(), "Open must enable hot-reload by default")
 }

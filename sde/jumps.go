@@ -103,20 +103,20 @@ type jumpIndex struct {
 
 func (s *SDE) ensureJumpIndex() *jumpIndex {
 	// acquire() first, like ensureMapCaches: a due reload happens there and gen is current.
-	h, err := s.db.acquire()
+	h, err := s.db.Acquire()
 	if err != nil {
 		return &jumpIndex{pos: map[int]jumpPos{}, network: map[int]bool{}, facts: &systemIndex{byID: map[int]*SystemFacts{}}}
 	}
-	defer h.release()
+	defer h.Release()
 	s.jumpMu.Lock()
 	defer s.jumpMu.Unlock()
-	if s.jumps != nil && s.jumps.gen == h.gen {
+	if s.jumps != nil && s.jumps.gen == h.Gen() {
 		return s.jumps
 	}
 	facts := s.ensureSystemIndex()
 	mc := s.ensureMapCaches()
-	idx := buildJumpIndex(h.db, h.gen, facts, mc)
-	if facts.gen == h.gen && mc.gen == h.gen {
+	idx := buildJumpIndex(h.DB(), h.Gen(), facts, mc)
+	if facts.gen == h.Gen() && mc.gen == h.Gen() {
 		s.jumps = idx // a reload between the acquire and the sub-indexes would mix generations: serve it once, do not keep it
 	}
 	return idx

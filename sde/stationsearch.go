@@ -98,12 +98,12 @@ func (s *SDE) FindStations(f StationFilter) []StationMatch {
 		return nil
 	}
 	idx := s.ensureSystemIndex()
-	h, err := s.db.acquire()
+	h, err := s.db.Acquire()
 	if err != nil {
 		return nil
 	}
-	defer h.release()
-	db := h.db
+	defer h.Release()
+	db := h.DB()
 	var dist, hsDist map[int]int
 	if f.Near != nil {
 		dist = s.JumpDistances(f.Near.Origin, false, nil)
@@ -235,20 +235,20 @@ type stationTables struct {
 
 // stationTables returns the cached tables, reloading them when the SDE file was replaced.
 func (s *SDE) stationTables() *stationTables {
-	h, err := s.db.acquire()
+	h, err := s.db.Acquire()
 	if err != nil {
 		return &stationTables{}
 	}
-	defer h.release()
+	defer h.Release()
 	s.stationMu.Lock()
 	defer s.stationMu.Unlock()
-	if s.stations != nil && s.stations.gen == h.gen {
+	if s.stations != nil && s.stations.gen == h.Gen() {
 		return s.stations
 	}
 	s.stationLoads.Add(1)
-	t := &stationTables{gen: h.gen, opServices: operationServices(h.db)}
-	t.corps, t.corpFaction = npcCorporations(h.db)
-	t.agents = loadAgents(h.db, t.corps)
+	t := &stationTables{gen: h.Gen(), opServices: operationServices(h.DB())}
+	t.corps, t.corpFaction = npcCorporations(h.DB())
+	t.agents = loadAgents(h.DB(), t.corps)
 	s.stations = t
 	return t
 }

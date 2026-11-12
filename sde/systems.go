@@ -272,17 +272,17 @@ func matchesSystem(sf *SystemFacts, f SystemFilter) bool {
 }
 
 func (s *SDE) ensureSystemIndex() *systemIndex {
-	h, err := s.db.acquire()
+	h, err := s.db.Acquire()
 	if err != nil {
 		return &systemIndex{byID: map[int]*SystemFacts{}}
 	}
-	defer h.release()
+	defer h.Release()
 	s.factsMu.Lock()
 	defer s.factsMu.Unlock()
-	if s.facts != nil && s.facts.gen == h.gen {
+	if s.facts != nil && s.facts.gen == h.Gen() {
 		return s.facts
 	}
-	s.facts = buildSystemIndex(h.db, h.gen, s.ensureMapCaches())
+	s.facts = buildSystemIndex(h.DB(), h.Gen(), s.ensureMapCaches())
 	return s.facts
 }
 

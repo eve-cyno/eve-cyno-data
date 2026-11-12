@@ -19,7 +19,7 @@ import (
 //
 // Three checks consume it: the SDE builder's publish gate in sde/build (a build missing
 // a column never replaces the live file), the refresh in sde/build (a live file missing
-// one is rebuilt at an unchanged build) and the open-time check in openHandle (an
+// one is rebuilt at an unchanged build) and the open-time check in openReloading (an
 // already-deployed file missing one is reported at ERROR).
 //
 // Every curated table of sde/build/builder.go is here: the builder creates those columns
@@ -102,12 +102,12 @@ func (s *SDE) FeatureGap(tables ...string) []string {
 	if s == nil || s.db == nil {
 		return nil
 	}
-	h, err := s.db.acquire()
+	h, err := s.db.Acquire()
 	if err != nil {
 		return nil
 	}
-	defer h.release()
-	missing, err := missingColumns(h.db, FeatureColumns, tables)
+	defer h.Release()
+	missing, err := missingColumns(h.DB(), FeatureColumns, tables)
 	if err != nil {
 		slog.Warn("sde: feature-column check failed", "tables", tables, "error", err)
 		return nil

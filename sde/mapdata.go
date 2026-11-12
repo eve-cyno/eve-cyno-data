@@ -141,19 +141,19 @@ type mapCaches struct {
 func (s *SDE) ensureMapCaches() *mapCaches {
 	// acquire() first: it is where a due reload happens, so gen is current, and it
 	// pins this generation until the cache is built.
-	h, err := s.db.acquire()
+	h, err := s.db.Acquire()
 	if err != nil {
 		return &mapCaches{adj: map[int][]int{}, sec: map[int]float64{}} // closed: empty, not cached
 	}
-	defer h.release()
+	defer h.Release()
 	s.mapMu.Lock()
 	defer s.mapMu.Unlock()
-	if s.mapCache != nil && s.mapCache.gen == h.gen {
+	if s.mapCache != nil && s.mapCache.gen == h.Gen() {
 		return s.mapCache
 	}
 	adj := make(map[int][]int)
 	sec := make(map[int]float64)
-	rows, err := h.db.Query("SELECT fromSolarSystemID, toSolarSystemID FROM mapSolarSystemJumps")
+	rows, err := h.DB().Query("SELECT fromSolarSystemID, toSolarSystemID FROM mapSolarSystemJumps")
 	if err == nil {
 		for rows.Next() {
 			var from, to int
@@ -163,7 +163,7 @@ func (s *SDE) ensureMapCaches() *mapCaches {
 		}
 		rows.Close()
 	}
-	rows2, err := h.db.Query("SELECT solarSystemID, security FROM mapSolarSystems")
+	rows2, err := h.DB().Query("SELECT solarSystemID, security FROM mapSolarSystems")
 	if err == nil {
 		for rows2.Next() {
 			var sysID int
@@ -178,7 +178,7 @@ func (s *SDE) ensureMapCaches() *mapCaches {
 		}
 		rows2.Close()
 	}
-	s.mapCache = &mapCaches{gen: h.gen, adj: adj, sec: sec}
+	s.mapCache = &mapCaches{gen: h.Gen(), adj: adj, sec: sec}
 	return s.mapCache
 }
 

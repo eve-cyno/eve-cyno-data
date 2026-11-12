@@ -6,13 +6,14 @@ import (
 	"sync/atomic"
 	"time"
 
+	"eve-cyno.dev/go/data/internal/sqlitero"
 	_ "modernc.org/sqlite"
 )
 
 type SDE struct {
-	// db follows the SDE file across atomic-rename rebuilds (see reloadingDB); it
+	// db follows the SDE file across atomic-rename rebuilds (see internal/sqlitero); it
 	// exposes the same Query/QueryRow/Ping/Close surface as *sql.DB.
-	db *reloadingDB
+	db *sqlitero.DB
 
 	mapMu    sync.Mutex // guards mapCache
 	mapCache *mapCaches // lazily built adjacency+security cache, tied to one db generation
@@ -61,7 +62,7 @@ func (s *SDE) Generation() uint64 {
 	if s.db == nil {
 		return 0
 	}
-	return s.db.handle().gen
+	return s.db.Gen()
 }
 
 // ServedFile returns the identity (inode, size, mtime) of the file the reader is serving
@@ -72,12 +73,12 @@ func (s *SDE) ServedFile() os.FileInfo {
 	if s == nil || s.db == nil {
 		return nil
 	}
-	return s.db.cur.Load().fi
+	return s.db.ServedFile()
 }
 
 // SameFile reports whether a and b describe the same file content, by the rule the
 // hot-reload uses to decide that a file was replaced: same inode, size and mtime.
-func SameFile(a, b os.FileInfo) bool { return sameFile(a, b) }
+func SameFile(a, b os.FileInfo) bool { return sqlitero.SameFile(a, b) }
 
 // Available reports whether the database is open and answers; false for a nil SDE.
 func (s *SDE) Available() bool { return s != nil && s.db != nil && s.db.Ping() == nil }
