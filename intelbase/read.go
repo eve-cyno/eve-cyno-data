@@ -3,6 +3,7 @@ package intelbase
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"strings"
 )
 
@@ -166,32 +167,32 @@ func placeholders(n int) string {
 // hourStats turns a baseline row (zero value: missing row) and the sample counts of
 // the hour of week into HourStats. Killmail numbers are only reported once the
 // killmail window has a start and that hour of week was sampled.
-func (r *reader) hourStats(how int, row baselineRow) (HourStats, error) {
+func (r *reader) hourStats(how int, row baselineRow) HourStats {
 	nJ, nK, nM := r.samples[groupMapJumps][how], r.samples[groupMapKills][how], r.samples[groupKillmails][how]
 	h := HourStats{How: how}
-	var err error
-	fail := func(metric string, e error) error {
-		return fmt.Errorf("intelbase: system %d hour of week %d %s: %w", row.systemID, how, metric, e)
+	// stat degrades one inconsistent metric to "unavailable" (N 0) with a warning:
+	// one bad row never fails a whole system or region response.
+	stat := func(m Metric, name string, sum, sumsq, n int64) Stat {
+		st, err := newStat(sum, sumsq, n)
+		if err != nil {
+			slog.Warn("intelbase: metric unavailable, inconsistent sums", "system", row.systemID, "how", how, "metric", name, "err", err)
+			h.unavailable[m] = true
+			return Stat{}
+		}
+		return st
 	}
-	if h.Jumps, err = newStat(row.jumps, row.jumpsSq, nJ); err != nil {
-		return h, fail("jumps", err)
+	h.Jumps = stat(MetricJumps, "jumps", row.jumps, row.jumpsSq, nJ)
+	h.ShipKills = stat(MetricShipKills, "ship kills", row.ship, row.shipSq, nK)
+	h.NPCKills = stat(MetricNPCKills, "npc kills", row.npc, row.npcSq, nK)
+	h.PodKills = stat(MetricPodKills, "pod kills", row.pod, row.podSq, nK)
+	if !r.meta.HasKillmailWindow || nM <= 0 {
+		return h
 	}
-	if h.ShipKills, err = newStat(row.ship, row.shipSq, nK); err != nil {
-		return h, fail("ship kills", err)
-	}
-	if h.NPCKills, err = newStat(row.npc, row.npcSq, nK); err != nil {
-		return h, fail("npc kills", err)
-	}
-	if h.PodKills, err = newStat(row.pod, row.podSq, nK); err != nil {
-		return h, fail("pod kills", err)
-	}
-	if !r.meta.HasKillmailWindow || nM == 0 {
-		return h, nil
-	}
-	if h.PvPKillmails, err = newStat(row.pvp, row.pvpSq, nM); err != nil {
-		return h, fail("pvp killmails", err)
+	h.PvPKillmails = stat(MetricPvPKillmails, "pvp killmails", row.pvp, row.pvpSq, nM)
+	if h.unavailable[MetricPvPKillmails] {
+		return h
 	}
 	h.ISKMean = float64(row.isk) / float64(nM)
 	h.KillmailsCollected = true
-	return h, nil
+	return h
 }

@@ -18,15 +18,19 @@
 --   latest_hour_start      Unix seconds; H - 3600, the start of the hour that the
 --                          latest table describes
 --   latest_how             0-167; the hour of week of latest_hour_start
+--   map_window_start       Unix seconds; the start of the earliest hour that either
+--                          map endpoint collected (the bucket of its first snapshot
+--                          with rows, minus 3600): the map statistics are collected
+--                          since then. Always present.
 --   killmail_window_start  Unix seconds; killmails dated before it never count.
 --                          Absent while the collector has no start set: PvP
 --                          killmails are then not collected yet.
 --
 -- how_samples and baseline never include the latest hour (the hour that
 -- latest_hour_start begins), in any group, killmails too, so a reader compares that
--- hour with them as they are. The collector folds an hour into its sums once that
--- endpoint's next snapshot arrives, which can be before the other endpoint's; this
--- file then leaves the hour out.
+-- hour with them as they are. The collector folds only hours that end at or before
+-- latest_hour_start, and the writer refuses to publish a file whose sums would hold a
+-- later one.
 CREATE TABLE meta (
   key   TEXT PRIMARY KEY,
   value TEXT NOT NULL

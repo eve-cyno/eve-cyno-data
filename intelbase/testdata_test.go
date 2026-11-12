@@ -18,8 +18,8 @@ import (
 // ingest/intel/publish_schema_v1.sql and testdata/publish-golden-v1.sqlite). Both
 // sides pin the same sha256; a changed contract is a new schema version.
 const (
-	schemaV1SHA256 = "93621570ffd7bf506aca12f7870a4b735a1dcf3afa8d0fdc9d00a2ebf128c036"
-	goldenV1SHA256 = "6b7c7ec872f4c1e78e9180c61abfe394a1046bc76f40594b58044e98ebc108cc"
+	schemaV1SHA256 = "ce43727b6497685d0b2075ba74acf3b666c997614846f074c33be3edb97d3e61"
+	goldenV1SHA256 = "8496680e0e77a2acd6062f6b7c34e0241f93f22ab26673514de11ea4bf7107fa"
 	goldenPath     = "testdata/golden-v1.sqlite"
 )
 

@@ -159,6 +159,10 @@ type Meta struct {
 	// computed it (never recomputed here).
 	LatestHour, LatestHourStart time.Time
 	LatestHow                   int
+	// MapWindowStart is the start of the earliest hour that either map endpoint
+	// collected (always present): jumps, ship, pod and NPC statistics are collected
+	// since then.
+	MapWindowStart time.Time
 	// KillmailWindowStart is when killmail collection started; HasKillmailWindow is
 	// false while the writer has no start set (PvP killmails: not collected yet).
 	KillmailWindowStart time.Time
@@ -178,6 +182,15 @@ type HourStats struct {
 	Jumps, ShipKills, PodKills, NPCKills, PvPKillmails Stat
 	ISKMean                                            float64
 	KillmailsCollected                                 bool
+	// unavailable marks the metrics whose stored sums were inconsistent; each reads
+	// as a Stat with N 0 (no baseline) and the reader logs a warning.
+	unavailable [MetricPvPKillmails + 1]bool
+}
+
+// Unavailable reports whether the stored sums of m were inconsistent, so the metric
+// answers as "no baseline" instead of failing the whole response.
+func (h HourStats) Unavailable(m Metric) bool {
+	return m >= 0 && int(m) < len(h.unavailable) && h.unavailable[m]
 }
 
 // Metric selects one Stat of HourStats.
@@ -256,10 +269,7 @@ func (s *Store) Hours(ctx context.Context, systemID int32, hows []int) (Baseline
 		for i, how := range hows {
 			row := rows[how]
 			row.systemID = systemID
-			out.Hours[i], err = r.hourStats(how, row)
-			if err != nil {
-				return err
-			}
+			out.Hours[i] = r.hourStats(how, row)
 		}
 		return nil
 	})
@@ -301,13 +311,9 @@ func (s *Store) Latest(ctx context.Context, systemIDs []int32) (LatestHour, erro
 		for i, id := range ids {
 			sl := counts[id]
 			sl.SystemID = id
-			var err error
 			row := usual[id]
 			row.systemID = id
-			sl.Usual, err = r.hourStats(r.meta.LatestHow, row)
-			if err != nil {
-				return err
-			}
+			sl.Usual = r.hourStats(r.meta.LatestHow, row)
 			out.Systems[i] = sl
 		}
 		return nil
@@ -450,7 +456,7 @@ func parseMeta(kv map[string]string) (Meta, error) {
 	for _, f := range []struct {
 		key string
 		dst *time.Time
-	}{{"generated_at", &m.GeneratedAt}, {"latest_hour", &m.LatestHour}, {"latest_hour_start", &m.LatestHourStart}} {
+	}{{"generated_at", &m.GeneratedAt}, {"latest_hour", &m.LatestHour}, {"latest_hour_start", &m.LatestHourStart}, {"map_window_start", &m.MapWindowStart}} {
 		n, ok := num(f.key)
 		if !ok {
 			return bad("meta " + f.key + " is missing or not a number")

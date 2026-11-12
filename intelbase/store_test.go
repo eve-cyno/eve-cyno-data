@@ -1,8 +1,10 @@
 package intelbase
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"log/slog"
 	"math"
 	"os"
 	"path/filepath"
@@ -72,9 +74,10 @@ func TestGoldenV1_Numbers(t *testing.T) {
 	b, err := st.Hours(ctx, sysTama, []int{43, 44, 100})
 	require.NoError(t, err)
 	require.Equal(t, time.Unix(1792555200, 0).UTC(), b.Meta.GeneratedAt)
-	require.Equal(t, 6, b.Samples.MapJumps)           // 3 weeks of how 43 and 44
-	require.Equal(t, 5, b.Samples.MapKills)           // 2 + 3
-	require.Equal(t, 3*47+2*121, b.Samples.Killmails) // how 45 is 2: the latest hour is left out
+	require.Equal(t, time.Unix(1791313200, 0).UTC(), b.Meta.MapWindowStart) // 2026-10-06T19:00Z
+	require.Equal(t, 6, b.Samples.MapJumps)                                 // 3 weeks of how 43 and 44
+	require.Equal(t, 5, b.Samples.MapKills)                                 // 2 + 3
+	require.Equal(t, 3*45+2*123, b.Samples.Killmails)                       // hows 45-47 are 2: the latest hour is left out
 	require.Len(t, b.Hours, 3)
 
 	h := b.Hours[0]
@@ -216,6 +219,8 @@ func TestOpen_RejectsIncompleteV1(t *testing.T) {
 		"how out of range":     {`UPDATE meta SET value = '168' WHERE key = 'latest_how'`},
 		"no schema version":    {`DELETE FROM meta WHERE key = 'schema_version'`},
 		"bad schema version":   {`UPDATE meta SET value = 'one' WHERE key = 'schema_version'`},
+		"no map window start":  {`DELETE FROM meta WHERE key = 'map_window_start'`},
+		"bad map window start": {`UPDATE meta SET value = 'x' WHERE key = 'map_window_start'`},
 		"bad killmail start":   {`UPDATE meta SET value = 'x' WHERE key = 'killmail_window_start'`},
 		"how_samples dropped":  {`DROP TABLE how_samples`},
 		"baseline column lost": {`ALTER TABLE baseline DROP COLUMN isk_sum`},
@@ -254,7 +259,7 @@ func TestOpen_ClosedStore(t *testing.T) {
 func TestHours_MeanAndSD(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "f.sqlite")
 	buildFile(t, path,
-		`INSERT INTO meta VALUES ('schema_version','1'),('generated_at','1'),('latest_hour','3600'),('latest_hour_start','0'),('latest_how','3')`,
+		`INSERT INTO meta VALUES ('schema_version','1'),('generated_at','1'),('latest_hour','3600'),('latest_hour_start','0'),('map_window_start','0'),('latest_how','3')`,
 		`INSERT INTO how_samples VALUES ('map_jumps',10,3),('map_jumps',11,3),('map_jumps',12,1),('map_jumps',13,3),('map_jumps',14,3)`,
 		// how 10: 15/83/n3; 11: 30/300/n3; 12: n 1; 13: no row; 14: 1.0e9, 1.2e9, 1.4e9.
 		`INSERT INTO baseline (system_id,how,jumps_sum,jumps_sumsq,ship_kills_sum,ship_kills_sumsq,npc_kills_sum,npc_kills_sumsq,pod_kills_sum,pod_kills_sumsq,pvp_km_sum,pvp_km_sumsq,isk_sum) VALUES
@@ -417,4 +422,72 @@ func TestLatest_ManySystems(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, l.Systems, 1501)
 	require.Equal(t, 500, l.Systems[1500].Jumps)
+}
+
+func TestOpen_MissingMapWindowStartReason(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "f.sqlite")
+	publishVariant(t, path, `DELETE FROM meta WHERE key = 'map_window_start'`)
+	st := Open(path, time.Minute)
+	defer st.Close()
+	_, err := st.Latest(context.Background(), nil)
+	var uf *UnknownFormatError
+	require.ErrorAs(t, err, &uf)
+	require.Contains(t, uf.Reason, "map_window_start")
+}
+
+// No killmail samples at an hour: the killmail figures are not collected, and the
+// ISK mean must be 0, never NaN (0/0).
+func TestKillmailsNoSamplesIsNotNaN(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "f.sqlite")
+	// The sums are zero too, as a consistent file has them at an unsampled hour.
+	publishVariant(t, path, `DELETE FROM how_samples WHERE metric_group = 'killmails' AND how = 43`,
+		`UPDATE baseline SET pvp_km_sum = 0, pvp_km_sumsq = 0, isk_sum = 0 WHERE how = 43`)
+	st := Open(path, time.Minute)
+	defer st.Close()
+	b, err := st.Hours(context.Background(), sysTama, []int{43})
+	require.NoError(t, err)
+	require.False(t, b.Hours[0].KillmailsCollected)
+	require.Equal(t, 0.0, b.Hours[0].ISKMean)
+}
+
+// One inconsistent metric row degrades that metric only; the system, the other
+// metrics and the other systems still answer.
+func TestCorruptMetricDegradesOnlyThatMetric(t *testing.T) {
+	var logs bytes.Buffer
+	old := slog.Default()
+	slog.SetDefault(slog.New(slog.NewTextHandler(&logs, nil)))
+	defer slog.SetDefault(old)
+
+	path := filepath.Join(t.TempDir(), "f.sqlite")
+	// Tama how 43: sum^2 above n*sumsq for the jumps of 3 samples.
+	publishVariant(t, path, `UPDATE baseline SET jumps_sum = 9999 WHERE system_id = 30002813 AND how = 43`)
+	st := Open(path, time.Minute)
+	defer st.Close()
+	ctx := context.Background()
+
+	b, err := st.Hours(ctx, sysTama, []int{43, 44})
+	require.NoError(t, err)
+	requireStat(t, Stat{}, b.Hours[0].Jumps, "corrupt jumps: unavailable")
+	require.True(t, b.Hours[0].Unavailable(MetricJumps))
+	require.False(t, b.Hours[0].Unavailable(MetricShipKills))
+	requireStat(t, Stat{Mean: 11, SD: math.Sqrt(8), N: 2}, b.Hours[0].ShipKills, "ship kills still answer")
+	requireStat(t, Stat{Mean: 330, SD: 30, N: 3}, b.Hours[1].Jumps, "other hour untouched")
+	require.Contains(t, logs.String(), "level=WARN")
+
+	w, err := st.Week(ctx, sysTama)
+	require.NoError(t, err)
+	require.Len(t, w.Hours, HoursPerWeek)
+
+	l, err := st.Latest(ctx, []int32{sysTama, sysThera})
+	require.NoError(t, err)
+	require.Len(t, l.Systems, 2)
+
+	// Same for a corrupt row at the latest hour of week (how 45).
+	publishVariant(t, path, `UPDATE baseline SET pvp_km_sum = 99 WHERE system_id = 30002813 AND how = 45`)
+	st2 := Open(path, time.Minute)
+	defer st2.Close()
+	l, err = st2.Latest(ctx, []int32{sysTama, sysThera})
+	require.NoError(t, err)
+	require.True(t, l.Systems[0].Usual.Unavailable(MetricPvPKillmails))
+	require.False(t, l.Systems[1].Usual.Unavailable(MetricPvPKillmails))
 }
