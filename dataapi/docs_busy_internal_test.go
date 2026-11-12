@@ -64,9 +64,10 @@ func TestDocs_BusyIsDocumentedWhereRetryAfterIs(t *testing.T) {
 
 	// Each surface that documents Retry-After also documents the busy answer.
 	pages := map[string][]string{
-		"/docs/rest":       {"<code>busy</code>", "<code>Retry-After: 1</code>"},
-		"/docs/access":     {"<code>503 busy</code>", "before authentication", "never charged against any limit or daily cap"},
-		"/docs/mcp":        {"<code>503</code>", "<code>Retry-After: 1</code>"},
+		"/docs/rest": {"<code>busy</code>", "Retry-After: 1", "<code>Retry-After</code></td><td>On <code>429</code> and <code>503</code>: seconds to wait (1 on busy)",
+			"before authentication errors", "never charged"},
+		"/docs/access":     {"503 busy", "before authentication", "never charged against any limit or daily cap"},
+		"/docs/mcp":        {"HTTP 503 with Retry-After: 1", "before any authentication error", "never charged"},
 		"/llms-full.txt":   {"`503` `busy`", "before authentication errors", "never charged"},
 		"/v1/openapi.yaml": {"`503` `busy`", "before authentication errors", "never charged"},
 	}
@@ -100,8 +101,11 @@ func TestTerms_CallerTokenIsPerUTCDay(t *testing.T) {
 		"a keyed hash of your address (IPv6: its /64) or API key id, salted per UTC day, so it cannot be compared across days",
 		"never the address itself",
 		"whoever holds the server secret could recompute a token for a known address",
-		"the secret is trimmed text from the server environment and is never published",
-		"whether the client came from Anthropic's published connector ranges",
+		"the secret is trimmed text from the server environment, or a random one per process when none is set",
+		"on a request refused for a daily cap (a key's quota or the keyless trial cap)",
+		"When the address parses, every access line also carries a class label",
+		"the range label is absent when the operator blanks the ranges",
+		"when the client came from Anthropic's published connector ranges",
 		"the address family (v4, v6 or pseudo)",
 	} {
 		require.Contains(t, md, want)
@@ -113,12 +117,7 @@ func TestTerms_CallerTokenIsPerUTCDay(t *testing.T) {
 
 func TestDocs_AnthropicRangesAreBothOutboundBlocks(t *testing.T) {
 	a := docsBusyAPI(t)
-	for _, path := range []string{"/docs/mcp", "/llms-full.txt"} {
-		body := getBody(t, a, path)
-		if strings.Contains(body, "160.79.104") {
-			require.Contains(t, body, "153.61.208.0/20", path)
-		}
-	}
+	// llms-full.txt carries no connector range text, so only the MCP page is checked.
 	require.Contains(t, getBody(t, a, "/docs/mcp"), "160.79.104.0/21")
 	require.Contains(t, getBody(t, a, "/docs/mcp"), "153.61.208.0/20")
 	require.Contains(t, getBody(t, a, "/docs/mcp"), "https://platform.claude.com/docs/en/api/ip-addresses")

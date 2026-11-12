@@ -137,7 +137,7 @@ func TestTerms_StateTheRequiredPoints(t *testing.T) {
 	md := do(newAPI(t, publicConfig()), http.MethodGet, "/terms.md", "").Body.String()
 	for _, want := range []string{"no warranty", "CC BY-SA 4.0", "EVE Developer License Agreement", "rate limit",
 		"X-Janice-Key", "never stored or logged", "30 days", "Bythlak",
-		"and on a refused request over a key's daily quota, the line also carries",
+		"and on a request refused for a daily cap (a key's quota or the keyless trial cap), the line also carries",
 		"ask on Discord and the operator deletes your key records",
 		"stay on a block list until it is unblocked"} {
 		require.Contains(t, md, want)

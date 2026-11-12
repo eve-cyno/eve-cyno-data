@@ -663,7 +663,7 @@ func TestPortal_MCPPageCoversEveryClientAndTheSkill(t *testing.T) {
 		`<li><a href="#mcp-skill">Agent skill</a></li>`, `<h2 id="mcp-skill">`,
 		"https://raw.githubusercontent.com/eve-cyno/claude-plugins/main/plugins/eve-cyno/skills/eve-data/SKILL.md",
 		`href="` + cursorHref + `"`, `href="` + vscodeHref + `"`,
-		"Connector calls reach the server from Anthropic's published outbound IPv4 ranges, <code>160.79.104.0/21</code> and <code>153.61.208.0/20</code> (no outbound IPv6; source: <a href=\"https://platform.claude.com/docs/en/api/ip-addresses\">platform.claude.com/docs/en/api/ip-addresses</a>). When the server is at capacity it answers HTTP <code>503</code> with <code>Retry-After: 1</code> (code <code>busy</code>); retry after that many seconds. Without a key they share one limit per client",
+		"Connector calls reach the server from Anthropic's published outbound IPv4 ranges, 160.79.104.0/21 and 153.61.208.0/20 (no outbound IPv6; source: https://platform.claude.com/docs/en/api/ip-addresses). When the server is at capacity it answers HTTP 503 with Retry-After: 1 (code busy), before any authentication error and never charged against a limit; retry after that many seconds. Without a key they share one limit per client",
 	} {
 		require.Contains(t, mcp, want)
 	}
