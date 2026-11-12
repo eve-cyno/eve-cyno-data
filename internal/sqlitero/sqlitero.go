@@ -176,7 +176,10 @@ func DSN(path string) string { return "file:" + path + "?mode=ro" }
 func (r *DB) openHandle() (*sql.DB, os.FileInfo, error) {
 	fi, err := os.Stat(r.path)
 	if err != nil {
-		return nil, nil, err
+		if errors.Is(err, os.ErrNotExist) {
+			return nil, nil, err
+		}
+		return nil, nil, fmt.Errorf("%w: %w", ErrUnreadable, err)
 	}
 	f, err := os.Open(r.path)
 	if err != nil {

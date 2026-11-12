@@ -344,7 +344,7 @@ Read from the process environment; the commands do not read a `.env` file.
 |---|---|---|
 | `EVE_CORE_SDE_PATH` | both | the SDE SQLite; default `data/sde/sde.sqlite` found upward from the working directory. The process cannot start without it |
 | `EVE_CORE_SDE_RELOAD_INTERVAL` | both | how often to check for a replaced SDE file (Go duration; `off` disables) |
-| `EVE_CORE_INTEL_BASELINE_PATH` | dataapi | the published intel baseline SQLite behind `get_activity_baseline`; unset: the tool answers that baselines are not configured. The file may not exist yet (the tool then says it is not published) and a replaced file is picked up on the SDE reload interval |
+| `EVE_CORE_INTEL_BASELINE_PATH` | dataapi | the published intel baseline SQLite behind `get_activity_baseline` and `compare_activity_to_baseline`; unset: the tools answer that baselines are not configured. The file may not exist yet (the tools then say it is not published) and a replaced or newly published file is picked up on the SDE reload interval, or every 5 minutes when that is `off` |
 | `DATAAPI_ADDR` | dataapi | listen address, default `:8092` |
 | `DATAAPI_EXPOSE_TOOL_API` | dataapi | `true` registers `POST /v1/tool/{name}` (default off) |
 | `DATAAPI_EXPOSE_MCP` | dataapi | `true` mounts `POST /v1/mcp` (default off) |

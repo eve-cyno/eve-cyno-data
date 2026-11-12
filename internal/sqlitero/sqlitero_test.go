@@ -625,3 +625,24 @@ func TestHandle_PoolConnectionOpensTheNewFile(t *testing.T) {
 	require.NoError(t, c1.QueryRowContext(ctx, `SELECT v FROM readings`).Scan(&v))
 	require.Equal(t, 1, v, "the connection opened before the swap keeps the old file")
 }
+
+// TestOpen_LazyStatErrorOtherThanMissingIsUnreadable: a stat failure that is not
+// "does not exist" (a parent directory without search permission) is ErrUnreadable,
+// not a plain error a caller would read as "not published yet".
+func TestOpen_LazyStatErrorOtherThanMissingIsUnreadable(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("root ignores directory permissions")
+	}
+	parent := filepath.Join(t.TempDir(), "locked")
+	require.NoError(t, os.Mkdir(parent, 0o700))
+	path := filepath.Join(parent, "readings.sqlite")
+	buildReadings(t, path, 1)
+	require.NoError(t, os.Chmod(parent, 0o000))
+	t.Cleanup(func() { _ = os.Chmod(parent, 0o700) })
+
+	db, _ := openReadings(t, path, time.Minute, Options{Name: "readings", Lazy: true})
+	err := db.Ping()
+	require.ErrorIs(t, err, ErrNotOpen)
+	require.ErrorIs(t, err, ErrUnreadable)
+	require.NotErrorIs(t, err, os.ErrNotExist)
+}
