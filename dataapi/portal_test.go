@@ -74,7 +74,7 @@ func TestPortal_EveryOfferedToolHasAPage(t *testing.T) {
 		}
 		require.Contains(t, body, "/docs/tools"+"#tools-", tl.Name)
 	}
-	require.Equal(t, 31, offered, "the public service offers 31 tools")
+	require.Equal(t, 32, offered, "the public service offers 32 tools")
 
 	for _, name := range []string{"no_such_tool", "convert_isk_to_real", "GET_MARKET_PRICE", "get_market_price.json"} {
 		requireError(t, do(api, http.MethodGet, "/docs/tools/"+name, ""), http.StatusNotFound, "not_found")
@@ -208,8 +208,8 @@ func TestPortal_RendersTheCatalogAndLimits(t *testing.T) {
 	api := newAPI(t, cfg)
 
 	home := do(api, http.MethodGet, "/", "").Body.String()
-	require.Contains(t, home, `<span data-slot="tools_offered">31</span>`)
-	require.Contains(t, home, `<span data-slot="tools_public">30</span>`)
+	require.Contains(t, home, `<span data-slot="tools_offered">32</span>`)
+	require.Contains(t, home, `<span data-slot="tools_public">31</span>`)
 	require.Contains(t, home, `<span data-slot="tools_upstream">10</span>`, "every live tool: eight ESI, one EvE-Scout, one zKillboard")
 	require.Contains(t, home, `<b data-slot="tools_upstream">10</b> tools · 9 calls/min per caller, shared`)
 	require.Contains(t, home, `<span data-slot="limit_mcp">77</span>`)

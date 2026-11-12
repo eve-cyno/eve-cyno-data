@@ -16,7 +16,7 @@ info:
     - An API key raises the per-minute budgets: every operation states its limit without a key and with one, counted in the key's own window. The live-data tools keep a lower limit than the route.
     - A new API key has a daily cap of 10000 requests per UTC day by default (a cap can be changed per key, 0 meaning none). Over its cap a key gets `429` `daily_quota_exceeded` with `Retry-After` set to the seconds until 00:00 UTC.
     - Request bodies are capped (256 KiB on the fit routes, 64 KiB on tools and MCP); an oversize body is `413`.
-    - Tool tiers: each tool is *public* (no key), *keyed* (an API key) or *disabled*. Public: `get_market_price`, `get_type_info`, `search_item_by_name`, `get_ship_stats`, `get_ship_bonuses`, `find_canonical_module`, `get_hull_facts`, `get_fits`, `list_fits`, `validate_fitting`, `compute_fit_stats`, `appraise_items`, `get_production_chain`, `get_jumps_between`, `get_jump_distances`, `plan_jump_route`, `get_recent_kills`, `get_systems_in_region`, `get_lp_offers`, `get_npc_stations`, `get_reprocessing_yield`, `get_required_skills`, `get_average_prices`, `get_market_history`, `get_sovereignty`, `get_system_activity`, `get_activity_baseline`, `find_systems`, `get_system_info`, `get_thera_connections`. Keyed (send the key as `Authorization: Bearer <key>` or `X-API-Key`; `401 api_key_required` without one, `401 invalid_api_key` for a key that is not valid, on every tool): `analyze_battle`. Optional: your own Janice key in the `X-Janice-Key` request header (used for that request only, never logged or stored) turns `appraise_items` into a Janice appraisal; without it the answer is an estimate from ESI average prices. Disabled tools are not offered on this service (`403 tool_disabled` over REST, absent from the MCP tool list).
+    - Tool tiers: each tool is *public* (no key), *keyed* (an API key) or *disabled*. Public: `get_market_price`, `get_type_info`, `search_item_by_name`, `get_ship_stats`, `get_ship_bonuses`, `find_canonical_module`, `get_hull_facts`, `get_fits`, `list_fits`, `validate_fitting`, `compute_fit_stats`, `appraise_items`, `get_production_chain`, `get_jumps_between`, `get_jump_distances`, `plan_jump_route`, `get_recent_kills`, `get_systems_in_region`, `get_lp_offers`, `get_npc_stations`, `get_reprocessing_yield`, `get_required_skills`, `get_average_prices`, `get_market_history`, `get_sovereignty`, `get_system_activity`, `get_activity_baseline`, `compare_activity_to_baseline`, `find_systems`, `get_system_info`, `get_thera_connections`. Keyed (send the key as `Authorization: Bearer <key>` or `X-API-Key`; `401 api_key_required` without one, `401 invalid_api_key` for a key that is not valid, on every tool): `analyze_battle`. Optional: your own Janice key in the `X-Janice-Key` request header (used for that request only, never logged or stored) turns `appraise_items` into a Janice appraisal; without it the answer is an estimate from ESI average prices. Disabled tools are not offered on this service (`403 tool_disabled` over REST, absent from the MCP tool list).
 
     ## Attribution and licences
 
@@ -2236,6 +2236,76 @@ paths:
           $ref: '#/components/responses/Unavailable'
         "504":
           $ref: '#/components/responses/Timeout'
+  /tool/compare_activity_to_baseline:
+    post:
+      tags:
+        - tools
+      summary: Compare the latest collected hour of EVE solar systems with their usual activity for the same hour of the week (UTC)…
+      description: |-
+        Compare the latest collected hour of EVE solar systems with their usual activity for the same hour of the week (UTC): jumps, ship, pod and NPC kills, each with the usual mean, its spread (sample standard deviation), the number of weeks sampled, a z-score and a plain word (about usual, busier, much busier, quieter, much quieter). The usual numbers never include the latest hour; a small gap on a quiet system stays 'about usual'; fewer than 4 weeks sampled answers 'not enough history'. Pass systems (up to 50 names), or region_name to list the systems furthest from usual in a region, e.g. the quietest systems in Delve now. Use for 'is Tama busier than usual', 'is this normal for this hour', 'which systems in Delve are unusually quiet right now'.
+
+        Sources: EVE Static Data Export (via Fuzzwork); ESI (EVE Swagger Interface); zKillboard (killmail counts). `result.data` is a `ActivityComparison` object when the call succeeds.
+
+        Access tier: **public**. No key needed.
+
+        Rate limit: 10 requests per minute per client IP without an API key, 60 per minute per API key with one.
+      operationId: compare_activity_to_baseline
+      parameters:
+        - $ref: '#/components/parameters/RequestID'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                direction:
+                  type: string
+                  description: 'Region mode only: list systems busier than usual, quieter than usual, or both (default both).'
+                  enum:
+                    - busier
+                    - quieter
+                    - both
+                limit:
+                  type: integer
+                  description: 'Region mode only: how many systems to list, 1 to 20 (default 10).'
+                  minimum: 1
+                  maximum: 20
+                region_name:
+                  type: string
+                  description: 'Region name, e.g. ''Delve'' (case-insensitive): lists the systems of the region furthest from their usual activity. Use this or systems, not both.'
+                systems:
+                  type: array
+                  description: 'Up to 50 solar system names, e.g. [''Tama'', ''Jita'']: one line each. Use this or region_name, not both.'
+                  items:
+                    type: string
+                  maxItems: 50
+                  minItems: 1
+              required: []
+      responses:
+        "200":
+          description: The tool's answer.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActivityComparisonToolResponse'
+          headers:
+            X-Request-ID:
+              $ref: '#/components/headers/RequestID'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "413":
+          $ref: '#/components/responses/PayloadTooLarge'
+        "429":
+          $ref: '#/components/responses/RateLimited'
+        "500":
+          $ref: '#/components/responses/InternalError'
+        "503":
+          $ref: '#/components/responses/Unavailable'
+        "504":
+          $ref: '#/components/responses/Timeout'
   /tool/find_systems:
     post:
       tags:
@@ -2807,6 +2877,95 @@ components:
               description: The typed answer, or null when the tool has none or the call ended in a text-only answer (an unknown id, a parse failure); `text` then says why.
               oneOf:
                 - $ref: '#/components/schemas/ActivityBaseline'
+                - type: "null"
+          required:
+            - text
+            - data
+        attribution:
+          type: array
+          description: The upstreams behind the answer; attribution is a condition of several of their licences.
+          items:
+            $ref: '#/components/schemas/Source'
+      required:
+        - tool
+        - version
+        - result
+        - attribution
+    ActivityComparison:
+      type: object
+      properties:
+        hour_start:
+          type: string
+          description: HourStart is the start of the latest collected hour (RFC 3339, UTC).
+        hour_label:
+          type: string
+          description: HourLabel names that hour, e.g. "Tuesday 2026-11-10 19:00-20:00 UTC"; weekday and hour come from the baseline file's own hour of week.
+        map_window_start:
+          type:
+            - string
+            - "null"
+          description: MapWindowStart is the date (YYYY-MM-DD, UTC) from which jumps and kills are counted; null when unknown.
+        region:
+          type: string
+          description: Region is the region name when the call was a region ranking; empty for a list of systems.
+        direction:
+          type: string
+          description: 'Direction is the filter used in a region ranking: "busier", "quieter" or "both".'
+        systems:
+          type: array
+          description: Systems holds the compared systems in request order, or the ranked systems of a region, furthest from usual first.
+          items:
+            $ref: '#/components/schemas/SystemComparison'
+        unknown_systems:
+          type: array
+          description: UnknownSystems lists the requested names that are not solar systems.
+          items:
+            type: string
+        region_systems:
+          type: integer
+          description: RegionSystems is the number of systems in the region (region ranking only).
+        truncated:
+          type: boolean
+          description: Truncated is true when a region had more systems than were checked.
+        left_out_not_enough_history:
+          type: integer
+          description: LeftOutNotEnoughHistory counts the region systems left out because fewer than 4 weeks were sampled.
+        notes:
+          type: array
+          description: 'Notes holds the caveats of the answer: a stale latest hour, skipped metrics.'
+          items:
+            type: string
+      required:
+        - hour_start
+        - hour_label
+        - map_window_start
+        - region
+        - direction
+        - systems
+        - unknown_systems
+        - region_systems
+        - truncated
+        - left_out_not_enough_history
+        - notes
+    ActivityComparisonToolResponse:
+      type: object
+      properties:
+        tool:
+          type: string
+          description: The tool that ran.
+        version:
+          type: string
+          description: The build version of the service.
+        result:
+          type: object
+          properties:
+            text:
+              type: string
+              description: The answer as the chat assistant reads it.
+            data:
+              description: The typed answer, or null when the tool has none or the call ended in a text-only answer (an unknown id, a parse failure); `text` then says why.
+              oneOf:
+                - $ref: '#/components/schemas/ActivityComparison'
                 - type: "null"
           required:
             - text
@@ -5006,6 +5165,48 @@ components:
         - version
         - result
         - attribution
+    MetricComparison:
+      type: object
+      properties:
+        metric:
+          type: string
+          description: Metric is "jumps", "ship_kills", "pod_kills" or "npc_kills".
+        now:
+          type: integer
+          description: Now is the count in the latest collected hour.
+        mean:
+          type: number
+          description: Mean is the usual count for this hour of the week.
+        sd:
+          type: number
+          description: SD is the sample standard deviation of the usual count; 0 below two samples.
+        n:
+          type: integer
+          description: N is the number of sampled weeks behind Mean and SD.
+        z:
+          type:
+            - number
+            - "null"
+          description: Z is (Now - Mean) / max(SD, 1); null when there is not enough history.
+        band:
+          type: string
+          description: Band is "about_usual", "busier", "much_busier", "quieter", "much_quieter" or "not_enough_history".
+        floor:
+          type: integer
+          description: Floor is the smallest gap from the mean (in counts) that earns a band other than about usual.
+        below_floor:
+          type: boolean
+          description: BelowFloor is true when |Z| reached 1 but the gap was under Floor, so the band stays about usual.
+      required:
+        - metric
+        - now
+        - mean
+        - sd
+        - n
+        - z
+        - band
+        - floor
+        - below_floor
     ModuleHit:
       type: object
       properties:
@@ -5958,6 +6159,24 @@ components:
         - ship_kills
         - pod_kills
         - npc_kills
+    SystemComparison:
+      type: object
+      properties:
+        system:
+          type: string
+          description: System is the system name as the SDE spells it.
+        system_id:
+          type: integer
+          description: SystemID is the solar system ID.
+        metrics:
+          type: array
+          description: Metrics holds jumps, ship kills, pod kills and NPC kills; a metric whose baseline is unavailable is left out and named in Notes.
+          items:
+            $ref: '#/components/schemas/MetricComparison'
+      required:
+        - system
+        - system_id
+        - metrics
     SystemInfo:
       type: object
       properties:

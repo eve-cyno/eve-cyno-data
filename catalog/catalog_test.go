@@ -49,7 +49,7 @@ func TestTiers_Policy(t *testing.T) {
 			"get_required_skills", "get_production_chain", "find_canonical_module", "search_item_by_name", "get_lp_offers", "get_recent_kills",
 			"get_ship_stats", "get_hull_facts", "get_ship_bonuses", "compute_fit_stats", "validate_fitting",
 			// the hour-of-week baselines (one local file, work class)
-			"get_activity_baseline",
+			"get_activity_baseline", "compare_activity_to_baseline",
 			// the public ESI pass-throughs
 			"get_market_price", "get_type_info", "get_sovereignty", "get_system_activity",
 			// the fit lookups

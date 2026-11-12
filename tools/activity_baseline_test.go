@@ -299,6 +299,9 @@ func (f failingBaselines) Hours(context.Context, int32, []int) (intelbase.Baseli
 func (f failingBaselines) Week(context.Context, int32) (intelbase.Baseline, error) {
 	return intelbase.Baseline{}, f.err
 }
+func (f failingBaselines) Latest(context.Context, []int32) (intelbase.LatestHour, error) {
+	return intelbase.LatestHour{}, f.err
+}
 
 func TestForPublic_CarriesBaselines(t *testing.T) {
 	d := baselineDeps(t)

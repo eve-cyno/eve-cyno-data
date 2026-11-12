@@ -16,7 +16,7 @@ Machine-readable description: [/v1/openapi.yaml](/v1/openapi.yaml) (OpenAPI 3.1;
 - An API key raises the per-minute budgets: every operation states its limit without a key and with one, counted in the key's own window. The live-data tools keep a lower limit than the route.
 - A new API key has a daily cap of 10000 requests per UTC day by default (a cap can be changed per key, 0 meaning none). Over its cap a key gets `429` `daily_quota_exceeded` with `Retry-After` set to the seconds until 00:00 UTC.
 - Request bodies are capped: 256 KiB on the fit routes, 64 KiB on the tool and MCP endpoints (`413`).
-- Tool tiers: each tool is *public* (no key), *keyed* (an API key) or *disabled*. Public: `get_market_price`, `get_type_info`, `search_item_by_name`, `get_ship_stats`, `get_ship_bonuses`, `find_canonical_module`, `get_hull_facts`, `get_fits`, `list_fits`, `validate_fitting`, `compute_fit_stats`, `appraise_items`, `get_production_chain`, `get_jumps_between`, `get_jump_distances`, `plan_jump_route`, `get_recent_kills`, `get_systems_in_region`, `get_lp_offers`, `get_npc_stations`, `get_reprocessing_yield`, `get_required_skills`, `get_average_prices`, `get_market_history`, `get_sovereignty`, `get_system_activity`, `get_activity_baseline`, `find_systems`, `get_system_info`, `get_thera_connections`. Keyed (send the key as `Authorization: Bearer <key>` or `X-API-Key`; `401 api_key_required` without one, `401 invalid_api_key` for a key that is not valid, on every tool): `analyze_battle`. Optional: your own Janice key in the `X-Janice-Key` request header (used for that request only, never logged or stored) turns `appraise_items` into a Janice appraisal; without it the answer is an estimate from ESI average prices. Disabled tools are not offered on this service (`403 tool_disabled` over REST, absent from the MCP tool list).
+- Tool tiers: each tool is *public* (no key), *keyed* (an API key) or *disabled*. Public: `get_market_price`, `get_type_info`, `search_item_by_name`, `get_ship_stats`, `get_ship_bonuses`, `find_canonical_module`, `get_hull_facts`, `get_fits`, `list_fits`, `validate_fitting`, `compute_fit_stats`, `appraise_items`, `get_production_chain`, `get_jumps_between`, `get_jump_distances`, `plan_jump_route`, `get_recent_kills`, `get_systems_in_region`, `get_lp_offers`, `get_npc_stations`, `get_reprocessing_yield`, `get_required_skills`, `get_average_prices`, `get_market_history`, `get_sovereignty`, `get_system_activity`, `get_activity_baseline`, `compare_activity_to_baseline`, `find_systems`, `get_system_info`, `get_thera_connections`. Keyed (send the key as `Authorization: Bearer <key>` or `X-API-Key`; `401 api_key_required` without one, `401 invalid_api_key` for a key that is not valid, on every tool): `analyze_battle`. Optional: your own Janice key in the `X-Janice-Key` request header (used for that request only, never logged or stored) turns `appraise_items` into a Janice appraisal; without it the answer is an estimate from ESI average prices. Disabled tools are not offered on this service (`403 tool_disabled` over REST, absent from the MCP tool list).
 
 ## Endpoints
 
@@ -527,6 +527,20 @@ Usual activity of one EVE solar system by hour of the week (UTC), from hourly ES
   - `day` (string): Weekday in UTC: Monday, Tuesday, Wednesday, Thursday, Friday, Saturday or Sunday (case-insensitive). With hour: that one hour. Alone: all 24 hours of that day.
   - `hour` (integer): Start of the UTC hour, 0 to 23 (19 means 19:00-20:00). With day: that one hour. Alone: that hour on every day of the week.
 - Typed result (`result.data`): ActivityBaseline with fields `system`, `system_id`, `view`, `samples`, `map_window_start`, `killmail_window_start`, `generated_at`, `hours`, `ranked_by`, `busiest`, `quietest`, `most_ship_kills`
+- Sources: EVE Static Data Export (via Fuzzwork); ESI (EVE Swagger Interface); zKillboard (killmail counts)
+
+### compare_activity_to_baseline
+
+Compare the latest collected hour of EVE solar systems with their usual activity for the same hour of the week (UTC): jumps, ship, pod and NPC kills, each with the usual mean, its spread (sample standard deviation), the number of weeks sampled, a z-score and a plain word (about usual, busier, much busier, quieter, much quieter). The usual numbers never include the latest hour; a small gap on a quiet system stays 'about usual'; fewer than 4 weeks sampled answers 'not enough history'. Pass systems (up to 50 names), or region_name to list the systems furthest from usual in a region, e.g. the quietest systems in Delve now. Use for 'is Tama busier than usual', 'is this normal for this hour', 'which systems in Delve are unusually quiet right now'.
+
+- Call: `POST /v1/tool/compare_activity_to_baseline` or MCP tool `compare_activity_to_baseline`
+- Access: public. No key needed.
+- Arguments:
+  - `direction` (string): Region mode only: list systems busier than usual, quieter than usual, or both (default both). One of: busier, quieter, both.
+  - `limit` (integer): Region mode only: how many systems to list, 1 to 20 (default 10).
+  - `region_name` (string): Region name, e.g. 'Delve' (case-insensitive): lists the systems of the region furthest from their usual activity. Use this or systems, not both.
+  - `systems` (array of string): Up to 50 solar system names, e.g. ['Tama', 'Jita']: one line each. Use this or region_name, not both.
+- Typed result (`result.data`): ActivityComparison with fields `hour_start`, `hour_label`, `map_window_start`, `region`, `direction`, `systems`, `unknown_systems`, `region_systems`, `truncated`, `left_out_not_enough_history`, `notes`
 - Sources: EVE Static Data Export (via Fuzzwork); ESI (EVE Swagger Interface); zKillboard (killmail counts)
 
 ### find_systems

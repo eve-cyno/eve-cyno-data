@@ -1349,3 +1349,64 @@ type LPItem struct {
 	// Quantity is how many of it the offer takes.
 	Quantity int `json:"quantity"`
 }
+
+// ActivityComparison is the result of compare_activity_to_baseline: the latest collected
+// hour of some systems (or the systems of a region furthest from usual) against their
+// usual numbers for the same hour of the week. The usual numbers never include the
+// latest hour.
+type ActivityComparison struct {
+	// HourStart is the start of the latest collected hour (RFC 3339, UTC).
+	HourStart string `json:"hour_start"`
+	// HourLabel names that hour, e.g. "Tuesday 2026-11-10 19:00-20:00 UTC"; weekday and hour come from the baseline file's own hour of week.
+	HourLabel string `json:"hour_label"`
+	// MapWindowStart is the date (YYYY-MM-DD, UTC) from which jumps and kills are counted; null when unknown.
+	MapWindowStart *string `json:"map_window_start"`
+	// Region is the region name when the call was a region ranking; empty for a list of systems.
+	Region string `json:"region"`
+	// Direction is the filter used in a region ranking: "busier", "quieter" or "both".
+	Direction string `json:"direction"`
+	// Systems holds the compared systems in request order, or the ranked systems of a region, furthest from usual first.
+	Systems []SystemComparison `json:"systems"`
+	// UnknownSystems lists the requested names that are not solar systems.
+	UnknownSystems []string `json:"unknown_systems"`
+	// RegionSystems is the number of systems in the region (region ranking only).
+	RegionSystems int `json:"region_systems"`
+	// Truncated is true when a region had more systems than were checked.
+	Truncated bool `json:"truncated"`
+	// LeftOutNotEnoughHistory counts the region systems left out because fewer than 4 weeks were sampled.
+	LeftOutNotEnoughHistory int `json:"left_out_not_enough_history"`
+	// Notes holds the caveats of the answer: a stale latest hour, skipped metrics.
+	Notes []string `json:"notes"`
+}
+
+// SystemComparison is the comparison of one system.
+type SystemComparison struct {
+	// System is the system name as the SDE spells it.
+	System string `json:"system"`
+	// SystemID is the solar system ID.
+	SystemID int `json:"system_id"`
+	// Metrics holds jumps, ship kills, pod kills and NPC kills; a metric whose baseline is unavailable is left out and named in Notes.
+	Metrics []MetricComparison `json:"metrics"`
+}
+
+// MetricComparison is one metric of the latest hour against its usual numbers.
+type MetricComparison struct {
+	// Metric is "jumps", "ship_kills", "pod_kills" or "npc_kills".
+	Metric string `json:"metric"`
+	// Now is the count in the latest collected hour.
+	Now int `json:"now"`
+	// Mean is the usual count for this hour of the week.
+	Mean float64 `json:"mean"`
+	// SD is the sample standard deviation of the usual count; 0 below two samples.
+	SD float64 `json:"sd"`
+	// N is the number of sampled weeks behind Mean and SD.
+	N int `json:"n"`
+	// Z is (Now - Mean) / max(SD, 1); null when there is not enough history.
+	Z *float64 `json:"z"`
+	// Band is "about_usual", "busier", "much_busier", "quieter", "much_quieter" or "not_enough_history".
+	Band string `json:"band"`
+	// Floor is the smallest gap from the mean (in counts) that earns a band other than about usual.
+	Floor int `json:"floor"`
+	// BelowFloor is true when |Z| reached 1 but the gap was under Floor, so the band stays about usual.
+	BelowFloor bool `json:"below_floor"`
+}

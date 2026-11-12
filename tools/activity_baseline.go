@@ -12,7 +12,7 @@ import (
 	"eve-cyno.dev/go/data/intelbase"
 )
 
-// BaselineSource is what get_activity_baseline reads: the published intel baseline
+// BaselineSource is what get_activity_baseline and compare_activity_to_baseline read: the published intel baseline
 // file (intelbase.Store). The numbers it returns never include the latest collected
 // hour, so "usual" does not count the hour a later comparison describes.
 type BaselineSource interface {
@@ -20,6 +20,9 @@ type BaselineSource interface {
 	Hours(ctx context.Context, systemID int32, hows []int) (intelbase.Baseline, error)
 	// Week returns the usual numbers of one system for all 168 hours of the week.
 	Week(ctx context.Context, systemID int32) (intelbase.Baseline, error)
+	// Latest returns the counts of the latest collected hour for the systems together
+	// with the usual numbers of the same hour of the week (compare_activity_to_baseline).
+	Latest(ctx context.Context, systemIDs []int32) (intelbase.LatestHour, error)
 }
 
 // minBaselineWeeks is the number of sampled weeks below which the answer says the
@@ -383,18 +386,25 @@ func baselineWeek(name string, b intelbase.Baseline, res *ActivityBaseline) stri
 // baselineFailure turns a store error into a text answer. The reason a reader can act
 // on (not published yet, newer format) is shown; anything else is logged and hidden.
 func baselineFailure(ctx context.Context, tool string, err error) (string, *ActivityBaseline, error) {
+	text, err := baselineFailureText(ctx, tool, err)
+	return text, nil, err
+}
+
+// baselineFailureText is baselineFailure for any baseline tool; a non-nil error means
+// the caller's context ended.
+func baselineFailureText(ctx context.Context, tool string, err error) (string, error) {
 	var uf *intelbase.UnknownFormatError
 	switch {
 	case ctx.Err() != nil:
-		return "", nil, ctx.Err()
+		return "", ctx.Err()
 	case errors.Is(err, intelbase.ErrNotPublished):
-		return "Activity baselines are not published on this server yet. Try again in an hour.", nil, nil
+		return "Activity baselines are not published on this server yet. Try again in an hour.", nil
 	case errors.As(err, &uf):
 		if uf.Version > 0 {
-			return fmt.Sprintf("Activity baselines on this server use format %d, which this version cannot read.", uf.Version), nil, nil
+			return fmt.Sprintf("Activity baselines on this server use format %d, which this version cannot read.", uf.Version), nil
 		}
-		return "Activity baselines on this server are in a format this version cannot read.", nil, nil
+		return "Activity baselines on this server are in a format this version cannot read.", nil
 	}
 	slog.Warn("activity baseline read failed", "tool", tool, "err", err)
-	return "[" + tool + " error: the activity baseline file could not be read]", nil, nil
+	return "[" + tool + " error: the activity baseline file could not be read]", nil
 }

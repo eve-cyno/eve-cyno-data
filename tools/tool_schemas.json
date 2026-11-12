@@ -1078,6 +1078,47 @@
   {
     "type": "function",
     "function": {
+      "name": "compare_activity_to_baseline",
+      "description": "Compare the latest collected hour of EVE solar systems with their usual activity for the same hour of the week (UTC): jumps, ship, pod and NPC kills, each with the usual mean, its spread (sample standard deviation), the number of weeks sampled, a z-score and a plain word (about usual, busier, much busier, quieter, much quieter). The usual numbers never include the latest hour; a small gap on a quiet system stays 'about usual'; fewer than 4 weeks sampled answers 'not enough history'. Pass systems (up to 50 names), or region_name to list the systems furthest from usual in a region, e.g. the quietest systems in Delve now. Use for 'is Tama busier than usual', 'is this normal for this hour', 'which systems in Delve are unusually quiet right now'.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "systems": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "maxItems": 50,
+            "description": "Up to 50 solar system names, e.g. ['Tama', 'Jita']: one line each. Use this or region_name, not both."
+          },
+          "region_name": {
+            "type": "string",
+            "description": "Region name, e.g. 'Delve' (case-insensitive): lists the systems of the region furthest from their usual activity. Use this or systems, not both."
+          },
+          "direction": {
+            "type": "string",
+            "enum": [
+              "busier",
+              "quieter",
+              "both"
+            ],
+            "description": "Region mode only: list systems busier than usual, quieter than usual, or both (default both)."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20,
+            "description": "Region mode only: how many systems to list, 1 to 20 (default 10)."
+          }
+        },
+        "required": []
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
       "name": "find_systems",
       "description": "Find solar systems by filters and rank them: security band, region, constellation, faction, wormhole class, NPC station and its services, asteroid belts, planet types, ice belts (EVE University's list of highsec and lowsec ice systems) and distance from an origin (near). One line per system, up to 100 per call (page with offset), with the total. Example, the three nearest highsec Clear Icicle systems to C-N4OD: {\"security\":{\"min\":0.45},\"ice_types\":[\"Clear Icicle\"],\"near\":{\"origin\":\"C-N4OD\"},\"sort\":\"jumps\",\"limit\":3}. Set jump_range {origin, ship, jump_drive_calibration (default 5)} to keep the systems that ship can jump to from the origin (cyno-able: lowsec or nullsec, not wormhole space, Pochven or Zarzakh; 'Jump Bridge' = Ansiblex reach), with the light-years, sorted nearest first; e.g. the nearest lowsec NPC-station systems a Rorqual can reach from EC-P8R: {\"jump_range\":{\"origin\":\"EC-P8R\",\"ship\":\"Rorqual\"},\"security\":{\"min\":0.1,\"max\":0.4},\"has_npc_station\":true,\"limit\":3}.",
       "parameters": {

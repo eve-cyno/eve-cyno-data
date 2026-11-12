@@ -54,6 +54,8 @@ func TestSchemaCapsMatchTheCode(t *testing.T) {
 		{"get_npc_stations", "agent.level"}:                   maxAgentLevel,
 		{"find_canonical_module", "limit"}:                    maxModuleLimit,
 		{"get_lp_offers", "limit"}:                            maxLPLimit,
+		{"compare_activity_to_baseline", "systems"}:           maxSystemsBatch,
+		{"compare_activity_to_baseline", "limit"}:             compareMaxLimit,
 	} // later tools add their rows here
 
 	props := map[string]map[string]any{}

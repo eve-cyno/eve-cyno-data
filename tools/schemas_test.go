@@ -9,7 +9,7 @@ import (
 
 // expectedToolCount is the number of tool definitions in tools/tool_schemas.json
 // (the source of truth; it was originally dumped from the deleted Python runtime).
-const expectedToolCount = 32
+const expectedToolCount = 33
 
 // executeToolSwitchNames is the set of tool names handled by ExecuteTool's
 // switch statement in tools.go. Kept in sync manually — any addition to the
@@ -17,38 +17,39 @@ const expectedToolCount = 32
 //
 // Every tool schema has a corresponding executor entry.
 var executeToolSwitchNames = map[string]bool{
-	"get_market_price":       true,
-	"get_type_info":          true,
-	"search_item_by_name":    true,
-	"get_ship_stats":         true,
-	"get_ship_bonuses":       true,
-	"find_canonical_module":  true,
-	"get_hull_facts":         true,
-	"get_fits":               true,
-	"list_fits":              true,
-	"analyze_battle":         true,
-	"validate_fitting":       true,
-	"compute_fit_stats":      true,
-	"appraise_items":         true,
-	"get_production_chain":   true,
-	"get_jumps_between":      true,
-	"get_jump_distances":     true,
-	"plan_jump_route":        true,
-	"get_systems_in_region":  true,
-	"get_npc_stations":       true,
-	"get_lp_offers":          true,
-	"get_reprocessing_yield": true,
-	"get_required_skills":    true,
-	"get_average_prices":     true,
-	"get_market_history":     true,
-	"get_sovereignty":        true,
-	"get_system_activity":    true,
-	"get_activity_baseline":  true,
-	"find_systems":           true,
-	"get_system_info":        true,
-	"get_thera_connections":  true,
-	"get_recent_kills":       true,
-	"convert_isk_to_real":    true,
+	"get_market_price":             true,
+	"get_type_info":                true,
+	"search_item_by_name":          true,
+	"get_ship_stats":               true,
+	"get_ship_bonuses":             true,
+	"find_canonical_module":        true,
+	"get_hull_facts":               true,
+	"get_fits":                     true,
+	"list_fits":                    true,
+	"analyze_battle":               true,
+	"validate_fitting":             true,
+	"compute_fit_stats":            true,
+	"appraise_items":               true,
+	"get_production_chain":         true,
+	"get_jumps_between":            true,
+	"get_jump_distances":           true,
+	"plan_jump_route":              true,
+	"get_systems_in_region":        true,
+	"get_npc_stations":             true,
+	"get_lp_offers":                true,
+	"get_reprocessing_yield":       true,
+	"get_required_skills":          true,
+	"get_average_prices":           true,
+	"get_market_history":           true,
+	"get_sovereignty":              true,
+	"get_system_activity":          true,
+	"get_activity_baseline":        true,
+	"compare_activity_to_baseline": true,
+	"find_systems":                 true,
+	"get_system_info":              true,
+	"get_thera_connections":        true,
+	"get_recent_kills":             true,
+	"convert_isk_to_real":          true,
 }
 
 // TestToolSchemasParse verifies that the embedded JSON parses into the expected

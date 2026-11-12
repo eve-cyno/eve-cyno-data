@@ -1,0 +1,157 @@
+{
+  "callouts": [
+    {
+      "kind": "note",
+      "text": "The numbers in this example come from a small synthetic test file, not from live data. A live answer names the hour it describes, the weeks sampled and the date from which the figures are counted.",
+      "title": "Example numbers"
+    }
+  ],
+  "prompt": "Is Tama busier than usual right now, and what about Jita?",
+  "recorded": "2026-11-12",
+  "request": {
+    "systems": [
+      "Tama",
+      "Jita"
+    ]
+  },
+  "response": {
+    "attribution": [
+      {
+        "name": "EVE Static Data Export (via Fuzzwork)",
+        "url": "https://www.fuzzwork.co.uk/dump/",
+        "license": "Fenris Creations game data under the EVE Developer License Agreement; converted by Fuzzwork Enterprises"
+      },
+      {
+        "name": "ESI (EVE Swagger Interface)",
+        "url": "https://esi.evetech.net/",
+        "license": "EVE Developer License Agreement (Fenris Creations); non-commercial use"
+      },
+      {
+        "name": "zKillboard (killmail counts)",
+        "url": "https://zkillboard.com/",
+        "license": "Public R2Z2 API under zKillboard's usage etiquette; only per-system counts and ISK sums derived from it are published; killmails are Fenris Creations game data (EVE Developer License Agreement)"
+      }
+    ],
+    "result": {
+      "data": {
+        "hour_start": "2026-11-10T19:00:00Z",
+        "hour_label": "Tuesday 2026-11-10 19:00-20:00 UTC",
+        "map_window_start": "2026-10-06",
+        "region": "",
+        "direction": "both",
+        "systems": [
+          {
+            "system": "Tama",
+            "system_id": 30002813,
+            "metrics": [
+              {
+                "metric": "jumps",
+                "now": 560,
+                "mean": 412,
+                "sd": 41.012193308819754,
+                "n": 5,
+                "z": 3.6086828832968636,
+                "band": "much_busier",
+                "floor": 20,
+                "below_floor": false
+              },
+              {
+                "metric": "ship_kills",
+                "now": 9,
+                "mean": 9.4,
+                "sd": 3.2093613071762426,
+                "n": 5,
+                "z": -0.12463539056995128,
+                "band": "about_usual",
+                "floor": 3,
+                "below_floor": false
+              },
+              {
+                "metric": "pod_kills",
+                "now": 3,
+                "mean": 3,
+                "sd": 0.7071067811865476,
+                "n": 5,
+                "z": 0,
+                "band": "about_usual",
+                "floor": 2,
+                "below_floor": false
+              },
+              {
+                "metric": "npc_kills",
+                "now": 0,
+                "mean": 0.8,
+                "sd": 0.8366600265340756,
+                "n": 5,
+                "z": -0.8,
+                "band": "about_usual",
+                "floor": 20,
+                "below_floor": false
+              }
+            ]
+          },
+          {
+            "system": "Jita",
+            "system_id": 30000142,
+            "metrics": [
+              {
+                "metric": "jumps",
+                "now": 405,
+                "mean": 639,
+                "sd": 20.12461179749811,
+                "n": 5,
+                "z": -11.627553482998906,
+                "band": "much_quieter",
+                "floor": 20,
+                "below_floor": false
+              },
+              {
+                "metric": "ship_kills",
+                "now": 1,
+                "mean": 1.4,
+                "sd": 1.140175425099138,
+                "n": 5,
+                "z": -0.35082320772281156,
+                "band": "about_usual",
+                "floor": 3,
+                "below_floor": false
+              },
+              {
+                "metric": "pod_kills",
+                "now": 0,
+                "mean": 0.4,
+                "sd": 0.5477225575051661,
+                "n": 5,
+                "z": -0.4,
+                "band": "about_usual",
+                "floor": 2,
+                "below_floor": false
+              },
+              {
+                "metric": "npc_kills",
+                "now": 8,
+                "mean": 4,
+                "sd": 1.5811388300841898,
+                "n": 5,
+                "z": 2.5298221281347035,
+                "band": "about_usual",
+                "floor": 20,
+                "below_floor": true
+              }
+            ]
+          }
+        ],
+        "unknown_systems": [],
+        "region_systems": 0,
+        "truncated": false,
+        "left_out_not_enough_history": 0,
+        "notes": []
+      },
+      "text": "Latest collected hour: Tuesday 2026-11-10 19:00-20:00 UTC.\n- Tama: jumps 560 (usual 412, sd 41, n 5, z +3.61): much busier than usual; ship kills 9 (usual 9.4, sd 3.2, n 5, z -0.12): about usual; pod kills 3 (usual 3.0, sd 0.7, n 5, z +0.00): about usual; NPC kills 0 (usual 0.8, sd 0.8, n 5, z -0.80): about usual\n- Jita: jumps 405 (usual 639, sd 20, n 5, z -11.63): much quieter than usual; ship kills 1 (usual 1.4, sd 1.1, n 5, z -0.35): about usual; pod kills 0 (usual 0.4, sd 0.5, n 5, z -0.40): about usual; NPC kills 8 (usual 4.0, sd 1.6, n 5, z +2.53): about usual (below the floor of 20)\nUsual is the same hour of the week over the weeks sampled (n); the latest hour is not part of it. Jumps, ship, pod and NPC kills counted since 2026-10-06 (UTC). Sample standard deviation; z = (now - usual) / max(sd, 1). A band other than about usual also needs a gap of at least 20 jumps, 3 ship kills, 2 pod kills or 20 NPC kills."
+    },
+    "tool": "compare_activity_to_baseline",
+    "version": "sha-0d59efe"
+  },
+  "tool": "compare_activity_to_baseline",
+  "trimmed": false
+}

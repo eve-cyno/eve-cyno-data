@@ -147,6 +147,9 @@ var toolAttribution = map[string][]Source{
 	// Hour-of-week baselines: ESI's hourly map statistics (jumps, ship, pod and NPC kills) and
 	// per-system counts from the zKillboard R2Z2 stream, system names from the SDE.
 	"get_activity_baseline": {sourceSDE, sourceESI, sourceZKillboardKillmails},
+	// The comparison reads the same published file and carries the same source list as the
+	// baseline tool (the approved tool list names SDE, ESI and zKillboard for both).
+	"compare_activity_to_baseline": {sourceSDE, sourceESI, sourceZKillboardKillmails},
 
 	// The community fit corpus.
 	"get_fits":  communityFits,

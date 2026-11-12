@@ -339,6 +339,9 @@ func dispatch(ctx context.Context, deps *Deps, name string, arguments map[string
 	case "get_activity_baseline":
 		return typed(getActivityBaseline(ctx, deps, arguments))
 
+	case "compare_activity_to_baseline":
+		return typed(compareActivityToBaseline(ctx, deps, arguments))
+
 	case "convert_isk_to_real":
 		amount := floatArg(arguments, "isk_amount", 0)
 		currency, _ := arguments["currency"].(string)
