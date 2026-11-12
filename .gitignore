@@ -4,6 +4,8 @@ data/
 *.sqlite-journal
 *.sqlite-wal
 *.sqlite-shm
+# The published intel baseline fixture is a committed byte copy (hash-pinned in intelbase tests)
+!intelbase/testdata/golden-v1.sqlite
 *.db
 
 # Binaries (build into bin/; the module root holds the dataapi/ and sde/ packages,
