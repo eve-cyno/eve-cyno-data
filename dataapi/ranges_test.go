@@ -49,11 +49,14 @@ func TestParseRanges(t *testing.T) {
 		"::ffff:160.79.104.0/117":          "item 1 of 1", // mapped: client addresses are unmapped, it never matches
 		"fe80::/10%eth0":                   "item 1 of 1",
 		"160.79.104.0 /21":                 "item 1 of 1",
+		"2001:db8::/80":                    "item 1 of 1", // longer than /64: callers are keyed by their /64
+		"192.0.2.0/24,2001:db8:0:1::/65":   "item 2 of 2",
+		"2001:db8::1/128":                  "item 1 of 1",
 	} {
 		_, err := dataapi.ParseRanges(in)
 		require.Error(t, err, in)
 		require.ErrorContains(t, err, item, in)
-		for _, part := range []string{"160.79", "999.1", "::ffff", "fe80", "garbage", "/33", "/117"} {
+		for _, part := range []string{"160.79", "999.1", "::ffff", "fe80", "garbage", "/33", "/117", "/80", "/128", "db8"} {
 			require.NotContains(t, err.Error(), part, "the error names the item's position, never its text: %q", in)
 		}
 	}

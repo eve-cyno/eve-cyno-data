@@ -77,7 +77,8 @@
 //	                          160.79.104.0/21,153.61.208.0/20 (no outbound IPv6; source
 //	                          https://platform.claude.com/docs/en/api/ip-addresses; the compose
 //	                          default too); set but blank: no label and no range tier; an
-//	                          invalid item is a startup error. The startup log says whether the
+//	                          invalid item (or an IPv6 prefix longer than /64) is a startup error.
+//	                          The startup log says whether the
 //	                          tier is on and how many ranges. Every access line whose client
 //	                          address parses also carries ipf (v4, v6, or pseudo for class E,
 //	                          Cloudflare's pseudo-IPv4)

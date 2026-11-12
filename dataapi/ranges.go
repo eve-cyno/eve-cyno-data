@@ -11,7 +11,8 @@ import (
 // ParseRanges parses a comma-separated list of CIDR prefixes (IPv4 or IPv6; white space around
 // an item is ignored), the form Config.AnthropicRanges is built from. A blank list is no prefix.
 // A prefix with host bits set is taken as its network ("160.79.104.9/21" is 160.79.104.0/21).
-// An empty item, an item that is not a prefix and an IPv4-mapped IPv6 prefix (client addresses
+// An IPv6 prefix longer than /64 is an error too (callers are keyed by their /64 network, so
+// such a prefix would split one client). An empty item, an item that is not a prefix and an IPv4-mapped IPv6 prefix (client addresses
 // are unmapped before they are matched, so it would never match; write it as IPv4) are errors.
 // An error names the item by its position, never by its text, so a startup error does not echo
 // the configured value.
@@ -29,12 +30,18 @@ func ParseRanges(s string) ([]netip.Prefix, error) {
 		if p.Addr().Is4In6() {
 			return nil, fmt.Errorf("item %d of %d is an IPv4-mapped IPv6 prefix, which never matches; write it as IPv4", i+1, len(items))
 		}
+		if p.Addr().Is6() && p.Bits() > ipv6ClientBits {
+			return nil, fmt.Errorf("item %d of %d is an IPv6 prefix longer than /%d; callers are counted per /%d network, so a longer prefix would match part of one caller", i+1, len(items), ipv6ClientBits, ipv6ClientBits)
+		}
 		out = append(out, p.Masked())
 	}
 	return out, nil
 }
 
 // rangeAnthropic is the name of Config.AnthropicRanges in the access line and the request meta.
+// ipv6ClientBits is the length of the IPv6 prefix a client is keyed by (see ClientKey).
+const ipv6ClientBits = 64
+
 const rangeAnthropic = "anthropic"
 
 // clientLabels are the attributes the access line carries about the client address, never the

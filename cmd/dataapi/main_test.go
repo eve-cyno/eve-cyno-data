@@ -869,3 +869,11 @@ func TestLogRangeTier(t *testing.T) {
 		})
 	}
 }
+
+// An IPv6 range longer than /64 is a startup error that names the variable and not the value.
+func TestAnthropicRanges_RejectsLongIPv6Prefix(t *testing.T) {
+	_, err := anthropicRanges(lookupEnv(map[string]string{"DATAAPI_ANTHROPIC_RANGES": "192.0.2.0/24,2001:db8::/80"}))
+	if err == nil || !strings.Contains(err.Error(), "DATAAPI_ANTHROPIC_RANGES") || !strings.Contains(err.Error(), "longer than /64") || strings.Contains(err.Error(), "db8") {
+		t.Fatalf("error %v: want the variable and the /64 rule, not the value", err)
+	}
+}
