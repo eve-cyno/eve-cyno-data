@@ -69,15 +69,18 @@
 //	                          startup warning. The value is never logged; set it only in the
 //	                          host .env (openssl rand -hex 32), since whoever holds it can
 //	                          reverse a token
-//	DATAAPI_ANTHROPIC_RANGES  comma-separated CIDR prefixes; an access line whose client address
-//	                          (the one the limits key on) lies in one carries range="anthropic",
-//	                          never the address. Unset: Anthropic's two outbound IPv4 ranges
+//	DATAAPI_ANTHROPIC_RANGES  comma-separated CIDR prefixes: the label and the range tier. An
+//	                          access line whose client address (the one the limits key on) lies
+//	                          in one carries range="anthropic", never the address, and a keyless
+//	                          caller there gets the range limits when the service accepts keys.
+//	                          Unset: Anthropic's two outbound IPv4 ranges
 //	                          160.79.104.0/21,153.61.208.0/20 (no outbound IPv6; source
 //	                          https://platform.claude.com/docs/en/api/ip-addresses; the compose
-//	                          default too); set but
-//	                          blank: no label; an invalid item is a startup error. Every access
-//	                          line whose client address parses also carries ipf (v4, v6, or
-//	                          pseudo for class E, Cloudflare's pseudo-IPv4)
+//	                          default too); set but blank: no label and no range tier; an
+//	                          invalid item is a startup error. The startup log says whether the
+//	                          tier is on and how many ranges. Every access line whose client
+//	                          address parses also carries ipf (v4, v6, or pseudo for class E,
+//	                          Cloudflare's pseudo-IPv4)
 //	ESI_CONTACT               contact for the ESI User-Agent (esi)
 //	DATAAPI_PUBLIC_URL        the public origin, e.g. https://data.eve-cyno.dev (https, no path or
 //	                          query; invalid is a startup error). Makes the OpenAPI servers entry
@@ -272,9 +275,23 @@ func logSalt(getenv func(string) string, log *slog.Logger) string {
 	return s
 }
 
-// anthropicRanges resolves DATAAPI_ANTHROPIC_RANGES, the networks whose access lines carry
-// range="anthropic": unset is dataapi.DefaultAnthropicRanges, set but blank is none (no label), anything
-// else a comma-separated CIDR list (dataapi.ParseRanges). The error names the variable and the
+// logRangeTier states at startup whether the range tier is on: it is on only when the service
+// accepts keys (keyless callers are the tier's whole point) and DATAAPI_ANTHROPIC_RANGES has at
+// least one prefix. The number of ranges is logged, never a prefix or any client address.
+func logRangeTier(log *slog.Logger, haveKeys bool, ranges int) {
+	switch {
+	case ranges == 0:
+		log.Info("range tier off, DATAAPI_ANTHROPIC_RANGES is blank: no range label either", "env", "DATAAPI_ANTHROPIC_RANGES", "ranges", 0)
+	case !haveKeys:
+		log.Info("range tier off, no API keys are configured; access lines still carry range=anthropic (never the address)", "env", "DATAAPI_ANTHROPIC_RANGES", "ranges", ranges)
+	default:
+		log.Info("range tier on: keyless callers in DATAAPI_ANTHROPIC_RANGES get the range limits; their access lines carry range=anthropic (never the address)", "env", "DATAAPI_ANTHROPIC_RANGES", "ranges", ranges)
+	}
+}
+
+// anthropicRanges resolves DATAAPI_ANTHROPIC_RANGES, the networks of the label and the range tier
+// (access lines carry range="anthropic"): unset is dataapi.DefaultAnthropicRanges, set but blank is
+// none (no label, no tier), anything else a comma-separated CIDR list (dataapi.ParseRanges). The error names the variable and the
 // position of the bad item, never the value.
 func anthropicRanges(lookup func(string) (string, bool)) ([]netip.Prefix, error) {
 	v, ok := lookup("DATAAPI_ANTHROPIC_RANGES")
@@ -447,8 +464,8 @@ type exposure struct {
 	// logSalt is DATAAPI_LOG_SALT, the secret of the per-UTC-day caller token ("" means a random
 	// secret per process). Never logged.
 	logSalt string
-	// anthropicRanges is DATAAPI_ANTHROPIC_RANGES: the networks whose access lines carry
-	// range="anthropic" (none: no label).
+	// anthropicRanges is DATAAPI_ANTHROPIC_RANGES: the label and range tier networks, whose
+	// access lines carry range="anthropic" (none: no label, no range tier).
 	anthropicRanges []netip.Prefix
 	// store is the self-serve key store (nil: none). Its keys authenticate next to auth, and
 	// it enforces the daily quota and records usage.
@@ -651,12 +668,6 @@ func run(log *slog.Logger) error {
 	if err != nil {
 		return err
 	}
-	if len(ranges) > 0 {
-		log.Info("access log: lines from addresses in DATAAPI_ANTHROPIC_RANGES carry range=anthropic (never the address)",
-			"env", "DATAAPI_ANTHROPIC_RANGES", "prefixes", len(ranges))
-	} else {
-		log.Info("access log: no range label, DATAAPI_ANTHROPIC_RANGES is blank", "env", "DATAAPI_ANTHROPIC_RANGES")
-	}
 	var store *keys.Store
 	if path := os.Getenv("DATAAPI_KEYS_DB"); path != "" {
 		store, err = keys.Open(path, keys.Options{DailyCap: dayCap, Logger: log})
@@ -671,6 +682,7 @@ func run(log *slog.Logger) error {
 		}()
 		log.Info("self-serve key store open", "env", "DATAAPI_KEYS_DB", "daily_cap", dayCap)
 	}
+	logRangeTier(log, auth != nil || store != nil, len(ranges))
 	ex := exposure{
 		toolAPI: exposeToolAPI(os.Getenv), mcp: exposeMCP(os.Getenv), auth: auth, publicURL: pub,
 		upstream: &upstream, logSalt: logSalt(os.Getenv, log), anthropicRanges: ranges,

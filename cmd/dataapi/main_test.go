@@ -841,3 +841,31 @@ func TestNewHandler_KeylessMCPInstructionsStateTheCallersDailyNumber(t *testing.
 	require.Contains(t, instructions("160.79.104.9"), "trying it out: 2000 requests a day per client")
 	require.Contains(t, instructions("192.0.2.9"), "trying it out: 200 requests a day per client")
 }
+
+// The startup line states whether the range tier is on (ranges and keys both present), and how
+// many ranges; it never carries a prefix.
+func TestLogRangeTier(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		keys     bool
+		ranges   int
+		want     string
+		wantAttr string
+	}{
+		{"on", true, 2, "range tier on", "ranges=2"},
+		{"no keys", false, 2, "range tier off", "ranges=2"},
+		{"no ranges", true, 0, "range tier off", "ranges=0"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var buf bytes.Buffer
+			logRangeTier(slog.New(slog.NewTextHandler(&buf, nil)), tc.keys, tc.ranges)
+			out := buf.String()
+			if !strings.Contains(out, tc.want) || !strings.Contains(out, tc.wantAttr) {
+				t.Fatalf("log line %q lacks %q and %q", out, tc.want, tc.wantAttr)
+			}
+			if strings.Contains(out, "160.79") || strings.Contains(out, "/21") {
+				t.Fatalf("log line %q carries a prefix", out)
+			}
+		})
+	}
+}
