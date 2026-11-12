@@ -268,12 +268,12 @@ func TestInflight_BusyAnswersTheRangeCeilingToARangeCaller(t *testing.T) {
 // as the chain would answer it, not 503 busy and not the HTTP 429.
 func TestInflight_BusyAnswersARangeCallersOwnLimitsInJSONRPC(t *testing.T) {
 	const x, outside = "160.79.104.9", "192.0.2.200"
-	rangeAPI := func(t *testing.T, limits dataapi.Limits) (*dataapi.API, *holdMCP) {
+	rangeAPI := func(t *testing.T, limits dataapi.Limits, anonCap int) (*dataapi.API, *holdMCP) {
 		t.Helper()
 		c := &clock{t: time.Date(2026, 11, 12, 10, 0, 0, 0, time.UTC)}
 		mcp := newHoldMCP()
 		api := newAPI(t, dataapi.Config{
-			MCP: mcp, Auth: keyedFixture(t, "ecd_test_key_one"), Limits: &limits, AnonDailyCap: dataapi.DefaultAnonDailyCap,
+			MCP: mcp, Auth: keyedFixture(t, "ecd_test_key_one"), Limits: &limits, AnonDailyCap: anonCap,
 			Now: c.now, MaxInFlight: 1, PublicURL: rangeTierURL, AnthropicRanges: mustRanges(t, anthropicOutbound),
 		})
 		require.Equal(t, http.StatusOK, do(api, http.MethodPost, "/v1/mcp", mcpCall, fromIP(x)...).Code, "x's one request")
@@ -284,7 +284,7 @@ func TestInflight_BusyAnswersARangeCallersOwnLimitsInJSONRPC(t *testing.T) {
 	t.Run("address", func(t *testing.T) {
 		limits := dataapi.DefaultLimits()
 		limits.Range.MCP = dataapi.Rate{Max: 1, Window: time.Minute}
-		api, mcp := rangeAPI(t, limits)
+		api, mcp := rangeAPI(t, limits, dataapi.DefaultAnonDailyCap)
 		release := hold(t, api, mcp, fromIP(outside)...)
 		defer release()
 		rec := do(api, http.MethodPost, "/v1/mcp", mcpCall, fromIP(x)...)
@@ -294,7 +294,7 @@ func TestInflight_BusyAnswersARangeCallersOwnLimitsInJSONRPC(t *testing.T) {
 	t.Run("daily cap", func(t *testing.T) {
 		limits := dataapi.DefaultLimits()
 		limits.Range.DailyCap = 1
-		api, mcp := rangeAPI(t, limits)
+		api, mcp := rangeAPI(t, limits, 1) // the range cap is the larger one, so the anonymous cap stays below it
 		release := hold(t, api, mcp, fromIP(outside)...)
 		defer release()
 		rec := do(api, http.MethodPost, "/v1/mcp", mcpCall, fromIP(x)...)

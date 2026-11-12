@@ -453,6 +453,24 @@ func TestAnonDailyCap_RangeAddressGetsTwoThousand(t *testing.T) {
 	require.Equal(t, 3, n, "an address outside is refused past the ordinary cap")
 }
 
+// A range caller has the larger of the range tier's daily cap and the anonymous daily cap
+// (owner ruling 2026-11-12): an operator who raises DATAAPI_ANON_DAILY_CAP above the range cap
+// never gives Anthropic's connectors less than everyone else.
+func TestAnonDailyCap_RangeCallerGetsTheLargerCap(t *testing.T) {
+	c := &clock{t: time.Date(2026, 11, 12, 12, 0, 0, 0, time.UTC)}
+	for _, tc := range []struct {
+		anon int
+		want string
+	}{{5000, "5000"}, {200, "2000"}} {
+		api := newAPI(t, dataapi.Config{
+			Auth: keyedFixture(t, trialKey), MCP: capEcho, AnonDailyCap: tc.anon, Now: c.now,
+			AnthropicRanges: mustRanges(t, anthropicOutbound), // Limits nil: DefaultLimits
+		})
+		require.Equal(t, tc.want, dailyCapOf(t, api, fromIP("160.79.104.9")...), "anon cap %d", tc.anon)
+		require.Equal(t, strconv.Itoa(tc.anon), dailyCapOf(t, api, fromIP("192.0.2.9")...), "outside the ranges")
+	}
+}
+
 // The 429 of the daily cap states the number the refused caller really has, and the wait to
 // 00:00 UTC.
 func TestAnonDailyCap_RangeRefusalStatesItsOwnCap(t *testing.T) {
