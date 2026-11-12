@@ -111,6 +111,10 @@ func getActivityBaseline(ctx context.Context, deps *Deps, args map[string]any) (
 		g := b.Meta.GeneratedAt.UTC().Format(time.RFC3339)
 		res.GeneratedAt = &g
 	}
+	if !b.Meta.MapWindowStart.IsZero() {
+		d := b.Meta.MapWindowStart.UTC().Format("2006-01-02")
+		res.MapWindowStart = &d
+	}
 	if b.Meta.HasKillmailWindow {
 		d := b.Meta.KillmailWindowStart.UTC().Format("2006-01-02")
 		res.KillmailWindowStart = &d
@@ -236,13 +240,22 @@ func baselineHour(h intelbase.HourStats) BaselineHour {
 
 const baselineMissedNote = "Hours the collector missed are left out, not counted as zero. Jumps are gate jumps only."
 
-// baselineWindowNote names the start of the killmail window and the statistics used;
-// it is empty while no killmail was collected.
+// baselineWindowNote names where each group of figures starts: the map figures (jumps,
+// ship, pod and NPC kills) since the map window start, the PvP killmail figures since
+// the killmail window start (left out while no killmail was collected), and the
+// statistics used.
 func baselineWindowNote(res *ActivityBaseline) string {
-	if res.KillmailWindowStart == nil {
+	var parts []string
+	if res.MapWindowStart != nil {
+		parts = append(parts, "Jumps, ship, pod and NPC kills counted since "+*res.MapWindowStart+" (UTC).")
+	}
+	if res.KillmailWindowStart != nil {
+		parts = append(parts, "PvP killmails counted since "+*res.KillmailWindowStart+" (UTC).")
+	}
+	if len(parts) == 0 {
 		return ""
 	}
-	return "PvP killmails counted since " + *res.KillmailWindowStart + " (UTC). Sample standard deviation; the latest hour is not part of the usual numbers."
+	return strings.Join(parts, " ") + " Sample standard deviation; the latest hour is not part of the usual numbers."
 }
 
 func baselineOneHour(name string, b intelbase.Baseline, res *ActivityBaseline) string {

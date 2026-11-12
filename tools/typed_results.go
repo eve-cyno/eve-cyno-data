@@ -571,7 +571,10 @@ type ActivityBaseline struct {
 	View string `json:"view"`
 	// Samples counts the hours folded per metric group over all 168 hours of the week.
 	Samples BaselineSamples `json:"samples"`
-	// KillmailWindowStart is the date (YYYY-MM-DD, UTC) from which killmails are counted;
+	// MapWindowStart is the date (YYYY-MM-DD, UTC) from which jumps, ship, pod and NPC
+	// kills are counted; null only when the file does not say.
+	MapWindowStart *string `json:"map_window_start"`
+	// KillmailWindowStart is the date (YYYY-MM-DD, UTC) from which PvP killmails are counted;
 	// null while killmails are not collected yet.
 	KillmailWindowStart *string `json:"killmail_window_start"`
 	// GeneratedAt is when the baseline file was built (RFC 3339, UTC); null when unknown.

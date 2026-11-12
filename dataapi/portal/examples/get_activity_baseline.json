@@ -41,6 +41,7 @@
           "map_kills": 8,
           "killmails": 385
         },
+        "map_window_start": "2026-10-04",
         "killmail_window_start": "2026-10-05",
         "generated_at": "2026-10-21T04:00:00Z",
         "hours": [
@@ -80,7 +81,7 @@
         "quietest": [],
         "most_ship_kills": []
       },
-      "text": "Tama, Tuesday 19:00-20:00 UTC, usual activity (5 weeks sampled):\n- jumps: mean 412, sd 41 (n 5)\n- ship kills: mean 9.4, sd 3.2 (n 5)\n- pod kills: mean 3.0, sd 0.7 (n 5)\n- NPC kills: mean 0.8, sd 0.8 (n 5)\n- PvP killmails on zKillboard: mean 8.6, sd 1.8 (n 5); mean ISK destroyed 1.42b\nHours the collector missed are left out, not counted as zero. Jumps are gate jumps only.\nPvP killmails counted since 2026-10-05 (UTC). Sample standard deviation; the latest hour is not part of the usual numbers."
+      "text": "Tama, Tuesday 19:00-20:00 UTC, usual activity (5 weeks sampled):\n- jumps: mean 412, sd 41 (n 5)\n- ship kills: mean 9.4, sd 3.2 (n 5)\n- pod kills: mean 3.0, sd 0.7 (n 5)\n- NPC kills: mean 0.8, sd 0.8 (n 5)\n- PvP killmails on zKillboard: mean 8.6, sd 1.8 (n 5); mean ISK destroyed 1.42b\nHours the collector missed are left out, not counted as zero. Jumps are gate jumps only.\nJumps, ship, pod and NPC kills counted since 2026-10-04 (UTC). PvP killmails counted since 2026-10-05 (UTC). Sample standard deviation; the latest hour is not part of the usual numbers."
     },
     "tool": "get_activity_baseline",
     "version": "sha-0d59efe"

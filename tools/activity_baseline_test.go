@@ -89,6 +89,7 @@ func TestBaseline_OneHourText(t *testing.T) {
 	d := baselineDeps(t, tamaFiveWeeks()...)
 	text, data := runBaseline(t, d, map[string]any{"system_name": "tama", "day": "tuesday", "hour": 19.0})
 	since := time.Unix(1791158400, 0).UTC().Format("2006-01-02")
+	mapSince := time.Unix(1791313200, 0).UTC().Format("2006-01-02")
 	require.Equal(t, strings.Join([]string{
 		"Tama, Tuesday 19:00-20:00 UTC, usual activity (5 weeks sampled):",
 		"- jumps: mean 412, sd 41 (n 5)",
@@ -97,7 +98,7 @@ func TestBaseline_OneHourText(t *testing.T) {
 		"- NPC kills: mean 0.8, sd 0.8 (n 5)",
 		"- PvP killmails on zKillboard: mean 8.6, sd 1.8 (n 5); mean ISK destroyed 1.42b",
 		"Hours the collector missed are left out, not counted as zero. Jumps are gate jumps only.",
-		"PvP killmails counted since " + since + " (UTC). Sample standard deviation; the latest hour is not part of the usual numbers.",
+		"Jumps, ship, pod and NPC kills counted since " + mapSince + " (UTC). PvP killmails counted since " + since + " (UTC). Sample standard deviation; the latest hour is not part of the usual numbers.",
 	}, "\n"), text)
 
 	require.NotNil(t, data)
@@ -116,6 +117,8 @@ func TestBaseline_OneHourText(t *testing.T) {
 	require.InDelta(t, 1.42e9, *h.ISKDestroyedMean, 1)
 	require.NotNil(t, data.KillmailWindowStart)
 	require.Equal(t, since, *data.KillmailWindowStart)
+	require.NotNil(t, data.MapWindowStart)
+	require.Equal(t, "2026-10-06", *data.MapWindowStart)
 }
 
 func TestBaseline_NotEnoughHistory(t *testing.T) {
@@ -138,7 +141,8 @@ func TestBaseline_KillmailsNotCollectedYet(t *testing.T) {
 	text, data := runBaseline(t, d, map[string]any{"system_name": "Tama", "day": "Tuesday", "hour": 19})
 	require.Contains(t, text, "- PvP killmails on zKillboard: not collected yet.")
 	require.NotContains(t, text, "ISK")
-	require.NotContains(t, text, "counted since")
+	require.NotContains(t, text, "PvP killmails counted since")
+	require.Contains(t, text, "Jumps, ship, pod and NPC kills counted since 2026-10-06 (UTC).")
 	require.Nil(t, data.KillmailWindowStart)
 	require.Nil(t, data.Hours[0].PvPKillmails)
 	require.Nil(t, data.Hours[0].ISKDestroyedMean)

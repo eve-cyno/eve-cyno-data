@@ -2737,11 +2737,16 @@ components:
         samples:
           $ref: '#/components/schemas/BaselineSamples'
           description: Samples counts the hours folded per metric group over all 168 hours of the week.
+        map_window_start:
+          type:
+            - string
+            - "null"
+          description: MapWindowStart is the date (YYYY-MM-DD, UTC) from which jumps, ship, pod and NPC kills are counted; null only when the file does not say.
         killmail_window_start:
           type:
             - string
             - "null"
-          description: KillmailWindowStart is the date (YYYY-MM-DD, UTC) from which killmails are counted; null while killmails are not collected yet.
+          description: KillmailWindowStart is the date (YYYY-MM-DD, UTC) from which PvP killmails are counted; null while killmails are not collected yet.
         generated_at:
           type:
             - string
@@ -2775,6 +2780,7 @@ components:
         - system_id
         - view
         - samples
+        - map_window_start
         - killmail_window_start
         - generated_at
         - hours

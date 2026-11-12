@@ -526,7 +526,7 @@ Usual activity of one EVE solar system by hour of the week (UTC), from hourly ES
   - `system_name` (string, required): Solar system name, e.g. 'Tama' (case-insensitive)
   - `day` (string): Weekday in UTC: Monday, Tuesday, Wednesday, Thursday, Friday, Saturday or Sunday (case-insensitive). With hour: that one hour. Alone: all 24 hours of that day.
   - `hour` (integer): Start of the UTC hour, 0 to 23 (19 means 19:00-20:00). With day: that one hour. Alone: that hour on every day of the week.
-- Typed result (`result.data`): ActivityBaseline with fields `system`, `system_id`, `view`, `samples`, `killmail_window_start`, `generated_at`, `hours`, `ranked_by`, `busiest`, `quietest`, `most_ship_kills`
+- Typed result (`result.data`): ActivityBaseline with fields `system`, `system_id`, `view`, `samples`, `map_window_start`, `killmail_window_start`, `generated_at`, `hours`, `ranked_by`, `busiest`, `quietest`, `most_ship_kills`
 - Sources: EVE Static Data Export (via Fuzzwork); ESI (EVE Swagger Interface); zKillboard (killmail counts)
 
 ### find_systems
