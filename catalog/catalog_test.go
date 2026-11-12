@@ -400,6 +400,9 @@ func TestWaitsOnUpstream_EveryToolIsClassified(t *testing.T) {
 		"compute_fit_stats":      classWork,
 		"get_fits":               classWork,
 		"list_fits":              classWork,
+		// Reads the published baseline file only (local SQLite, no third party).
+		"get_activity_baseline":        classWork,
+		"compare_activity_to_baseline": classWork,
 		// No ESI fallback on a public surface (names and dogma from the SDE only).
 		"validate_fitting": classWork,
 		// Accepted work-class wait: the shared price snapshot (single flight, at most 20 s, only
