@@ -25,7 +25,9 @@ type meta struct {
 	// toolLogged is set once the tool handler wrote the request's usage line, so the
 	// access-log wrapper does not write a second one for a refusal.
 	toolLogged *bool
-	// rng is the range the client address matched ("" none; see clientLabels, rangeFrom).
+	// rng is the range of the range tier the client address matched: "" when none matched or
+	// the API has no range tier (see clientLabels, rangeFrom). The access line's range label
+	// does not read it.
 	rng string
 }
 
@@ -83,11 +85,12 @@ func validRequestID(s string) bool {
 // The gate runs before every charge (the key's quota, the anonymous daily cap and, inside
 // the mux, the route limiter and the upstream limiter): a busy refusal has spent nothing. For a
 // keyless caller inside the ranges, a full range ceiling is answered before the anonymous daily
-// cap is spent (rangeCeilingRefusal). A full route first runs the checks that record nothing
+// cap is spent: the route's (rangeCeilingRefusal) and, for a live-upstream call, the live tools'
+// (liveCeilingRefusal). A full route first runs the checks that record nothing
 // (gateRefusal): the per-IP route limiter, the range ceiling, the anonymous daily cap and the
 // key's quota. A caller over one of them gets that limit's 429 instead of 503 busy. The
-// upstream limiter is deliberately not pre-checked, so a caller that only it would refuse still
-// gets 503 busy. On a route with an upstream pool the
+// upstream limiter, its range ceiling included, is deliberately not pre-checked there, so a
+// caller that only it would refuse still gets 503 busy. On a route with an upstream pool the
 // request is classed first (routeGate, classifierFor), which may peek at and restore its body.
 func (a *API) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	id := r.Header.Get(HeaderRequestID)
@@ -98,8 +101,12 @@ func (a *API) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	log := a.log.With("request_id", id)
 	toolLogged := false
 	// The address family and the range of the client, matched once: labels only, never the
-	// address (clientLabels). The range also chooses the range tier (rangeFrom).
+	// address (clientLabels). On an API with the range tier the range also chooses the tier
+	// (rangeFrom), for the route limiters and the live-upstream limiter alike.
 	client, rng := a.clientLabels(r)
+	if !a.rangeTier {
+		rng = ""
+	}
 	ctx := context.WithValue(r.Context(), metaKey{}, meta{id: id, log: log, toolLogged: &toolLogged, rng: rng})
 	if a.auth != nil {
 		// The credential is read here, once: the limiter keys on the result and the tool and
@@ -224,7 +231,7 @@ func (a *API) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if a.countsAnon(r, pattern) {
 		// A full range ceiling that binds the caller is answered before the daily cap is
 		// spent: other addresses filled it, so it must not cost this caller a daily unit.
-		if a.rangeCeilingRefusal(rec, r, pattern) {
+		if a.rangeCeilingRefusal(rec, r, pattern) || a.liveCeilingRefusal(rec, r, pattern) {
 			return
 		}
 		// The same client key the per-minute limiter uses for a caller without a key. An
@@ -284,7 +291,7 @@ func (a *API) gateRefusal(w http.ResponseWriter, r *http.Request, pattern string
 			// Under the route's cache policy, as the limiter inside the mux writes it.
 			cached(g.cache, func(w http.ResponseWriter, r *http.Request) {
 				if shared {
-					a.writeRangeCeilingRefusal(w, r, retry, b.pair.ceilingRate)
+					a.writeRangeCeilingRefusal(w, r, retry, b.pair)
 					return
 				}
 				writeRateLimited(w, r, retry)

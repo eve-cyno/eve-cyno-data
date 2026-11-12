@@ -132,8 +132,12 @@ type serverConfig struct {
 	// allow, when set, is asked before each call that reads a live upstream (an Upstream tool
 	// whose catalog.Tool.SpendsUpstream is true for the call's arguments; for plan_jump_route
 	// or get_production_chain that means a live option is set) whether the caller is within its budget for it; a
-	// refusal carries the wait.
-	allow func(tool string) (ok bool, retryAfter time.Duration)
+	// refusal carries the wait and, when a limit shared by many callers refused it, that limit's
+	// name (see HTTPOptions.Upstream).
+	allow func(tool string) (ok bool, retryAfter time.Duration, shared string)
+	// keyHint is how to get an API key (HTTPOptions.KeyHint), which a refusal by a shared limit
+	// points at; empty: no pointer.
+	keyHint string
 	// called, when set, is told of every tools/call.
 	called func(tool string)
 	// instructions is the initialize text; empty means the package default.
@@ -168,7 +172,7 @@ func buildServer(deps *tools.Deps, exposed []catalog.Tool, cfg serverConfig, exe
 		},
 		&mcp.ServerOptions{Instructions: text, Logger: quiet(log)},
 	)
-	h := &handler{deps: deps, exec: exec, timeout: timeout, log: log, allow: cfg.allow, called: cfg.called, keyed: cfg.keyed, userAgent: cfg.userAgent}
+	h := &handler{deps: deps, exec: exec, timeout: timeout, log: log, allow: cfg.allow, keyHint: cfg.keyHint, called: cfg.called, keyed: cfg.keyed, userAgent: cfg.userAgent}
 	for _, t := range exposed {
 		s.AddTool(mcpTool(t, cfg.janiceFromHeader), h.call(t))
 	}
@@ -209,7 +213,8 @@ type handler struct {
 	exec    executor
 	timeout time.Duration
 	log     *slog.Logger
-	allow   func(tool string) (bool, time.Duration)
+	allow   func(tool string) (bool, time.Duration, string)
+	keyHint string
 	called  func(tool string)
 	// keyed and userAgent feed the usage line (see serverConfig).
 	keyed     bool
@@ -262,10 +267,9 @@ func (h *handler) call(t catalog.Tool) mcp.ToolHandler {
 		}
 
 		if h.allow != nil && t.SpendsUpstream(args) {
-			if ok, retry := h.allow(name); !ok {
+			if ok, retry, shared := h.allow(name); !ok {
 				use.Outcome = toolusage.RateLimited
-				return failure(fmt.Sprintf("rate_limited: %s reads live %s data and has a lower per-caller limit; retry in %d seconds",
-					name, t.UpstreamName, max(1, int((retry+time.Second-1)/time.Second)))), nil
+				return failure(h.upstreamRefusal(name, t.UpstreamName, retry, shared)), nil
 			}
 		}
 
@@ -287,6 +291,21 @@ func (h *handler) call(t catalog.Tool) mcp.ToolHandler {
 		use.Outcome = toolusage.OutcomeOfResult(out)
 		return success(out), nil
 	}
+}
+
+// upstreamRefusal is the isError text of a live call the Upstream hook refused: the caller's own
+// lower limit, or, when shared names a limit that many callers share, that limit and the way to
+// a budget of one's own (keyHint).
+func (h *handler) upstreamRefusal(tool, upstream string, retry time.Duration, shared string) string {
+	secs := max(1, int((retry+time.Second-1)/time.Second))
+	if shared == "" {
+		return fmt.Sprintf("rate_limited: %s reads live %s data and has a lower per-caller limit; retry in %d seconds", tool, upstream, secs)
+	}
+	msg := fmt.Sprintf("rate_limited: %s is reached; retry in %d seconds", shared, secs)
+	if h.keyHint != "" {
+		msg += ", or use a free API key for a budget of your own: " + h.keyHint
+	}
+	return msg
 }
 
 // failure is a tool-level error: isError with the message as text.
@@ -375,9 +394,13 @@ type HTTPOptions struct {
 	// Upstream, when set, is asked before every call that reads a live upstream (a call for
 	// which catalog.Tool.SpendsUpstream is true; for plan_jump_route or get_production_chain that means a live
 	// option is set) whether the request's caller is within its budget for it
-	// (dataapi.UpstreamLimiter.Allow; the same limiter as the REST endpoint, so one budget
-	// covers both). A refusal is an isError result starting "rate_limited". Nil: no limit.
-	Upstream func(r *http.Request, tool string) (ok bool, retryAfter time.Duration)
+	// (dataapi.UpstreamHook; the same limiter as the REST endpoint, so one budget covers both).
+	// A refusal is an isError result starting "rate_limited" with the wait. shared is empty when
+	// the caller's own limit refused the call; when a limit that many callers share refused it
+	// (dataapi's ceiling of all keyless connector calls), shared names that limit ("the shared
+	// limit of N ... calls per minute for ..."), and the result states it, "is reached", and
+	// points at KeyHint instead of the per-caller text. Nil: no limit.
+	Upstream func(r *http.Request, tool string) (ok bool, retryAfter time.Duration, shared string)
 	// ToolCalled, when set, is called once per tools/call with the HTTP request that carried
 	// it and the tool name, before the tool runs (also for a call that is then refused or
 	// fails). Nil: off. It must be cheap; the embedding service uses it for usage counting.
@@ -429,7 +452,8 @@ func httpHandler(deps *tools.Deps, o HTTPOptions, exec executor) http.Handler {
 				cfg.instructions = keylessInstructions(o.AnonDailyCap, o.KeyHint)
 			}
 			if o.Upstream != nil {
-				cfg.allow = func(tool string) (bool, time.Duration) { return o.Upstream(r, tool) }
+				cfg.allow = func(tool string) (bool, time.Duration, string) { return o.Upstream(r, tool) }
+				cfg.keyHint = o.KeyHint
 			}
 			if o.ToolCalled != nil {
 				cfg.called = func(tool string) { o.ToolCalled(r, tool) }

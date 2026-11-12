@@ -520,8 +520,12 @@ func newHandler(d *bootstrap.Deps, ex exposure, log *slog.Logger) (http.Handler,
 		limits = limits.WithoutKeys()
 	}
 	// One budget for the tools that read live ESI data, shared by REST and MCP so using
-	// both does not double a caller's allowance.
+	// both does not double a caller's allowance. Keyless callers inside the Anthropic ranges get
+	// the range pair of the live tools on a service that accepts keys (the range tier).
 	upstream := dataapi.NewUpstreamLimiter(limits.UpstreamTool, nil)
+	if auth != nil && len(ex.anthropicRanges) > 0 {
+		upstream = dataapi.NewRangeUpstreamLimiter(limits.UpstreamTool, limits.Range, nil, nil)
+	}
 	cfg := dataapi.Config{
 		Deps:                dataapi.NewDeps(d.Tools, d.Retriever),
 		Docs:                true,

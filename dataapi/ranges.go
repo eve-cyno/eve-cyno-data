@@ -101,7 +101,51 @@ func (a *API) rangeCeilingRefusal(w http.ResponseWriter, r *http.Request, patter
 		return false
 	}
 	cached(rr.cache, func(w http.ResponseWriter, r *http.Request) {
-		a.writeRangeCeilingRefusal(w, r, retry, rr.limit.ceilingRate)
+		a.writeRangeCeilingRefusal(w, r, retry, rr.limit)
+	})(w, r)
+	return true
+}
+
+// liveRoute is the check of a route whose calls the live-upstream limiter can charge and the
+// route's cache policy.
+type liveRoute struct {
+	// spends reports whether the request is a call the limiter charges (it may peek at and
+	// restore the body).
+	spends classifier
+	cache  string
+}
+
+// liveCheckFor returns the check of a route path of the route table whose calls the live-upstream
+// limiter can charge (nil for every other route): the REST tool route and MCP.
+func liveCheckFor(path string) classifier {
+	switch path {
+	case "/mcp":
+		return (*API).mcpSpendsUpstream
+	case "/tool/{name}":
+		return (*API).toolSpendsUpstream
+	}
+	return nil
+}
+
+// liveCeilingRefusal is rangeCeilingRefusal for the live tools: for a caller without a valid key
+// inside the ranges whose request is a call the live-upstream limiter charges, a full shared live
+// ceiling that binds the caller (UpstreamLimiter.ceilingBinds) is answered here with its 429,
+// under the route's cache policy, and nothing is recorded. ServeHTTP runs it before the anonymous
+// daily cap, so live calls of other addresses never spend a caller's daily cap. The call is
+// classified only when the ceiling binds, so a body is peeked only then. When the caller's own
+// live budget has the longer wait it reports false: that refusal comes from the limiter in the
+// handler, after the daily cap is spent, like every per-address 429.
+func (a *API) liveCeilingRefusal(w http.ResponseWriter, r *http.Request, pattern string) bool {
+	lr, ok := a.liveRoutes[pattern]
+	if !ok {
+		return false
+	}
+	binds, retry := a.upstream.ceilingBinds(r)
+	if !binds || !lr.spends(a, r, pattern) {
+		return false
+	}
+	cached(lr.cache, func(w http.ResponseWriter, r *http.Request) {
+		a.writeRangeCeilingRefusal(w, r, retry, a.upstream.rng)
 	})(w, r)
 	return true
 }

@@ -18,11 +18,15 @@ import (
 // EvE-Scout; catalog.Tool.Upstream), one budget across all of them. It is stricter than the route limits and is
 // one budget across REST (/tool/{name}) and MCP: a caller cannot double it by using both.
 // The caller is named by a KeyResolver, like every other limit. A caller with an API key
-// gets the rate's KeyedMax (the same as Max when it sets none), one without gets Max. A nil
-// *UpstreamLimiter allows everything.
+// gets the rate's KeyedMax (the same as Max when it sets none), one without gets Max; built by
+// NewRangeUpstreamLimiter, a caller without a valid key inside Config.AnthropicRanges gets the
+// range pair instead (Limits.Range.Upstream per address, Limits.Range.UpstreamCeiling shared by
+// all of them). A nil *UpstreamLimiter allows everything.
 type UpstreamLimiter struct {
-	anon, keyed *WindowLimiter
-	keys        KeyResolver
+	anon, keyed *WindowLimiter // nil: unlimited
+	// rng is the range pair of keyless callers inside the ranges (nil: no range tier).
+	rng  *rangeLimiter
+	keys KeyResolver
 }
 
 // NewUpstreamLimiter returns the limiter for rate, or nil when the rate is disabled. keys
@@ -43,21 +47,78 @@ func NewUpstreamLimiter(rate Rate, keys KeyResolver) *UpstreamLimiter {
 	return u
 }
 
+// NewRangeUpstreamLimiter is NewUpstreamLimiter(rate, keys) plus the range tier of the live
+// tools: a caller without a valid key whose address matched Config.AnthropicRanges counts
+// against rng.Upstream per address and rng.UpstreamCeiling shared by all of them, both read from
+// now (nil means time.Now; pass Config.Now, the clock of the range tier's other windows). The
+// pair applies only on an API with the range tier (ranges configured, Config.Auth set); anywhere
+// else this limiter is NewUpstreamLimiter's. It returns nil only when rate and both range rates
+// are disabled. Use the same limiter as Config.Upstream and in UpstreamHook.
+func NewRangeUpstreamLimiter(rate Rate, rng RangeLimits, keys KeyResolver, now func() time.Time) *UpstreamLimiter {
+	u := NewUpstreamLimiter(rate, keys)
+	pair := newRangeLimiter(rng.Upstream, rng.UpstreamCeiling, now)
+	if pair == nil {
+		return u
+	}
+	pair.unit = "live-upstream calls"
+	if u == nil {
+		// The plain rate is off: every caller outside the tier is unlimited.
+		if keys == nil {
+			keys = CallerKeys{}
+		}
+		u = &UpstreamLimiter{keys: keys}
+	}
+	u.rng = pair
+	return u
+}
+
 // Allow records one call of tool by the caller of r and reports whether it is within
 // budget; when not, retryAfter is how long until the oldest counted call leaves the window.
 // Tools that read no live upstream are never limited here.
 func (u *UpstreamLimiter) Allow(r *http.Request, tool string) (ok bool, retryAfter time.Duration) {
+	ok, retryAfter, _ = u.allow(r, tool)
+	return ok, retryAfter
+}
+
+// allow is Allow; shared is true when the range ceiling, which every keyless caller in the
+// ranges shares, refused the call rather than the caller's own budget.
+func (u *UpstreamLimiter) allow(r *http.Request, tool string) (ok bool, retryAfter time.Duration, shared bool) {
 	if u == nil {
-		return true, 0
+		return true, 0, false
 	}
 	if t, found := catalog.Lookup(tool); !found || !t.Upstream {
-		return true, 0
+		return true, 0, false
+	}
+	key := "upstream:" + u.keys.Key(r)
+	if u.inTier(r) {
+		return u.rng.allow(key)
 	}
 	l := u.anon
 	if CallerFrom(r.Context()).Authenticated() {
 		l = u.keyed
 	}
-	return l.Allow("upstream:" + u.keys.Key(r))
+	if l == nil {
+		return true, 0, false
+	}
+	ok, retryAfter = l.Allow(key)
+	return ok, retryAfter, false
+}
+
+// inTier reports whether the caller of r counts against the range pair: the limiter has one and
+// the caller has no valid key and an address in the ranges of an API with the range tier
+// (rangeFrom).
+func (u *UpstreamLimiter) inTier(r *http.Request) bool {
+	return u.rng != nil && rangeFrom(r.Context()) != "" && !CallerFrom(r.Context()).Authenticated()
+}
+
+// ceilingBinds reports whether the shared live ceiling is what would refuse a live call of the
+// caller of r now (rangeLimiter.ceilingBinds), with its wait, and records nothing. It is false
+// outside the range tier and for a nil limiter.
+func (u *UpstreamLimiter) ceilingBinds(r *http.Request) (binds bool, retryAfter time.Duration) {
+	if u == nil || !u.inTier(r) {
+		return false, 0
+	}
+	return u.rng.ceilingBinds("upstream:" + u.keys.Key(r))
 }
 
 // retrySeconds renders a wait as whole seconds, at least 1 (Retry-After).

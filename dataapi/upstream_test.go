@@ -5,6 +5,7 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -17,6 +18,7 @@ import (
 
 	"eve-cyno.dev/go/data/dataapi"
 	"eve-cyno.dev/go/data/esi"
+	"eve-cyno.dev/go/data/mcpserver"
 	"eve-cyno.dev/go/data/tools"
 )
 
@@ -435,4 +437,276 @@ func TestGeneratedDocs_ListToolsStateTheirDataOnlyForTheListForm(t *testing.T) {
 	}
 	require.NotContains(t, string(files["llms-full.txt"]), "Its own fair-use limit")
 	require.Contains(t, string(files["llms-full.txt"]), "share one fair-use limit")
+}
+
+// liveCeilingText names the shared live-tool ceiling of the range tier (DefaultLimits: 30 a
+// minute) in both refusals of it.
+const liveCeilingText = "the shared limit of 30 live-upstream calls per minute for all keyless claude.ai and Claude Desktop connector calls is reached"
+
+// liveCeilingMessage is the REST 429 message of the shared live-tool ceiling.
+const liveCeilingMessage = liveCeilingText + "; retry after Retry-After seconds, or use a free API key for a budget of your own: " +
+	rangeTierURL + "/docs/access#access-keys"
+
+// liveRangeAPI serves the public REST tools and the real MCP transport over offline deps, with
+// API keys, the given Anthropic ranges ("" none) and the default limits, and one live-tool
+// limiter with the range pair shared by both surfaces, on the clock clk (Config.Now and the
+// limiter read the same clock, as cmd/dataapi wires them). anonCap 0 turns the anonymous daily
+// cap off.
+func liveRangeAPI(t *testing.T, ranges string, anonCap int, clk *testClock) *dataapi.API {
+	t.Helper()
+	limits := dataapi.DefaultLimits()
+	deps := &tools.Deps{Client: tools.WithTransport(offlineTransport{})}
+	lim := dataapi.NewRangeUpstreamLimiter(limits.UpstreamTool, limits.Range, nil, clk.now)
+	return newAPI(t, dataapi.Config{
+		Deps: dataapi.NewDeps(deps, nil), ToolAPI: dataapi.ToolAPIPublic, Auth: testKeys(t),
+		Limits: &limits, AnonDailyCap: anonCap, Now: clk.now, PublicURL: rangeTierURL,
+		AnthropicRanges: mustRanges(t, ranges), Upstream: lim,
+		MCP: mcpserver.HTTPHandler(deps, mcpserver.HTTPOptions{
+			DisableLocalhostProtection: true, Keyed: dataapi.KeyedTier, Upstream: dataapi.UpstreamHook(lim),
+			KeyHint: rangeTierURL + "/docs/access#access-keys",
+		}),
+	})
+}
+
+// liveREST is one REST call of a live-upstream tool from ip.
+func liveREST(api http.Handler, ip string, hdr ...string) *httptest.ResponseRecorder {
+	return do(api, http.MethodPost, "/v1/tool/get_type_info", `{"type_id":587}`, append(fromIP(ip), hdr...)...)
+}
+
+// liveMCP is one MCP tools/call of a live-upstream tool from ip.
+func liveMCP(t *testing.T, api http.Handler, ip string, hdr ...string) *httptest.ResponseRecorder {
+	t.Helper()
+	return postMCP(t, api, rpcCall("get_type_info", `{"type_id":587}`), append(fromIP(ip), hdr...)...)
+}
+
+// liveCall alternates the surfaces: REST for even i, MCP for odd i.
+func liveCall(t *testing.T, api http.Handler, ip string, i int, hdr ...string) *httptest.ResponseRecorder {
+	t.Helper()
+	if i%2 == 0 {
+		return liveREST(api, ip, hdr...)
+	}
+	return liveMCP(t, api, ip, hdr...)
+}
+
+// requireLiveServed asserts a live call that ran: a REST answer that is no refusal, or an MCP
+// result that is no rate_limited error.
+func requireLiveServed(t *testing.T, rec *httptest.ResponseRecorder, msg string) {
+	t.Helper()
+	require.NotEqual(t, http.StatusTooManyRequests, rec.Code, "%s: %s", msg, rec.Body.String())
+	require.NotContains(t, rec.Body.String(), "rate_limited", msg)
+}
+
+// requireOwnLiveRefusal asserts the refusal of the caller's own live-tool budget: the REST 429
+// that names the tool, or the MCP isError result of the per-caller limit.
+func requireOwnLiveRefusal(t *testing.T, rec *httptest.ResponseRecorder, msg string) {
+	t.Helper()
+	if rec.Code == http.StatusTooManyRequests {
+		requireError(t, rec, http.StatusTooManyRequests, "rate_limited")
+		require.Equal(t, "too many calls to get_type_info, which reads live ESI data and has a lower limit; slow down", errorMessage(t, rec), msg)
+		return
+	}
+	res := rpcResult(t, rec)
+	require.Equal(t, true, res["isError"], "%s: %v", msg, res)
+	require.Contains(t, fmt.Sprint(res["content"]), "rate_limited: get_type_info reads live ESI data and has a lower per-caller limit", msg)
+}
+
+// requireLiveCeilingRefusal asserts the HTTP 429 of the shared live-tool ceiling.
+func requireLiveCeilingRefusal(t *testing.T, rec *httptest.ResponseRecorder, msg string) {
+	t.Helper()
+	requireError(t, rec, http.StatusTooManyRequests, "rate_limited")
+	require.Equal(t, liveCeilingMessage, errorMessage(t, rec), msg)
+	require.NotEmpty(t, rec.Header().Get("Retry-After"), msg)
+}
+
+// A keyless caller inside the ranges gets 15 live-tool calls a minute, REST and MCP together
+// (not the 5 of other keyless callers), and all of them share 30 a minute. The ceiling refuses
+// no one outside the ranges and no caller with a key.
+func TestRangeUpstream_FifteenPerAddressThirtyShared(t *testing.T) {
+	clk := newTestClock()
+	api := liveRangeAPI(t, anthropicOutbound, dataapi.DefaultAnonDailyCap, clk)
+	require.Equal(t, 15, dataapi.DefaultLimits().Range.Upstream.Max)
+	require.Equal(t, 30, dataapi.DefaultLimits().Range.UpstreamCeiling.Max)
+	addrs := rangeAddrs(3)
+
+	for i := range 15 {
+		requireLiveServed(t, liveCall(t, api, addrs[0], i), fmt.Sprintf("call %d of the first address", i+1))
+	}
+	requireOwnLiveRefusal(t, liveREST(api, addrs[0]), "the 16th call of one address, REST")
+	requireOwnLiveRefusal(t, liveMCP(t, api, addrs[0]), "the 16th call of one address, MCP")
+
+	for i := range 15 {
+		requireLiveServed(t, liveCall(t, api, addrs[1], i), fmt.Sprintf("call %d of the second address", i+1))
+	}
+	requireLiveCeilingRefusal(t, liveREST(api, addrs[2]), "the 31st live call of the ranges, REST")
+	requireLiveCeilingRefusal(t, liveMCP(t, api, addrs[2]), "the 31st live call of the ranges, MCP")
+
+	// Outside the ranges the full ceiling refuses nobody: the plain keyless budget of 5.
+	for i := range 5 {
+		requireLiveServed(t, liveCall(t, api, "192.0.2.10", i), fmt.Sprintf("call %d outside the ranges", i+1))
+	}
+	requireOwnLiveRefusal(t, liveMCP(t, api, "192.0.2.10"), "the 6th call outside the ranges")
+	// A caller with a key inside the ranges keeps its key's budget of 10.
+	key := []string{"X-API-Key", keyAlpha}
+	for i := range 10 {
+		requireLiveServed(t, liveCall(t, api, "160.79.104.200", i, key...), fmt.Sprintf("keyed call %d in the ranges", i+1))
+	}
+	requireOwnLiveRefusal(t, liveMCP(t, api, "160.79.104.200", key...), "the 11th keyed call")
+
+	clk.advance(time.Minute + time.Second)
+	for i := range 15 {
+		requireLiveServed(t, liveCall(t, api, addrs[2], i), fmt.Sprintf("call %d of the third address after a minute", i+1))
+	}
+}
+
+// A live call of a range caller that the ceiling refuses (other addresses filled it) costs no
+// unit of its daily cap; a refusal of its own address limit still does, as for every keyless
+// caller.
+func TestRangeUpstream_LiveCeilingRefusalSpendsNoDailyCap(t *testing.T) {
+	clk := newTestClock()
+	const daily = 20
+	api := liveRangeAPI(t, anthropicOutbound, daily, clk)
+	addrs := rangeAddrs(3)
+	for i := range 15 {
+		requireLiveServed(t, liveCall(t, api, addrs[0], i), addrs[0])
+	}
+	// Refused by its own budget while the ceiling has room: a daily unit spent.
+	requireOwnLiveRefusal(t, liveMCP(t, api, addrs[0]), "the 16th call of the first address: a daily unit spent")
+	for i := range 15 {
+		requireLiveServed(t, liveCall(t, api, addrs[1], i), addrs[1])
+	}
+	for i := range 50 {
+		requireLiveCeilingRefusal(t, liveCall(t, api, addrs[2], i), fmt.Sprintf("ceiling refusal %d", i+1))
+	}
+
+	clk.advance(time.Minute + time.Second) // the same UTC day
+	for i := range 15 {
+		requireLiveServed(t, liveCall(t, api, addrs[2], i), fmt.Sprintf("live call %d after the refusals", i+1))
+	}
+	search := rpcCall("search_item_by_name", `{"names":["Tritanium"]}`)
+	for i := range daily - 15 {
+		rec := postMCP(t, api, search, fromIP(addrs[2])...)
+		require.Equal(t, http.StatusOK, rec.Code, "request %d: %s", 16+i, rec.Body.String())
+	}
+	requireError(t, liveMCP(t, api, addrs[2]), http.StatusTooManyRequests, "daily_quota_exceeded")
+
+	for i := range daily - 16 {
+		rec := postMCP(t, api, search, fromIP(addrs[0])...)
+		require.Equal(t, http.StatusOK, rec.Code, "first address, request %d: %s", 17+i, rec.Body.String())
+	}
+	requireError(t, postMCP(t, api, search, fromIP(addrs[0])...), http.StatusTooManyRequests, "daily_quota_exceeded")
+}
+
+// The refusal of the shared live ceiling says it is shared and states its number, on REST (a 429
+// before or inside the tool handler) and on MCP (an isError result), unlike the caller's own
+// limit.
+func TestRangeUpstream_SharedRefusalMessageNamesTheSharedBudget(t *testing.T) {
+	for name, anonCap := range map[string]int{
+		"checked before the daily cap": dataapi.DefaultAnonDailyCap,
+		"no daily cap: the handler":    0,
+	} {
+		t.Run(name, func(t *testing.T) {
+			clk := newTestClock()
+			api := liveRangeAPI(t, anthropicOutbound, anonCap, clk)
+			addrs := rangeAddrs(3)
+			for _, ip := range addrs[:2] {
+				for i := range 15 {
+					requireLiveServed(t, liveCall(t, api, ip, i), ip)
+				}
+			}
+			rec := liveREST(api, addrs[2])
+			requireLiveCeilingRefusal(t, rec, "REST")
+			require.Equal(t, "60", rec.Header().Get("Retry-After"), "the oldest counted call leaves the window in a minute")
+			if anonCap > 0 {
+				requireLiveCeilingRefusal(t, liveMCP(t, api, addrs[2]), "MCP, before the daily cap")
+				return
+			}
+			res := rpcResult(t, liveMCP(t, api, addrs[2]))
+			require.Equal(t, true, res["isError"], fmt.Sprint(res))
+			content := res["content"].([]any)
+			require.Equal(t, "rate_limited: "+liveCeilingText+"; retry in 60 seconds, or use a free API key for a budget of your own: "+
+				rangeTierURL+"/docs/access#access-keys", content[0].(map[string]any)["text"])
+		})
+	}
+}
+
+// A range caller's calls that read no live upstream (SDE tools on REST and MCP) are counted in
+// neither live bucket.
+func TestRangeUpstream_NonLiveCallsAreNotCharged(t *testing.T) {
+	clk := newTestClock()
+	api := liveRangeAPI(t, anthropicOutbound, dataapi.DefaultAnonDailyCap, clk)
+	addrs := rangeAddrs(3)
+	for range 5 {
+		rec := do(api, http.MethodPost, "/v1/tool/get_jumps_between", `{"from_system":"Jita","to_system":"Amarr"}`, fromIP(addrs[0])...)
+		require.NotEqual(t, http.StatusTooManyRequests, rec.Code, rec.Body.String())
+	}
+	for range 10 {
+		rec := postMCP(t, api, rpcCall("search_item_by_name", `{"names":["Tritanium"]}`), fromIP(addrs[0])...)
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		require.NotContains(t, rec.Body.String(), "rate_limited")
+	}
+	// The address still has all 15 (5 REST: the tool route allows 10 a minute), and the
+	// ranges all 30.
+	for i := range 15 {
+		var rec *httptest.ResponseRecorder
+		if i < 5 {
+			rec = liveREST(api, addrs[0])
+		} else {
+			rec = liveMCP(t, api, addrs[0])
+		}
+		requireLiveServed(t, rec, fmt.Sprintf("live call %d after the SDE calls", i+1))
+	}
+	requireOwnLiveRefusal(t, liveMCP(t, api, addrs[0]), "the 16th live call")
+	for i := range 15 {
+		requireLiveServed(t, liveCall(t, api, addrs[1], i), "second address")
+	}
+	requireLiveCeilingRefusal(t, liveMCP(t, api, addrs[2]), "the 31st live call of the ranges")
+	// A Janice appraisal with the caller's own key waits on a third party but spends no live
+	// budget, so the full ceiling does not refuse it either.
+	janice := []string{"X-Janice-Key", "caller-janice"}
+	appraise := `{"items":"Tritanium 1"}`
+	requireLiveServed(t, do(api, http.MethodPost, "/v1/tool/appraise_items", appraise, append(fromIP(addrs[2]), janice...)...), "Janice appraisal, REST")
+	requireLiveServed(t, postMCP(t, api, rpcCall("appraise_items", appraise), append(fromIP(addrs[2]), janice...)...), "Janice appraisal, MCP")
+}
+
+// Without ranges, or on a service that accepts no keys, a caller in Anthropic's ranges gets the
+// plain live budget: 5 a minute without keys, the keyed 10 for everyone where no keys exist.
+func TestRangeUpstream_NoTierWithoutRangesOrKeys(t *testing.T) {
+	api := liveRangeAPI(t, "", dataapi.DefaultAnonDailyCap, newTestClock())
+	for i := range 5 {
+		requireLiveServed(t, liveCall(t, api, "160.79.104.9", i), "no ranges")
+	}
+	requireOwnLiveRefusal(t, liveMCP(t, api, "160.79.104.9"), "the 6th call without ranges")
+
+	clk := newTestClock()
+	limits := dataapi.DefaultLimits().WithoutKeys()
+	deps := &tools.Deps{Client: tools.WithTransport(offlineTransport{})}
+	lim := dataapi.NewRangeUpstreamLimiter(limits.UpstreamTool, limits.Range, nil, clk.now)
+	noKeys := newAPI(t, dataapi.Config{
+		Deps: dataapi.NewDeps(deps, nil), ToolAPI: dataapi.ToolAPIPublic, Limits: &limits, Now: clk.now,
+		AnthropicRanges: mustRanges(t, anthropicOutbound), Upstream: lim,
+		MCP: mcpserver.HTTPHandler(deps, mcpserver.HTTPOptions{DisableLocalhostProtection: true, Upstream: dataapi.UpstreamHook(lim)}),
+	})
+	for i := range 10 {
+		requireLiveServed(t, liveCall(t, noKeys, "160.79.104.9", i), "no keys")
+	}
+	requireOwnLiveRefusal(t, liveMCP(t, noKeys, "160.79.104.9"), "the 11th call where no keys exist")
+}
+
+// NewUpstreamLimiter keeps the signature and use the web service compiles against
+// (services/native/server/router.go: cfg.Upstream = dataapi.NewUpstreamLimiter(limits.UpstreamTool, nil)).
+func TestNewUpstreamLimiter_SignatureUnchanged(t *testing.T) {
+	var build func(dataapi.Rate, dataapi.KeyResolver) *dataapi.UpstreamLimiter = dataapi.NewUpstreamLimiter
+	var allow func(*dataapi.UpstreamLimiter, *http.Request, string) (bool, time.Duration) = (*dataapi.UpstreamLimiter).Allow
+	limits := dataapi.DefaultLimits()
+	var cfg dataapi.Config
+	cfg.Upstream = dataapi.NewUpstreamLimiter(limits.UpstreamTool, nil)
+	require.NotNil(t, build(limits.UpstreamTool, nil))
+	req := httptest.NewRequest(http.MethodPost, "/v1/tool/get_type_info", nil)
+	for range 5 {
+		ok, _ := allow(cfg.Upstream, req, "get_type_info")
+		require.True(t, ok)
+	}
+	ok, retry := cfg.Upstream.Allow(req, "get_type_info")
+	require.False(t, ok, "the keyless budget of 5 a minute")
+	require.Positive(t, retry)
 }

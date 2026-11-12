@@ -435,6 +435,10 @@ type API struct {
 	// rangeRoutes maps the mux pattern of every route with a range tier to its range pair, for
 	// the ceiling check that runs before the anonymous daily cap (ServeHTTP).
 	rangeRoutes map[string]rangeRoute
+	// liveRoutes maps the mux pattern of every route whose calls the live-upstream limiter can
+	// charge (MCP, the tool route) to its check, for the live ceiling check that runs before the
+	// anonymous daily cap (ServeHTTP). Filled only on an API with the range tier.
+	liveRoutes map[string]liveRoute
 	// now is Config.Now (nil: time.Now).
 	now func() time.Time
 	// trialFree holds the mux patterns whose requests the anonymous daily cap does not count.
@@ -500,6 +504,7 @@ func New(cfg Config) (*API, error) {
 		anthropic:           slices.Clone(cfg.AnthropicRanges),
 		rangeTier:           len(cfg.AnthropicRanges) > 0 && cfg.Auth != nil,
 		rangeRoutes:         map[string]rangeRoute{},
+		liveRoutes:          map[string]liveRoute{},
 		now:                 cfg.Now,
 		log:                 cfg.Logger,
 		mux:                 http.NewServeMux(),
@@ -581,6 +586,9 @@ func (a *API) register(rt route) {
 	}
 	if limit.rng != nil {
 		a.rangeRoutes[pattern] = rangeRoute{limit: limit.rng, cache: rt.cache}
+	}
+	if spends := liveCheckFor(rt.path); spends != nil && a.rangeTier {
+		a.liveRoutes[pattern] = liveRoute{spends: spends, cache: rt.cache}
 	}
 	if rt.anyMethod {
 		if gate {

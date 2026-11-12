@@ -100,7 +100,7 @@ func TestHTTPHandler_UsageLineForRateLimitedAndInvalidCalls(t *testing.T) {
 		DisableLocalhostProtection: true,
 		Keyed:                      func(*http.Request) bool { return true },
 		Logger:                     slog.New(slog.NewJSONHandler(&buf, nil)),
-		Upstream:                   func(*http.Request, string) (bool, time.Duration) { return false, time.Second },
+		Upstream:                   func(*http.Request, string) (bool, time.Duration, string) { return false, time.Second, "" },
 	}, exec)
 	post := func(body string) {
 		postRPC(t, h, body, "User-Agent", "Some Agent/2")

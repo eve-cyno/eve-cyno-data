@@ -52,7 +52,7 @@ func TestCall_InvalidArgumentsDoNotSpendTheUpstreamBudget(t *testing.T) {
 		ran++
 		return tools.Result{}, nil
 	}
-	cfg := serverConfig{allow: func(string) (bool, time.Duration) { asked++; return true, 0 }}
+	cfg := serverConfig{allow: func(string) (bool, time.Duration, string) { asked++; return true, 0, "" }}
 	cs := connect(t, buildServer(&tools.Deps{}, []catalog.Tool{market}, cfg, exec))
 
 	res := callWith(t, cs, "get_market_price", map[string]any{})

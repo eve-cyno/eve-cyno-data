@@ -790,3 +790,29 @@ func TestCheckAdminToken(t *testing.T) {
 func TestShutdownBudgetFitsDockersStopTimeout(t *testing.T) {
 	require.Less(t, shutdownBudget, 10*time.Second)
 }
+
+// With keys and the Anthropic ranges, a keyless caller inside them gets the live-tool range
+// budget (15 a minute) instead of the plain 5; a caller outside keeps the 5.
+func TestNewHandler_RangeCallersGetTheLiveRangeBudget(t *testing.T) {
+	ranges, err := anthropicRanges(lookupEnv(nil))
+	require.NoError(t, err)
+	keys, err := dataapi.ParseKeyFile(strings.NewReader("alpha:" + dataapi.HashKey("alpha-secret-key-0001") + "\n"))
+	require.NoError(t, err)
+	h, err := newHandler(&bootstrap.Deps{Tools: &tools.Deps{}}, exposure{toolAPI: true, auth: keys, anthropicRanges: ranges}, slog.Default())
+	require.NoError(t, err)
+	live := func(ip string) *httptest.ResponseRecorder {
+		req := httptest.NewRequest(http.MethodPost, "/v1/tool/get_market_price", strings.NewReader(`{"type_id":0}`))
+		req.Header.Set("CF-Connecting-IP", ip)
+		rec := httptest.NewRecorder()
+		h.ServeHTTP(rec, req)
+		return rec
+	}
+	// The tool route allows 10 a minute per address: more than the plain live budget.
+	for i := range 10 {
+		require.Equal(t, http.StatusOK, live("160.79.104.9").Code, "range call %d", i+1)
+	}
+	for i := range 5 {
+		require.Equal(t, http.StatusOK, live("192.0.2.9").Code, "call %d outside", i+1)
+	}
+	require.Equal(t, http.StatusTooManyRequests, live("192.0.2.9").Code)
+}

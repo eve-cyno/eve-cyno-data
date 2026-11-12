@@ -145,11 +145,18 @@ func noteLiveCall(r *http.Request, tool, surface string) {
 
 // UpstreamHook wraps u.Allow (nil u allows everything) as the mcpserver.HTTPOptions.Upstream
 // hook, with the in-flight backstop: a live MCP call on a request admitted to the work pool is
-// logged as inflight_misclassified. Pass the same limiter as Config.Upstream.
-func UpstreamHook(u *UpstreamLimiter) func(r *http.Request, tool string) (bool, time.Duration) {
-	return func(r *http.Request, tool string) (bool, time.Duration) {
+// logged as inflight_misclassified. A refusal by the shared live ceiling of the range tier
+// (NewRangeUpstreamLimiter) names that ceiling (shared), so the isError text says the limit is
+// shared; a refusal of the caller's own budget leaves shared empty. Pass the same limiter as
+// Config.Upstream.
+func UpstreamHook(u *UpstreamLimiter) func(r *http.Request, tool string) (ok bool, retryAfter time.Duration, shared string) {
+	return func(r *http.Request, tool string) (bool, time.Duration, string) {
 		noteLiveCall(r, tool, "mcp")
-		return u.Allow(r, tool)
+		ok, retry, shared := u.allow(r, tool)
+		if shared {
+			return false, retry, u.rng.sharedLimit()
+		}
+		return ok, retry, ""
 	}
 }
 
@@ -201,62 +208,79 @@ func (e errorReader) Read([]byte) (int, error) { return 0, e.err }
 // or a body over the transport's limit, or a request with an invalid API key, is work: it is
 // refused at once.
 func (a *API) mcpWaitsOnUpstream(r *http.Request, _ string) bool {
+	t, args, janice, ok := a.mcpToolCall(r)
+	return ok && t.WaitsOnUpstream(args, janice)
+}
+
+// mcpSpendsUpstream reports whether a POST to the MCP transport is a tools/call that the
+// transport's Upstream hook charges (catalog.Tool.SpendsUpstream), decoded as mcpWaitsOnUpstream
+// decodes it.
+func (a *API) mcpSpendsUpstream(r *http.Request, _ string) bool {
+	t, args, _, ok := a.mcpToolCall(r)
+	return ok && t.SpendsUpstream(args)
+}
+
+// mcpToolCall decodes a POST to the MCP transport as mcpWaitsOnUpstream describes: the tool of a
+// tools/call the transport would run for this caller, its arguments and whether the transport
+// hands it a Janice key. ok is false for anything the SDK or the handler refuses before a tool
+// runs. A peeked body is restored.
+func (a *API) mcpToolCall(r *http.Request) (t catalog.Tool, args map[string]any, janice bool, ok bool) {
 	if authErrorFrom(r.Context()) != nil {
-		return false // mcpTransport answers 401 at once, before any tool runs
+		return t, nil, false, false // mcpTransport answers 401 at once, before any tool runs
 	}
 	body, err := peekBody(r, toolBodyMax+1)
 	if err != nil || len(body) > toolBodyMax {
-		return false
+		return t, nil, false, false
 	}
 	if jsonTooDeep(body, maxJSONDepth) {
-		return false // the SDK's decoder refuses it before any tool runs
+		return t, nil, false, false // the SDK's decoder refuses it before any tool runs
 	}
 	// The SDK decodes the first JSON value of the body (trailing data is ignored) and serves a
 	// tools/call only as a JSON-RPC 2.0 call: a string or numeric id.
 	var env map[string]json.RawMessage
 	if json.NewDecoder(bytes.NewReader(body)).Decode(&env) != nil {
-		return false
+		return t, nil, false, false
 	}
 	var version string
 	if json.Unmarshal(env["jsonrpc"], &version) != nil || version != "2.0" {
-		return false
+		return t, nil, false, false
 	}
 	var id any
 	if json.Unmarshal(env["id"], &id) != nil {
-		return false
+		return t, nil, false, false
 	}
 	switch id.(type) {
 	case string, float64:
 	default:
-		return false
+		return t, nil, false, false
 	}
 	var method string
 	if json.Unmarshal(env["method"], &method) != nil || method != "tools/call" {
-		return false
+		return t, nil, false, false
 	}
 	var params map[string]json.RawMessage
 	if json.Unmarshal(env["params"], &params) != nil {
-		return false
+		return t, nil, false, false
 	}
 	var name string
 	if json.Unmarshal(params["name"], &name) != nil {
-		return false
+		return t, nil, false, false
 	}
-	t, ok := catalog.Lookup(name)
-	if !ok || t.Tier == catalog.TierDisabled || (t.Tier == catalog.TierKeyed && !KeyedTier(r)) {
-		return false // not on this caller's tool list: the SDK answers an error at once
+	t, found := catalog.Lookup(name)
+	if !found || t.Tier == catalog.TierDisabled || (t.Tier == catalog.TierKeyed && !KeyedTier(r)) {
+		return t, nil, false, false // not on this caller's tool list: the SDK answers an error at once
 	}
-	args := map[string]any{}
+	args = map[string]any{}
 	if raw := params["arguments"]; len(raw) > 0 && string(raw) != "null" {
 		if json.Unmarshal(raw, &args) != nil || args == nil {
-			return false
+			return t, nil, false, false
 		}
 	}
 	if t.CheckArgs(args) != nil {
-		return false
+		return t, nil, false, false
 	}
-	janice := catalog.JaniceKeyFrom(r.Header)
-	return t.WaitsOnUpstream(args, janice != "" && len(janice) <= maxCredentialLen)
+	key := catalog.JaniceKeyFrom(r.Header)
+	return t, args, key != "" && len(key) <= maxCredentialLen, true
 }
 
 // maxJSONDepth is the nesting depth the MCP SDK's JSON decoder accepts (encoding/json, used for the
@@ -299,41 +323,60 @@ func jsonTooDeep(b []byte, max int) bool {
 // arguments (catalog.Tool.BodyDependentClass) has its body peeked and decoded as the handler
 // decodes it.
 func (a *API) toolWaitsOnUpstream(r *http.Request, pattern string) bool {
+	t, args, janice, ok := a.restToolCall(r, pattern)
+	return ok && t.WaitsOnUpstream(args, janice)
+}
+
+// toolSpendsUpstream reports whether a POST to the REST tool route is a call the handler charges
+// to the live-upstream limiter (catalog.Tool.SpendsUpstream, on the public tool API only, where
+// that limiter applies), decided as toolWaitsOnUpstream decides its class.
+func (a *API) toolSpendsUpstream(r *http.Request, pattern string) bool {
+	if a.toolMode != ToolAPIPublic {
+		return false
+	}
+	t, args, _, ok := a.restToolCall(r, pattern)
+	return ok && t.SpendsUpstream(args)
+}
+
+// restToolCall decodes a POST to the REST tool route as toolWaitsOnUpstream describes: the tool,
+// its arguments (nil, the body unread, for a tool whose class does not depend on them) and
+// whether the executor gets a Janice key. ok is false for a request the handler refuses before
+// running the tool. A peeked body is restored.
+func (a *API) restToolCall(r *http.Request, pattern string) (t catalog.Tool, args map[string]any, janice bool, ok bool) {
 	if a.deps.Tools == nil {
-		return false
+		return t, nil, false, false
 	}
-	t, ok := catalog.Lookup(a.toolName(r, pattern))
-	if !ok {
-		return false
+	t, found := catalog.Lookup(a.toolName(r, pattern))
+	if !found {
+		return t, nil, false, false
 	}
-	janice := a.deps.Tools.JaniceAPIKey != ""
+	janice = a.deps.Tools.JaniceAPIKey != ""
 	if a.toolMode == ToolAPIPublic {
 		key := catalog.JaniceKeyFrom(r.Header)
 		switch {
 		case authErrorFrom(r.Context()) != nil, len(key) > maxCredentialLen, t.Tier == catalog.TierDisabled,
 			t.Tier == catalog.TierKeyed && !CallerFrom(r.Context()).Allows(catalog.TierKeyed):
-			return false
+			return t, nil, false, false
 		}
 		janice = key != ""
 	}
 	if !t.BodyDependentClass() {
-		return t.WaitsOnUpstream(nil, janice)
+		return t, nil, janice, true
 	}
 	body, err := peekBody(r, toolBodyMax+1)
 	if err != nil || len(body) > toolBodyMax {
-		return false
+		return t, nil, false, false
 	}
-	var args map[string]any
 	if len(body) > 0 && json.Unmarshal(body, &args) != nil {
-		return false
+		return t, nil, false, false
 	}
 	if args == nil {
 		args = map[string]any{}
 	}
 	if t.CheckArgs(args) != nil {
-		return false
+		return t, nil, false, false
 	}
-	return t.WaitsOnUpstream(args, janice)
+	return t, args, janice, true
 }
 
 // fitsSearchWaitsOnUpstream classes a fit search: one with a q the retriever embeds (any

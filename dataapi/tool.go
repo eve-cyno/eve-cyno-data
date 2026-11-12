@@ -157,8 +157,13 @@ func (a *API) tool(w http.ResponseWriter, r *http.Request) {
 				// the gate and the upstream limiter apply.
 				noteLiveCall(r, name, "rest")
 			}
-			if ok, retry := a.upstream.Allow(r, name); !ok {
+			if ok, retry, shared := a.upstream.allow(r, name); !ok {
 				use.Outcome = toolusage.RateLimited
+				if shared {
+					// The range tier's ceiling, which all keyless callers in the ranges share.
+					a.writeRangeCeilingRefusal(w, r, retry, a.upstream.rng)
+					return
+				}
 				w.Header().Set("Retry-After", strconv.Itoa(retrySeconds(retry)))
 				writeError(w, r, http.StatusTooManyRequests, "rate_limited",
 					"too many calls to "+name+", which reads live "+upstreamLabel(name)+" data and has a lower limit; slow down")

@@ -215,6 +215,9 @@ type rangeLimiter struct {
 	ceiling *windowLog // nil: unlimited
 	// ceilingRate is the ceiling's rate, which its refusal message states.
 	ceilingRate Rate
+	// unit names what the ceiling counts in its refusal message: "requests" on a route,
+	// "live-upstream calls" for the live tools (NewRangeUpstreamLimiter).
+	unit string
 }
 
 // newRangeLimiter returns the pair for the per-address rate and the shared ceiling, reading the
@@ -226,7 +229,7 @@ func newRangeLimiter(perAddr, ceiling Rate, now func() time.Time) *rangeLimiter 
 	if now == nil {
 		now = time.Now
 	}
-	l := &rangeLimiter{now: now}
+	l := &rangeLimiter{now: now, unit: "requests"}
 	if perAddr.enabled() {
 		w := newWindowLog(perAddr.Max, perAddr.Window)
 		l.perAddr = &w
@@ -325,7 +328,7 @@ func (a *API) limited(t tieredLimiter, h http.HandlerFunc) http.HandlerFunc {
 		ok, retry, shared := b.allow(a.keys.Key(r))
 		if !ok {
 			if shared {
-				a.writeRangeCeilingRefusal(w, r, retry, b.pair.ceilingRate)
+				a.writeRangeCeilingRefusal(w, r, retry, b.pair)
 				return
 			}
 			writeRateLimited(w, r, retry)
@@ -335,12 +338,19 @@ func (a *API) limited(t tieredLimiter, h http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
-// writeRangeCeilingRefusal answers 429 rate_limited for a full range ceiling of rate: the code
-// of every per-minute refusal (the code list is stable), its own message, which names the shared
-// limit and the way out (a free key), and Retry-After in whole seconds (at least 1).
-func (a *API) writeRangeCeilingRefusal(w http.ResponseWriter, r *http.Request, retry time.Duration, rate Rate) {
-	msg := fmt.Sprintf("the shared limit of %d requests per %s for all keyless claude.ai and Claude Desktop connector calls is reached; "+
-		"retry after Retry-After seconds, or use a free API key for a budget of your own", rate.Max, windowWord(rate))
+// sharedLimit names the ceiling of l as its refusals state it: "the shared limit of N <unit> per
+// minute for all keyless claude.ai and Claude Desktop connector calls".
+func (l *rangeLimiter) sharedLimit() string {
+	return fmt.Sprintf("the shared limit of %d %s per %s for all keyless claude.ai and Claude Desktop connector calls",
+		l.ceilingRate.Max, l.unit, windowWord(l.ceilingRate))
+}
+
+// writeRangeCeilingRefusal answers 429 rate_limited for the full ceiling of the range pair l: the
+// code of every per-minute refusal (the code list is stable), its own message, which names the
+// shared limit (rangeLimiter.sharedLimit) and the way out (a free key), and Retry-After in whole
+// seconds (at least 1).
+func (a *API) writeRangeCeilingRefusal(w http.ResponseWriter, r *http.Request, retry time.Duration, l *rangeLimiter) {
+	msg := l.sharedLimit() + " is reached; retry after Retry-After seconds, or use a free API key for a budget of your own"
 	if a.surface.PublicURL != "" {
 		msg += ": " + a.surface.PublicURL + "/docs/access#access-keys"
 	}
