@@ -2244,7 +2244,7 @@ paths:
       description: |-
         Compare the latest collected hour of EVE solar systems with their usual activity for the same hour of the week (UTC): jumps, ship, pod and NPC kills, each with the usual mean, its spread (sample standard deviation), the number of weeks sampled, a z-score and a plain word (about usual, busier, much busier, quieter, much quieter). The usual numbers never include the latest hour; a small gap on a quiet system stays 'about usual'; fewer than 4 weeks sampled answers 'not enough history'. Pass systems (up to 50 names), or region_name to list the systems furthest from usual in a region, e.g. the quietest systems in Delve now. Use for 'is Tama busier than usual', 'is this normal for this hour', 'which systems in Delve are unusually quiet right now'.
 
-        Sources: EVE Static Data Export (via Fuzzwork); ESI (EVE Swagger Interface); zKillboard (killmail counts). `result.data` is a `ActivityComparison` object when the call succeeds.
+        Sources: EVE Static Data Export (via Fuzzwork); ESI (EVE Swagger Interface). `result.data` is a `ActivityComparison` object when the call succeeds.
 
         Access tier: **public**. No key needed.
 
@@ -2910,7 +2910,7 @@ components:
           description: Region is the region name when the call was a region ranking; empty for a list of systems.
         direction:
           type: string
-          description: 'Direction is the filter used in a region ranking: "busier", "quieter" or "both".'
+          description: 'Direction is the filter requested: "busier", "quieter" or "both" ("both" when none was given). Only a region ranking applies it.'
         systems:
           type: array
           description: Systems holds the compared systems in request order, or the ranked systems of a region, furthest from usual first.

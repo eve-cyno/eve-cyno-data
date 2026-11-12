@@ -399,15 +399,31 @@ func baselineHours(hours []intelbase.HourStats) []BaselineHour {
 	return out
 }
 
+// unavailHoursText says how many hours of the week hold a metric the reader degraded.
+func unavailHoursText(n int) string {
+	verb := "have"
+	if n == 1 {
+		verb = "has"
+	}
+	return fmt.Sprintf("%d %s of the week %s an unavailable metric (%s)", n, plural(n, "hour", "hours"), verb,
+		strings.TrimSuffix(strings.TrimPrefix(unavailableText, "unavailable ("), ")"))
+}
+
 func baselineWeek(name string, b intelbase.Baseline, res *ActivityBaseline) string {
-	maxWeeks, anyJumpSamples, anyJumps, anySamples := 0, false, false, false
+	maxWeeks, anyJumpSamples, anyJumps, anySamples, unavailHours := 0, false, false, false, 0
 	for _, h := range b.Hours {
+		if len(unavailableMetrics(h)) > 0 {
+			unavailHours++
+		}
 		maxWeeks = max(maxWeeks, weeksSampled(h))
 		anyJumpSamples = anyJumpSamples || h.Jumps.N > 0
 		anyJumps = anyJumps || h.Jumps.Mean > 0
 		anySamples = anySamples || h.Jumps.N > 0 || h.ShipKills.N > 0
 	}
 	if !anySamples {
+		if unavailHours > 0 {
+			return fmt.Sprintf("No usable activity baseline for %s yet: %s.", name, unavailHoursText(unavailHours))
+		}
 		return fmt.Sprintf("No activity baseline for %s yet: no hour of the week has been sampled.", name)
 	}
 	metric, label, ranked := intelbase.MetricJumps, "jumps", "jumps"
@@ -435,7 +451,10 @@ func baselineWeek(name string, b intelbase.Baseline, res *ActivityBaseline) stri
 		out = append(out, "- most ship kills: "+rankedList(top, intelbase.MetricShipKills))
 	}
 	if maxWeeks < minBaselineWeeks {
-		out = append(out, fmt.Sprintf("fewer than %d weeks sampled; read as rough.", minBaselineWeeks))
+		out = append(out, fmt.Sprintf("Fewer than %d weeks sampled; read as rough.", minBaselineWeeks))
+	}
+	if unavailHours > 0 {
+		out = append(out, "Note: "+unavailHoursText(unavailHours)+"; ask with day and hour to see which.")
 	}
 	out = append(out, baselineMissedNote, "Ask with day and hour for the full numbers of one hour.")
 	if w := baselineWindowNote(res); w != "" {

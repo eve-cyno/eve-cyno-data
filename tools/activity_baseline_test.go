@@ -386,7 +386,7 @@ func TestBaseline_ThinWeekHistoryCaveat(t *testing.T) {
 	// The golden file has at most three jump samples per hour: the week view says so.
 	d := baselineDeps(t)
 	text, _ := runBaseline(t, d, map[string]any{"system_name": "Tama"})
-	require.Contains(t, text, "fewer than 4 weeks sampled; read as rough")
+	require.Contains(t, text, "Fewer than 4 weeks sampled; read as rough")
 	d = baselineDeps(t, tamaFiveWeeks()...)
 	text, _ = runBaseline(t, d, map[string]any{"system_name": "Tama"})
 	require.NotContains(t, text, "read as rough")
@@ -408,4 +408,22 @@ func TestBaseline_UnreadableFileText(t *testing.T) {
 	text, data := runBaseline(t, d, map[string]any{"system_name": "Tama"})
 	require.Equal(t, "The activity baseline file exists but could not be read; the operator was notified by the log.", text)
 	require.Nil(t, data)
+}
+
+func TestBaseline_WeekAllUnavailableIsNotUnsampled(t *testing.T) {
+	// Jumps and ship kills of the only stored hour are corrupt: the week was sampled, its
+	// numbers cannot be read. The answer must not claim nothing was sampled.
+	d := baselineDeps(t,
+		`DELETE FROM baseline`, `DELETE FROM how_samples`,
+		`INSERT OR REPLACE INTO how_samples VALUES ('map_jumps', 43, 5), ('map_kills', 43, 5)`,
+		fmt.Sprintf(`INSERT OR REPLACE INTO baseline VALUES (%d, 43, 100, 1, 100, 1, 4, 6, 15, 47, 0, 0, 0)`, blTama))
+	text, _ := runBaseline(t, d, map[string]any{"system_name": "Tama"})
+	require.NotContains(t, text, "no hour of the week has been sampled")
+	require.Contains(t, text, "1 hour of the week has an unavailable metric")
+}
+
+func TestBaseline_WeekMentionsUnavailableHours(t *testing.T) {
+	d := baselineDeps(t, corruptJumps()...)
+	text, _ := runBaseline(t, d, map[string]any{"system_name": "Tama"})
+	require.Contains(t, text, "1 hour of the week has an unavailable metric")
 }

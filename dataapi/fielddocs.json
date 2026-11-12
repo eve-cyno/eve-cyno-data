@@ -239,7 +239,7 @@
   "tools.ActivityBaseline.System": "System is the system name as the SDE spells it.",
   "tools.ActivityBaseline.SystemID": "SystemID is the solar system ID.",
   "tools.ActivityBaseline.View": "View says what was asked: \"hour\" (day and hour), \"day\", \"hour_every_day\" or \"week\".",
-  "tools.ActivityComparison.Direction": "Direction is the filter used in a region ranking: \"busier\", \"quieter\" or \"both\".",
+  "tools.ActivityComparison.Direction": "Direction is the filter requested: \"busier\", \"quieter\" or \"both\" (\"both\" when none was given). Only a region ranking applies it.",
   "tools.ActivityComparison.HourLabel": "HourLabel names that hour, e.g. \"Tuesday 2026-11-10 19:00-20:00 UTC\"; weekday and hour come from the baseline file's own hour of week.",
   "tools.ActivityComparison.HourStart": "HourStart is the start of the latest collected hour (RFC 3339, UTC).",
   "tools.ActivityComparison.LeftOutNotEnoughHistory": "LeftOutNotEnoughHistory counts the region systems left out because fewer than 4 weeks were sampled.",

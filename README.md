@@ -389,9 +389,9 @@ Read this before you show answers to other people.
   `source_url`, `author` when known, `license`, and `credit` / `license_url` when the terms require them): keep the link back
   wherever you show a fit. A search returns at most 24 fits, ranked, with no paging: the service is not a way to dump a site's
   data.
-- **Activity baselines.** `get_activity_baseline` and `compare_activity_to_baseline` derive its numbers from ESI's hourly map statistics (jumps, ship, pod and NPC
+- **Activity baselines.** `get_activity_baseline` derives its numbers from ESI's hourly map statistics (jumps, ship, pod and NPC
   kills) and from per-system counts and ISK sums of killmails in zKillboard's public R2Z2 stream; killmails are Fenris Creations
-  game data. Only counts are published, never a killmail, pilot, corporation or alliance. The answer names the UTC hour, the
+  game data. Only counts are published, never a killmail, pilot, corporation or alliance. `compare_activity_to_baseline` reads the same file but only its ESI map figures. The answer names the UTC hour, the
   number of weeks sampled and the date from which killmails are counted.
 - **Tool answers.** Each response lists its upstreams in `attribution` (REST) or `_meta["eve-cyno/attribution"]` plus a
   `Sources:` text line (MCP). The full list with licences is at the end of [`llms-full.txt`](llms-full.txt).

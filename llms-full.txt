@@ -541,7 +541,7 @@ Compare the latest collected hour of EVE solar systems with their usual activity
   - `region_name` (string): Region name, e.g. 'Delve' (case-insensitive): lists the systems of the region furthest from their usual activity. Use this or systems, not both.
   - `systems` (array of string): Up to 50 solar system names, e.g. ['Tama', 'Jita']: one line each. Use this or region_name, not both.
 - Typed result (`result.data`): ActivityComparison with fields `hour_start`, `hour_label`, `map_window_start`, `region`, `direction`, `systems`, `unknown_systems`, `region_systems`, `truncated`, `left_out_not_enough_history`, `notes`
-- Sources: EVE Static Data Export (via Fuzzwork); ESI (EVE Swagger Interface); zKillboard (killmail counts)
+- Sources: EVE Static Data Export (via Fuzzwork); ESI (EVE Swagger Interface)
 
 ### find_systems
 

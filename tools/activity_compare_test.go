@@ -255,12 +255,21 @@ func TestCompare_RegionRanksAndLimits(t *testing.T) {
 	require.Equal(t, ids[2], data.Systems[0].SystemID)
 	require.Contains(t, text, "5 systems furthest from usual:")
 
-	// Too few weeks sampled: every system is left out and the footer counts them.
-	d = baselineDeps(t, append(hourEdits(fresh, how, 3), edits[len(hourEdits(fresh, how, 4)):]...)...)
+	// Too few weeks sampled: every system is left out, the footer counts them and the
+	// answer says nothing was compared (never "no system is away from usual").
+	jumps3 := []int{900, 1000, 1100}
+	thin := hourEdits(fresh, how, 3)
+	for _, id := range ids {
+		thin = append(thin, baseRow(id, how, jumps3, nil, nil, nil), latestRow(id, 500, 0, 0, 0))
+	}
+	d = baselineDeps(t, thin...)
 	text, data = runCompare(t, d, map[string]any{"region_name": "Delve"})
 	require.Empty(t, data.Systems)
 	require.Equal(t, len(region), data.LeftOutNotEnoughHistory)
 	require.Contains(t, text, fmt.Sprintf("%d systems left out: fewer than 4 weeks sampled.", len(region)))
+	require.Contains(t, text, "No system in Delve has 4 weeks sampled at "+data.HourLabel+" yet.")
+	require.NotContains(t, text, "beyond the floors")
+	require.NotContains(t, text, "unavailable")
 }
 
 func TestCompare_RegionTruncated(t *testing.T) {
@@ -291,6 +300,7 @@ func TestCompare_RegionWithoutJumps(t *testing.T) {
 		latestRow(other, 500, 0, 0, 0))...)
 	text, data := runCompare(t, d, map[string]any{"region_name": "A-R00003"})
 	require.Contains(t, text, "No system in A-R00003 has a jump baseline (no gate jumps); ranked by kills only.")
+	require.Contains(t, data.Notes, "No system in A-R00003 has a jump baseline (no gate jumps); ranked by kills only.")
 	require.Len(t, data.Systems, 1)
 	require.Equal(t, id, data.Systems[0].SystemID)
 	require.Equal(t, "much_busier", metricOf(t, data.Systems[0], "npc_kills").Band)
@@ -439,8 +449,7 @@ func TestCompare_NotUpstream(t *testing.T) {
 }
 
 func TestAttribution_ActivityComparison(t *testing.T) {
-	require.Equal(t, sourceNames(Attribution("get_activity_baseline")), sourceNames(Attribution("compare_activity_to_baseline")))
-	require.Len(t, Attribution("compare_activity_to_baseline"), 3)
+	require.Equal(t, sourceNames([]Source{sourceSDE, sourceESI}), sourceNames(Attribution("compare_activity_to_baseline")))
 }
 
 var _ = intelbase.ErrNotPublished
@@ -451,4 +460,36 @@ func TestCompare_UnreadableFileText(t *testing.T) {
 	res, err := ExecuteToolResult(context.Background(), d, "compare_activity_to_baseline", map[string]any{"systems": []any{"Tama"}})
 	require.NoError(t, err)
 	require.Equal(t, "The activity baseline file exists but could not be read; the operator was notified by the log.", res.Text)
+}
+
+func TestCompare_RegionNotesOnlyForListedRows(t *testing.T) {
+	fresh := cmpFresh()
+	how := howOf(fresh)
+	d := baselineDeps(t)
+	rid := d.SDE.ResolveRegionName("Delve")
+	require.NotNil(t, rid)
+	region := d.SDE.GetSystemsInRegion(*rid, -1, 1)
+	require.GreaterOrEqual(t, len(region), 6)
+	edits := hourEdits(fresh, how, 4)
+	for _, r := range region[:6] {
+		id := r["system_id"].(int)
+		// Jumps sums no counts can produce; ship kills 5,5,5,5 against 30 now.
+		edits = append(edits,
+			fmt.Sprintf(`INSERT OR REPLACE INTO baseline VALUES (%d, %d, 100, 1, 20, 100, 0, 0, 0, 0, 0, 0, 0)`, id, how),
+			latestRow(id, 0, 30, 0, 0))
+	}
+	d = baselineDeps(t, edits...)
+	text, data := runCompare(t, d, map[string]any{"region_name": "Delve", "limit": 1})
+	require.Len(t, data.Systems, 1)
+	require.Equal(t, 1, strings.Count(text, "jumps skipped, the baseline for it is unavailable."), text)
+	require.Contains(t, text, data.Systems[0].System+": jumps skipped")
+	require.Contains(t, text, "5 more systems had an unavailable metric.")
+	require.Len(t, data.Notes, 3) // jump-baseline note, the listed row's skip, the counted line
+}
+
+func TestCompare_LegendFloorsFromTable(t *testing.T) {
+	fresh := cmpFresh()
+	d := baselineDeps(t, append(hourEdits(fresh, howOf(fresh), 5), tamaBase(howOf(fresh)))...)
+	text, _ := runCompare(t, d, map[string]any{"systems": []any{"Tama"}})
+	require.Contains(t, text, "a gap of at least 20 jumps, 3 ship kills, 2 pod kills or 20 NPC kills.")
 }

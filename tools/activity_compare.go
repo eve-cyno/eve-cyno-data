@@ -181,7 +181,9 @@ func compareLimitArg(v any) (int, bool) {
 
 // compareActivityToBaseline answers compare_activity_to_baseline. Every failure is a
 // text answer (a nil error), so a missing or unreadable baseline file is a clean tool
-// answer, never a 500.
+// answer, never a 500. A region is ranked by the largest |z| among a system's metrics, as
+// the approved formula says; with sd clamped to 1, a kill metric with mean 0 and sd 0 can
+// therefore outrank jump swings (25 NPC kills against a mean of 0 gives z 25).
 func compareActivityToBaseline(ctx context.Context, deps *Deps, args map[string]any) (string, *ActivityComparison, error) {
 	return compareActivity(ctx, deps, args, maxRegionSystems)
 }
@@ -320,7 +322,12 @@ func compareLegend(res *ActivityComparison) string {
 		b.WriteString(" Jumps, ship, pod and NPC kills counted since " + *res.MapWindowStart + " (UTC).")
 	}
 	b.WriteString(" Sample standard deviation; z = (now - usual) / max(sd, 1).")
-	b.WriteString(" A band other than about usual also needs a gap of at least 20 jumps, 3 ship kills, 2 pod kills or 20 NPC kills.")
+	gaps := make([]string, len(compareMetrics))
+	for i, c := range compareMetrics {
+		gaps[i] = fmt.Sprintf("%d %s", c.floor, c.label)
+	}
+	b.WriteString(" A band other than about usual also needs a gap of at least " +
+		strings.Join(gaps[:len(gaps)-1], ", ") + " or " + gaps[len(gaps)-1] + ".")
 	return b.String()
 }
 
@@ -330,12 +337,14 @@ func compareRegion(res *ActivityComparison, latest intelbase.LatestHour, nameOf 
 	type ranked struct {
 		sc    SystemComparison
 		score float64
+		skip  []string
 	}
 	var (
-		rows    []ranked
-		leftOut int
-		anyJump bool
-		kept    []intelbase.SystemLatest
+		rows      []ranked
+		leftOut   int
+		withSkips int
+		anyJump   bool
+		kept      []intelbase.SystemLatest
 	)
 	for _, sl := range latest.Systems {
 		if weeksSampled(sl.Usual) < minBaselineWeeks {
@@ -348,11 +357,15 @@ func compareRegion(res *ActivityComparison, latest intelbase.LatestHour, nameOf 
 	res.LeftOutNotEnoughHistory = leftOut
 	var out []string
 	if len(kept) > 0 && !anyJump {
-		out = append(out, fmt.Sprintf("No system in %s has a jump baseline (no gate jumps); ranked by kills only.", res.Region))
+		note := fmt.Sprintf("No system in %s has a jump baseline (no gate jumps); ranked by kills only.", res.Region)
+		res.Notes = append(res.Notes, note)
+		out = append(out, note)
 	}
 	for _, sl := range kept {
 		sc, sk := compareSystem(nameOf[sl.SystemID], sl)
-		*skipped = append(*skipped, sk...)
+		if len(sk) > 0 {
+			withSkips++
+		}
 		score := 0.0
 		for _, m := range sc.Metrics {
 			if m.Band == bandAbout || m.Band == bandNotEnoug || (m.Metric == "jumps" && !anyJump) {
@@ -364,7 +377,7 @@ func compareRegion(res *ActivityComparison, latest intelbase.LatestHour, nameOf 
 			score = math.Max(score, math.Abs(*m.Z))
 		}
 		if score > 0 {
-			rows = append(rows, ranked{sc, score})
+			rows = append(rows, ranked{sc, score, sk})
 		}
 	}
 	slices.SortStableFunc(rows, func(a, b ranked) int {
@@ -379,8 +392,19 @@ func compareRegion(res *ActivityComparison, latest intelbase.LatestHour, nameOf 
 	if len(rows) > limit {
 		rows = rows[:limit]
 	}
+	for _, r := range rows {
+		if len(r.skip) > 0 {
+			withSkips--
+			*skipped = append(*skipped, r.skip...)
+		}
+	}
+	if withSkips > 0 {
+		*skipped = append(*skipped, fmt.Sprintf("%d more %s had an unavailable metric.", withSkips, plural(withSkips, "system", "systems")))
+	}
 	what := map[string]string{"busier": "above usual", "quieter": "below usual", "both": "from usual"}[direction]
-	if len(rows) == 0 {
+	if len(kept) == 0 {
+		out = append(out, fmt.Sprintf("No system in %s has %d weeks sampled at %s yet.", res.Region, minBaselineWeeks, res.HourLabel))
+	} else if len(rows) == 0 {
 		out = append(out, fmt.Sprintf("%s, latest collected hour %s: no system is %s beyond the floors.",
 			res.Region, res.HourLabel, strings.Replace(what, "from usual", "away from usual", 1)))
 	} else {

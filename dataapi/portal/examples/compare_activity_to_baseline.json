@@ -25,11 +25,6 @@
         "name": "ESI (EVE Swagger Interface)",
         "url": "https://esi.evetech.net/",
         "license": "EVE Developer License Agreement (Fenris Creations); non-commercial use"
-      },
-      {
-        "name": "zKillboard (killmail counts)",
-        "url": "https://zkillboard.com/",
-        "license": "Public R2Z2 API under zKillboard's usage etiquette; only per-system counts and ISK sums derived from it are published; killmails are Fenris Creations game data (EVE Developer License Agreement)"
       }
     ],
     "result": {

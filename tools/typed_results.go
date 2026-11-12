@@ -1367,7 +1367,7 @@ type ActivityComparison struct {
 	MapWindowStart *string `json:"map_window_start"`
 	// Region is the region name when the call was a region ranking; empty for a list of systems.
 	Region string `json:"region"`
-	// Direction is the filter used in a region ranking: "busier", "quieter" or "both".
+	// Direction is the filter requested: "busier", "quieter" or "both" ("both" when none was given). Only a region ranking applies it.
 	Direction string `json:"direction"`
 	// Systems holds the compared systems in request order, or the ranked systems of a region, furthest from usual first.
 	Systems []SystemComparison `json:"systems"`
