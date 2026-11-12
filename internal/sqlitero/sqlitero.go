@@ -49,6 +49,12 @@ type Options struct {
 	// OnOpen rejects it): calls then fail with ErrNotOpen until a reload check,
 	// at most once per interval, opens the file. It needs a positive interval.
 	// Without Lazy a file that cannot be opened is an error from Open.
+	//
+	// Pool property (all modes): a Handle's *sql.DB is a pool, and every NEW
+	// connection opens the path again. After a swap, a new connection of an old,
+	// still-referenced Handle can therefore read the NEW file while Gen() still
+	// reports the old generation. A caller that mixes several queries must run them
+	// on ONE connection (h.DB().Conn(ctx)) taken while it holds the reference.
 	Lazy bool
 }
 
@@ -91,9 +97,15 @@ func (h *Handle) acquire() bool {
 }
 
 // Release drops a reference taken by Acquire and closes the pool if it was the
-// last one of a retired handle. Call it exactly once per Acquire.
+// last one of a retired handle. Call it exactly once per Acquire; an extra call
+// panics (it would otherwise drive the count negative and close a pool another
+// query still uses).
 func (h *Handle) Release() {
 	h.mu.Lock()
+	if h.refs <= 0 {
+		h.mu.Unlock()
+		panic("sqlitero: Handle.Release called more often than Acquire")
+	}
 	h.refs--
 	closeNow := h.retired && h.refs == 0 && !h.closed
 	if closeNow {
@@ -183,7 +195,9 @@ func (r *DB) openHandle() (*sql.DB, os.FileInfo, error) {
 // Open opens path read-only and arms the reload check: the file's identity
 // (inode, size, mtime) is checked at most once per interval, piggy-backed on a
 // call. interval <= 0 disables reloading (the handle stays on the file it opened).
-// A missing or unusable file is an error, unless opt.Lazy is set.
+// A missing or unusable file is an error, unless opt.Lazy is set. See Options.Lazy
+// for the pool property: a handle's pool can open the replaced file on a new
+// connection, so multi-query callers use one h.DB().Conn(ctx).
 func Open(path string, interval time.Duration, opt Options) (*DB, error) {
 	if opt.Lazy && interval <= 0 {
 		return nil, fmt.Errorf("%s: a lazy open needs a positive reload interval, got %s", opt.Name, interval)
@@ -385,14 +399,16 @@ type Row struct {
 	row     *sql.Row
 	err     error
 	release func()
+	once    sync.Once
 }
 
-// Scan copies the single row into dest and releases the handle reference.
+// Scan copies the single row into dest and releases the handle reference (once,
+// even if Scan is called again).
 func (p *Row) Scan(dest ...any) error {
 	if p.err != nil {
 		return p.err
 	}
-	defer p.release()
+	defer p.once.Do(p.release)
 	return p.row.Scan(dest...)
 }
 

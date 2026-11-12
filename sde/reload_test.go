@@ -294,6 +294,7 @@ func TestClose_WaitsForInFlightRowsAndRejectsNewQueries(t *testing.T) {
 	require.False(t, s.Available())
 	_, qerr := s.db.Query(`SELECT 1`)
 	require.ErrorIs(t, qerr, errClosed)
+	require.EqualError(t, qerr, "sde: database is closed")
 	require.NoError(t, s.Close(), "Close is idempotent")
 }
 

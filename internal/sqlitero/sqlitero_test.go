@@ -557,3 +557,71 @@ func TestOpen_LazyConcurrentFirstOpen(t *testing.T) {
 	require.Zero(t, bad.Load())
 	require.Equal(t, uint64(1), db.Gen())
 }
+
+// TestHandleRelease_DoubleReleasePanics: an extra Release would drive refs negative
+// and could close a pool another query still uses; it fails loudly instead.
+func TestHandleRelease_DoubleReleasePanics(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "readings.sqlite")
+	buildReadings(t, path, 1)
+	db, _ := openReadings(t, path, time.Minute, Options{Name: "readings"})
+	h, err := db.Acquire()
+	require.NoError(t, err)
+	h.Release()
+	require.PanicsWithValue(t, "sqlitero: Handle.Release called more often than Acquire", h.Release)
+	// refs is back to zero, not negative: the handle still works.
+	h2, err := db.Acquire()
+	require.NoError(t, err)
+	h2.Release()
+}
+
+// TestRow_ScanTwiceReleasesOnce: a second Scan on the same Row must not release
+// the handle a second time.
+func TestRow_ScanTwiceReleasesOnce(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "readings.sqlite")
+	buildReadings(t, path, 1)
+	db, _ := openReadings(t, path, time.Minute, Options{Name: "readings"})
+	row := db.QueryRow(`SELECT v FROM readings`)
+	var v int
+	require.NoError(t, row.Scan(&v))
+	require.NotPanics(t, func() { _ = row.Scan(&v) })
+	h, err := db.Acquire()
+	require.NoError(t, err)
+	h.Release()
+}
+
+// TestHandle_PoolConnectionOpensTheNewFile documents the pool property: a handle's
+// *sql.DB opens the path again for every NEW connection, so after a swap a second
+// connection of the OLD handle reads the NEW file while Gen() still says 1.
+func TestHandle_PoolConnectionOpensTheNewFile(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "readings.sqlite")
+	buildReadings(t, path, 1)
+	db, clk := openReadings(t, path, time.Minute, Options{Name: "readings"})
+	h, err := db.Acquire()
+	require.NoError(t, err)
+	defer h.Release()
+
+	ctx := t.Context()
+	c1, err := h.DB().Conn(ctx)
+	require.NoError(t, err)
+	defer c1.Close()
+	var v int
+	require.NoError(t, c1.QueryRowContext(ctx, `SELECT v FROM readings`).Scan(&v))
+	require.Equal(t, 1, v)
+
+	replaceByRename(t, path, 2)
+	clk.advance(2 * time.Minute)
+	h2, err := db.Acquire() // triggers the swap; h is retired but still referenced
+	require.NoError(t, err)
+	h2.Release()
+	require.Equal(t, uint64(2), h2.Gen())
+
+	// c1 is busy, so the pool opens a new connection: it sees the NEW file.
+	c2, err := h.DB().Conn(ctx)
+	require.NoError(t, err)
+	defer c2.Close()
+	require.NoError(t, c2.QueryRowContext(ctx, `SELECT v FROM readings`).Scan(&v))
+	require.Equal(t, 2, v, "a new pooled connection of the old handle reads the new file")
+	require.Equal(t, uint64(1), h.Gen())
+	require.NoError(t, c1.QueryRowContext(ctx, `SELECT v FROM readings`).Scan(&v))
+	require.Equal(t, 1, v, "the connection opened before the swap keeps the old file")
+}

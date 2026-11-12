@@ -9,14 +9,7 @@ import (
 
 // DefaultReloadInterval is how often (at most) an open SDE handle checks whether
 // the file on disk was replaced.
-const DefaultReloadInterval = sqlitero.DefaultReloadInterval
-
-// errClosed is wrapped by the error of queries issued after Close
-// ("sde: database is closed").
-var errClosed = sqlitero.ErrClosed
-
-// dsn is the read-only connection string for the SDE file.
-func dsn(path string) string { return sqlitero.DSN(path) }
+const DefaultReloadInterval = 5 * time.Minute
 
 // openReloading opens the SDE file through the shared read-only reload handle
 // (internal/sqlitero): the ingest rebuilds sde.sqlite when Fuzzwork publishes a
