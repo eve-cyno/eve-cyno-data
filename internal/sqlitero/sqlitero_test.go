@@ -429,3 +429,131 @@ func TestAcquireRelease_ConcurrentAcrossSwaps(t *testing.T) {
 	require.NoError(t, db.Close())
 	require.True(t, cur.Closed())
 }
+
+// TestOpen_LazyMissingFile: a lazy DB opens on a missing file, answers with an
+// honest error (no stat per call), and serves the file once it appears and the
+// next check comes due.
+func TestOpen_LazyMissingFile(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "readings.sqlite")
+	db, clk := openReadings(t, path, time.Minute, Options{Name: "readings", Lazy: true})
+
+	err := db.Ping()
+	require.ErrorIs(t, err, ErrNotOpen)
+	require.ErrorIs(t, err, os.ErrNotExist, "the error says why the file is not open")
+	require.True(t, strings.HasPrefix(err.Error(), "readings: "), err.Error())
+	_, err = db.Query(`SELECT v FROM readings`)
+	require.ErrorIs(t, err, ErrNotOpen)
+	var v int
+	require.ErrorIs(t, db.QueryRow(`SELECT v FROM readings`).Scan(&v), ErrNotOpen)
+	_, err = db.Acquire()
+	require.ErrorIs(t, err, ErrNotOpen)
+	require.Zero(t, db.Gen())
+	require.Nil(t, db.Current())
+	require.Nil(t, db.ServedFile())
+
+	buildReadings(t, path, 4)
+	clk.advance(59 * time.Second)
+	require.ErrorIs(t, db.Ping(), ErrNotOpen, "no retry inside the interval")
+
+	clk.advance(time.Second)
+	require.NoError(t, db.Ping())
+	require.Equal(t, uint64(1), db.Gen())
+	require.Equal(t, 4, readValue(t, db))
+	require.NotNil(t, db.ServedFile())
+
+	replaceByRename(t, path, 5)
+	clk.advance(time.Minute)
+	require.Equal(t, 5, readValue(t, db), "after the lazy open the file reloads as usual")
+	require.Equal(t, uint64(2), db.Gen())
+}
+
+// TestOpen_LazyUnusableFileRecovers: a corrupt file or one the hook rejects keeps
+// the lazy DB unopened with that reason; a later good file is served.
+func TestOpen_LazyUnusableFileRecovers(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "readings.sqlite")
+	require.NoError(t, os.WriteFile(path, []byte("not a sqlite database, only text, long enough"), 0o644))
+	var reject atomic.Bool
+	opt := Options{Name: "readings", Lazy: true, OnOpen: func(*sql.DB) error {
+		if reject.Load() {
+			return errors.New("unknown format")
+		}
+		return nil
+	}}
+	db, clk := openReadings(t, path, time.Minute, opt)
+	err := db.Ping()
+	require.ErrorIs(t, err, ErrNotOpen)
+	require.NotErrorIs(t, err, os.ErrNotExist)
+
+	require.NoError(t, os.Remove(path))
+	clk.advance(time.Minute)
+	require.ErrorIs(t, db.Ping(), os.ErrNotExist, "the reason follows the latest check")
+
+	reject.Store(true)
+	replaceByRename(t, path, 1)
+	clk.advance(time.Minute)
+	err = db.Ping()
+	require.ErrorIs(t, err, ErrNotOpen)
+	require.ErrorContains(t, err, "unknown format")
+
+	reject.Store(false)
+	clk.advance(time.Minute)
+	require.Equal(t, 1, readValue(t, db))
+	require.Equal(t, uint64(1), db.Gen())
+}
+
+func TestOpen_LazyNeedsPositiveInterval(t *testing.T) {
+	_, err := Open(filepath.Join(t.TempDir(), "readings.sqlite"), 0, Options{Name: "readings", Lazy: true})
+	require.Error(t, err)
+}
+
+func TestClose_LazyNeverOpened(t *testing.T) {
+	db, err := Open(filepath.Join(t.TempDir(), "readings.sqlite"), time.Minute, Options{Name: "readings", Lazy: true})
+	require.NoError(t, err)
+	require.NoError(t, db.Close())
+	require.ErrorIs(t, db.Ping(), ErrClosed)
+	require.NoError(t, db.Close())
+}
+
+// TestOpen_LazyConcurrentFirstOpen: callers race the first open (run with -race);
+// every call either says not open or succeeds, and exactly one generation opens.
+func TestOpen_LazyConcurrentFirstOpen(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "readings.sqlite")
+	db, err := Open(path, time.Millisecond, Options{Name: "readings", Lazy: true})
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = db.Close() })
+
+	var (
+		stop   atomic.Bool
+		bad    atomic.Int64
+		served atomic.Int64
+		wg     sync.WaitGroup
+	)
+	for range 8 {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for !stop.Load() {
+				h, err := db.Acquire()
+				if err != nil {
+					if !errors.Is(err, ErrNotOpen) {
+						bad.Add(1)
+					}
+					continue
+				}
+				var v int
+				if err := h.DB().QueryRow(`SELECT v FROM readings`).Scan(&v); err != nil || v != 9 || h.Gen() != 1 {
+					bad.Add(1)
+				}
+				h.Release()
+				served.Add(1)
+			}
+		}()
+	}
+	time.Sleep(10 * time.Millisecond)
+	replaceByRename(t, path, 9)
+	require.Eventually(t, func() bool { return served.Load() > 100 }, 5*time.Second, time.Millisecond)
+	stop.Store(true)
+	wg.Wait()
+	require.Zero(t, bad.Load())
+	require.Equal(t, uint64(1), db.Gen())
+}

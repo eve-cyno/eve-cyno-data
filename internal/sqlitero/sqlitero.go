@@ -32,6 +32,10 @@ const DefaultReloadInterval = 5 * time.Minute
 // ErrClosed is returned (wrapped with the DB's Name) for calls issued after Close.
 var ErrClosed = errors.New("database is closed")
 
+// ErrNotOpen is returned (wrapped with the DB's Name and the reason of the last
+// failed open) by a lazy DB that has not opened its file yet.
+var ErrNotOpen = errors.New("database file not open")
+
 // Options configures a DB.
 type Options struct {
 	// Name labels log lines and errors ("<Name> reload: ...", "<Name>: database is
@@ -41,6 +45,11 @@ type Options struct {
 	// each reload) before it is served. An error rejects that file: the first open
 	// fails, and a reload keeps serving the current handle.
 	OnOpen func(db *sql.DB) error
+	// Lazy makes Open succeed when the file is missing or unusable (also when
+	// OnOpen rejects it): calls then fail with ErrNotOpen until a reload check,
+	// at most once per interval, opens the file. It needs a positive interval.
+	// Without Lazy a file that cannot be opened is an error from Open.
+	Lazy bool
 }
 
 // Handle is one generation of the connection pool. It is reference counted: every
@@ -128,10 +137,11 @@ type DB struct {
 	path      string
 	name      string
 	onOpen    func(*sql.DB) error
-	interval  time.Duration    // <= 0 disables reloading (open-once behaviour)
-	now       func() time.Time // injectable clock (SetClock)
-	beforeUse func()           // test hook: runs after a handle is acquired, before it is used
-	errClosed error            // ErrClosed wrapped with the name
+	interval  time.Duration         // <= 0 disables reloading (open-once behaviour)
+	now       func() time.Time      // injectable clock (SetClock)
+	beforeUse func()                // test hook: runs after a handle is acquired, before it is used
+	errClosed error                 // ErrClosed wrapped with the name
+	lastErr   atomic.Pointer[error] // why the file is not open yet (lazy DB without a handle)
 
 	cur       atomic.Pointer[Handle]
 	nextCheck atomic.Int64 // unix nanos of the earliest next stat
@@ -173,8 +183,11 @@ func (r *DB) openHandle() (*sql.DB, os.FileInfo, error) {
 // Open opens path read-only and arms the reload check: the file's identity
 // (inode, size, mtime) is checked at most once per interval, piggy-backed on a
 // call. interval <= 0 disables reloading (the handle stays on the file it opened).
-// A missing or unusable file is an error.
+// A missing or unusable file is an error, unless opt.Lazy is set.
 func Open(path string, interval time.Duration, opt Options) (*DB, error) {
+	if opt.Lazy && interval <= 0 {
+		return nil, fmt.Errorf("%s: a lazy open needs a positive reload interval, got %s", opt.Name, interval)
+	}
 	r := &DB{
 		path:      path,
 		name:      opt.Name,
@@ -185,9 +198,14 @@ func Open(path string, interval time.Duration, opt Options) (*DB, error) {
 	}
 	db, fi, err := r.openHandle()
 	if err != nil {
-		return nil, err
+		if !opt.Lazy {
+			return nil, err
+		}
+		r.lastErr.Store(&err)
+		slog.Warn(r.name+": file not open yet, retrying at each reload check", "path", path, "interval", interval, "error", err)
+	} else {
+		r.cur.Store(&Handle{db: db, gen: 1, fi: fi})
 	}
-	r.cur.Store(&Handle{db: db, gen: 1, fi: fi})
 	r.nextCheck.Store(r.now().Add(interval).UnixNano())
 	return r, nil
 }
@@ -208,21 +226,34 @@ func (r *DB) SetBeforeUse(f func()) { r.beforeUse = f }
 func (r *DB) Interval() time.Duration { return r.interval }
 
 // Current returns the generation being served now, without a reference and
-// without the reload check. Test hook.
+// without the reload check; nil while a lazy DB has not opened its file. Test
+// hook.
 func (r *DB) Current() *Handle { return r.cur.Load() }
 
 // ServedFile returns the identity (inode, size, mtime) of the file being served
-// now, as stat'ed before it was opened. It does not run the reload check.
-func (r *DB) ServedFile() os.FileInfo { return r.cur.Load().fi }
+// now, as stat'ed before it was opened, or nil while a lazy DB has not opened its
+// file. It does not run the reload check.
+func (r *DB) ServedFile() os.FileInfo {
+	if h := r.cur.Load(); h != nil {
+		return h.fi
+	}
+	return nil
+}
 
 // Gen returns the serial of the file being served now: 1 when opened, +1 each
-// time the file is replaced and reloaded. Like a query, it performs the due
-// reload check.
-func (r *DB) Gen() uint64 { return r.handle().gen }
+// time the file is replaced and reloaded, 0 while a lazy DB has not opened its
+// file. Like a query, it performs the due reload check.
+func (r *DB) Gen() uint64 {
+	if h := r.handle(); h != nil {
+		return h.gen
+	}
+	return 0
+}
 
 // handle returns the current generation, first checking (at most once per
 // interval, and only one caller per interval) whether the file was replaced. The
-// result is NOT protected against retirement: use Acquire to hold it.
+// result is NOT protected against retirement: use Acquire to hold it. It is nil
+// while a lazy DB has not opened its file.
 func (r *DB) handle() *Handle {
 	h := r.cur.Load()
 	if r.interval <= 0 {
@@ -248,6 +279,9 @@ func (r *DB) Acquire() (*Handle, error) {
 			return nil, r.errClosed
 		}
 		h := r.handle()
+		if h == nil {
+			return nil, fmt.Errorf("%s: %w: %w", r.name, ErrNotOpen, *r.lastErr.Load())
+		}
 		if h.acquire() {
 			return h, nil
 		}
@@ -264,12 +298,16 @@ func SameFile(a, b os.FileInfo) bool {
 }
 
 // reloadIfChanged opens the file at path if its identity differs from the current
-// handle's and swaps it in. It returns the new handle, or nil when nothing
-// changed or the replacement is unusable (the old handle then keeps serving and
-// the next interval retries).
+// handle's (or, for a lazy DB, if no handle is open yet) and swaps it in. It
+// returns the new handle, or nil when nothing changed or the replacement is
+// unusable (the old handle then keeps serving and the next interval retries).
 func (r *DB) reloadIfChanged() *Handle {
 	fi, err := os.Stat(r.path)
 	if err != nil {
+		if r.cur.Load() == nil {
+			r.lastErr.Store(&err) // the caller's error says it; no log line per interval
+			return nil
+		}
 		slog.Warn(r.name+" reload: stat failed, keeping current handle", "path", r.path, "error", err)
 		return nil
 	}
@@ -280,6 +318,9 @@ func (r *DB) reloadIfChanged() *Handle {
 		return nil
 	}
 	old := r.cur.Load()
+	if old == nil {
+		return r.openFirst()
+	}
 	if SameFile(old.fi, fi) {
 		return nil
 	}
@@ -294,6 +335,21 @@ func (r *DB) reloadIfChanged() *Handle {
 	slog.Info(r.name+" reload: switched to replaced file", "path", r.path, "generation", nh.gen,
 		"size", openedFI.Size(), "mtime", openedFI.ModTime().UTC().Format(time.RFC3339))
 	old.retire()
+	return nh
+}
+
+// openFirst opens the file of a lazy DB that has no handle yet. r.mu is held.
+func (r *DB) openFirst() *Handle {
+	db, fi, err := r.openHandle()
+	if err != nil {
+		r.lastErr.Store(&err)
+		slog.Warn(r.name+" reload: file still unusable, not open yet", "path", r.path, "error", err)
+		return nil
+	}
+	nh := &Handle{db: db, gen: 1, fi: fi}
+	r.cur.Store(nh)
+	slog.Info(r.name+" reload: opened file", "path", r.path, "generation", nh.gen,
+		"size", fi.Size(), "mtime", fi.ModTime().UTC().Format(time.RFC3339))
 	return nh
 }
 
@@ -391,6 +447,8 @@ func (r *DB) Close() error {
 		return nil
 	}
 	r.closed = true
-	r.cur.Load().retire()
+	if h := r.cur.Load(); h != nil {
+		h.retire()
+	}
 	return nil
 }
