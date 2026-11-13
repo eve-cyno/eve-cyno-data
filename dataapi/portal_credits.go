@@ -42,7 +42,7 @@ func credits() []credit {
 			[]creditLink{{"https://www.eve-scout.com/", "eve-scout.com"}}, "Public API without published terms, used with attribution. One shared cached copy: at most one request per cache lifetime, or one a minute while EvE-Scout does not answer."},
 		{"tool", tool, "JN", "Janice", "Market appraisals for <code>appraise_items</code>.",
 			[]creditLink{{"https://janice.e-351.com/", "janice.e-351.com"}}, "Optional: with your own Janice key, sent per request and never stored. Without one, appraisals are ESI estimates."},
-		{"tool", tool, "PF", "Pyfa", "The fitting tool we check our fit engine against. Its numbers are the yardstick in our tests.",
+		{"tool", tool, "PF", "Pyfa", "A second opinion for our fit engine: an optional test compares our numbers with Pyfa's. The main yardstick is now the EVE client itself.",
 			[]creditLink{{"https://github.com/pyfa-org/Pyfa", "github.com/pyfa-org/Pyfa"}}, "GPL-3.0. A separate test oracle only: no Pyfa code is included or linked."},
 		{"oss", oss, "Go", "Go", "The language and standard library the whole service is written in.",
 			[]creditLink{{"https://go.dev/", "go.dev"}}, "BSD-3-Clause."},
