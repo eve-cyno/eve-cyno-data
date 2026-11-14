@@ -61,6 +61,9 @@
 //	DATAAPI_ESI_GUARD_PERCENT share (0-90, default 25) of every ESI rate-limit group's tokens
 //	                          kept unspent; below it a tool answers 503 upstream_busy instead
 //	                          of calling ESI. Every ESI call is logged as msg "esi_call"
+//	DATAAPI_HUB_PRICES_EVERY  cycle of the market-hub price builder behind market-hubs.json (Go
+//	                          duration, default 15m, minimum 5m; 0 turns it off and the name
+//	                          answers 404)
 //	DATAAPI_LOG_SALT          secret of the opaque "caller" token in the tool/MCP access-log
 //	                          lines; tokens rotate at 00:00 UTC, so they compare only within one
 //	                          UTC day (with it set, also across restarts within the day). No
@@ -163,6 +166,7 @@ import (
 	coreconfig "eve-cyno.dev/go/data/config"
 	"eve-cyno.dev/go/data/dataapi"
 	"eve-cyno.dev/go/data/dataapi/keys"
+	"eve-cyno.dev/go/data/hubprices"
 	"eve-cyno.dev/go/data/mcpserver"
 	"eve-cyno.dev/go/data/sde"
 )
@@ -488,6 +492,9 @@ type exposure struct {
 	// datasetDir is EVE_CORE_INTEL_DATASET_DIR: the intel collector's published snapshot files
 	// behind /v1/datasets/{file} ("" = not configured).
 	datasetDir string
+	// hubPrices is the in-memory source of market-hubs.json, filled by the hub price refresher
+	// (nil: the builder is off and the name answers 404).
+	hubPrices *dataapi.MemoryDataset
 }
 
 // publicURL resolves DATAAPI_PUBLIC_URL: unset is fine, a value that is not an https origin
@@ -557,6 +564,7 @@ func newHandler(d *bootstrap.Deps, ex exposure, log *slog.Logger) (http.Handler,
 		MaxInFlightUpstream: ex.maxInFlightUpstream,
 		SDEBuildFunc:        ex.sdeBuild,
 		DatasetDir:          ex.datasetDir,
+		MarketHubs:          ex.hubPrices,
 	}
 	if ex.store != nil {
 		cfg.SelfServe = true
@@ -694,6 +702,11 @@ func run(log *slog.Logger) error {
 		store: store, keyedFactor: factor, dailyCap: dayCap, anonDailyCap: anonCap, maxInFlight: maxIF, maxInFlightUpstream: maxIFUp, sdeBuild: followSDEBuild(cfg.SDEPath, deps.Tools.SDE, log),
 		datasetDir: cfg.IntelDatasetDir,
 	}
+	hubEvery, err := coreconfig.HubPricesEvery(os.Getenv)
+	if err != nil {
+		return err
+	}
+	ex.hubPrices = hubPricesSource(hubEvery)
 	if ex.datasetDir != "" {
 		log.Info("intel datasets served outside the limits", "env", "EVE_CORE_INTEL_DATASET_DIR", "dir", ex.datasetDir)
 	}
@@ -735,6 +748,13 @@ func run(log *slog.Logger) error {
 	if err := checkAdminToken(os.Getenv("DATAAPI_ADMIN_TOKEN")); err != nil {
 		return err
 	}
+	// The refresher shares the tools' ESI client (group-aware buckets and the guard share) and
+	// stops, with its build canceled, before run returns.
+	stopHubs, err := startHubPrices(ctx, hubEvery, ex.hubPrices, deps.Tools.Client.ESI, log)
+	if err != nil {
+		return err
+	}
+	defer stopHubs()
 	servers := []*http.Server{srv}
 	if adm := adminServer(store, os.Getenv("DATAAPI_ADMIN_TOKEN"), adminAddr(os.Getenv), log); adm != nil {
 		servers = append(servers, adm)
@@ -796,4 +816,39 @@ func shutdownAll(servers []*http.Server, timeout time.Duration) error {
 	}
 	wg.Wait()
 	return errors.Join(errs...)
+}
+
+// hubPricesSource returns the in-memory market-hubs.json source, or nil when the builder is
+// off (every == 0): the route then answers 404 and no goroutine runs.
+func hubPricesSource(every time.Duration) *dataapi.MemoryDataset {
+	if every <= 0 {
+		return nil
+	}
+	return dataapi.NewMemoryDataset(dataapi.MarketHubsMaxBytes)
+}
+
+// startHubPrices starts the hub price refresher on ctx and returns the function that cancels
+// it and waits for it. With no dataset (builder off) it starts nothing.
+func startHubPrices(ctx context.Context, every time.Duration, ds *dataapi.MemoryDataset, pager hubprices.Pager, log *slog.Logger) (func(), error) {
+	if ds == nil {
+		log.Info("hub price builder off", "env", "DATAAPI_HUB_PRICES_EVERY")
+		return func() {}, nil
+	}
+	r, err := dataapi.NewHubRefresher(dataapi.HubRefresherConfig{
+		Builder: hubprices.New(pager), Dataset: ds, Every: every, Logger: log,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("hub price refresher: %w", err)
+	}
+	rctx, cancel := context.WithCancel(ctx)
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		r.Run(rctx)
+	}()
+	log.Info("hub price builder started", "every", every, "env", "DATAAPI_HUB_PRICES_EVERY")
+	return func() {
+		cancel()
+		<-done
+	}, nil
 }

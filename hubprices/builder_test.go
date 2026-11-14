@@ -35,10 +35,11 @@ func fixture(t *testing.T, name string) []byte {
 
 // answer is one fake ESI reply.
 type answer struct {
-	status int
-	body   []byte
-	lm     time.Time
-	pages  int
+	status  int
+	body    []byte
+	lm      time.Time
+	expires time.Time
+	pages   int
 }
 
 // fakeESI serves /markets/{region}/orders from a per-region script; fetch counts the
@@ -79,6 +80,9 @@ func newFake(t *testing.T) *fakeESI {
 		}
 		if !a.lm.IsZero() {
 			w.Header().Set("Last-Modified", a.lm.UTC().Format(http.TimeFormat))
+		}
+		if !a.expires.IsZero() {
+			w.Header().Set("Expires", a.expires.UTC().Format(http.TimeFormat))
 		}
 		if a.status == 0 {
 			a.status = 200
@@ -183,7 +187,7 @@ func TestFailedRegionKeepsRowsAndAsOf(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			f.script[10000002] = bad
-			f.serve(10000043, base.Add(time.Hour), "dodixie_page1.json") // amarr moves on
+			f.serve(10000043, base.Add(time.Hour), "amarr_page1.json") // amarr moves on
 			res := build(t, f, first.Table)
 			j := statusOf(res, "jita")
 			require.False(t, j.Updated)
@@ -219,6 +223,7 @@ func TestBackoffKeepsRows(t *testing.T) {
 	require.NoError(t, err)
 	require.False(t, statusOf(res, "jita").Updated)
 	require.Equal(t, ReasonBackoff, statusOf(res, "jita").Reason)
+	require.True(t, statusOf(res, "jita").RetryAt.After(time.Now()), "a back-off names when sending may resume")
 	require.Equal(t, first.Table.Hubs[0], res.Table.Hubs[0])
 	require.True(t, res.Complete)
 }
@@ -446,4 +451,37 @@ func TestHubsEqualToolsList(t *testing.T) {
 	}
 	require.Len(t, want, 5)
 	require.Equal(t, want, Hubs())
+}
+
+func TestHubDroppingToZeroRowsIsNotComplete(t *testing.T) {
+	f := newFake(t)
+	f.serveAll()
+	first := build(t, f, nil)
+	require.True(t, first.Complete)
+	require.NotEmpty(t, first.Table.Hubs[1].Types)
+	// amarr suddenly answers a well-formed but empty book: an ESI glitch, not a market.
+	f.script[10000043] = func(page, _ int) answer {
+		return answer{body: []byte(`[]`), lm: base.Add(time.Hour), expires: base.Add(time.Hour + 5*time.Minute), pages: 1}
+	}
+	res := build(t, f, first.Table)
+	st := statusOf(res, "amarr")
+	require.False(t, st.RetryAt.IsZero(), "the status carries the read's Expires for the retry")
+	require.False(t, st.Updated)
+	require.Equal(t, ReasonEmpty, st.Reason)
+	require.Equal(t, len(first.Table.Hubs[1].Types), st.Rows, "the previous rows are kept")
+	require.Equal(t, first.Table.Hubs[1], res.Table.Hubs[1])
+	require.False(t, res.Complete)
+	require.Nil(t, res.JSON)
+	require.ErrorIs(t, res.Problem, ErrEmptyHub)
+	require.True(t, statusOf(res, "jita").Updated, "the other hubs still update")
+}
+
+func TestEmptyFirstReadIsAccepted(t *testing.T) {
+	// No previous count to drop from: an empty book on the first build is not the guard's case.
+	f := newFake(t)
+	f.serveAll()
+	f.script[10000043] = func(int, int) answer { return answer{body: []byte(`[]`), lm: base, pages: 1} }
+	res := build(t, f, nil)
+	require.True(t, statusOf(res, "amarr").Updated)
+	require.True(t, res.Complete)
 }

@@ -213,3 +213,11 @@ func TestMemoryDataset_OpenAPIMentionsHubs(t *testing.T) {
 	require.Contains(t, s, "Download a published dataset")
 	require.False(t, strings.Contains(s, "published intel dataset"))
 }
+
+func TestMemoryDataset_NextAttempt(t *testing.T) {
+	mem := dataapi.NewMemoryDataset(dataapi.MarketHubsMaxBytes)
+	require.True(t, mem.NextAttempt().IsZero(), "unset until the builder says")
+	at := time.Date(2026, 11, 14, 12, 5, 0, 0, time.UTC)
+	mem.SetNextAttempt(at)
+	require.Equal(t, at, mem.NextAttempt())
+}

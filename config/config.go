@@ -6,6 +6,7 @@
 package config
 
 import (
+	"fmt"
 	"log/slog"
 	"os"
 	"strings"
@@ -106,4 +107,35 @@ func envOr(key, dflt string) string {
 		return v
 	}
 	return dflt
+}
+
+// Bounds and default of DATAAPI_HUB_PRICES_EVERY, the cycle of the market-hub price builder.
+const (
+	DefaultHubPricesEvery = 15 * time.Minute
+	// MinHubPricesEvery protects the shared ESI budget: a build reads every page of five
+	// region order books, so a cycle shorter than this would starve the live price tools.
+	MinHubPricesEvery = 5 * time.Minute
+)
+
+// HubPricesEvery resolves DATAAPI_HUB_PRICES_EVERY (a Go duration): unset is
+// DefaultHubPricesEvery, "0" (or "0s") turns the builder off (returns 0), and a value below
+// MinHubPricesEvery, a negative or an unparsable one is an error.
+func HubPricesEvery(getenv func(string) string) (time.Duration, error) {
+	raw := strings.TrimSpace(getenv("DATAAPI_HUB_PRICES_EVERY"))
+	if raw == "" {
+		return DefaultHubPricesEvery, nil
+	}
+	if raw == "0" {
+		return 0, nil
+	}
+	d, err := time.ParseDuration(raw)
+	switch {
+	case err != nil:
+		return 0, fmt.Errorf("DATAAPI_HUB_PRICES_EVERY: want a duration such as 15m or 0 to turn off, got %q: %w", raw, err)
+	case d == 0:
+		return 0, nil
+	case d < MinHubPricesEvery:
+		return 0, fmt.Errorf("DATAAPI_HUB_PRICES_EVERY: %s is below the %s minimum (it would starve the live ESI tools)", d, MinHubPricesEvery)
+	}
+	return d, nil
 }

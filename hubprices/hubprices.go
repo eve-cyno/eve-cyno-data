@@ -39,6 +39,7 @@ const (
 	ReasonIncomplete = "incomplete" // fewer pages came back than ESI announced
 	ReasonDecode     = "decode"     // a page was not a list of orders
 	ReasonCanceled   = "canceled"   // the context ended before the hub was read
+	ReasonEmpty      = "empty"      // the book came back with no rows at the station though the previous table had some
 )
 
 // Hub is one trade hub: the region whose order book holds it and the station whose
@@ -91,10 +92,18 @@ type HubStatus struct {
 	Rows         int    // rows now held for the hub
 	Pages        int    // pages read for the new rows
 	Inconsistent bool   // the pages still disagreed on Last-Modified after the second read
+	// RetryAt is when ESI may answer differently for this hub: the latest Expires of the pages
+	// read, or the end of a back-off or rate limit. Zero when ESI gave none. The refresher
+	// retries a failed first build at it.
+	RetryAt time.Time
 }
 
 // ErrIncomplete is the Problem of a Result whose table does not hold all five hubs.
 var ErrIncomplete = errors.New("hubprices: table does not hold all five hubs")
+
+// ErrEmptyHub is the Problem of a Result in which a hub that held rows came back with none:
+// most likely an ESI glitch, so the hub keeps its previous rows and the table is not published.
+var ErrEmptyHub = errors.New("hubprices: a hub dropped to zero rows")
 
 // Result is the outcome of one Build.
 //
@@ -139,10 +148,11 @@ type order struct {
 // build) supplies the rows of a hub whose read fails; such a hub keeps its rows and asOf
 // and the other hubs update. builtAt and nextBuildAt come from the caller. Build returns
 // an error only when ctx ends; the Result is still usable then (hubs read so far updated,
-// the rest kept) and is Complete only if all five hubs are held.
+// the rest kept) and is Complete only if all five hubs are held and none dropped to zero rows (ErrEmptyHub).
 func (b *Builder) Build(ctx context.Context, prev *Table, builtAt, nextBuildAt time.Time) (Result, error) {
 	t := &Table{BuiltAt: builtAt.UTC().Truncate(time.Second), NextBuildAt: nextBuildAt.UTC().Truncate(time.Second)}
 	var statuses []HubStatus
+	emptied := false
 	for _, h := range b.hubs {
 		old, hadOld := previous(prev, h.Key)
 		st := HubStatus{Key: h.Key}
@@ -151,6 +161,13 @@ func (b *Builder) Build(ctx context.Context, prev *Table, builtAt, nextBuildAt t
 			st.Reason, st.Err = ReasonCanceled, ctx.Err()
 		} else {
 			ht, st = b.readHub(ctx, h, builtAt)
+			if st.Updated && len(ht.Types) == 0 && hadOld && len(old.Types) > 0 {
+				// A hub that held rows and now has none is most likely an ESI glitch: keep
+				// the previous rows and do not publish this table.
+				st = HubStatus{Key: h.Key, Reason: ReasonEmpty, Pages: st.Pages, RetryAt: st.RetryAt,
+					Err: fmt.Errorf("hubprices: %s: 0 rows, previous table had %d", h.Key, len(old.Types))}
+				emptied = true
+			}
 		}
 		if st.Updated {
 			t.Hubs = append(t.Hubs, ht)
@@ -163,9 +180,11 @@ func (b *Builder) Build(ctx context.Context, prev *Table, builtAt, nextBuildAt t
 	res := Result{Table: t, Status: statuses}
 	if len(t.Hubs) != len(b.hubs) {
 		res.Problem = fmt.Errorf("%w: %d of %d", ErrIncomplete, len(t.Hubs), len(b.hubs))
-	} else if err := t.Validate(); err != nil {
-		res.Problem = err
+	} else if emptied {
+		res.Problem = ErrEmptyHub
 	} else if out, err := t.Encode(); err != nil {
+		res.Problem = err
+	} else if err := ValidateJSON(out); err != nil { // encode once: validate the bytes that would be published
 		res.Problem = err
 	} else {
 		res.JSON, res.Complete = out, true
@@ -198,6 +217,7 @@ func (b *Builder) readHub(ctx context.Context, h Hub, now time.Time) (HubTable, 
 			st.Inconsistent, err = true, nil // second disagreement: accepted, as get_market_price does
 		}
 	}
+	st.RetryAt = retryAt(pages, err, now)
 	if err != nil {
 		st.Err = err
 		switch {
@@ -267,6 +287,26 @@ func (b *Builder) readHub(ctx context.Context, h Hub, now time.Time) (HubTable, 
 	sort.Slice(rows, func(i, j int) bool { return rows[i].ID < rows[j].ID })
 	st.Updated, st.Rows, st.Pages = true, len(rows), len(pages)
 	return HubTable{Hub: h, AsOf: oldest.UTC().Truncate(time.Second), Types: rows}, st
+}
+
+// retryAt is when a read may be repeated with a different answer: the latest Expires of the
+// pages, else the end of the back-off, else now plus ESI's Retry-After. Zero when unknown.
+func retryAt(pages []*esi.Response, err error, now time.Time) time.Time {
+	var at time.Time
+	for _, p := range pages {
+		if p != nil && p.Expires.After(at) {
+			at = p.Expires
+		}
+	}
+	var be *esi.BackoffError
+	var rl *esi.RateLimitError
+	switch {
+	case errors.As(err, &be) && be.Until.After(at):
+		at = be.Until
+	case errors.As(err, &rl) && rl.RetryAfter > 0 && now.Add(rl.RetryAfter).After(at):
+		at = now.Add(rl.RetryAfter)
+	}
+	return at
 }
 
 func isNotFound(err error) bool {

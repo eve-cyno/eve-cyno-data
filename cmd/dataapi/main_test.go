@@ -5,6 +5,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -12,6 +13,7 @@ import (
 	"net/netip"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -21,6 +23,7 @@ import (
 	"eve-cyno.dev/go/data/bootstrap"
 	"eve-cyno.dev/go/data/dataapi"
 	"eve-cyno.dev/go/data/dataapi/keys"
+	"eve-cyno.dev/go/data/esi"
 	"eve-cyno.dev/go/data/sde"
 	"eve-cyno.dev/go/data/tools"
 )
@@ -901,4 +904,42 @@ func TestNewHandler_ServesTheDatasetDir(t *testing.T) {
 	rec = get(off)
 	require.Equal(t, http.StatusNotFound, rec.Code)
 	require.Contains(t, rec.Body.String(), "not configured")
+}
+
+func TestHubPricesOffCreatesNoSourceAndNoGoroutine(t *testing.T) {
+	require.Nil(t, hubPricesSource(0))
+	require.NotNil(t, hubPricesSource(15*time.Minute))
+
+	before := runtime.NumGoroutine()
+	stop, err := startHubPrices(context.Background(), 0, nil, nil, slog.New(slog.DiscardHandler))
+	require.NoError(t, err)
+	stop()
+	require.Equal(t, before, runtime.NumGoroutine(), "the off switch starts no goroutine")
+
+	h, err := newHandler(&bootstrap.Deps{Tools: &tools.Deps{}}, exposure{datasetDir: t.TempDir()}, slog.Default())
+	require.NoError(t, err)
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/v1/datasets/market-hubs.json", nil))
+	require.Equal(t, http.StatusNotFound, rec.Code, "no source registered: 404")
+}
+
+func TestHubPricesOnServes503UntilFirstBuildAndStopsOnCancel(t *testing.T) {
+	ds := hubPricesSource(15 * time.Minute)
+	h, err := newHandler(&bootstrap.Deps{Tools: &tools.Deps{}}, exposure{datasetDir: t.TempDir(), hubPrices: ds}, slog.Default())
+	require.NoError(t, err)
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/v1/datasets/market-hubs.json", nil))
+	require.Equal(t, http.StatusServiceUnavailable, rec.Code)
+
+	// A pager that fails at once: the first build is incomplete, nothing is published, and
+	// stop returns (the build is canceled, the goroutine ends).
+	stop, err := startHubPrices(context.Background(), 15*time.Minute, ds, failingPager{}, slog.New(slog.DiscardHandler))
+	require.NoError(t, err)
+	stop()
+}
+
+type failingPager struct{}
+
+func (failingPager) GetAllPages(context.Context, esi.Request, esi.PageOptions) ([]*esi.Response, error) {
+	return nil, errors.New("no network in tests")
 }

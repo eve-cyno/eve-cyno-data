@@ -87,3 +87,19 @@ func TestIntelDatasetDir(t *testing.T) {
 	t.Setenv("EVE_CORE_INTEL_DATASET_DIR", "  /data/intel-pub ")
 	require.Equal(t, "/data/intel-pub", Load().IntelDatasetDir)
 }
+
+func TestHubPricesEvery(t *testing.T) {
+	get := func(v string) func(string) string {
+		return func(string) string { return v }
+	}
+	for in, want := range map[string]time.Duration{"": 15 * time.Minute, " 20m ": 20 * time.Minute, "5m": 5 * time.Minute, "0": 0, "0s": 0, "1h": time.Hour} {
+		d, err := HubPricesEvery(get(in))
+		require.NoError(t, err, in)
+		require.Equal(t, want, d, in)
+	}
+	for _, in := range []string{"4m59s", "1s", "-5m", "soon", "15"} {
+		_, err := HubPricesEvery(get(in))
+		require.Error(t, err, in)
+		require.Contains(t, err.Error(), "DATAAPI_HUB_PRICES_EVERY")
+	}
+}

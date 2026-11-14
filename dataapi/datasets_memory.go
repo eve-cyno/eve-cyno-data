@@ -32,6 +32,22 @@ type memoryState struct {
 type MemoryDataset struct {
 	max   int
 	state atomic.Pointer[memoryState]
+	// attempt is the time of the builder's next try (nil: not set). Before the first publish
+	// the route can send it as Retry-After; see SetNextAttempt.
+	attempt atomic.Pointer[time.Time]
+}
+
+// SetNextAttempt records when the builder will try next. The builder calls it before each
+// wait; the route reads it with NextAttempt to tell a client when to come back while nothing
+// is published yet. Safe for concurrent use.
+func (m *MemoryDataset) SetNextAttempt(at time.Time) { m.attempt.Store(&at) }
+
+// NextAttempt returns the time set by SetNextAttempt, or the zero time when none was set.
+func (m *MemoryDataset) NextAttempt() time.Time {
+	if p := m.attempt.Load(); p != nil {
+		return *p
+	}
+	return time.Time{}
 }
 
 // NewMemoryDataset returns an empty dataset that refuses a body longer than maxBytes.
