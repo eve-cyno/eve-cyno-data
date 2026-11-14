@@ -16,7 +16,7 @@
       {
         "name": "zKillboard (gate kill counts)",
         "url": "https://zkillboard.com/",
-        "license": "Public R2Z2 API under zKillboard's usage etiquette; only per-gate kill counts and the leading attacking alliances (alliance ids, names from ESI, kill counts) derived from it are published, never a killmail, pilot or corporation; killmails are Fenris Creations game data (EVE Developer License Agreement)"
+        "license": "Public R2Z2 API under zKillboard's usage etiquette; only per-gate kill counts and kill times, the leading attacking alliances (alliance ids, names from ESI, kill counts), the largest attacker count (max_attackers) and the dictor_hic flag per fight, per-system counts and a 28-day per-hour gate profile derived from it are published, never a killmail, pilot or corporation; killmails are Fenris Creations game data (EVE Developer License Agreement)"
       },
       {
         "name": "ESI (EVE Swagger Interface)",

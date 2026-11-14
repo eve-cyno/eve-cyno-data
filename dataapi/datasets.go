@@ -17,12 +17,14 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"eve-cyno.dev/go/data/intelsnap"
 )
 
 // DatasetMaxBytes bounds the size of one published dataset file. The route never loads a
 // larger file: it answers 500 and logs once per file version. The bound sits well above the
 // writer's own caps (512 KiB for the recent gate snapshot, 2 MiB for the daily profile).
-const DatasetMaxBytes = 4 << 20
+const DatasetMaxBytes = intelsnap.MaxFileBytes
 
 // datasetCheckEvery is how often, at most, the route looks at a file again: a request within
 // that time after the last look is answered from memory, for a present file and a missing one
@@ -252,7 +254,7 @@ func sameVersion(a, b os.FileInfo) bool {
 // DatasetMaxBytes and builds its version. The FileInfo is the opened file's, so the version key
 // and the bytes belong together.
 func loadDataset(path string) (datasetState, os.FileInfo, *datasetVersion, error) {
-	file, err := openNoFollow(path)
+	file, err := intelsnap.OpenNoFollow(path)
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
 			return datasetMissing, nil, nil, nil

@@ -644,3 +644,14 @@ func TestDatasets_OpenAPIDocumentsCaching(t *testing.T) {
 		}
 	}
 }
+
+// Unknown names and nested paths are never cached at the edge, whichever handler answers.
+func TestDatasets_UnknownPathsAreNoStore(t *testing.T) {
+	dir := t.TempDir()
+	api := datasetAPI(t, dir, newStepClock().now)
+	for _, target := range []string{"/v1/datasets/nope.json", "/v1/datasets/a/b"} {
+		rec := do(api, http.MethodGet, target, "")
+		requireError(t, rec, http.StatusNotFound, "not_found")
+		require.Equal(t, "no-store", rec.Header().Get("Cache-Control"), target)
+	}
+}

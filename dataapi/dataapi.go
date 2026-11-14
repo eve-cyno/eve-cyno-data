@@ -586,6 +586,11 @@ func New(cfg Config) (*API, error) {
 		a.portal = portal
 	}
 	a.mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		// A path under the datasets route that no pattern took (a nested one) is never cached at
+		// the edge, as every other answer of that route.
+		if strings.HasPrefix(r.URL.Path, a.prefix+"/datasets/") {
+			w.Header().Set("Cache-Control", cacheNone)
+		}
 		writeError(w, r, http.StatusNotFound, "not_found", "no such route")
 	})
 	return a, nil

@@ -349,3 +349,30 @@ func TestReader_ConcurrentUse(t *testing.T) {
 	close(stop)
 	wg.Wait()
 }
+
+func TestReader_RefusesSymlink(t *testing.T) {
+	dir := t.TempDir()
+	out := t.TempDir()
+	put(t, out, "target.json", golden(t, "intel-gates-now.v1.golden.json"))
+	require.NoError(t, os.Symlink(filepath.Join(out, "target.json"), filepath.Join(dir, "intel-gates-now.json")))
+	_, err := NewReader(dir).GatesNow()
+	require.Error(t, err, "a symlinked snapshot was followed")
+	require.False(t, errors.Is(err, os.ErrNotExist))
+}
+
+func TestReader_RefusesOversizeAndCachesTheError(t *testing.T) {
+	dir := t.TempDir()
+	r := NewReader(dir)
+	put(t, dir, "intel-gates-now.json", bytes.Repeat([]byte("x"), MaxFileBytes+1))
+	_, err1 := r.GatesNow()
+	require.Error(t, err1)
+	require.ErrorIs(t, err1, ErrTooLarge)
+	_, err2 := r.GatesNow()
+	require.Same(t, err1, err2, "an unchanged oversize file must return the cached error")
+
+	// exactly at the bound is read (and fails to decode, not for its size)
+	put(t, dir, "intel-gates-now.json", bytes.Repeat([]byte("x"), MaxFileBytes))
+	_, err := r.GatesNow()
+	require.Error(t, err)
+	require.NotErrorIs(t, err, ErrTooLarge)
+}

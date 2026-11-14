@@ -1,6 +1,6 @@
 //go:build !unix
 
-package dataapi
+package intelsnap
 
 import (
 	"errors"
@@ -10,9 +10,9 @@ import (
 // errNotRegular is the open error of a name that is not a regular file.
 var errNotRegular = errors.New("not a regular file")
 
-// openNoFollow opens path for reading only when the name itself is a regular file: without an
+// OpenNoFollow opens path for reading only when the name itself is a regular file: without an
 // O_NOFOLLOW, the name is checked before the open and the opened file must be the one checked.
-func openNoFollow(path string) (*os.File, error) {
+func OpenNoFollow(path string) (*os.File, error) {
 	lfi, err := os.Lstat(path)
 	if err != nil {
 		return nil, err

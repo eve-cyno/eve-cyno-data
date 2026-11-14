@@ -1,6 +1,8 @@
 package intelsnap
 
 import (
+	"errors"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -20,6 +22,18 @@ type Reader struct {
 	hour     cached[SystemsHour]
 	profile  cached[GatesProfile]
 }
+
+// MaxFileBytes bounds the size of one published snapshot file. It sits well above the writer's
+// own caps (512 KiB for the recent gate snapshot, 2 MiB for the daily profile). The data API's
+// dataset route and this reader share it.
+const MaxFileBytes = 4 << 20
+
+// ErrTooLarge is the error of a snapshot file above MaxFileBytes; ErrNotRegular is the error of
+// a name that is a symlink or another special file. Both are refused without reading.
+var (
+	ErrTooLarge   = errors.New("intelsnap: file above the size bound")
+	ErrNotRegular = errors.New("intelsnap: not a regular file")
+)
 
 // NewReader returns a Reader for the directory the collector publishes to.
 func NewReader(dir string) *Reader { return &Reader{dir: dir} }
@@ -59,28 +73,46 @@ func (c *cached[T]) fresh(fi os.FileInfo) bool {
 func load[T any](c *cached[T], path string, dec func([]byte) (*T, error)) (*T, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	fi, err := os.Stat(path)
+	// Lstat: a symlink is never followed, as the dataset route does.
+	lfi, err := os.Lstat(path)
 	if err != nil {
 		return nil, err
 	}
-	if c.fresh(fi) {
+	if !lfi.Mode().IsRegular() {
+		return nil, fmt.Errorf("%w: %s", ErrNotRegular, lfi.Mode())
+	}
+	if c.fresh(lfi) {
 		return c.val, c.err
 	}
-	f, err := os.Open(path)
+	f, err := OpenNoFollow(path)
 	if err != nil {
 		return nil, err
 	}
 	defer f.Close()
 	// The stat and the bytes come from one open file, so they match.
-	fi, err = f.Stat()
+	fi, err := f.Stat()
 	if err != nil {
 		return nil, err
 	}
-	b, err := io.ReadAll(f)
-	if err != nil {
-		return nil, err
+	if !fi.Mode().IsRegular() {
+		return nil, fmt.Errorf("%w: %s", ErrNotRegular, fi.Mode())
 	}
-	v, err := dec(b)
+	var v *T
+	if fi.Size() > MaxFileBytes {
+		err = fmt.Errorf("%w: %d bytes", ErrTooLarge, fi.Size())
+	} else {
+		var b []byte
+		// Bounded even when the file grows after the stat.
+		b, err = io.ReadAll(io.LimitReader(f, MaxFileBytes+1))
+		if err != nil {
+			return nil, err
+		}
+		if len(b) > MaxFileBytes {
+			err = fmt.Errorf("%w: more than %d bytes", ErrTooLarge, MaxFileBytes)
+		} else {
+			v, err = dec(b)
+		}
+	}
 	c.info, c.size, c.mtime, c.done, c.val, c.err = fi, fi.Size(), fi.ModTime(), true, v, err
 	return v, err
 }

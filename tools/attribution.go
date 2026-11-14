@@ -43,12 +43,13 @@ var (
 		URL:     "https://zkillboard.com/",
 		License: "Public R2Z2 API under zKillboard's usage etiquette; only per-system counts and ISK sums derived from it are published; killmails are Fenris Creations game data (EVE Developer License Agreement)",
 	}
-	// sourceZKillboardGateKills is the killmail side of get_gate_camps: per-gate kill counts
-	// and the leading attacking alliances, never a killmail.
+	// sourceZKillboardGateKills is the killmail side of get_gate_camps: per-gate kill counts,
+	// kill times, leading attacking alliances, max_attackers, the dictor_hic flag, per-system counts
+	// and the 28-day per-hour gate profile, never a killmail.
 	sourceZKillboardGateKills = Source{
 		Name:    "zKillboard (gate kill counts)",
 		URL:     "https://zkillboard.com/",
-		License: "Public R2Z2 API under zKillboard's usage etiquette; only per-gate kill counts and the leading attacking alliances (alliance ids, names from ESI, kill counts) derived from it are published, never a killmail, pilot or corporation; killmails are Fenris Creations game data (EVE Developer License Agreement)",
+		License: "Public R2Z2 API under zKillboard's usage etiquette; only per-gate kill counts and kill times, the leading attacking alliances (alliance ids, names from ESI, kill counts), the largest attacker count (max_attackers) and the dictor_hic flag per fight, per-system counts and a 28-day per-hour gate profile derived from it are published, never a killmail, pilot or corporation; killmails are Fenris Creations game data (EVE Developer License Agreement)",
 	}
 	sourceWarBeacon = Source{
 		Name:    "WarBeacon",
