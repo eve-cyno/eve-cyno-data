@@ -268,7 +268,7 @@ func TestGateCamps_NoAllianceWording(t *testing.T) {
 // here is a change of both repositories.
 const (
 	gcWordingFile   = "testdata/gate-camps-wording-cases.json"
-	gcWordingSHA256 = "f3c6d41fc817c6ceeaabbc487ba703c53493fd81c372683be89c340a7c33cc17"
+	gcWordingSHA256 = "feba91453338a140f6d4c47e8e754c968ef27cc5ac99f1e1cb45fd75b89601f3"
 )
 
 type gcWordingCase struct {
@@ -357,7 +357,7 @@ func TestGateCamps_WordingCases(t *testing.T) {
 	}
 	require.GreaterOrEqual(t, kinds["row"], 12)
 	require.GreaterOrEqual(t, kinds["security"], 12)
-	require.GreaterOrEqual(t, kinds["answer"], 12)
+	require.GreaterOrEqual(t, kinds["answer"], 31)
 }
 
 // The six fixture gates through the whole tool, sorted: the rows the JSON holds, joined.
@@ -406,16 +406,18 @@ func TestGateCamps_FeedBehindWording(t *testing.T) {
 	require.False(t, data.FeedBehind)
 }
 
-// An old file says how old it is, from its own times; a clock behind the file says "just now".
+// An old file says how old it is, from its own times; past 2 hours it shows no rows at all;
+// a clock behind the file says "just now" and the snapshot is current.
 func TestGateCamps_OldSnapshotStatesAge(t *testing.T) {
 	d := gcDeps(t, gcFixture())
 	gcClock(t, gcAt(15, 1))
 	text, _ := gcCall(t, d, nil)
-	require.Contains(t, text, "Kills up to 11:58 UTC (183 min ago); snapshot 12:00 UTC.\n")
+	require.Equal(t, "Gate camp data is out of date (last update 3 h ago).\nKills up to 2026-11-14 11:58 UTC; snapshot 2026-11-14 12:00 UTC.", text)
 
 	gcClock(t, gcAt(11, 50))
 	text, _ = gcCall(t, d, nil)
 	require.Contains(t, text, "Kills up to 11:58 UTC (just now); snapshot 12:00 UTC.\n")
+	require.NotContains(t, text, "This snapshot is")
 
 	snap := gcFixture()
 	snap.Feed.NewestKillmailTime = nil
@@ -424,6 +426,51 @@ func TestGateCamps_OldSnapshotStatesAge(t *testing.T) {
 	require.Contains(t, text, "No kill has reached the feed yet; snapshot 12:00 UTC.\n")
 	require.True(t, data.NewestKillmail.IsZero())
 	require.False(t, data.FeedBehind)
+}
+
+// The typed result names the state and the age; an out-of-date answer has an empty, non-nil rows list.
+func TestGateCamps_FreshnessTyped(t *testing.T) {
+	d := gcDeps(t, gcFixture())
+	at := func(h, m, s int) time.Time { return gcAt(h, m).Add(time.Duration(s) * time.Second) }
+	for _, c := range []struct {
+		now       time.Time
+		freshness string
+		ageS      int
+	}{
+		{gcAt(12, 3), "current", 180},
+		{at(12, 10, 1), "old", 601},
+		{at(14, 0, 1), "out_of_date", 7201},
+		{gcAt(11, 57), "current", 0},
+	} {
+		gcClock(t, c.now)
+		_, data := gcCall(t, d, nil)
+		require.Equal(t, c.freshness, data.Freshness, c.now.String())
+		require.Equal(t, c.ageS, data.SnapshotAgeS, c.now.String())
+		if c.freshness == "out_of_date" {
+			require.NotNil(t, data.Rows)
+			require.Empty(t, data.Rows)
+			raw, err := json.Marshal(data)
+			require.NoError(t, err)
+			require.Contains(t, string(raw), `"rows":[]`)
+		}
+	}
+}
+
+// Past 2 hours an empty or below-threshold scope never reads as "no kills" or "no gate".
+func TestGateCamps_OutOfDateHidesEmptyAndBelow(t *testing.T) {
+	d := gcDeps(t, gcFixture())
+	gcClock(t, gcAt(14, 1))
+	for _, args := range []map[string]any{
+		{"system_names": []any{"Amamake"}},                          // no gate in scope
+		{"system_names": []any{"Perimeter"}},                        // only a "kills" gate: below min_state
+		{"system_names": []any{"Jita"}, "min_state": "likely_camp"}, // below the threshold
+	} {
+		text, data := gcCall(t, d, args)
+		require.NotContains(t, text, "No kills seen")
+		require.NotContains(t, text, "No gate of")
+		require.True(t, strings.HasPrefix(text, "Gate camp data is out of date (last update 2 h ago).\n"), text)
+		require.Equal(t, "out_of_date", data.Freshness)
+	}
 }
 
 func TestGateCamps_DelayLineOnlyWithSamples(t *testing.T) {

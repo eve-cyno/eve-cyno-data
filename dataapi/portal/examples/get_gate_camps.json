@@ -99,7 +99,9 @@
             "max_attackers": 8
           }
         ],
-        "trimmed": false
+        "trimmed": false,
+        "freshness": "current",
+        "snapshot_age_s": 180
       },
       "text": "Sivala > Tama gate in Sivala (0.6 high-sec): 6 ship kills and 1 pod in the last 10 min, by Example Alliance 1 (4) and attackers in no alliance (2). A fight, not a camp.\nTama > Sivala gate in Tama (0.3 low-sec): 4 ship kills and 2 pods in the last 40 min, by Example Alliance 1 (2), Example Alliance 2 (1), Example Alliance 3 (1). Interdictor or HIC seen. Likely camp.\n\nKills up to 11:58 UTC (5 min ago); snapshot 12:00 UTC.\nzKillboard published kills a median of 3 min after they happened (last 24 hours).\nOnly kills that reached zKillboard count; a camp that kills nothing is invisible."
     },

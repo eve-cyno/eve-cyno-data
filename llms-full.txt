@@ -551,7 +551,7 @@ Recent kills on EVE stargates and the camp state of each gate, from zKillboard k
   - `min_state` (string): Weakest state to list: kills (any kill), possible_camp (default) or likely_camp (likely camps and fights). One of: kills, possible_camp, likely_camp.
   - `region_name` (string): Region name, e.g. 'The Forge'; every gate in that region. Not together with system_names.
   - `system_names` (array of string): Solar system names (case-insensitive); every gate of those systems. Not together with region_name.
-- Typed result (`result.data`): GateCamps with fields `generated_at`, `newest_killmail`, `feed_behind`, `delay_p50_s`, `rows`, `trimmed`
+- Typed result (`result.data`): GateCamps with fields `generated_at`, `newest_killmail`, `feed_behind`, `delay_p50_s`, `rows`, `trimmed`, `freshness`, `snapshot_age_s`
 - Sources: zKillboard (gate kill counts); ESI (EVE Swagger Interface); EVE Static Data Export (via Fuzzwork)
 
 ### compare_activity_to_baseline

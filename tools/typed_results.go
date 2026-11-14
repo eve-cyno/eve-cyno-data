@@ -1439,6 +1439,14 @@ type GateCamps struct {
 	Rows []GateCampRow `json:"rows"`
 	// Trimmed is true when the collector dropped the weakest rows to keep the snapshot small.
 	Trimmed bool `json:"trimmed"`
+	// Freshness is how old the snapshot is against the server clock: "current" (up to 10
+	// minutes, and any snapshot dated after now), "old" (over 10 minutes, up to 2 hours; the
+	// rows are shown and the text warns that camps may have changed) or "out_of_date" (over 2
+	// hours; rows is empty, because an old empty list would read as safe).
+	Freshness string `json:"freshness"`
+	// SnapshotAgeS is the age of the snapshot in whole seconds, rounded down; 0 when the
+	// snapshot is dated after now.
+	SnapshotAgeS int `json:"snapshot_age_s"`
 }
 
 // GateCampRow is one gate: the stargate in system From that leads to system To.

@@ -32,6 +32,17 @@ const (
 	// gateCampsFeedBehind is how much older than the snapshot the newest killmail may be
 	// before the answer says the killmail feed may be behind.
 	gateCampsFeedBehind = 15 * time.Minute
+	// gateCampsOldAfter is the snapshot age above which the answer says camps may have changed.
+	gateCampsOldAfter = 10 * time.Minute
+	// gateCampsOutOfDateAfter is the snapshot age above which the answer shows no rows.
+	gateCampsOutOfDateAfter = 2 * time.Hour
+)
+
+// Snapshot freshness, as GateCamps.Freshness.
+const (
+	gateCampsCurrent   = "current"
+	gateCampsOld       = "old"
+	gateCampsOutOfDate = "out_of_date"
 )
 
 // Fixed answers. The newer-format sentence never carries a version number.
@@ -132,6 +143,16 @@ func getGateCamps(ctx context.Context, deps *Deps, args map[string]any) (string,
 		return gateCampsReadFailure(ctx, tool, err)
 	}
 
+	// A negative age (the clock behind the file) is current, however large.
+	age := gateCampsNow().Sub(snap.GeneratedAt)
+	freshness := gateCampsCurrent
+	switch {
+	case age > gateCampsOutOfDateAfter:
+		freshness = gateCampsOutOfDate
+	case age > gateCampsOldAfter:
+		freshness = gateCampsOld
+	}
+
 	// The snapshot is shared: pick into a new slice and sort that.
 	picked := make([]intelsnap.GatesNowGate, 0, len(snap.Gates))
 	below := 0
@@ -163,7 +184,8 @@ func getGateCamps(ctx context.Context, deps *Deps, args map[string]any) (string,
 		picked = picked[:limit]
 	}
 
-	res := &GateCamps{GeneratedAt: snap.GeneratedAt, Rows: make([]GateCampRow, 0, len(picked)), Trimmed: snap.Trimmed}
+	res := &GateCamps{GeneratedAt: snap.GeneratedAt, Rows: make([]GateCampRow, 0, len(picked)), Trimmed: snap.Trimmed,
+		Freshness: freshness, SnapshotAgeS: int(max(age, 0) / time.Second)}
 	if t := snap.Feed.NewestKillmailTime; t != nil {
 		res.NewestKillmail = *t
 		res.FeedBehind = snap.GeneratedAt.Sub(*t) > gateCampsFeedBehind
@@ -204,7 +226,16 @@ func getGateCamps(ctx context.Context, deps *Deps, args map[string]any) (string,
 		res.Rows = append(res.Rows, row)
 	}
 
+	if freshness == gateCampsOutOfDate {
+		// no rows, no empty or below-threshold sentence: an old empty list would read as safe
+		res.Rows = []GateCampRow{}
+		return fmt.Sprintf("Gate camp data is out of date (last update %d h ago).\n%s", int(age/time.Hour), gateCampsDatedFooter(res, snap.GeneratedAt)), res, nil
+	}
+
 	var b strings.Builder
+	if freshness == gateCampsOld {
+		fmt.Fprintf(&b, "This snapshot is %d min old; camps may have changed.\n", int(age/time.Minute))
+	}
 	switch {
 	case len(res.Rows) > 0:
 		for _, r := range res.Rows {
@@ -220,6 +251,21 @@ func getGateCamps(ctx context.Context, deps *Deps, args map[string]any) (string,
 	}
 	b.WriteString(gateCampsFooter(res, snap.GeneratedAt, len(res.Rows) > 0))
 	return b.String(), res, nil
+}
+
+// gateCampsDatedFooter is footer line 1 alone, with the date before each time, for a snapshot
+// more than 2 hours old.
+func gateCampsDatedFooter(res *GateCamps, generated time.Time) string {
+	const layout = "2006-01-02 15:04"
+	snapshot := generated.UTC().Format(layout)
+	if res.NewestKillmail.IsZero() {
+		return fmt.Sprintf("No kill has reached the feed yet; snapshot %s UTC.", snapshot)
+	}
+	line := fmt.Sprintf("Kills up to %s UTC; snapshot %s UTC.", res.NewestKillmail.UTC().Format(layout), snapshot)
+	if res.FeedBehind {
+		line += " The killmail feed may be behind."
+	}
+	return line
 }
 
 // gateCampsFooter is the footer of an answer. The delay and caveat lines come with rows only.

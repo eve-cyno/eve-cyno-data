@@ -1,5 +1,5 @@
 {
- "doc": "Wording cases for the get_gate_camps answer and for the desktop Intel plugin, which must print the same sentences. Both repositories pin this file by sha256 and copy it byte for byte; change it in the data repository first. Inputs use the field names of the intel-gates-now snapshot (format 1: generated_at, feed, gates[]); times are RFC 3339 UTC. kind row: one gate sentence from the gate object, the two system names and the true security (the sentence shows the display security and band word). kind security: display security (one decimal) and band for a true security. kind answer: the whole text for a snapshot, the clock now and the tool request (system_names, min_state). Systems are real SDE ids; alliances are made up.",
+ "doc": "Wording cases for the get_gate_camps answer and for the desktop Intel plugin, which must print the same sentences. Both repositories pin this file by sha256 and copy it byte for byte; change it in the data repository first. Inputs use the field names of the intel-gates-now snapshot (format 1: generated_at, feed, gates[]); times are RFC 3339 UTC. kind row: one gate sentence from the gate object, the two system names and the true security (the sentence shows the display security and band word). kind security: display security (one decimal) and band for a true security. kind answer: the whole text for a snapshot, the clock now and the tool request (system_names, min_state). Systems are real SDE ids; alliances are made up. In answer cases the snapshot age is now minus generated_at: over 10 minutes the answer starts with the old sentence, over 2 hours it is the out-of-date sentence and a dated footer line 1 only; a negative age is current.",
  "cases": [
   {
    "name": "likely_camp, three alliances, pods plural, interdictor",
@@ -1238,6 +1238,884 @@
     ]
    },
    "expected": "No gate of Perimeter is at possible_camp or above; 1 gate had kills in the last 2 hours at a lower state. Set min_state to kills to list them. That is not proof of safety: only kills that reached zKillboard count.\nKills up to 11:58 UTC (5 min ago); snapshot 12:00 UTC."
+  },
+  {
+   "name": "snapshot age 9 min: no sentence",
+   "kind": "answer",
+   "now": "2026-11-14T12:09:00Z",
+   "snapshot": {
+    "format": "intel-gates-now",
+    "version": 1,
+    "generated_at": "2026-11-14T12:00:00Z",
+    "window_s": 7200,
+    "radius_m": 150000,
+    "credit": "zKillboard; killmails are Fenris Creations game data (ESI)",
+    "feed": {
+     "newest_killmail_time": "2026-11-14T11:58:00Z",
+     "delay_p50_s": 180,
+     "delay_p90_s": 540,
+     "delay_samples": 400
+    },
+    "gates": [
+     {
+      "system_id": 30000142,
+      "to_system_id": 30000144,
+      "state": "gank",
+      "ship_kills_60m": 3,
+      "ship_kills_120m": 3,
+      "pod_kills_60m": 0,
+      "pod_kills_120m": 0,
+      "structure_kills_60m": 0,
+      "first_kill": "2026-11-14T11:40:00Z",
+      "last_kill": "2026-11-14T11:58:00Z",
+      "groups": 1,
+      "attackers": [
+       {
+        "alliance_id": 2004,
+        "name": "",
+        "kills": 3
+       }
+      ],
+      "no_alliance_kills": 0,
+      "dictor_hic": false,
+      "smartbomb": false,
+      "max_attackers": 4
+     }
+    ],
+    "systems": []
+   },
+   "request": {
+    "system_names": [
+     "Jita"
+    ]
+   },
+   "expected": "Jita > Perimeter gate in Jita (0.9 high-sec): 3 ship kills in the last 20 min, by an alliance not yet named (3). Gank pattern (high-sec).\n\nKills up to 11:58 UTC (11 min ago); snapshot 12:00 UTC.\nzKillboard published kills a median of 3 min after they happened (last 24 hours).\nOnly kills that reached zKillboard count; a camp that kills nothing is invisible."
+  },
+  {
+   "name": "snapshot age exactly 10 min: no sentence",
+   "kind": "answer",
+   "now": "2026-11-14T12:10:00Z",
+   "snapshot": {
+    "format": "intel-gates-now",
+    "version": 1,
+    "generated_at": "2026-11-14T12:00:00Z",
+    "window_s": 7200,
+    "radius_m": 150000,
+    "credit": "zKillboard; killmails are Fenris Creations game data (ESI)",
+    "feed": {
+     "newest_killmail_time": "2026-11-14T11:58:00Z",
+     "delay_p50_s": 180,
+     "delay_p90_s": 540,
+     "delay_samples": 400
+    },
+    "gates": [
+     {
+      "system_id": 30000142,
+      "to_system_id": 30000144,
+      "state": "gank",
+      "ship_kills_60m": 3,
+      "ship_kills_120m": 3,
+      "pod_kills_60m": 0,
+      "pod_kills_120m": 0,
+      "structure_kills_60m": 0,
+      "first_kill": "2026-11-14T11:40:00Z",
+      "last_kill": "2026-11-14T11:58:00Z",
+      "groups": 1,
+      "attackers": [
+       {
+        "alliance_id": 2004,
+        "name": "",
+        "kills": 3
+       }
+      ],
+      "no_alliance_kills": 0,
+      "dictor_hic": false,
+      "smartbomb": false,
+      "max_attackers": 4
+     }
+    ],
+    "systems": []
+   },
+   "request": {
+    "system_names": [
+     "Jita"
+    ]
+   },
+   "expected": "Jita > Perimeter gate in Jita (0.9 high-sec): 3 ship kills in the last 20 min, by an alliance not yet named (3). Gank pattern (high-sec).\n\nKills up to 11:58 UTC (12 min ago); snapshot 12:00 UTC.\nzKillboard published kills a median of 3 min after they happened (last 24 hours).\nOnly kills that reached zKillboard count; a camp that kills nothing is invisible."
+  },
+  {
+   "name": "snapshot age 10 min 1 s: old",
+   "kind": "answer",
+   "now": "2026-11-14T12:10:01Z",
+   "snapshot": {
+    "format": "intel-gates-now",
+    "version": 1,
+    "generated_at": "2026-11-14T12:00:00Z",
+    "window_s": 7200,
+    "radius_m": 150000,
+    "credit": "zKillboard; killmails are Fenris Creations game data (ESI)",
+    "feed": {
+     "newest_killmail_time": "2026-11-14T11:58:00Z",
+     "delay_p50_s": 180,
+     "delay_p90_s": 540,
+     "delay_samples": 400
+    },
+    "gates": [
+     {
+      "system_id": 30000142,
+      "to_system_id": 30000144,
+      "state": "gank",
+      "ship_kills_60m": 3,
+      "ship_kills_120m": 3,
+      "pod_kills_60m": 0,
+      "pod_kills_120m": 0,
+      "structure_kills_60m": 0,
+      "first_kill": "2026-11-14T11:40:00Z",
+      "last_kill": "2026-11-14T11:58:00Z",
+      "groups": 1,
+      "attackers": [
+       {
+        "alliance_id": 2004,
+        "name": "",
+        "kills": 3
+       }
+      ],
+      "no_alliance_kills": 0,
+      "dictor_hic": false,
+      "smartbomb": false,
+      "max_attackers": 4
+     }
+    ],
+    "systems": []
+   },
+   "request": {
+    "system_names": [
+     "Jita"
+    ]
+   },
+   "expected": "This snapshot is 10 min old; camps may have changed.\nJita > Perimeter gate in Jita (0.9 high-sec): 3 ship kills in the last 20 min, by an alliance not yet named (3). Gank pattern (high-sec).\n\nKills up to 11:58 UTC (12 min ago); snapshot 12:00 UTC.\nzKillboard published kills a median of 3 min after they happened (last 24 hours).\nOnly kills that reached zKillboard count; a camp that kills nothing is invisible."
+  },
+  {
+   "name": "snapshot age 11 min: old",
+   "kind": "answer",
+   "now": "2026-11-14T12:11:00Z",
+   "snapshot": {
+    "format": "intel-gates-now",
+    "version": 1,
+    "generated_at": "2026-11-14T12:00:00Z",
+    "window_s": 7200,
+    "radius_m": 150000,
+    "credit": "zKillboard; killmails are Fenris Creations game data (ESI)",
+    "feed": {
+     "newest_killmail_time": "2026-11-14T11:58:00Z",
+     "delay_p50_s": 180,
+     "delay_p90_s": 540,
+     "delay_samples": 400
+    },
+    "gates": [
+     {
+      "system_id": 30000142,
+      "to_system_id": 30000144,
+      "state": "gank",
+      "ship_kills_60m": 3,
+      "ship_kills_120m": 3,
+      "pod_kills_60m": 0,
+      "pod_kills_120m": 0,
+      "structure_kills_60m": 0,
+      "first_kill": "2026-11-14T11:40:00Z",
+      "last_kill": "2026-11-14T11:58:00Z",
+      "groups": 1,
+      "attackers": [
+       {
+        "alliance_id": 2004,
+        "name": "",
+        "kills": 3
+       }
+      ],
+      "no_alliance_kills": 0,
+      "dictor_hic": false,
+      "smartbomb": false,
+      "max_attackers": 4
+     }
+    ],
+    "systems": []
+   },
+   "request": {
+    "system_names": [
+     "Jita"
+    ]
+   },
+   "expected": "This snapshot is 11 min old; camps may have changed.\nJita > Perimeter gate in Jita (0.9 high-sec): 3 ship kills in the last 20 min, by an alliance not yet named (3). Gank pattern (high-sec).\n\nKills up to 11:58 UTC (13 min ago); snapshot 12:00 UTC.\nzKillboard published kills a median of 3 min after they happened (last 24 hours).\nOnly kills that reached zKillboard count; a camp that kills nothing is invisible."
+  },
+  {
+   "name": "snapshot age 1 h 59 min: old",
+   "kind": "answer",
+   "now": "2026-11-14T13:59:00Z",
+   "snapshot": {
+    "format": "intel-gates-now",
+    "version": 1,
+    "generated_at": "2026-11-14T12:00:00Z",
+    "window_s": 7200,
+    "radius_m": 150000,
+    "credit": "zKillboard; killmails are Fenris Creations game data (ESI)",
+    "feed": {
+     "newest_killmail_time": "2026-11-14T11:58:00Z",
+     "delay_p50_s": 180,
+     "delay_p90_s": 540,
+     "delay_samples": 400
+    },
+    "gates": [
+     {
+      "system_id": 30000142,
+      "to_system_id": 30000144,
+      "state": "gank",
+      "ship_kills_60m": 3,
+      "ship_kills_120m": 3,
+      "pod_kills_60m": 0,
+      "pod_kills_120m": 0,
+      "structure_kills_60m": 0,
+      "first_kill": "2026-11-14T11:40:00Z",
+      "last_kill": "2026-11-14T11:58:00Z",
+      "groups": 1,
+      "attackers": [
+       {
+        "alliance_id": 2004,
+        "name": "",
+        "kills": 3
+       }
+      ],
+      "no_alliance_kills": 0,
+      "dictor_hic": false,
+      "smartbomb": false,
+      "max_attackers": 4
+     }
+    ],
+    "systems": []
+   },
+   "request": {
+    "system_names": [
+     "Jita"
+    ]
+   },
+   "expected": "This snapshot is 119 min old; camps may have changed.\nJita > Perimeter gate in Jita (0.9 high-sec): 3 ship kills in the last 20 min, by an alliance not yet named (3). Gank pattern (high-sec).\n\nKills up to 11:58 UTC (121 min ago); snapshot 12:00 UTC.\nzKillboard published kills a median of 3 min after they happened (last 24 hours).\nOnly kills that reached zKillboard count; a camp that kills nothing is invisible."
+  },
+  {
+   "name": "snapshot age exactly 2 h: old, rows kept",
+   "kind": "answer",
+   "now": "2026-11-14T14:00:00Z",
+   "snapshot": {
+    "format": "intel-gates-now",
+    "version": 1,
+    "generated_at": "2026-11-14T12:00:00Z",
+    "window_s": 7200,
+    "radius_m": 150000,
+    "credit": "zKillboard; killmails are Fenris Creations game data (ESI)",
+    "feed": {
+     "newest_killmail_time": "2026-11-14T11:58:00Z",
+     "delay_p50_s": 180,
+     "delay_p90_s": 540,
+     "delay_samples": 400
+    },
+    "gates": [
+     {
+      "system_id": 30000142,
+      "to_system_id": 30000144,
+      "state": "gank",
+      "ship_kills_60m": 3,
+      "ship_kills_120m": 3,
+      "pod_kills_60m": 0,
+      "pod_kills_120m": 0,
+      "structure_kills_60m": 0,
+      "first_kill": "2026-11-14T11:40:00Z",
+      "last_kill": "2026-11-14T11:58:00Z",
+      "groups": 1,
+      "attackers": [
+       {
+        "alliance_id": 2004,
+        "name": "",
+        "kills": 3
+       }
+      ],
+      "no_alliance_kills": 0,
+      "dictor_hic": false,
+      "smartbomb": false,
+      "max_attackers": 4
+     }
+    ],
+    "systems": []
+   },
+   "request": {
+    "system_names": [
+     "Jita"
+    ]
+   },
+   "expected": "This snapshot is 120 min old; camps may have changed.\nJita > Perimeter gate in Jita (0.9 high-sec): 3 ship kills in the last 20 min, by an alliance not yet named (3). Gank pattern (high-sec).\n\nKills up to 11:58 UTC (122 min ago); snapshot 12:00 UTC.\nzKillboard published kills a median of 3 min after they happened (last 24 hours).\nOnly kills that reached zKillboard count; a camp that kills nothing is invisible."
+  },
+  {
+   "name": "snapshot age 2 h 1 s: out of date",
+   "kind": "answer",
+   "now": "2026-11-14T14:00:01Z",
+   "snapshot": {
+    "format": "intel-gates-now",
+    "version": 1,
+    "generated_at": "2026-11-14T12:00:00Z",
+    "window_s": 7200,
+    "radius_m": 150000,
+    "credit": "zKillboard; killmails are Fenris Creations game data (ESI)",
+    "feed": {
+     "newest_killmail_time": "2026-11-14T11:58:00Z",
+     "delay_p50_s": 180,
+     "delay_p90_s": 540,
+     "delay_samples": 400
+    },
+    "gates": [
+     {
+      "system_id": 30000142,
+      "to_system_id": 30000144,
+      "state": "gank",
+      "ship_kills_60m": 3,
+      "ship_kills_120m": 3,
+      "pod_kills_60m": 0,
+      "pod_kills_120m": 0,
+      "structure_kills_60m": 0,
+      "first_kill": "2026-11-14T11:40:00Z",
+      "last_kill": "2026-11-14T11:58:00Z",
+      "groups": 1,
+      "attackers": [
+       {
+        "alliance_id": 2004,
+        "name": "",
+        "kills": 3
+       }
+      ],
+      "no_alliance_kills": 0,
+      "dictor_hic": false,
+      "smartbomb": false,
+      "max_attackers": 4
+     }
+    ],
+    "systems": []
+   },
+   "request": {
+    "system_names": [
+     "Jita"
+    ]
+   },
+   "expected": "Gate camp data is out of date (last update 2 h ago).\nKills up to 2026-11-14 11:58 UTC; snapshot 2026-11-14 12:00 UTC."
+  },
+  {
+   "name": "snapshot age 2 h 1 min: out of date",
+   "kind": "answer",
+   "now": "2026-11-14T14:01:00Z",
+   "snapshot": {
+    "format": "intel-gates-now",
+    "version": 1,
+    "generated_at": "2026-11-14T12:00:00Z",
+    "window_s": 7200,
+    "radius_m": 150000,
+    "credit": "zKillboard; killmails are Fenris Creations game data (ESI)",
+    "feed": {
+     "newest_killmail_time": "2026-11-14T11:58:00Z",
+     "delay_p50_s": 180,
+     "delay_p90_s": 540,
+     "delay_samples": 400
+    },
+    "gates": [
+     {
+      "system_id": 30000142,
+      "to_system_id": 30000144,
+      "state": "gank",
+      "ship_kills_60m": 3,
+      "ship_kills_120m": 3,
+      "pod_kills_60m": 0,
+      "pod_kills_120m": 0,
+      "structure_kills_60m": 0,
+      "first_kill": "2026-11-14T11:40:00Z",
+      "last_kill": "2026-11-14T11:58:00Z",
+      "groups": 1,
+      "attackers": [
+       {
+        "alliance_id": 2004,
+        "name": "",
+        "kills": 3
+       }
+      ],
+      "no_alliance_kills": 0,
+      "dictor_hic": false,
+      "smartbomb": false,
+      "max_attackers": 4
+     }
+    ],
+    "systems": []
+   },
+   "request": {
+    "system_names": [
+     "Jita"
+    ]
+   },
+   "expected": "Gate camp data is out of date (last update 2 h ago).\nKills up to 2026-11-14 11:58 UTC; snapshot 2026-11-14 12:00 UTC."
+  },
+  {
+   "name": "out of date, no gate in scope: never \"no kills seen\"",
+   "kind": "answer",
+   "now": "2026-11-14T14:01:00Z",
+   "snapshot": {
+    "format": "intel-gates-now",
+    "version": 1,
+    "generated_at": "2026-11-14T12:00:00Z",
+    "window_s": 7200,
+    "radius_m": 150000,
+    "credit": "zKillboard; killmails are Fenris Creations game data (ESI)",
+    "feed": {
+     "newest_killmail_time": "2026-11-14T11:58:00Z",
+     "delay_p50_s": 180,
+     "delay_p90_s": 540,
+     "delay_samples": 400
+    },
+    "gates": [
+     {
+      "system_id": 30000142,
+      "to_system_id": 30000144,
+      "state": "gank",
+      "ship_kills_60m": 3,
+      "ship_kills_120m": 3,
+      "pod_kills_60m": 0,
+      "pod_kills_120m": 0,
+      "structure_kills_60m": 0,
+      "first_kill": "2026-11-14T11:40:00Z",
+      "last_kill": "2026-11-14T11:58:00Z",
+      "groups": 1,
+      "attackers": [
+       {
+        "alliance_id": 2004,
+        "name": "",
+        "kills": 3
+       }
+      ],
+      "no_alliance_kills": 0,
+      "dictor_hic": false,
+      "smartbomb": false,
+      "max_attackers": 4
+     }
+    ],
+    "systems": []
+   },
+   "request": {
+    "system_names": [
+     "Tama"
+    ]
+   },
+   "expected": "Gate camp data is out of date (last update 2 h ago).\nKills up to 2026-11-14 11:58 UTC; snapshot 2026-11-14 12:00 UTC."
+  },
+  {
+   "name": "out of date, below threshold: never \"no gate is at\"",
+   "kind": "answer",
+   "now": "2026-11-14T14:01:00Z",
+   "snapshot": {
+    "format": "intel-gates-now",
+    "version": 1,
+    "generated_at": "2026-11-14T12:00:00Z",
+    "window_s": 7200,
+    "radius_m": 150000,
+    "credit": "zKillboard; killmails are Fenris Creations game data (ESI)",
+    "feed": {
+     "newest_killmail_time": "2026-11-14T11:58:00Z",
+     "delay_p50_s": 180,
+     "delay_p90_s": 540,
+     "delay_samples": 400
+    },
+    "gates": [
+     {
+      "system_id": 30000144,
+      "to_system_id": 30000142,
+      "state": "kills",
+      "ship_kills_60m": 0,
+      "ship_kills_120m": 1,
+      "pod_kills_60m": 0,
+      "pod_kills_120m": 1,
+      "structure_kills_60m": 0,
+      "first_kill": "2026-11-14T10:30:00Z",
+      "last_kill": "2026-11-14T10:31:00Z",
+      "groups": 0,
+      "attackers": [],
+      "no_alliance_kills": 0,
+      "dictor_hic": false,
+      "smartbomb": false,
+      "max_attackers": 0
+     }
+    ],
+    "systems": []
+   },
+   "request": {
+    "system_names": [
+     "Perimeter"
+    ]
+   },
+   "expected": "Gate camp data is out of date (last update 2 h ago).\nKills up to 2026-11-14 11:58 UTC; snapshot 2026-11-14 12:00 UTC."
+  },
+  {
+   "name": "out of date, null feed",
+   "kind": "answer",
+   "now": "2026-11-14T14:01:00Z",
+   "snapshot": {
+    "format": "intel-gates-now",
+    "version": 1,
+    "generated_at": "2026-11-14T12:00:00Z",
+    "window_s": 7200,
+    "radius_m": 150000,
+    "credit": "zKillboard; killmails are Fenris Creations game data (ESI)",
+    "feed": {
+     "newest_killmail_time": null,
+     "delay_p50_s": null,
+     "delay_p90_s": null,
+     "delay_samples": 0
+    },
+    "gates": [
+     {
+      "system_id": 30000142,
+      "to_system_id": 30000144,
+      "state": "gank",
+      "ship_kills_60m": 3,
+      "ship_kills_120m": 3,
+      "pod_kills_60m": 0,
+      "pod_kills_120m": 0,
+      "structure_kills_60m": 0,
+      "first_kill": "2026-11-14T11:40:00Z",
+      "last_kill": "2026-11-14T11:58:00Z",
+      "groups": 1,
+      "attackers": [
+       {
+        "alliance_id": 2004,
+        "name": "",
+        "kills": 3
+       }
+      ],
+      "no_alliance_kills": 0,
+      "dictor_hic": false,
+      "smartbomb": false,
+      "max_attackers": 4
+     }
+    ],
+    "systems": []
+   },
+   "request": {
+    "system_names": [
+     "Jita"
+    ]
+   },
+   "expected": "Gate camp data is out of date (last update 2 h ago).\nNo kill has reached the feed yet; snapshot 2026-11-14 12:00 UTC."
+  },
+  {
+   "name": "out of date, feed behind",
+   "kind": "answer",
+   "now": "2026-11-14T14:01:00Z",
+   "snapshot": {
+    "format": "intel-gates-now",
+    "version": 1,
+    "generated_at": "2026-11-14T12:00:00Z",
+    "window_s": 7200,
+    "radius_m": 150000,
+    "credit": "zKillboard; killmails are Fenris Creations game data (ESI)",
+    "feed": {
+     "newest_killmail_time": "2026-11-14T11:40:00Z",
+     "delay_p50_s": 180,
+     "delay_p90_s": 540,
+     "delay_samples": 400
+    },
+    "gates": [
+     {
+      "system_id": 30000142,
+      "to_system_id": 30000144,
+      "state": "gank",
+      "ship_kills_60m": 3,
+      "ship_kills_120m": 3,
+      "pod_kills_60m": 0,
+      "pod_kills_120m": 0,
+      "structure_kills_60m": 0,
+      "first_kill": "2026-11-14T11:40:00Z",
+      "last_kill": "2026-11-14T11:58:00Z",
+      "groups": 1,
+      "attackers": [
+       {
+        "alliance_id": 2004,
+        "name": "",
+        "kills": 3
+       }
+      ],
+      "no_alliance_kills": 0,
+      "dictor_hic": false,
+      "smartbomb": false,
+      "max_attackers": 4
+     }
+    ],
+    "systems": []
+   },
+   "request": {
+    "system_names": [
+     "Jita"
+    ]
+   },
+   "expected": "Gate camp data is out of date (last update 2 h ago).\nKills up to 2026-11-14 11:40 UTC; snapshot 2026-11-14 12:00 UTC. The killmail feed may be behind."
+  },
+  {
+   "name": "out of date for 26 h, the date names the day",
+   "kind": "answer",
+   "now": "2026-11-15T14:30:00Z",
+   "snapshot": {
+    "format": "intel-gates-now",
+    "version": 1,
+    "generated_at": "2026-11-14T12:00:00Z",
+    "window_s": 7200,
+    "radius_m": 150000,
+    "credit": "zKillboard; killmails are Fenris Creations game data (ESI)",
+    "feed": {
+     "newest_killmail_time": "2026-11-14T11:58:00Z",
+     "delay_p50_s": 180,
+     "delay_p90_s": 540,
+     "delay_samples": 400
+    },
+    "gates": [
+     {
+      "system_id": 30000142,
+      "to_system_id": 30000144,
+      "state": "gank",
+      "ship_kills_60m": 3,
+      "ship_kills_120m": 3,
+      "pod_kills_60m": 0,
+      "pod_kills_120m": 0,
+      "structure_kills_60m": 0,
+      "first_kill": "2026-11-14T11:40:00Z",
+      "last_kill": "2026-11-14T11:58:00Z",
+      "groups": 1,
+      "attackers": [
+       {
+        "alliance_id": 2004,
+        "name": "",
+        "kills": 3
+       }
+      ],
+      "no_alliance_kills": 0,
+      "dictor_hic": false,
+      "smartbomb": false,
+      "max_attackers": 4
+     }
+    ],
+    "systems": []
+   },
+   "request": {
+    "system_names": [
+     "Jita"
+    ]
+   },
+   "expected": "Gate camp data is out of date (last update 26 h ago).\nKills up to 2026-11-14 11:58 UTC; snapshot 2026-11-14 12:00 UTC."
+  },
+  {
+   "name": "old and empty: the sentence comes first",
+   "kind": "answer",
+   "now": "2026-11-14T12:25:00Z",
+   "snapshot": {
+    "format": "intel-gates-now",
+    "version": 1,
+    "generated_at": "2026-11-14T12:00:00Z",
+    "window_s": 7200,
+    "radius_m": 150000,
+    "credit": "zKillboard; killmails are Fenris Creations game data (ESI)",
+    "feed": {
+     "newest_killmail_time": "2026-11-14T11:58:00Z",
+     "delay_p50_s": 180,
+     "delay_p90_s": 540,
+     "delay_samples": 400
+    },
+    "gates": [
+     {
+      "system_id": 30000142,
+      "to_system_id": 30000144,
+      "state": "gank",
+      "ship_kills_60m": 3,
+      "ship_kills_120m": 3,
+      "pod_kills_60m": 0,
+      "pod_kills_120m": 0,
+      "structure_kills_60m": 0,
+      "first_kill": "2026-11-14T11:40:00Z",
+      "last_kill": "2026-11-14T11:58:00Z",
+      "groups": 1,
+      "attackers": [
+       {
+        "alliance_id": 2004,
+        "name": "",
+        "kills": 3
+       }
+      ],
+      "no_alliance_kills": 0,
+      "dictor_hic": false,
+      "smartbomb": false,
+      "max_attackers": 4
+     }
+    ],
+    "systems": []
+   },
+   "request": {
+    "system_names": [
+     "Tama"
+    ]
+   },
+   "expected": "This snapshot is 25 min old; camps may have changed.\nNo kills seen on gates of Tama in the last 2 hours. That is not proof of safety: only kills that reached zKillboard count.\nKills up to 11:58 UTC (27 min ago); snapshot 12:00 UTC."
+  },
+  {
+   "name": "negative age: the newest kill after now reads just now",
+   "kind": "answer",
+   "now": "2026-11-14T11:57:00Z",
+   "snapshot": {
+    "format": "intel-gates-now",
+    "version": 1,
+    "generated_at": "2026-11-14T12:00:00Z",
+    "window_s": 7200,
+    "radius_m": 150000,
+    "credit": "zKillboard; killmails are Fenris Creations game data (ESI)",
+    "feed": {
+     "newest_killmail_time": "2026-11-14T11:58:00Z",
+     "delay_p50_s": 180,
+     "delay_p90_s": 540,
+     "delay_samples": 400
+    },
+    "gates": [
+     {
+      "system_id": 30000142,
+      "to_system_id": 30000144,
+      "state": "gank",
+      "ship_kills_60m": 3,
+      "ship_kills_120m": 3,
+      "pod_kills_60m": 0,
+      "pod_kills_120m": 0,
+      "structure_kills_60m": 0,
+      "first_kill": "2026-11-14T11:40:00Z",
+      "last_kill": "2026-11-14T11:58:00Z",
+      "groups": 1,
+      "attackers": [
+       {
+        "alliance_id": 2004,
+        "name": "",
+        "kills": 3
+       }
+      ],
+      "no_alliance_kills": 0,
+      "dictor_hic": false,
+      "smartbomb": false,
+      "max_attackers": 4
+     }
+    ],
+    "systems": []
+   },
+   "request": {
+    "system_names": [
+     "Jita"
+    ]
+   },
+   "expected": "Jita > Perimeter gate in Jita (0.9 high-sec): 3 ship kills in the last 20 min, by an alliance not yet named (3). Gank pattern (high-sec).\n\nKills up to 11:58 UTC (just now); snapshot 12:00 UTC.\nzKillboard published kills a median of 3 min after they happened (last 24 hours).\nOnly kills that reached zKillboard count; a camp that kills nothing is invisible."
+  },
+  {
+   "name": "the newest kill exactly now is 0 min ago",
+   "kind": "answer",
+   "now": "2026-11-14T11:58:00Z",
+   "snapshot": {
+    "format": "intel-gates-now",
+    "version": 1,
+    "generated_at": "2026-11-14T12:00:00Z",
+    "window_s": 7200,
+    "radius_m": 150000,
+    "credit": "zKillboard; killmails are Fenris Creations game data (ESI)",
+    "feed": {
+     "newest_killmail_time": "2026-11-14T11:58:00Z",
+     "delay_p50_s": 180,
+     "delay_p90_s": 540,
+     "delay_samples": 400
+    },
+    "gates": [
+     {
+      "system_id": 30000142,
+      "to_system_id": 30000144,
+      "state": "gank",
+      "ship_kills_60m": 3,
+      "ship_kills_120m": 3,
+      "pod_kills_60m": 0,
+      "pod_kills_120m": 0,
+      "structure_kills_60m": 0,
+      "first_kill": "2026-11-14T11:40:00Z",
+      "last_kill": "2026-11-14T11:58:00Z",
+      "groups": 1,
+      "attackers": [
+       {
+        "alliance_id": 2004,
+        "name": "",
+        "kills": 3
+       }
+      ],
+      "no_alliance_kills": 0,
+      "dictor_hic": false,
+      "smartbomb": false,
+      "max_attackers": 4
+     }
+    ],
+    "systems": []
+   },
+   "request": {
+    "system_names": [
+     "Jita"
+    ]
+   },
+   "expected": "Jita > Perimeter gate in Jita (0.9 high-sec): 3 ship kills in the last 20 min, by an alliance not yet named (3). Gank pattern (high-sec).\n\nKills up to 11:58 UTC (0 min ago); snapshot 12:00 UTC.\nzKillboard published kills a median of 3 min after they happened (last 24 hours).\nOnly kills that reached zKillboard count; a camp that kills nothing is invisible."
+  },
+  {
+   "name": "snapshot 3 h ahead of the clock: current, never out of date",
+   "kind": "answer",
+   "now": "2026-11-14T09:00:00Z",
+   "snapshot": {
+    "format": "intel-gates-now",
+    "version": 1,
+    "generated_at": "2026-11-14T12:00:00Z",
+    "window_s": 7200,
+    "radius_m": 150000,
+    "credit": "zKillboard; killmails are Fenris Creations game data (ESI)",
+    "feed": {
+     "newest_killmail_time": "2026-11-14T11:58:00Z",
+     "delay_p50_s": 180,
+     "delay_p90_s": 540,
+     "delay_samples": 400
+    },
+    "gates": [
+     {
+      "system_id": 30000142,
+      "to_system_id": 30000144,
+      "state": "gank",
+      "ship_kills_60m": 3,
+      "ship_kills_120m": 3,
+      "pod_kills_60m": 0,
+      "pod_kills_120m": 0,
+      "structure_kills_60m": 0,
+      "first_kill": "2026-11-14T11:40:00Z",
+      "last_kill": "2026-11-14T11:58:00Z",
+      "groups": 1,
+      "attackers": [
+       {
+        "alliance_id": 2004,
+        "name": "",
+        "kills": 3
+       }
+      ],
+      "no_alliance_kills": 0,
+      "dictor_hic": false,
+      "smartbomb": false,
+      "max_attackers": 4
+     }
+    ],
+    "systems": []
+   },
+   "request": {
+    "system_names": [
+     "Jita"
+    ]
+   },
+   "expected": "Jita > Perimeter gate in Jita (0.9 high-sec): 3 ship kills in the last 20 min, by an alliance not yet named (3). Gank pattern (high-sec).\n\nKills up to 11:58 UTC (just now); snapshot 12:00 UTC.\nzKillboard published kills a median of 3 min after they happened (last 24 hours).\nOnly kills that reached zKillboard count; a camp that kills nothing is invisible."
   }
  ]
 }
