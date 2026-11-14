@@ -86,7 +86,7 @@ func load[T any](c *cached[T], path string, dec func([]byte) (*T, error)) (*T, e
 	}
 	f, err := OpenNoFollow(path)
 	if err != nil {
-		return nil, err
+		return nil, openFailure(path, err)
 	}
 	defer f.Close()
 	// The stat and the bytes come from one open file, so they match.
@@ -115,4 +115,13 @@ func load[T any](c *cached[T], path string, dec func([]byte) (*T, error)) (*T, e
 	}
 	c.info, c.size, c.mtime, c.done, c.val, c.err = fi, fi.Size(), fi.ModTime(), true, v, err
 	return v, err
+}
+
+// openFailure names a failed open: a name that became a symlink (or any non-regular file)
+// between the Lstat and the open is ErrNotRegular, not a raw ELOOP.
+func openFailure(path string, err error) error {
+	if lfi, lerr := os.Lstat(path); lerr == nil && !lfi.Mode().IsRegular() {
+		return fmt.Errorf("%w: %s", ErrNotRegular, lfi.Mode())
+	}
+	return err
 }

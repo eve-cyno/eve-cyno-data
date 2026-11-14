@@ -356,8 +356,23 @@ func TestReader_RefusesSymlink(t *testing.T) {
 	put(t, out, "target.json", golden(t, "intel-gates-now.v1.golden.json"))
 	require.NoError(t, os.Symlink(filepath.Join(out, "target.json"), filepath.Join(dir, "intel-gates-now.json")))
 	_, err := NewReader(dir).GatesNow()
-	require.Error(t, err, "a symlinked snapshot was followed")
+	require.ErrorIs(t, err, ErrNotRegular, "a symlinked snapshot was followed")
 	require.False(t, errors.Is(err, os.ErrNotExist))
+}
+
+// A rename keeps inode, size and mtime, so the cache key still matches; the symlink check must
+// run before the cache is consulted.
+func TestReader_RefusesSymlinkSwappedInAfterACachedRead(t *testing.T) {
+	dir := t.TempDir()
+	f := filepath.Join(dir, "intel-gates-now.json")
+	put(t, dir, "intel-gates-now.json", golden(t, "intel-gates-now.v1.golden.json"))
+	r := NewReader(dir)
+	_, err := r.GatesNow()
+	require.NoError(t, err)
+	require.NoError(t, os.Rename(f, f+".real"))
+	require.NoError(t, os.Symlink(f+".real", f))
+	_, err = r.GatesNow()
+	require.ErrorIs(t, err, ErrNotRegular)
 }
 
 func TestReader_RefusesOversizeAndCachesTheError(t *testing.T) {
@@ -375,4 +390,15 @@ func TestReader_RefusesOversizeAndCachesTheError(t *testing.T) {
 	_, err := r.GatesNow()
 	require.Error(t, err)
 	require.NotErrorIs(t, err, ErrTooLarge)
+}
+
+// A symlink swapped in between the Lstat and the open fails the open with ELOOP; the reader
+// names it ErrNotRegular. The race itself is not deterministic, so the mapping is tested alone.
+func TestOpenFailure_NamesASymlink(t *testing.T) {
+	dir := t.TempDir()
+	link := filepath.Join(dir, "l.json")
+	require.NoError(t, os.Symlink(filepath.Join(dir, "elsewhere"), link))
+	raw := errors.New("too many levels of symbolic links")
+	require.ErrorIs(t, openFailure(link, raw), ErrNotRegular)
+	require.Same(t, raw, openFailure(filepath.Join(dir, "missing"), raw))
 }

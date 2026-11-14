@@ -2,13 +2,7 @@
 
 package intelsnap
 
-import (
-	"errors"
-	"os"
-)
-
-// errNotRegular is the open error of a name that is not a regular file.
-var errNotRegular = errors.New("not a regular file")
+import "os"
 
 // OpenNoFollow opens path for reading only when the name itself is a regular file: without an
 // O_NOFOLLOW, the name is checked before the open and the opened file must be the one checked.
@@ -18,7 +12,7 @@ func OpenNoFollow(path string) (*os.File, error) {
 		return nil, err
 	}
 	if !lfi.Mode().IsRegular() {
-		return nil, errNotRegular
+		return nil, ErrNotRegular
 	}
 	f, err := os.Open(path)
 	if err != nil {
@@ -27,7 +21,7 @@ func OpenNoFollow(path string) (*os.File, error) {
 	fi, err := f.Stat()
 	if err != nil || !os.SameFile(lfi, fi) {
 		_ = f.Close()
-		return nil, errNotRegular
+		return nil, ErrNotRegular
 	}
 	return f, nil
 }

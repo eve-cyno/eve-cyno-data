@@ -44,12 +44,13 @@ var (
 		License: "Public R2Z2 API under zKillboard's usage etiquette; only per-system counts and ISK sums derived from it are published; killmails are Fenris Creations game data (EVE Developer License Agreement)",
 	}
 	// sourceZKillboardGateKills is the killmail side of get_gate_camps: per-gate kill counts,
-	// kill times, leading attacking alliances, max_attackers, the dictor_hic flag, per-system counts
-	// and the 28-day per-hour gate profile, never a killmail.
+	// kill times, camp state, groups, leading attacking alliances, no_alliance_kills, max_attackers,
+	// the dictor_hic and smartbomb flags, per-system counts, the 28-day per-hour gate profile with
+	// camp_days and zKillboard's upload delay (delay_p50_s, delay_p90_s), never a killmail.
 	sourceZKillboardGateKills = Source{
 		Name:    "zKillboard (gate kill counts)",
 		URL:     "https://zkillboard.com/",
-		License: "Public R2Z2 API under zKillboard's usage etiquette; only per-gate kill counts and kill times, the leading attacking alliances (alliance ids, names from ESI, kill counts), the largest attacker count (max_attackers) and the dictor_hic flag per fight, per-system counts and a 28-day per-hour gate profile derived from it are published, never a killmail, pilot or corporation; killmails are Fenris Creations game data (EVE Developer License Agreement)",
+		License: "Public R2Z2 API under zKillboard's usage etiquette; only these values derived from it are published: per gate over the last 60 minutes the kill counts and kill times, the camp state, the number of groups, the leading attacking alliances (alliance ids, names from ESI, kill counts), no_alliance_kills, the largest attacker count (max_attackers) and the dictor_hic and smartbomb flags; per-system counts; a 28-day per-hour gate profile with camp_days; and the upload delay of zKillboard (delay_p50_s, delay_p90_s); never a killmail, pilot or corporation; killmails are Fenris Creations game data (EVE Developer License Agreement)",
 	}
 	sourceWarBeacon = Source{
 		Name:    "WarBeacon",

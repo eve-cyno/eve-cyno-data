@@ -16,7 +16,8 @@ func TestGateKillsAttribution_NamesEveryPublishedField(t *testing.T) {
 	}
 	require.NotEmpty(t, src.License)
 	for _, want := range []string{
-		"kill times", "max_attackers", "dictor_hic", "per-system counts", "28-day per-hour gate profile",
+		"kill times", "max_attackers", "dictor_hic", "smartbomb", "per-system counts", "28-day per-hour gate profile",
+		"delay_p50_s", "delay_p90_s", "state", "groups", "no_alliance_kills", "camp_days", "per gate over the last 60 minutes",
 		"never a killmail, pilot or corporation",
 		"killmails are Fenris Creations game data (EVE Developer License Agreement)",
 	} {
