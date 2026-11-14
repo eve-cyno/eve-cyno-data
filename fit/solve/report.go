@@ -121,8 +121,10 @@ func BuildReport(ctx context.Context, c *Catalog, ev Evaluator, r Request, res *
 		} else {
 			rep.Binding.Text = c.nameOf(nc.Hull.TypeID) + " cannot be flown"
 		}
-		// The skills the hull needs, the direct requirements first (the input order).
-		for _, m := range nc.Hull.Missing[:min(trainLines, len(nc.Hull.Missing))] {
+		// The skills the hull needs, the direct requirements first (the input order), then the
+		// prerequisites of those skills.
+		train := c.withPrereqs(ctx, r.Skills, nc.Hull.Missing)
+		for _, m := range train[:min(trainLines, len(train))] {
 			rep.Train = append(rep.Train, c.trainLine(m.TypeID, m.Has, m.Needs))
 		}
 		return rep, nil
@@ -144,7 +146,7 @@ func BuildReport(ctx context.Context, c *Catalog, ev Evaluator, r Request, res *
 		}
 		rep.Binding = b
 		if b.Code == BindSkill {
-			rep.Binding.Text, rep.Train = c.skillBinding(b, opt)
+			rep.Binding.Text, rep.Train = c.skillBinding(ctx, r.Skills, b, opt)
 			return rep, nil
 		}
 		t, err := trainFor(ctx, c, ev, r, res, b, opt.Fit)
@@ -230,6 +232,39 @@ func (c *Catalog) nameOf(id int) string {
 		return *n
 	}
 	return fmt.Sprintf("type %d", id)
+}
+
+// withPrereqs is the training list of missing skills: each missing skill of an item, then the
+// unmet prerequisites of those skills (fit.SkillReq.All of the skill, each at the level the game
+// needs to start training it), in that order. CanUse reports only what the item itself requires
+// (owner ruling 2026-11-14), but a skill cannot be trained without its prerequisites, so advice
+// on what to train lists them too. A skill listed twice keeps the higher level.
+func (c *Catalog) withPrereqs(ctx context.Context, skills fit.SkillProfile, miss []fit.MissingSkill) []fit.MissingSkill {
+	out := make([]fit.MissingSkill, 0, len(miss))
+	at := map[int]int{}
+	add := func(m fit.MissingSkill) {
+		if i, ok := at[m.TypeID]; ok {
+			out[i].Needs = max(out[i].Needs, m.Needs)
+			return
+		}
+		at[m.TypeID] = len(out)
+		out = append(out, m)
+	}
+	for _, m := range miss {
+		add(m)
+	}
+	for _, m := range miss {
+		reqs := fit.RequiredSkills(ctx, c.Store(), []int{m.TypeID})
+		if len(reqs) == 0 {
+			continue
+		}
+		for _, q := range reqs[0].All {
+			if has := skills[q.SkillTypeID]; has < q.Level {
+				add(fit.MissingSkill{TypeID: q.SkillTypeID, Needs: q.Level, Has: has})
+			}
+		}
+	}
+	return out
 }
 
 func (c *Catalog) trainLine(skill, from, to int) TrainLine {
@@ -362,7 +397,7 @@ func capBaselineTrain(ctx context.Context, c *Catalog, ev Evaluator, r Request, 
 	for _, i := range needed {
 		cd := cands[i]
 		names = append(names, cd.name)
-		for _, m := range cd.miss {
+		for _, m := range c.withPrereqs(ctx, r.Skills, cd.miss) {
 			l := c.trainLine(m.TypeID, m.Has, m.Needs)
 			l.For = cd.name
 			l.Text += " (" + cd.name + ")"
@@ -393,9 +428,9 @@ func dedupeTrain(lines []TrainLine) []TrainLine {
 
 // skillBinding is the text and the train of a skill binding: the skills the option's lines
 // lack, one line per skill from the pilot's level to the required one, in the violations'
-// order (the direct requirements of a line first), at most trainLines. Each line names the
+// order (the direct requirements first, then the prerequisites of those skills), at most trainLines. Each line names the
 // item that needs the skill.
-func (c *Catalog) skillBinding(b Binding, opt Option) (string, []TrainLine) {
+func (c *Catalog) skillBinding(ctx context.Context, skills fit.SkillProfile, b Binding, opt Option) (string, []TrainLine) {
 	text := bindingText(b)
 	train := []TrainLine{}
 	// The highest level required per skill, so one line trains far enough for every item.
@@ -434,6 +469,22 @@ func (c *Catalog) skillBinding(b Binding, opt Option) (string, []TrainLine) {
 		l.For = line
 		l.Text += " (" + line + ")"
 		train = append(train, l)
+	}
+	// The unmet prerequisites of those skills follow, while the list has room.
+	if len(train) < trainLines {
+		var direct []fit.MissingSkill
+		for _, l := range train {
+			direct = append(direct, fit.MissingSkill{TypeID: l.SkillID, Needs: l.To, Has: l.From})
+		}
+		for _, m := range c.withPrereqs(ctx, skills, direct)[len(direct):] {
+			if len(train) == trainLines {
+				break
+			}
+			l := c.trainLine(m.TypeID, m.Has, m.Needs)
+			l.For = train[0].For
+			l.Text += " (" + l.For + ")"
+			train = append(train, l)
+		}
 	}
 	return text, train
 }

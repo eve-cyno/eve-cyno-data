@@ -22,6 +22,11 @@ golangci-lint run ./...
 go generate ./dataapi && git diff --exit-code  # generated files (OpenAPI, llms.txt, tool schemas, field docs) must be committed
 ```
 
+After an SDE refresh (a new Fuzzwork build): regenerate the fix/downgrade golden. Solve the 96 pairs with the code at 1d01273 (a tree copy with
+the corpus) on the new SDE, check that status, change count and To list of every pair match the current code, then run
+`EVE_UPDATE_GOLDEN=1 go test -run TestFixDowngrade_UnchangedByTwoPass ./fit/solve/` and commit `fit/solve/testdata/fixdown-golden.json`. Until then the
+test skips with a `skipped goldens: 1 (golden build X, SDE build Y)` line, which the CI step prints.
+
 Tests that need the SDE skip when it is missing; CI sets `EVE_REQUIRE_SDE=1` so they fail instead. New behaviour comes with a
 test, and a bug fix comes with the regression test in the same commit.
 

@@ -166,7 +166,7 @@ func TestSkillBinding_KeepsHighestLevel(t *testing.T) {
 		{Code: fit.CodeSkill, Names: []string{"A"}, Skill: &fit.MissingSkill{TypeID: skillRare, Has: 1, Needs: 2}},
 		{Code: fit.CodeSkill, Names: []string{"B"}, Skill: &fit.MissingSkill{TypeID: skillRare, Has: 1, Needs: 4}},
 	}}
-	text, train := c.skillBinding(Binding{Code: BindSkill}, opt)
+	text, train := c.skillBinding(context.Background(), nil, Binding{Code: BindSkill}, opt)
 	require.Len(t, train, 1)
 	require.Equal(t, 4, train[0].To)
 	require.Equal(t, 1, train[0].From)
@@ -226,7 +226,7 @@ func TestSkillBinding_NamesTopLevelLine(t *testing.T) {
 		{Code: fit.CodeSkill, Names: []string{"B"}, Skill: &fit.MissingSkill{TypeID: skillRare, Has: 1, Needs: 4}},
 		{Code: fit.CodeSkill, Names: []string{"C"}, Skill: &fit.MissingSkill{TypeID: skillRare, Has: 1, Needs: 4}},
 	}}
-	text, train := c.skillBinding(Binding{Code: BindSkill}, opt)
+	text, train := c.skillBinding(context.Background(), nil, Binding{Code: BindSkill}, opt)
 	require.Len(t, train, 1)
 	require.Equal(t, "B", train[0].For, "first line among ties")
 	require.Contains(t, train[0].Text, "(B)")

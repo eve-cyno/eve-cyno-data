@@ -152,11 +152,7 @@ func CanUse(ctx context.Context, s RequiredSDE, skills SkillProfile, id int) Can
 // canUseAt is CanUse with the level lookup supplied by the caller.
 func canUseAt(ctx context.Context, s RequiredSDE, level func(skillTypeID int) int, id int) CanUseResult {
 	res := CanUseResult{TypeID: id, OK: true}
-	reqs := RequiredSkills(ctx, s, []int{id})
-	if len(reqs) == 0 {
-		return res
-	}
-	for _, q := range reqs[0].Direct {
+	for _, q := range directSkills(s, id) {
 		has := level(q.SkillTypeID)
 		if has < q.Level {
 			res.Missing = append(res.Missing, MissingSkill{TypeID: q.SkillTypeID, Needs: q.Level, Has: has})

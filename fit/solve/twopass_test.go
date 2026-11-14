@@ -103,12 +103,13 @@ func TestConvert_PassAOverHalfTheCapSkipsPassB(t *testing.T) {
 
 // Fix and Downgrade results of the 48 + 48 corpus pairs are byte-equal to the results before
 // the two-pass change (sha256 of the JSON plus a readable summary, testdata/fixdown-golden.json,
-// written at 1d01273 for the SDE build named in the file; another build skips the test).
+// written at 1d01273 for the SDE build named in the file; another build skips the test with a "skipped goldens" line, a diff on the same build fails it).
 // EVE_UPDATE_GOLDEN=1 rewrites the file and fails the run: regenerate it from the code at
-// 1d01273, never from the current code. Exception, 2026-11-10 (fit parity): the engine numbers moved
+// 1d01273, never from the current code (after 2026-11-14 the file may be rewritten from the current code only after the reviewed diff of the Exception below). Exception, 2026-11-10 (fit parity): the engine numbers moved
 // (Cerberus kinetic bonus, Reactive Armor Hardener, discrete capacitor, weapon-only volley), so the file was
 // regenerated from the engine at that commit (a second time after the Opus review narrowed the Not-modelled flags: two sha values moved, statuses and changes did not); the two-pass logic was untouched, see the as-built note.
 // Exception, 2026-11-10 (subsystem slots): refit/ref5/alpha, refit/ref6/droner and refit/ref6/tanker moved their sha256 only (statuses, changes and To identical) not because of a subsystem rule: ref5 (Megathron) and ref6 (Myrmidon) have no subsystems. The JSON of every fit.Violation now carries "SubsystemSlot":"" (the field has no omitempty), which changes the hash of any result that lists a violation.
+// Exception, 2026-11-14 (Fable fix round, F2): the golden was regenerated for the SDE of Fuzzwork build 3698585_20261113, whose sdeInfo.buildNumber is 3693310 (the file before it, 3670638, no longer matched, so the test had skipped everywhere; the interim 3682781 golden was replaced the same day). The 96 pairs were first solved by the code at 1d01273 (the solver before the two-pass change, on a copy of the 1d01273 tree with the same corpus and the same SDE): status, change count and To list are identical for all 96 against the current code; 51 sha256 values differ, from the engine moves since (Fit parity, the idle-module and offline rules of 2026-11-14, charge volume), as before. A build mismatch skips with a loud "skipped goldens" line (coordinator ruling 2026-11-14); the golden follows prod's build.
 // Exception, 2026-11-10 (capacitor wording): downgrade/ref2/droner and refit/ref2/droner moved their sha256 only, because the capacitor warning floors the seconds ("empty in 60 s", not 61) like the card.
 func TestFixDowngrade_UnchangedByTwoPass(t *testing.T) {
 	skipHeavyCorpus(t)
@@ -119,7 +120,11 @@ func TestFixDowngrade_UnchangedByTwoPass(t *testing.T) {
 		var want goldenFile
 		require.NoError(t, json.Unmarshal(raw, &want))
 		if want.SDEBuild != build {
-			t.Skipf("golden was generated with SDE build %s, this SDE is build %s; regenerate it from 1d01273 (EVE_UPDATE_GOLDEN=1)", want.SDEBuild, build)
+			// A golden from another build skips, loudly and countably (the CI step prints the line); a diff
+			// on the same build fails. After an SDE refresh: regenerate it (EVE_UPDATE_GOLDEN=1) after a
+			// reviewed diff of statuses, change counts and To lists against the code at 1d01273 on the same
+			// SDE (CONTRIBUTING.md, "After an SDE refresh").
+			t.Skipf("skipped goldens: 1 (golden build %s, SDE build %s): fixdown-golden.json is not checked on this SDE", want.SDEBuild, build)
 		}
 		require.Equal(t, want.Entries, computeFixDown(t))
 		return

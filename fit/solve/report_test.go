@@ -58,6 +58,11 @@ func TestNoCandidate_ImpossibleCase(t *testing.T) {
 		}
 	}
 	require.True(t, found, "train lists Gallente Battleship: %+v", rep.Train)
+	// The hull's own list is Gallente Battleship; the game cannot train it without its
+	// prerequisites, so the advice lists them after it (owner ruling 2026-11-14: CanUse checks
+	// only the item's own skills, the training list keeps the closure).
+	require.Greater(t, len(rep.Train), 1, "the prerequisites of the skill follow: %+v", rep.Train)
+	require.Equal(t, gb, rep.Train[0].SkillID, "the direct requirement first")
 	require.Equal(t, TrainNote, rep.Note)
 	require.Empty(t, rep.Closest)
 }

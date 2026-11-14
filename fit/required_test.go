@@ -100,7 +100,7 @@ func TestCanUse_PrerequisitesOfATrainedSkillAreNotChecked(t *testing.T) {
 }
 
 func TestCanUse_HighestLevelWins(t *testing.T) {
-	// MLO is needed at I, II, III and IV along four paths: IV is the one reported, once.
+	// 3319 is needed at level IV by the item itself: IV is the one reported, once.
 	s := openReqSDE(t)
 	res := CanUse(context.Background(), s, SkillProfile{3324: 5, 3321: 3, 20211: 1, 3319: 3}, 2410)
 	require.Equal(t, []MissingSkill{{3319, 4, 3}}, res.Missing)
@@ -197,4 +197,14 @@ func TestSkillViolations_AllZeroCerberus(t *testing.T) {
 	for _, x := range SkillViolations(context.Background(), s, f, StatsOpts{Skills: p, MissingAsZero: true}) {
 		require.NotEqual(t, 11993, x.ItemTypeID)
 	}
+}
+
+// The old closure wanted skill 10 at IV through skill 11; the item's own list says I (owner ruling
+// 2026-11-14), so a pilot with 10 at I and 11 at I can use it. Runs without the SDE.
+func TestCanUse_OwnLevelNotClosureLevel(t *testing.T) {
+	f := fakeReq{1: {{10, 1}, {11, 1}}, 11: {{10, 4}}}
+	require.True(t, CanUse(context.Background(), f, SkillProfile{10: 1, 11: 1}, 1).OK)
+	require.Equal(t, []MissingSkill{{10, 1, 0}}, CanUse(context.Background(), f, SkillProfile{11: 1}, 1).Missing)
+	r := RequiredSkills(context.Background(), f, []int{1})[0]
+	require.Equal(t, 4, levels(r.All)[10], "the training list still wants 10 at IV")
 }

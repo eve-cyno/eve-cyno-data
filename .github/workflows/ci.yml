@@ -139,7 +139,13 @@ jobs:
           fail-on-cache-miss: true
 
       - name: go test (fit/solve corpus tests, no -race)
-        run: go test -count=1 -timeout 1200s -run '^(TestConvert_TwoPassNeverWorseThanClassic|TestFixDowngrade_UnchangedByTwoPass|TestSolve_TiesReproducible|TestOwnerExample_ConvertDoctrineCollection|TestSolve_NeverOutsideSubset|TestConvert_HardpointsCap|TestDowngrade_MinimalChanges|TestSolve_TwinSkippingKeepsSuccessfulResults|TestConvert_OwnHullNoChange|TestCandidates_AnyMetaGroup_RealSDE|TestConvert_HardpointsRepairedBeforeSlotOverflow|TestConvert_RigSizeFamily|TestDowngrade_AnyMetaGroupButNoOfficerIntroduced)$' ./fit/solve/
+        run: |
+          set +e
+          go test -v -count=1 -timeout 1200s -run '^(TestConvert_TwoPassNeverWorseThanClassic|TestFixDowngrade_UnchangedByTwoPass|TestSolve_TiesReproducible|TestOwnerExample_ConvertDoctrineCollection|TestSolve_NeverOutsideSubset|TestConvert_HardpointsCap|TestDowngrade_MinimalChanges|TestSolve_TwinSkippingKeepsSuccessfulResults|TestConvert_OwnHullNoChange|TestCandidates_AnyMetaGroup_RealSDE|TestConvert_HardpointsRepairedBeforeSlotOverflow|TestConvert_RigSizeFamily|TestDowngrade_AnyMetaGroupButNoOfficerIntroduced)$' ./fit/solve/ > solve.log 2>&1
+          rc=$?
+          grep -E '^(--- |ok|FAIL|PASS)' solve.log | tail -30
+          grep -h 'skipped goldens' solve.log || true
+          exit $rc
 
       - name: go test (fit/gofa corpus tests, no -race)
         run: go test -count=1 -timeout 1200s -run '^(TestProperty_HigherSkillNeverLowers|TestProperty_Deterministic|TestEHP_UniformUnchanged|TestProperty_ModuleOrderIrrelevant|TestPrune_EqualsFull|TestPrune_LevelZeroEqualsAbsent|TestStats_DeterministicAcrossCallsAndEngines|TestResources_DifferentialAllV|TestStats_MissingAsZeroEqualsCompleteMap|TestGolden_MaxLockedTargetsAllV|TestEvaluateMany_EqualsSingle|TestResources_SkillProfiles|TestSubset_EngineMatchesSQLite|TestImplants_NoneEqualsToday|TestCapacitor_AllV27Table|TestSubset_StartAndStatsTime|TestAmmoRangeModifiers|TestSubset_StoreSurvivesWriteJSON|TestApplyDefaultAmmo_TableBySizeAndFamily|TestImplants_HandFormula|TestImplants_FitLinesNeverApply|TestImplants_SetBonusHandFormula|TestImplants_SetBonusResolvedAttr|TestImplants_SetBonusLowGradeNavy|TestImplants_SetBonusUnshownFamilies|TestImplantSets_KeyTableComplete|TestImplantSets_OneKeyPerImplant|TestImplantSets_NamePrefix|TestImplantSets_Counts|TestImplantSets_GradesAndCoverage|TestImplantSets_SlotsAndUniqueness|TestImplantSets_Order|TestImplantSets_KnownSets|TestImplantSets_AllModelled|TestImplantSlot|TestImplantBonuses_MidGradeCrystal|TestImplantBonuses_LowGradeGrail|TestImplantBonuses_RealTotals|TestImplantBonuses_CapsuleEqualsRifter|TestImplantBonuses_RealInputErrors|TestImplantBonuses_RepeatsAndDeterminism|TestImplantBonuses_FactorUsesResolvedKey|TestImplantBonuses_RealNoTotals|TestImplantBonuses_RealShipAndDroneTargets)$' ./fit/gofa/

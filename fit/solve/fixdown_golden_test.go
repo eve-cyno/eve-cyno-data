@@ -18,8 +18,9 @@ import (
 
 // The Fix/Downgrade golden (testdata/fixdown-golden.json): per solve the sha256 of the Result
 // JSON, and a readable summary so a red diff can be read without hashes. The file carries the
-// SDE build id (sdeInfo.buildNumber) it was generated with; the test skips on another build,
-// because CI builds the SDE from the latest Fuzzwork dump.
+// SDE build id (sdeInfo.buildNumber) it was generated with; the test skips on another build
+// with a "skipped goldens" line (see TestFixDowngrade_UnchangedByTwoPass), because CI builds the SDE
+// from the latest Fuzzwork dump.
 
 type goldenEntry struct {
 	SHA256  string `json:"sha256"`
