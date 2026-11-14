@@ -61,6 +61,10 @@ func wallStepped(t time.Time, d time.Duration) time.Time {
 		ext  int64
 		loc  *time.Location
 	}
+	if unsafe.Sizeof(time.Time{}) != unsafe.Sizeof(timeLayout{}) {
+		panic(fmt.Sprintf("wallStepped: time.Time is %d bytes, timeLayout %d: the time package changed its layout",
+			unsafe.Sizeof(time.Time{}), unsafe.Sizeof(timeLayout{})))
+	}
 	s := t.Add(d)
 	(*timeLayout)(unsafe.Pointer(&s)).ext = (*timeLayout)(unsafe.Pointer(&t)).ext
 	return s
@@ -240,6 +244,46 @@ func TestHubRefresher_RetryAtInThePastFallsBack(t *testing.T) {
 	h.onSleep = func(int) { h.cancel() }
 	r.Run(ctx)
 	require.Equal(t, []time.Duration{300 * time.Second}, h.sleeps)
+}
+
+// TestHubRefresher_RetryAtIsCappedAtOneCycle: ESI's Expires (or a back-off's end) is trusted
+// only up to one cycle out, the normal cadence: a retry never waits longer than a regular
+// build would. A far-future Expires before the first publish must not park the refresher.
+func TestHubRefresher_RetryAtIsCappedAtOneCycle(t *testing.T) {
+	const every = 10 * time.Minute
+	const took = 30 * time.Second
+	for _, tc := range []struct {
+		name    string
+		retryAt time.Duration // the failed region's RetryAt, from the build's start
+		sleep   time.Duration // the wait after the 30 s build
+	}{
+		{"a year out is capped at one cycle", 365 * 24 * time.Hour, every},
+		{"just past the cycle is capped", took + every + time.Second, every},
+		{"at the cycle is kept", took + every, every},
+		{"inside the cycle is kept", took + every - time.Second, every - time.Second},
+		{"two minutes out is kept", 2 * time.Minute, 2*time.Minute - took},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			h, r, ctx := newHubHarness(t, every)
+			t0 := h.clk.now()
+			h.script = []func(hubCall) (hubprices.Result, time.Duration){
+				func(c hubCall) (hubprices.Result, time.Duration) { return incompleteAt(c, took, t0.Add(tc.retryAt)) },
+			}
+			var retryAfter string
+			var attempt time.Time
+			h.onSleep = func(int) {
+				rec := do(h.api, http.MethodGet, "/v1/datasets/"+hubsName, "")
+				require.Equal(t, http.StatusServiceUnavailable, rec.Code)
+				retryAfter = rec.Header().Get("Retry-After")
+				attempt = h.mem.NextAttempt()
+				h.cancel()
+			}
+			r.Run(ctx)
+			require.Equal(t, fmt.Sprint(int(tc.sleep/time.Second)), retryAfter, "the 503 Retry-After follows the capped retry")
+			require.Equal(t, t0.Add(took+tc.sleep), attempt, "SetNextAttempt gets the capped retry")
+			require.Equal(t, []time.Duration{tc.sleep}, h.sleeps)
+		})
+	}
 }
 
 func TestHubRefresher_UpdatedHubRetryAtIsIgnored(t *testing.T) {

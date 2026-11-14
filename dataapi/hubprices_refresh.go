@@ -72,7 +72,11 @@ type HubRefresher struct {
 }
 
 // retryTime is when to retry a build that left nothing published: the latest Expires of the
-// hubs that failed, else (or when already past) hubRetryFallback from now.
+// hubs that failed, else (or when already past) hubRetryFallback from now. The Expires is
+// capped at one cycle (Every) from now: a retry never waits longer than a regular build would,
+// so a bad far-future Expires or back-off end from ESI cannot park the refresher (and the
+// route's Retry-After, which follows SetNextAttempt) for longer than the normal cadence. The
+// fallback needs no cap: it equals the 5 min floor of the cycle (config.MinHubPricesEvery).
 func (r *HubRefresher) retryTime() time.Time {
 	now := r.now()
 	var at time.Time
@@ -83,6 +87,9 @@ func (r *HubRefresher) retryTime() time.Time {
 	}
 	if !at.After(now) {
 		return now.Add(hubRetryFallback)
+	}
+	if limit := now.Add(r.every); at.After(limit) {
+		return limit
 	}
 	return at
 }
