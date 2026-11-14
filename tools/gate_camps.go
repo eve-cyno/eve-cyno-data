@@ -144,7 +144,8 @@ func getGateCamps(ctx context.Context, deps *Deps, args map[string]any) (string,
 	}
 
 	// A negative age (the clock behind the file) is current, however large.
-	age := gateCampsNow().Sub(snap.GeneratedAt)
+	now := gateCampsNow() // read once: the age and the footer share one instant
+	age := now.Sub(snap.GeneratedAt)
 	freshness := gateCampsCurrent
 	switch {
 	case age > gateCampsOutOfDateAfter:
@@ -249,7 +250,7 @@ func getGateCamps(ctx context.Context, deps *Deps, args map[string]any) (string,
 	default:
 		fmt.Fprintf(&b, "No kills seen on gates of %s in the last 2 hours. That is not proof of safety: only kills that reached zKillboard count.\n", scope)
 	}
-	b.WriteString(gateCampsFooter(res, snap.GeneratedAt, len(res.Rows) > 0))
+	b.WriteString(gateCampsFooter(res, snap.GeneratedAt, now, len(res.Rows) > 0))
 	return b.String(), res, nil
 }
 
@@ -269,13 +270,13 @@ func gateCampsDatedFooter(res *GateCamps, generated time.Time) string {
 }
 
 // gateCampsFooter is the footer of an answer. The delay and caveat lines come with rows only.
-func gateCampsFooter(res *GateCamps, generated time.Time, full bool) string {
+func gateCampsFooter(res *GateCamps, generated, now time.Time, full bool) string {
 	var b strings.Builder
 	if res.NewestKillmail.IsZero() {
 		fmt.Fprintf(&b, "No kill has reached the feed yet; snapshot %s UTC.", generated.UTC().Format("15:04"))
 	} else {
 		age := "just now"
-		if d := gateCampsNow().Sub(res.NewestKillmail); d >= 0 {
+		if d := now.Sub(res.NewestKillmail); d >= 0 {
 			age = fmt.Sprintf("%d min ago", int(d/time.Minute))
 		}
 		fmt.Fprintf(&b, "Kills up to %s UTC (%s); snapshot %s UTC.", res.NewestKillmail.UTC().Format("15:04"), age, generated.UTC().Format("15:04"))

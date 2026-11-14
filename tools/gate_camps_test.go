@@ -268,7 +268,7 @@ func TestGateCamps_NoAllianceWording(t *testing.T) {
 // here is a change of both repositories.
 const (
 	gcWordingFile   = "testdata/gate-camps-wording-cases.json"
-	gcWordingSHA256 = "feba91453338a140f6d4c47e8e754c968ef27cc5ac99f1e1cb45fd75b89601f3"
+	gcWordingSHA256 = "8003abcb359c605c66909356766115809865c86599bf40af23bab759177c370b"
 )
 
 type gcWordingCase struct {
@@ -357,7 +357,7 @@ func TestGateCamps_WordingCases(t *testing.T) {
 	}
 	require.GreaterOrEqual(t, kinds["row"], 12)
 	require.GreaterOrEqual(t, kinds["security"], 12)
-	require.GreaterOrEqual(t, kinds["answer"], 31)
+	require.GreaterOrEqual(t, kinds["answer"], 32)
 }
 
 // The six fixture gates through the whole tool, sorted: the rows the JSON holds, joined.
@@ -747,4 +747,17 @@ func TestGateCamps_RegionWithoutSystemsIsReadError(t *testing.T) {
 	require.Equal(t, gateCampsReadError, text)
 	require.NotContains(t, text, "No kills seen")
 	require.Nil(t, data)
+}
+
+// The clock is read once per answer: a clock that advances on every call must not give the age
+// and the footer different instants.
+func TestGateCamps_ReadsTheClockOnce(t *testing.T) {
+	d := gcDeps(t, gcFixture())
+	now := gcAt(12, 10) // exactly 10 min: current
+	old := gateCampsNow
+	gateCampsNow = func() time.Time { n := now; now = now.Add(time.Minute); return n }
+	t.Cleanup(func() { gateCampsNow = old })
+	text, _ := gcCall(t, d, map[string]any{"system_names": []any{"Jita"}})
+	require.NotContains(t, text, "This snapshot is")
+	require.Contains(t, text, "Kills up to 11:58 UTC (12 min ago); snapshot 12:00 UTC.")
 }

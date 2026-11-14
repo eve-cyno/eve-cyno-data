@@ -4461,7 +4461,7 @@ components:
           description: DelayP50S is the median seconds zKillboard took to publish a kill over the last 24 hours; null below 100 samples.
         rows:
           type: array
-          description: Rows holds the gates, by state (fight, likely_camp, gank, possible_camp, kills), then by ship kills in the last 60 minutes; empty when no gate matches.
+          description: Rows holds the gates, by state (fight, likely_camp, gank, possible_camp, kills), then by ship kills in the last 60 minutes; empty when no gate matches; also empty when freshness is out_of_date.
           items:
             $ref: '#/components/schemas/GateCampRow'
         trimmed:

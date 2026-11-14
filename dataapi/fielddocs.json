@@ -365,7 +365,7 @@
   "tools.GateCamps.Freshness": "Freshness is how old the snapshot is against the server clock: \"current\" (up to 10 minutes, and any snapshot dated after now), \"old\" (over 10 minutes, up to 2 hours; the rows are shown and the text warns that camps may have changed) or \"out_of_date\" (over 2 hours; rows is empty, because an old empty list would read as safe).",
   "tools.GateCamps.GeneratedAt": "GeneratedAt is when the snapshot was built (RFC 3339, UTC).",
   "tools.GateCamps.NewestKillmail": "NewestKillmail is the time of the newest killmail the collector had seen; the zero time when it had seen none.",
-  "tools.GateCamps.Rows": "Rows holds the gates, by state (fight, likely_camp, gank, possible_camp, kills), then by ship kills in the last 60 minutes; empty when no gate matches.",
+  "tools.GateCamps.Rows": "Rows holds the gates, by state (fight, likely_camp, gank, possible_camp, kills), then by ship kills in the last 60 minutes; empty when no gate matches; also empty when freshness is out_of_date.",
   "tools.GateCamps.SnapshotAgeS": "SnapshotAgeS is the age of the snapshot in whole seconds, rounded down; 0 when the snapshot is dated after now.",
   "tools.GateCamps.Trimmed": "Trimmed is true when the collector dropped the weakest rows to keep the snapshot small.",
   "tools.HistoryBucket.AverageISK": "AverageISK is the daily average price weighted by volume (the plain mean when no volume traded).",

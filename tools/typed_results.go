@@ -1435,7 +1435,8 @@ type GateCamps struct {
 	// hours; null below 100 samples.
 	DelayP50S *int `json:"delay_p50_s"`
 	// Rows holds the gates, by state (fight, likely_camp, gank, possible_camp, kills), then
-	// by ship kills in the last 60 minutes; empty when no gate matches.
+	// by ship kills in the last 60 minutes; empty when no gate matches; also empty when freshness is
+	// out_of_date.
 	Rows []GateCampRow `json:"rows"`
 	// Trimmed is true when the collector dropped the weakest rows to keep the snapshot small.
 	Trimmed bool `json:"trimmed"`
