@@ -65,7 +65,9 @@ func TestMemoryDataset_UnpublishedIs503(t *testing.T) {
 		{"zero attempt: fallback", func(m *dataapi.MemoryDataset, _ time.Time) { m.SetNextAttempt(time.Time{}) }, "300"},
 		{"past attempt: fallback", func(m *dataapi.MemoryDataset, now time.Time) { m.SetNextAttempt(now.Add(-time.Minute)) }, "300"},
 		{"future attempt: seconds to it", func(m *dataapi.MemoryDataset, now time.Time) { m.SetNextAttempt(now.Add(90 * time.Second)) }, "90"},
-		{"fraction rounds up", func(m *dataapi.MemoryDataset, now time.Time) { m.SetNextAttempt(now.Add(89*time.Second + time.Millisecond)) }, "90"},
+		{"fraction rounds up", func(m *dataapi.MemoryDataset, now time.Time) {
+			m.SetNextAttempt(now.Add(89*time.Second + time.Millisecond))
+		}, "90"},
 		{"under a second: at least 1", func(m *dataapi.MemoryDataset, now time.Time) { m.SetNextAttempt(now.Add(10 * time.Millisecond)) }, "1"},
 	}
 	for _, tc := range cases {
