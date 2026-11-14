@@ -130,7 +130,8 @@ func tankWith(ship *Item, items []*Item, p fit.DamagePattern) fit.TankStats {
 	armorEHP := patternEHP(p, armorHP, aEM, aTherm, aKin, aExp)
 	hullEHP := patternEHP(p, hullHP, hEM, hTherm, hKin, hExp)
 
-	// Active rep per second: sum over modules where the module has either
+	// Active rep per second (the module-level figure of tank(); Engine.Stats replaces it with the
+	// local repair of the repair summary, which leaves out remote repairers and counts hull repairers): sum over modules where the module has either
 	// a shield boost amount or an armor repair amount AND a duration > 0.
 	var activeRepPerSec float64
 	for _, it := range items {

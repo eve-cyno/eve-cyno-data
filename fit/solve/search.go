@@ -308,7 +308,7 @@ type line struct {
 	orig  Candidate     // the written choice
 	cands []Candidate   // usable candidates, canonical order (orig first when usable)
 	// sym names the lines that evaluate alike: same slot group, module state, written choice
-	// and candidate list (an offline line draws its load but adds no output, so it is no twin of
+	// and candidate list (an offline line uses no load and adds no output, so it is no twin of
 	// an online one). Two lines of one sym that hold the same choice are interchangeable (the engine does
 	// not read the order of equal modules), so a round evaluates a change on one of them only.
 	sym string

@@ -14,7 +14,7 @@ import (
 	"eve-cyno.dev/go/data/fit/gofa"
 )
 
-// offlineEngine is a fakeEngine where an offline high module still draws its load but adds
+// offlineEngine is a fakeEngine where an offline high module uses no load and adds
 // no DPS (as gofa does).
 type offlineEngine struct{ fakeEngine }
 

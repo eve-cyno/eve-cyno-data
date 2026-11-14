@@ -45,7 +45,7 @@ type Item struct {
 	Overheat bool // when true, overload-category (effectCategory 5) effects apply
 	// Inert makes the item a target only: it is resolved (its own attributes get the
 	// skill and hull modifiers, so its CPU / PG load is final) but none of its effects
-	// act. An offline module is still charged its load but must not boost the ship.
+	// act. An offline module uses no CPU or PG (Resources zeroes it) and must not boost the ship.
 	Inert bool
 	// Idle is a module that is online but not active: its active, target and area effects
 	// (effect categories 1, 2 and 3) do not act. The engine sets it on every module that cannot

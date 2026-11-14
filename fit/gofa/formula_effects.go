@@ -39,8 +39,8 @@ const (
 // the rows into the same stacking pool as the Damage Control (EVE University wiki, "Armor
 // tanking": "Only a Reactive Armor Hardener is stacking penalized with a damage control." and
 // "This module is not stacking penalized with other modules except for Damage Control.",
-// https://wiki.eveuniversity.org/Armor_tanking). An offline module is already Inert; the engine
-// has no "online but not active" state, so an online module counts as active.
+// https://wiki.eveuniversity.org/Armor_tanking). An offline module is already Inert; a module
+// that cannot cycle is Idle (online, not active), any other online module counts as active.
 var formulaEffectModifiers = map[int][]dogma.Modifier{
 	4928: {
 		{Domain: "shipID", Func: "ItemModifier", ModifiedAttr: attrArmorEMResonance, ModifyingAttr: attrArmorEMResonance, Operation: opPreMul},

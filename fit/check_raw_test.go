@@ -34,7 +34,7 @@ func rawStateFixture() rawSDE {
 	}
 }
 
-func TestCheckRaw_OfflineLineDoesNotBoostCapacityButIsStillCharged(t *testing.T) {
+func TestCheckRaw_OfflineLineDoesNotBoostCapacity(t *testing.T) {
 	s := rawStateFixture()
 	in := RawInput{HullID: 300, HullName: "Hull", SDESlots: true, Lines: []RawLine{
 		{Name: "RCU", TypeID: 31, State: "offline"},

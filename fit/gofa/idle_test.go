@@ -65,17 +65,35 @@ func TestIdle_MicroJumpDriveNoCapacitorEvent(t *testing.T) {
 	require.Equal(t, none.Capacitor.Stable, def.Capacitor.Stable)
 	require.Empty(t, def.Unmodelled, "an idle module's jump effect is not flagged unmodelled")
 	act, _ := idleStats(t, "[Megathron, mjd]\nLarge Micro Jump Drive\n", "active")
-	// Active: 786 GJ per (12 s + 180 s) = 4.09 GJ/s, not 65.5 GJ/s.
+	// Active: 786 GJ per (duration + 180 s delay), about 4.1 GJ/s (Micro Jump Drive Operation V
+	// cuts the duration to 9 s), not 65.5 GJ/s.
 	drain := none.Capacitor.DeltaGJps - act.Capacitor.DeltaGJps
 	require.InDelta(t, 786.0/192.0, drain, 0.1, "about 4.1 GJ/s (the engine adds the skill-resolved cost and duration)")
 }
 
-// Warp core stabilizers and interdiction nullifiers carry attr 669; their active effects do not
-// act by default, so the speed stays the plain hull's (the stabilizer's passive penalties stay).
-func TestIdle_WarpCoreStabilizerAndNullifier(t *testing.T) {
-	none, _ := idleStats(t, "[Vexor, none]\n", "")
-	wcs, _ := idleStats(t, "[Vexor, wcs]\nWarp Core Stabilizer II\n", "")
-	require.InDelta(t, none.Navigation.MaxVelocity, wcs.Navigation.MaxVelocity, 1e-9)
+// An interdiction nullifier (effect 8117) assigns the ship's interdictionNullifier flag (attr
+// 1538) while active; by default it does not. A warp core stabilizer (effect 8121) adds to attr
+// 104, which hulls do not carry, so its effect is not observable in the engine: the rule is
+// pinned for it through nonCycling in TestIdle_BastionStaysActiveWithItsSpeedPenalty.
+func TestIdle_InterdictionNullifier(t *testing.T) {
+	s := openRealSDE(t)
+	defer s.Close()
+	eng := New(s)
+	shipAttr := func(eft, state string, attr int) float64 {
+		f, warn := fit.ParseEFT(eft, s)
+		require.Empty(t, warn)
+		for _, g := range [][]fit.FitModule{f.High, f.Mid, f.Low} {
+			for i := range g {
+				g[i].State = state
+			}
+		}
+		ship, _, err := eng.resolve(f, fit.StatsOpts{})
+		require.NoError(t, err)
+		return ship.Attrs[attr]
+	}
+	const nul = "[Vexor, nul]\nInterdiction Nullifier I\n"
+	require.Equal(t, shipAttr("[Vexor, none]\n", "", 1538), shipAttr(nul, "", 1538), "idle: no nullifier flag")
+	require.NotEqual(t, shipAttr("[Vexor, none]\n", "", 1538), shipAttr(nul, "active", 1538), "active: it acts")
 }
 
 // Bastion and siege have neither attribute: they are modes and stay active, and the bastion's
