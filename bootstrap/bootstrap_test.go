@@ -246,3 +246,25 @@ func TestBuildDepsBaselines(t *testing.T) {
 	require.Equal(t, "Activity baselines are not published on this server yet. Try again in an hour.", out)
 	require.NoError(t, d.Close())
 }
+
+// The gate camp source is off without a directory and lazy with one: the files need not exist yet.
+func TestBuildDepsGateCamps(t *testing.T) {
+	cfg := corpusAvailable(t)
+	cfg.IntelDatasetDir = ""
+	d, err := BuildDepsWith(context.Background(), cfg, offlineOptions())
+	require.NoError(t, err)
+	require.Nil(t, d.Tools.GateCamps, "no directory: a nil interface, not a nil reader inside one")
+	out, err := tools.ExecuteTool(context.Background(), d.Tools, "get_gate_camps", map[string]any{})
+	require.NoError(t, err)
+	require.Contains(t, out, "not configured on this server")
+	require.NoError(t, d.Close())
+
+	cfg.IntelDatasetDir = t.TempDir()
+	d, err = BuildDepsWith(context.Background(), cfg, offlineOptions())
+	require.NoError(t, err)
+	require.NotNil(t, d.Tools.GateCamps)
+	out, err = tools.ExecuteTool(context.Background(), d.Tools, "get_gate_camps", map[string]any{})
+	require.NoError(t, err)
+	require.Contains(t, out, "not published yet")
+	require.NoError(t, d.Close())
+}

@@ -151,6 +151,10 @@ var toolAttribution = map[string][]Source{
 	// figures, system names come from the SDE.
 	"compare_activity_to_baseline": {sourceSDE, sourceESI},
 
+	// Gate camps: zKillboard killmails matched to gate positions by the collector, alliance
+	// names from ESI, system names and security from the SDE.
+	"get_gate_camps": {sourceZKillboardKillmails, sourceESI, sourceSDE},
+
 	// The community fit corpus.
 	"get_fits":  communityFits,
 	"list_fits": communityFits,

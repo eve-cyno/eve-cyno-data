@@ -1,0 +1,111 @@
+{
+  "callouts": [
+    {
+      "kind": "note",
+      "text": "The numbers in this example come from a small synthetic test snapshot with made-up alliances, not from live data. A live answer names the real alliances and the time of the newest kill.",
+      "title": "Example numbers"
+    }
+  ],
+  "prompt": "Is anyone camping the gates in The Citadel right now?",
+  "recorded": "2026-11-14",
+  "request": {
+    "region_name": "The Citadel"
+  },
+  "response": {
+    "attribution": [
+      {
+        "name": "zKillboard (killmail counts)",
+        "url": "https://zkillboard.com/",
+        "license": "Public R2Z2 API under zKillboard's usage etiquette; only per-system counts and ISK sums derived from it are published; killmails are Fenris Creations game data (EVE Developer License Agreement)"
+      },
+      {
+        "name": "ESI (EVE Swagger Interface)",
+        "url": "https://esi.evetech.net/",
+        "license": "EVE Developer License Agreement (Fenris Creations); non-commercial use"
+      },
+      {
+        "name": "EVE Static Data Export (via Fuzzwork)",
+        "url": "https://www.fuzzwork.co.uk/dump/",
+        "license": "Fenris Creations game data under the EVE Developer License Agreement; converted by Fuzzwork Enterprises"
+      }
+    ],
+    "result": {
+      "data": {
+        "generated_at": "2026-11-14T12:00:00Z",
+        "newest_killmail": "2026-11-14T11:58:00Z",
+        "feed_behind": false,
+        "delay_p50_s": 180,
+        "rows": [
+          {
+            "from": "Sivala",
+            "to": "Tama",
+            "from_system_id": 30002765,
+            "to_system_id": 30002813,
+            "security": 0.6,
+            "band": "high",
+            "state": "fight",
+            "ship_kills_60m": 6,
+            "pod_kills_60m": 1,
+            "ship_kills_120m": 7,
+            "pod_kills_120m": 1,
+            "structure_kills_60m": 0,
+            "first_kill": "2026-11-14T11:50:00Z",
+            "last_kill": "2026-11-14T11:58:00Z",
+            "attackers": [
+              {
+                "alliance_id": 2001,
+                "name": "Example Alliance 1",
+                "kills": 4
+              }
+            ],
+            "no_alliance_kills": 2,
+            "dictor_hic": false,
+            "max_attackers": 45
+          },
+          {
+            "from": "Tama",
+            "to": "Sivala",
+            "from_system_id": 30002813,
+            "to_system_id": 30002765,
+            "security": 0.3,
+            "band": "low",
+            "state": "likely_camp",
+            "ship_kills_60m": 4,
+            "pod_kills_60m": 2,
+            "ship_kills_120m": 6,
+            "pod_kills_120m": 3,
+            "structure_kills_60m": 0,
+            "first_kill": "2026-11-14T11:20:00Z",
+            "last_kill": "2026-11-14T11:55:00Z",
+            "attackers": [
+              {
+                "alliance_id": 2001,
+                "name": "Example Alliance 1",
+                "kills": 2
+              },
+              {
+                "alliance_id": 2002,
+                "name": "Example Alliance 2",
+                "kills": 1
+              },
+              {
+                "alliance_id": 2003,
+                "name": "Example Alliance 3",
+                "kills": 1
+              }
+            ],
+            "no_alliance_kills": 0,
+            "dictor_hic": true,
+            "max_attackers": 8
+          }
+        ],
+        "trimmed": false
+      },
+      "text": "Sivala > Tama gate in Sivala (0.6 high-sec): 6 ship kills and 1 pod in the last 10 min, by Example Alliance 1 (4) and attackers in no alliance (2). A fight, not a camp.\nTama > Sivala gate in Tama (0.3 low-sec): 4 ship kills and 2 pods in the last 40 min, by Example Alliance 1 (2), Example Alliance 2 (1), Example Alliance 3 (1). Interdictor or HIC seen. Likely camp.\n\nKills up to 11:58 UTC (5 min ago); snapshot 12:00 UTC.\nzKillboard published kills a median of 3 min after they happened (last 24 hours).\nOnly kills that reached zKillboard count; a camp that kills nothing is invisible."
+    },
+    "tool": "get_gate_camps",
+    "version": "sha-0d59efe"
+  },
+  "tool": "get_gate_camps",
+  "trimmed": false
+}

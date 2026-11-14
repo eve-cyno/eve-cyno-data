@@ -17,7 +17,7 @@ info:
     - An API key raises the per-minute budgets: every operation states its limit without a key and with one, counted in the key's own window. The live-data tools keep a lower limit than the route.
     - A new API key has a daily cap of 10000 requests per UTC day by default (a cap can be changed per key, 0 meaning none). Over its cap a key gets `429` `daily_quota_exceeded` with `Retry-After` set to the seconds until 00:00 UTC.
     - Request bodies are capped (256 KiB on the fit routes, 64 KiB on tools and MCP); an oversize body is `413`.
-    - Tool tiers: each tool is *public* (no key), *keyed* (an API key) or *disabled*. Public: `get_market_price`, `get_type_info`, `search_item_by_name`, `get_ship_stats`, `get_ship_bonuses`, `find_canonical_module`, `get_hull_facts`, `get_fits`, `list_fits`, `validate_fitting`, `compute_fit_stats`, `appraise_items`, `get_production_chain`, `get_jumps_between`, `get_jump_distances`, `plan_jump_route`, `get_recent_kills`, `get_systems_in_region`, `get_lp_offers`, `get_npc_stations`, `get_reprocessing_yield`, `get_required_skills`, `get_average_prices`, `get_market_history`, `get_sovereignty`, `get_system_activity`, `get_activity_baseline`, `compare_activity_to_baseline`, `find_systems`, `get_system_info`, `get_thera_connections`. Keyed (send the key as `Authorization: Bearer <key>` or `X-API-Key`; `401 api_key_required` without one, `401 invalid_api_key` for a key that is not valid, on every tool): `analyze_battle`. Optional: your own Janice key in the `X-Janice-Key` request header (used for that request only, never logged or stored) turns `appraise_items` into a Janice appraisal; without it the answer is an estimate from ESI average prices. Disabled tools are not offered on this service (`403 tool_disabled` over REST, absent from the MCP tool list).
+    - Tool tiers: each tool is *public* (no key), *keyed* (an API key) or *disabled*. Public: `get_market_price`, `get_type_info`, `search_item_by_name`, `get_ship_stats`, `get_ship_bonuses`, `find_canonical_module`, `get_hull_facts`, `get_fits`, `list_fits`, `validate_fitting`, `compute_fit_stats`, `appraise_items`, `get_production_chain`, `get_jumps_between`, `get_jump_distances`, `plan_jump_route`, `get_recent_kills`, `get_systems_in_region`, `get_lp_offers`, `get_npc_stations`, `get_reprocessing_yield`, `get_required_skills`, `get_average_prices`, `get_market_history`, `get_sovereignty`, `get_system_activity`, `get_activity_baseline`, `get_gate_camps`, `compare_activity_to_baseline`, `find_systems`, `get_system_info`, `get_thera_connections`. Keyed (send the key as `Authorization: Bearer <key>` or `X-API-Key`; `401 api_key_required` without one, `401 invalid_api_key` for a key that is not valid, on every tool): `analyze_battle`. Optional: your own Janice key in the `X-Janice-Key` request header (used for that request only, never logged or stored) turns `appraise_items` into a Janice appraisal; without it the answer is an estimate from ESI average prices. Disabled tools are not offered on this service (`403 tool_disabled` over REST, absent from the MCP tool list).
 
     ## Attribution and licences
 
@@ -2239,6 +2239,75 @@ paths:
           $ref: '#/components/responses/Unavailable'
         "504":
           $ref: '#/components/responses/Timeout'
+  /tool/get_gate_camps:
+    post:
+      tags:
+        - tools
+      summary: Recent kills on EVE stargates and the camp state of each gate, from zKillboard killmails matched to gate positions by…
+      description: |-
+        Recent kills on EVE stargates and the camp state of each gate, from zKillboard killmails matched to gate positions by the EVE-Cyno collector and refreshed every minute: kill counts in the last hour, the attacking alliances, interdictor use, and a state (likely camp, possible camp, fight, high-sec gank pattern). Give system names or a region, or nothing for the busiest gates of New Eden. Kills that never reached zKillboard are not counted.
+
+        Sources: zKillboard (killmail counts); ESI (EVE Swagger Interface); EVE Static Data Export (via Fuzzwork). `result.data` is a `GateCamps` object when the call succeeds.
+
+        Access tier: **public**. No key needed.
+
+        Rate limit: 10 requests per minute per client IP without an API key, 60 per minute per API key with one.
+      operationId: get_gate_camps
+      parameters:
+        - $ref: '#/components/parameters/RequestID'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                limit:
+                  type: integer
+                  description: How many gates to list, strongest first (default 15).
+                  minimum: 1
+                  maximum: 50
+                min_state:
+                  type: string
+                  description: 'Weakest state to list: kills (any kill), possible_camp (default) or likely_camp (likely camps and fights).'
+                  enum:
+                    - kills
+                    - possible_camp
+                    - likely_camp
+                region_name:
+                  type: string
+                  description: Region name, e.g. 'The Forge'; every gate in that region. Not together with system_names.
+                system_names:
+                  type: array
+                  description: Solar system names (case-insensitive); every gate of those systems. Not together with region_name.
+                  items:
+                    type: string
+                  maxItems: 50
+                  minItems: 1
+      responses:
+        "200":
+          description: The tool's answer.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GateCampsToolResponse'
+          headers:
+            X-Request-ID:
+              $ref: '#/components/headers/RequestID'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "413":
+          $ref: '#/components/responses/PayloadTooLarge'
+        "429":
+          $ref: '#/components/responses/RateLimited'
+        "500":
+          $ref: '#/components/responses/InternalError'
+        "503":
+          $ref: '#/components/responses/Unavailable'
+        "504":
+          $ref: '#/components/responses/Timeout'
   /tool/compare_activity_to_baseline:
     post:
       tags:
@@ -4261,6 +4330,169 @@ components:
               description: The typed answer, or null when the tool has none or the call ended in a text-only answer (an unknown id, a parse failure); `text` then says why.
               oneOf:
                 - $ref: '#/components/schemas/FitValidation'
+                - type: "null"
+          required:
+            - text
+            - data
+        attribution:
+          type: array
+          description: The upstreams behind the answer; attribution is a condition of several of their licences.
+          items:
+            $ref: '#/components/schemas/Source'
+      required:
+        - tool
+        - version
+        - result
+        - attribution
+    GateCampAttacker:
+      type: object
+      properties:
+        alliance_id:
+          type: integer
+          description: AllianceID is the alliance ID.
+        name:
+          type: string
+          description: Name is the alliance name; empty when the collector has not resolved it yet.
+        kills:
+          type: integer
+          description: Kills is the ship kills of the last 60 minutes in which the alliance led the attackers.
+      required:
+        - alliance_id
+        - name
+        - kills
+    GateCampRow:
+      type: object
+      properties:
+        from:
+          type: string
+          description: From is the name of the system the gate stands in.
+        to:
+          type: string
+          description: To is the name of the system the gate leads to.
+        from_system_id:
+          type: integer
+          description: FromSystemID is the solar system ID of From.
+        to_system_id:
+          type: integer
+          description: ToSystemID is the solar system ID of To.
+        security:
+          type: number
+          description: Security is the security of From as EVE shows it (one decimal; a true value between 0 and 0.05 shows 0.1).
+        band:
+          type: string
+          description: Band is "high", "low" or "null" (null-sec), read from the shown security.
+        state:
+          type: string
+          description: State is "fight", "likely_camp", "gank" (high-sec gank pattern), "possible_camp" or "kills" (kills without a camp pattern).
+        ship_kills_60m:
+          type: integer
+          description: ShipKills60m is the ships killed on the gate in the last 60 minutes.
+        pod_kills_60m:
+          type: integer
+          description: PodKills60m is the capsules killed on the gate in the last 60 minutes.
+        ship_kills_120m:
+          type: integer
+          description: ShipKills120m is the ships killed on the gate in the last 120 minutes.
+        pod_kills_120m:
+          type: integer
+          description: PodKills120m is the capsules killed on the gate in the last 120 minutes.
+        structure_kills_60m:
+          type: integer
+          description: StructureKills60m is the structures killed on the gate in the last 60 minutes; the only count of a row that is a structure-only fight.
+        first_kill:
+          type: string
+          format: date-time
+          description: FirstKill is the time of the first counted kill of the row's window.
+        last_kill:
+          type: string
+          format: date-time
+          description: LastKill is the time of the last counted kill of the row's window.
+        attackers:
+          type: array
+          description: Attackers lists up to three attacking alliances of the last 60 minutes, most kills first.
+          items:
+            $ref: '#/components/schemas/GateCampAttacker'
+        no_alliance_kills:
+          type: integer
+          description: NoAllianceKills is the ship kills of the last 60 minutes whose top attacker has no alliance.
+        dictor_hic:
+          type: boolean
+          description: DictorHIC is true when an interdictor or heavy interdictor took part in a ship kill of the last 60 minutes.
+        max_attackers:
+          type: integer
+          description: MaxAttackers is the largest attacker count of a killmail of the last 60 minutes.
+      required:
+        - from
+        - to
+        - from_system_id
+        - to_system_id
+        - security
+        - band
+        - state
+        - ship_kills_60m
+        - pod_kills_60m
+        - ship_kills_120m
+        - pod_kills_120m
+        - structure_kills_60m
+        - first_kill
+        - last_kill
+        - attackers
+        - no_alliance_kills
+        - dictor_hic
+        - max_attackers
+    GateCamps:
+      type: object
+      properties:
+        generated_at:
+          type: string
+          format: date-time
+          description: GeneratedAt is when the snapshot was built (RFC 3339, UTC).
+        newest_killmail:
+          type: string
+          format: date-time
+          description: NewestKillmail is the time of the newest killmail the collector had seen; the zero time when it had seen none.
+        feed_behind:
+          type: boolean
+          description: 'FeedBehind is true when the newest killmail is more than 15 minutes older than the snapshot: the killmail feed may be behind.'
+        delay_p50_s:
+          type:
+            - integer
+            - "null"
+          description: DelayP50S is the median seconds zKillboard took to publish a kill over the last 24 hours; null below 100 samples.
+        rows:
+          type: array
+          description: Rows holds the gates, by state (fight, likely_camp, gank, possible_camp, kills), then by ship kills in the last 60 minutes; empty when no gate matches.
+          items:
+            $ref: '#/components/schemas/GateCampRow'
+        trimmed:
+          type: boolean
+          description: Trimmed is true when the collector dropped the weakest rows to keep the snapshot small.
+      required:
+        - generated_at
+        - newest_killmail
+        - feed_behind
+        - delay_p50_s
+        - rows
+        - trimmed
+    GateCampsToolResponse:
+      type: object
+      properties:
+        tool:
+          type: string
+          description: The tool that ran.
+        version:
+          type: string
+          description: The build version of the service.
+        result:
+          type: object
+          properties:
+            text:
+              type: string
+              description: The answer as the chat assistant reads it.
+            data:
+              description: The typed answer, or null when the tool has none or the call ended in a text-only answer (an unknown id, a parse failure); `text` then says why.
+              oneOf:
+                - $ref: '#/components/schemas/GateCamps'
                 - type: "null"
           required:
             - text

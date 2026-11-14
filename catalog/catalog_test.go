@@ -49,7 +49,7 @@ func TestTiers_Policy(t *testing.T) {
 			"get_required_skills", "get_production_chain", "find_canonical_module", "search_item_by_name", "get_lp_offers", "get_recent_kills",
 			"get_ship_stats", "get_hull_facts", "get_ship_bonuses", "compute_fit_stats", "validate_fitting",
 			// the hour-of-week baselines (one local file, work class)
-			"get_activity_baseline", "compare_activity_to_baseline",
+			"get_activity_baseline", "compare_activity_to_baseline", "get_gate_camps",
 			// the public ESI pass-throughs
 			"get_market_price", "get_type_info", "get_sovereignty", "get_system_activity",
 			// the fit lookups
@@ -403,6 +403,8 @@ func TestWaitsOnUpstream_EveryToolIsClassified(t *testing.T) {
 		// Reads the published baseline file only (local SQLite, no third party).
 		"get_activity_baseline":        classWork,
 		"compare_activity_to_baseline": classWork,
+		// Reads the published gate snapshot only (a local file, no third party).
+		"get_gate_camps": classWork,
 		// No ESI fallback on a public surface (names and dogma from the SDE only).
 		"validate_fitting": classWork,
 		// Accepted work-class wait: the shared price snapshot (single flight, at most 20 s, only

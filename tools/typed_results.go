@@ -1,6 +1,10 @@
 package tools
 
-import "eve-cyno.dev/go/data/rag"
+import (
+	"time"
+
+	"eve-cyno.dev/go/data/rag"
+)
 
 // Typed tool results: the structured twin of the LLM-oriented text, for the public API
 // (dataapi POST /v1/tool/{name}, later MCP / OpenAPI). Each struct is built from the
@@ -1413,4 +1417,80 @@ type MetricComparison struct {
 	Floor int `json:"floor"`
 	// BelowFloor is true when |Z| reached 1 but the gap was under Floor, so the band stays about usual.
 	BelowFloor bool `json:"below_floor"`
+}
+
+// GateCamps is the result of get_gate_camps: the gates of the asked scope that saw kills in
+// the last two hours, strongest state first, from the snapshot the intel collector
+// publishes every minute. Only kills that reached zKillboard are counted.
+type GateCamps struct {
+	// GeneratedAt is when the snapshot was built (RFC 3339, UTC).
+	GeneratedAt time.Time `json:"generated_at"`
+	// NewestKillmail is the time of the newest killmail the collector had seen; the zero
+	// time when it had seen none.
+	NewestKillmail time.Time `json:"newest_killmail"`
+	// FeedBehind is true when the newest killmail is more than 15 minutes older than the
+	// snapshot: the killmail feed may be behind.
+	FeedBehind bool `json:"feed_behind"`
+	// DelayP50S is the median seconds zKillboard took to publish a kill over the last 24
+	// hours; null below 100 samples.
+	DelayP50S *int `json:"delay_p50_s"`
+	// Rows holds the gates, by state (fight, likely_camp, gank, possible_camp, kills), then
+	// by ship kills in the last 60 minutes; empty when no gate matches.
+	Rows []GateCampRow `json:"rows"`
+	// Trimmed is true when the collector dropped the weakest rows to keep the snapshot small.
+	Trimmed bool `json:"trimmed"`
+}
+
+// GateCampRow is one gate: the stargate in system From that leads to system To.
+type GateCampRow struct {
+	// From is the name of the system the gate stands in.
+	From string `json:"from"`
+	// To is the name of the system the gate leads to.
+	To string `json:"to"`
+	// FromSystemID is the solar system ID of From.
+	FromSystemID int `json:"from_system_id"`
+	// ToSystemID is the solar system ID of To.
+	ToSystemID int `json:"to_system_id"`
+	// Security is the security of From as EVE shows it (one decimal; a true value between 0
+	// and 0.05 shows 0.1).
+	Security float64 `json:"security"`
+	// Band is "high", "low" or "null" (null-sec), read from the shown security.
+	Band string `json:"band"`
+	// State is "fight", "likely_camp", "gank" (high-sec gank pattern), "possible_camp" or
+	// "kills" (kills without a camp pattern).
+	State string `json:"state"`
+	// ShipKills60m is the ships killed on the gate in the last 60 minutes.
+	ShipKills60m int `json:"ship_kills_60m"`
+	// PodKills60m is the capsules killed on the gate in the last 60 minutes.
+	PodKills60m int `json:"pod_kills_60m"`
+	// ShipKills120m is the ships killed on the gate in the last 120 minutes.
+	ShipKills120m int `json:"ship_kills_120m"`
+	// PodKills120m is the capsules killed on the gate in the last 120 minutes.
+	PodKills120m int `json:"pod_kills_120m"`
+	// StructureKills60m is the structures killed on the gate in the last 60 minutes; the
+	// only count of a row that is a structure-only fight.
+	StructureKills60m int `json:"structure_kills_60m"`
+	// FirstKill is the time of the first counted kill of the row's window.
+	FirstKill time.Time `json:"first_kill"`
+	// LastKill is the time of the last counted kill of the row's window.
+	LastKill time.Time `json:"last_kill"`
+	// Attackers lists up to three attacking alliances of the last 60 minutes, most kills first.
+	Attackers []GateCampAttacker `json:"attackers"`
+	// NoAllianceKills is the ship kills of the last 60 minutes whose top attacker has no alliance.
+	NoAllianceKills int `json:"no_alliance_kills"`
+	// DictorHIC is true when an interdictor or heavy interdictor took part in a ship kill of
+	// the last 60 minutes.
+	DictorHIC bool `json:"dictor_hic"`
+	// MaxAttackers is the largest attacker count of a killmail of the last 60 minutes.
+	MaxAttackers int `json:"max_attackers"`
+}
+
+// GateCampAttacker is one attacking alliance on a gate.
+type GateCampAttacker struct {
+	// AllianceID is the alliance ID.
+	AllianceID int `json:"alliance_id"`
+	// Name is the alliance name; empty when the collector has not resolved it yet.
+	Name string `json:"name"`
+	// Kills is the ship kills of the last 60 minutes in which the alliance led the attackers.
+	Kills int `json:"kills"`
 }

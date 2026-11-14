@@ -273,6 +273,9 @@ func tierTable() map[string]Tier {
 		// (no upstream request), so public and work class.
 		"get_activity_baseline":        TierPublic,
 		"compare_activity_to_baseline": TierPublic,
+		// Recent gate kills and camp states: one local snapshot file (no upstream request),
+		// so public and work class.
+		"get_gate_camps": TierPublic,
 
 		// Public ESI pass-throughs: public,
 		// unauthenticated ESI routes served from the shared Expires cache, behind a stricter
@@ -374,6 +377,7 @@ func summaryTable() map[string]string {
 		"get_required_skills":          "Skills to fly a ship or build an item, for up to 20 items at once, with SP and training time.",
 		"get_activity_baseline":        "Usual jumps, kills and PvP killmails of a system by hour of the week (UTC), with spread and weeks sampled.",
 		"compare_activity_to_baseline": "The latest hour of systems, or the most unusual ones in a region, against their usual for that hour of the week.",
+		"get_gate_camps":               "Recent kills on stargates and the camp state of each gate, with the attacking alliances, updated every minute.",
 		"get_sovereignty":              "Alliance, corporation or faction holding sovereignty over up to 50 solar systems.",
 		"get_system_activity":          "Jumps and ship, pod and NPC kills in up to 50 solar systems in the last hour.",
 		"appraise_items":               "Total ISK value of an item list: an estimate from ESI average prices, or a Janice appraisal with your own Janice key.",
@@ -473,6 +477,8 @@ func dataType(name string) reflect.Type {
 		return reflect.TypeFor[tools.ActivityBaseline]()
 	case "compare_activity_to_baseline":
 		return reflect.TypeFor[tools.ActivityComparison]()
+	case "get_gate_camps":
+		return reflect.TypeFor[tools.GateCamps]()
 	case "get_ship_stats":
 		return reflect.TypeFor[tools.ShipStats]()
 	case "validate_fitting":

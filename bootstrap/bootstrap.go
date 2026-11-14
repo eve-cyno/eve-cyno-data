@@ -14,6 +14,7 @@ import (
 	"eve-cyno.dev/go/data/fit"
 	"eve-cyno.dev/go/data/fit/gofa"
 	"eve-cyno.dev/go/data/intelbase"
+	"eve-cyno.dev/go/data/intelsnap"
 	"eve-cyno.dev/go/data/ports"
 	"eve-cyno.dev/go/data/rag"
 	"eve-cyno.dev/go/data/sde"
@@ -132,6 +133,10 @@ func BuildDepsWith(ctx context.Context, cfg config.CoreConfig, opts Options) (*D
 		bl := intelbase.Open(cfg.IntelBaselinePath, sdeReloadInterval(cfg))
 		td.Baselines = bl
 		closeFn = func() error { return errors.Join(bl.Close(), s.Close()) }
+	}
+	if cfg.IntelDatasetDir != "" {
+		// The reader looks at the files on every call; they may not exist yet.
+		td.GateCamps = intelsnap.NewReader(cfg.IntelDatasetDir)
 	}
 	return &Deps{Tools: td, Retriever: retr, close: closeFn}, nil
 }

@@ -41,6 +41,11 @@ type Deps struct {
 	// interface).
 	Baselines BaselineSource
 
+	// GateCamps is the published gate snapshot behind get_gate_camps (intelsnap.Reader). nil
+	// means the server has no snapshot directory: the tool says so. Never assign a nil
+	// *intelsnap.Reader to it (that would be a non-nil interface).
+	GateCamps GateCampsSource
+
 	// Legality is the one Alpha-clone legality checker (skill allowlist + meta tier)
 	// behind validate_fitting and the fit controller, built once where the Deps are
 	// (bootstrap). nil → AlphaLegality builds one lazily, once (tests, struct
@@ -72,6 +77,7 @@ func (d *Deps) ForPublic(janiceKey string) *Deps {
 		Public:       true,
 		Stats:        d.StatsEngine(),
 		Baselines:    d.Baselines,
+		GateCamps:    d.GateCamps,
 		Legality:     d.AlphaLegality(),
 	}
 }
@@ -341,6 +347,9 @@ func dispatch(ctx context.Context, deps *Deps, name string, arguments map[string
 
 	case "compare_activity_to_baseline":
 		return typed(compareActivityToBaseline(ctx, deps, arguments))
+
+	case "get_gate_camps":
+		return typed(getGateCamps(ctx, deps, arguments))
 
 	case "convert_isk_to_real":
 		amount := floatArg(arguments, "isk_amount", 0)

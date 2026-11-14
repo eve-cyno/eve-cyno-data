@@ -17,7 +17,7 @@ Machine-readable description: [/v1/openapi.yaml](/v1/openapi.yaml) (OpenAPI 3.1;
 - An API key raises the per-minute budgets: every operation states its limit without a key and with one, counted in the key's own window. The live-data tools keep a lower limit than the route.
 - A new API key has a daily cap of 10000 requests per UTC day by default (a cap can be changed per key, 0 meaning none). Over its cap a key gets `429` `daily_quota_exceeded` with `Retry-After` set to the seconds until 00:00 UTC.
 - Request bodies are capped: 256 KiB on the fit routes, 64 KiB on the tool and MCP endpoints (`413`).
-- Tool tiers: each tool is *public* (no key), *keyed* (an API key) or *disabled*. Public: `get_market_price`, `get_type_info`, `search_item_by_name`, `get_ship_stats`, `get_ship_bonuses`, `find_canonical_module`, `get_hull_facts`, `get_fits`, `list_fits`, `validate_fitting`, `compute_fit_stats`, `appraise_items`, `get_production_chain`, `get_jumps_between`, `get_jump_distances`, `plan_jump_route`, `get_recent_kills`, `get_systems_in_region`, `get_lp_offers`, `get_npc_stations`, `get_reprocessing_yield`, `get_required_skills`, `get_average_prices`, `get_market_history`, `get_sovereignty`, `get_system_activity`, `get_activity_baseline`, `compare_activity_to_baseline`, `find_systems`, `get_system_info`, `get_thera_connections`. Keyed (send the key as `Authorization: Bearer <key>` or `X-API-Key`; `401 api_key_required` without one, `401 invalid_api_key` for a key that is not valid, on every tool): `analyze_battle`. Optional: your own Janice key in the `X-Janice-Key` request header (used for that request only, never logged or stored) turns `appraise_items` into a Janice appraisal; without it the answer is an estimate from ESI average prices. Disabled tools are not offered on this service (`403 tool_disabled` over REST, absent from the MCP tool list).
+- Tool tiers: each tool is *public* (no key), *keyed* (an API key) or *disabled*. Public: `get_market_price`, `get_type_info`, `search_item_by_name`, `get_ship_stats`, `get_ship_bonuses`, `find_canonical_module`, `get_hull_facts`, `get_fits`, `list_fits`, `validate_fitting`, `compute_fit_stats`, `appraise_items`, `get_production_chain`, `get_jumps_between`, `get_jump_distances`, `plan_jump_route`, `get_recent_kills`, `get_systems_in_region`, `get_lp_offers`, `get_npc_stations`, `get_reprocessing_yield`, `get_required_skills`, `get_average_prices`, `get_market_history`, `get_sovereignty`, `get_system_activity`, `get_activity_baseline`, `get_gate_camps`, `compare_activity_to_baseline`, `find_systems`, `get_system_info`, `get_thera_connections`. Keyed (send the key as `Authorization: Bearer <key>` or `X-API-Key`; `401 api_key_required` without one, `401 invalid_api_key` for a key that is not valid, on every tool): `analyze_battle`. Optional: your own Janice key in the `X-Janice-Key` request header (used for that request only, never logged or stored) turns `appraise_items` into a Janice appraisal; without it the answer is an estimate from ESI average prices. Disabled tools are not offered on this service (`403 tool_disabled` over REST, absent from the MCP tool list).
 
 ## Endpoints
 
@@ -539,6 +539,20 @@ Usual activity of one EVE solar system by hour of the week (UTC), from hourly ES
   - `hour` (integer): Start of the UTC hour, 0 to 23 (19 means 19:00-20:00). With day: that one hour. Alone: that hour on every day of the week.
 - Typed result (`result.data`): ActivityBaseline with fields `system`, `system_id`, `view`, `samples`, `map_window_start`, `killmail_window_start`, `generated_at`, `hours`, `ranked_by`, `busiest`, `quietest`, `most_ship_kills`
 - Sources: EVE Static Data Export (via Fuzzwork); ESI (EVE Swagger Interface); zKillboard (killmail counts)
+
+### get_gate_camps
+
+Recent kills on EVE stargates and the camp state of each gate, from zKillboard killmails matched to gate positions by the EVE-Cyno collector and refreshed every minute: kill counts in the last hour, the attacking alliances, interdictor use, and a state (likely camp, possible camp, fight, high-sec gank pattern). Give system names or a region, or nothing for the busiest gates of New Eden. Kills that never reached zKillboard are not counted.
+
+- Call: `POST /v1/tool/get_gate_camps` or MCP tool `get_gate_camps`
+- Access: public. No key needed.
+- Arguments:
+  - `limit` (integer): How many gates to list, strongest first (default 15).
+  - `min_state` (string): Weakest state to list: kills (any kill), possible_camp (default) or likely_camp (likely camps and fights). One of: kills, possible_camp, likely_camp.
+  - `region_name` (string): Region name, e.g. 'The Forge'; every gate in that region. Not together with system_names.
+  - `system_names` (array of string): Solar system names (case-insensitive); every gate of those systems. Not together with region_name.
+- Typed result (`result.data`): GateCamps with fields `generated_at`, `newest_killmail`, `feed_behind`, `delay_p50_s`, `rows`, `trimmed`
+- Sources: zKillboard (killmail counts); ESI (EVE Swagger Interface); EVE Static Data Export (via Fuzzwork)
 
 ### compare_activity_to_baseline
 

@@ -77,7 +77,7 @@ func TestPortal_EveryOfferedToolHasAPage(t *testing.T) {
 		}
 		require.Contains(t, body, "/docs/tools"+"#tools-", tl.Name)
 	}
-	require.Equal(t, 32, offered, "the public service offers 32 tools")
+	require.Equal(t, 33, offered, "the public service offers 33 tools")
 
 	for _, name := range []string{"no_such_tool", "convert_isk_to_real", "GET_MARKET_PRICE", "get_market_price.json"} {
 		requireError(t, do(api, http.MethodGet, "/docs/tools/"+name, ""), http.StatusNotFound, "not_found")
@@ -285,20 +285,20 @@ func TestPortal_RendersTheCatalogAndLimits(t *testing.T) {
 	api := newAPI(t, cfg)
 
 	home := do(api, http.MethodGet, "/", "").Body.String()
-	require.Contains(t, home, `<span data-slot="tools_offered">32</span>`)
-	require.Contains(t, home, `<span data-slot="tools_public">31</span>`)
+	require.Contains(t, home, `<span data-slot="tools_offered">33</span>`)
+	require.Contains(t, home, `<span data-slot="tools_public">32</span>`)
 	require.Contains(t, home, `<span data-slot="tools_upstream">10</span>`, "every live tool: eight ESI, one EvE-Scout, one zKillboard")
 	require.Contains(t, home, `<b><span data-slot="tools_upstream">10</span></b> tools · <span data-slot="limit_upstream">9</span> calls/min per caller, shared`)
 	require.Contains(t, home, `<span data-slot="limit_mcp">77</span>`)
 	require.Contains(t, home, `ESI, EvE-Scout and zKillboard, <span data-slot="limit_upstream">9</span> calls/min shared`)
-	require.Contains(t, home, `<span data-slot="tools_public_label">31 tools</span>`)
+	require.Contains(t, home, `<span data-slot="tools_public_label">32 tools</span>`)
 	require.Contains(t, home, `<span data-slot="tools_keyed_label">1 tool</span>`)
 	require.Contains(t, home, `<span data-slot="lobe_total">6</span>`, "the lobes of the atlas")
 	for _, tl := range catalog.Tools() {
 		link := `<a href="/docs/tools/` + tl.Name + `">` + tl.Name + `</a>`
 		require.Equal(t, tl.Tier.Offered(), strings.Contains(home, link), "%s: the atlas lists exactly the offered tools", tl.Name)
 	}
-	require.Equal(t, 32, strings.Count(home, "<li data-tool"), "one atlas row per offered tool")
+	require.Equal(t, 33, strings.Count(home, "<li data-tool"), "one atlas row per offered tool")
 	require.NotContains(t, home, "community_fits", "the community-fit count is not known to the service: the slot is hidden")
 	require.NotContains(t, home, "~8,150")
 

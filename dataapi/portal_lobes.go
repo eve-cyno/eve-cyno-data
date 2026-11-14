@@ -63,6 +63,7 @@ func portalLobeSpecs() []portalLobeSpec {
 		}},
 		{"Combat", []string{
 			"get_recent_kills",
+			"get_gate_camps",
 			"analyze_battle",
 		}},
 	}

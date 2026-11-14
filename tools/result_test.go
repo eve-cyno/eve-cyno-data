@@ -194,6 +194,8 @@ func stubbedUpstreams(t *testing.T) *Client {
 func TestExecuteToolResult_TextMatchesExecuteTool(t *testing.T) {
 	sdeDeps := testDeps(t)
 	stubDeps := &Deps{SDE: sdeDeps.SDE, Client: stubbedUpstreams(t)}
+	gcClock(t, gcAt(12, 3))
+	campDeps := &Deps{SDE: sdeDeps.SDE, GateCamps: gcSource{snap: gcFixture()}}
 
 	type tc struct {
 		tool string
@@ -267,6 +269,8 @@ func TestExecuteToolResult_TextMatchesExecuteTool(t *testing.T) {
 		{"get_system_activity", map[string]any{"systems": []any{"Jita"}}, stubDeps},
 		{"get_activity_baseline", map[string]any{"system_name": "Tama", "day": "Tuesday", "hour": 19}, sdeDeps},
 		{"get_activity_baseline", map[string]any{"system_name": "Nope"}, sdeDeps},
+		{"get_gate_camps", map[string]any{"region_name": "The Citadel"}, campDeps},
+		{"get_gate_camps", map[string]any{"system_names": []any{"Nope99"}}, campDeps},
 		{"compare_activity_to_baseline", map[string]any{"systems": []any{"Tama"}}, sdeDeps},
 		{"compare_activity_to_baseline", map[string]any{}, sdeDeps},
 		{"convert_isk_to_real", map[string]any{"isk_amount": 1e9, "currency": "BOTH"}, stubDeps},

@@ -1078,6 +1078,46 @@
   {
     "type": "function",
     "function": {
+      "name": "get_gate_camps",
+      "description": "Recent kills on EVE stargates and the camp state of each gate, from zKillboard killmails matched to gate positions by the EVE-Cyno collector and refreshed every minute: kill counts in the last hour, the attacking alliances, interdictor use, and a state (likely camp, possible camp, fight, high-sec gank pattern). Give system names or a region, or nothing for the busiest gates of New Eden. Kills that never reached zKillboard are not counted.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "system_names": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "maxItems": 50,
+            "description": "Solar system names (case-insensitive); every gate of those systems. Not together with region_name."
+          },
+          "region_name": {
+            "type": "string",
+            "description": "Region name, e.g. 'The Forge'; every gate in that region. Not together with system_names."
+          },
+          "min_state": {
+            "type": "string",
+            "enum": [
+              "kills",
+              "possible_camp",
+              "likely_camp"
+            ],
+            "description": "Weakest state to list: kills (any kill), possible_camp (default) or likely_camp (likely camps and fights)."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 50,
+            "description": "How many gates to list, strongest first (default 15)."
+          }
+        }
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
       "name": "compare_activity_to_baseline",
       "description": "Compare the latest collected hour of EVE solar systems with their usual activity for the same hour of the week (UTC): jumps, ship, pod and NPC kills, each with the usual mean, its spread (sample standard deviation), the number of weeks sampled, a z-score and a plain word (about usual, busier, much busier, quieter, much quieter). The usual numbers never include the latest hour; a small gap on a quiet system stays 'about usual'; fewer than 4 weeks sampled answers 'not enough history'. Pass systems (up to 50 names), or region_name to list the systems furthest from usual in a region, e.g. the quietest systems in Delve now. Use for 'is Tama busier than usual', 'is this normal for this hour', 'which systems in Delve are unusually quiet right now'.",
       "parameters": {
