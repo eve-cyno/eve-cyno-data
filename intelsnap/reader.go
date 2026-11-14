@@ -78,6 +78,8 @@ func load[T any](c *cached[T], path string, dec func([]byte) (*T, error)) (*T, e
 	if err != nil {
 		return nil, err
 	}
+	// Defense in depth: keeps a device node or a FIFO from being opened at all; the check after
+	// the open refuses the same files.
 	if !lfi.Mode().IsRegular() {
 		return nil, fmt.Errorf("%w: %s", ErrNotRegular, lfi.Mode())
 	}
@@ -121,7 +123,7 @@ func load[T any](c *cached[T], path string, dec func([]byte) (*T, error)) (*T, e
 // between the Lstat and the open is ErrNotRegular, not a raw ELOOP.
 func openFailure(path string, err error) error {
 	if lfi, lerr := os.Lstat(path); lerr == nil && !lfi.Mode().IsRegular() {
-		return fmt.Errorf("%w: %s", ErrNotRegular, lfi.Mode())
+		return fmt.Errorf("%w: %s: %w", ErrNotRegular, lfi.Mode(), err)
 	}
 	return err
 }

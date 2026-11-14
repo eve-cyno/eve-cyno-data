@@ -360,7 +360,8 @@ func TestReader_RefusesSymlink(t *testing.T) {
 	require.False(t, errors.Is(err, os.ErrNotExist))
 }
 
-// A rename keeps inode, size and mtime, so the cache key still matches; the symlink check must
+// Lstat sees the symlink as its own inode, so the cache key never matches it; this guards against
+// the reader switching to os.Stat, which would follow the link to the cached inode. The symlink check must
 // run before the cache is consulted.
 func TestReader_RefusesSymlinkSwappedInAfterACachedRead(t *testing.T) {
 	dir := t.TempDir()
