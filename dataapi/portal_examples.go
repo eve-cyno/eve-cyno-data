@@ -121,6 +121,8 @@ func newExampleView(t catalog.Tool, fx exampleFixture, origin, prefix string) (e
 // "attribution" key in bold. The docs pages keep newExampleView's highlighted blocks.
 func homeExample(v exampleView, fx exampleFixture) exampleView {
 	v.Curl, v.Python, v.JS = homePlain(v.Curl, v.Tool), homePlain(v.Python, v.Tool), homePlain(v.JS, v.Tool)
+	// the design indents the curl continuation lines by two spaces, the docs pages by four
+	v.Curl = template.HTML(strings.ReplaceAll(string(v.Curl), "\n    -", "\n  -")) // #nosec G203 -- whitespace change only
 	if fx.Prompt != "" {
 		v.Claude = template.HTML(escText(fx.Prompt))
 	}

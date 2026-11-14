@@ -476,16 +476,33 @@ func TestPortal_KeysCopyFollowsConfig(t *testing.T) {
 	cfg.KeyDailyCap = 0
 	require.Contains(t, get(cfg, "/docs/rest"), "daily_quota_exceeded", "the trial cap of a client without a key is still stated")
 	cfg.AnonDailyCap = 0
+	require.NotContains(t, get(cfg, "/"), "Over the daily cap")
 	require.NotContains(t, get(cfg, "/docs/access"), "daily_quota_exceeded")
 	require.NotContains(t, get(cfg, "/docs/rest"), "daily_quota_exceeded")
 
 	cfg = publicConfig()
 	cfg.Auth = nil
+	require.NotContains(t, get(cfg, "/"), "Over the daily cap")
 	require.NotContains(t, get(cfg, "/docs/access"), "/apikey create")
 	require.Contains(t, get(cfg, "/docs/access"), "per key. No keys are issued yet")
 	require.Contains(t, get(cfg, "/docs/mcp"), "calls per minute per caller, shared with REST")
 	require.Contains(t, get(publicConfig(), "/docs/mcp"), "calls per minute per caller without a key and 10 with one, shared with REST")
 	require.Contains(t, get(cfg, "/"), "No cookies, no accounts, no analytics.")
+}
+
+// The home example is plain code that copies as shown (no prompt markers, no token spans), with
+// the tool name and "attribution" in bold and the design's two-space curl continuation lines;
+// the docs pages keep their highlighting.
+func TestPortal_HomeExampleIsPlain(t *testing.T) {
+	api := portalAPI(t)
+	home := do(api, http.MethodGet, "/", "").Body.String()
+	require.NotContains(t, home, "data-nocopy")
+	require.NotContains(t, home, "tk-")
+	require.Contains(t, home, "/tool/<b>get_market_price</b>")
+	require.Contains(t, home, `<b>"attribution"</b>`)
+	require.Contains(t, home, "\\\n  -H 'Content-Type: application/json' \\\n  -d '")
+	require.NotContains(t, home, "\n    -H")
+	require.Contains(t, do(api, http.MethodGet, "/docs/", "").Body.String(), "tk-p")
 }
 
 // The search box reads a JSON index: every page and every offered tool, inline and at
