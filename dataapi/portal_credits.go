@@ -54,3 +54,21 @@ func credits() []credit {
 			[]creditLink{{"https://pkg.go.dev/modernc.org/sqlite", "modernc.org/sqlite"}}, "BSD-3-Clause. SQLite itself is public domain."},
 	}
 }
+
+// creditTally is the count line of the Hall of Fame: projects, outbound links, kinds and the
+// number of projects per kind (keyed by credit.Cat).
+type creditTally struct {
+	Projects, Links, Kinds int
+	ByCat                  map[string]int
+}
+
+// tallyCredits counts cs; the numbers follow the list, never a literal.
+func tallyCredits(cs []credit) creditTally {
+	t := creditTally{Projects: len(cs), ByCat: map[string]int{}}
+	for _, c := range cs {
+		t.Links += len(c.Links)
+		t.ByCat[c.Cat]++
+	}
+	t.Kinds = len(t.ByCat)
+	return t
+}

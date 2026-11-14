@@ -233,15 +233,20 @@ type pageData struct {
 	TermsUpdated       string
 	SearchIndex        template.JS
 
-	Stats      portalStats
-	Lim        portalLimits // per-minute limits without an API key (everyone's, on a service without keys)
-	KeyLim     portalLimits // per-minute limits with an API key (the same as Lim where a key does not raise them)
-	Tools      toolGroups
-	NavGroups  []navGroup
-	LimitCards []limitCard
-	LimitRows  []limitRowView
-	Credits    []credit
-	Sources    []tools.Source
+	Stats       portalStats
+	Lim         portalLimits // per-minute limits without an API key (everyone's, on a service without keys)
+	KeyLim      portalLimits // per-minute limits with an API key (the same as Lim where a key does not raise them)
+	Tools       toolGroups
+	NavGroups   []navGroup
+	LimitCards  []limitCard
+	LimitRows   []limitRowView
+	Credits     []credit
+	CreditTally creditTally
+	// Lobes groups the offered tools for the home page.
+	Lobes []portalLobe
+	// ToolsPublicLabel and ToolsKeyedLabel are the tier counts as the home page words them ("31 tools", "1 tool").
+	ToolsPublicLabel, ToolsKeyedLabel string
+	Sources                           []tools.Source
 
 	KeyedNames template.HTML
 	// LiveESITools and LiveScoutTools list the tools whose every call can read live ESI or
@@ -491,6 +496,10 @@ func newPageData(in portalInput, assetVersion string) pageData {
 		d.FirstTool = d.Tools.Public[0].Name
 	}
 	d.KeyMCP = d.KeyLim.MCP
+	d.CreditTally = tallyCredits(d.Credits)
+	d.Lobes = portalLobes(offered)
+	d.ToolsPublicLabel = fmt.Sprintf("%d %s", len(pub), plural(len(pub), "tool"))
+	d.ToolsKeyedLabel = fmt.Sprintf("%d %s", len(keyed), plural(len(keyed), "tool"))
 	d.Range = rangeViewOf(s)
 	d.LimitCards = limitCards(s)
 	d.LimitRows = limitTable(s)
