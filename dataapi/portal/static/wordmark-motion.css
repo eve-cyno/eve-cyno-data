@@ -1,0 +1,113 @@
+/* EVE-Cyno wordmark: CYNO, variant B "Axis". Canonical source: copy this file byte for byte.
+   Size: set --cy-h (default 24px) on the SVG or on any ancestor. Never below 20px in a header.
+   Colours, dark ground by default. Override on the SVG or on any ancestor:
+     --cy-accent  C gate, ray, the Y beacon, the N ray, the O diamond (product accent)
+     --cy-ink     Y, N stems, O ring, product suffix letters stay --cy-accent
+     --cy-core    white-hot centre of the two beacons
+     --cy-spark   lens flash and jump streaks
+   Light ground: add class cy-on-light; set --cy-accent-ink on an ancestor for a product ink
+   (ice #0b5f7a is the default, data #146b50, AI #3b46c4).
+   Motion: the jump-in runs only while the SVG has class cy-play, and only under
+   prefers-reduced-motion: no-preference. Total 1140 ms. No other animation, no loop.
+   The product suffix group (.cy-suffix: DATA, AI, DESKTOP) fades in last, 240 ms from 900 ms, so it
+   never shows while Y, N, O are still arriving. */
+.cy-wm {
+  display: block;
+  height: var(--cy-h, 24px);
+  width: auto;
+  overflow: visible;
+}
+.cy-wm .cy-a { fill: var(--cy-accent, #4ad6f5); }
+.cy-wm .cy-as { fill: none; stroke: var(--cy-accent, #4ad6f5); }
+.cy-wm .cy-i { fill: var(--cy-ink, #e8eef7); }
+.cy-wm .cy-is { fill: none; stroke: var(--cy-ink, #e8eef7); }
+.cy-wm .cy-k { fill: var(--cy-core, #f5fbff); }
+.cy-wm .cy-s { fill: var(--cy-spark, #f5fbff); }
+.cy-wm .cy-fx { opacity: 0; }
+.cy-wm.cy-on-light {
+  --cy-accent: var(--cy-accent-ink, #0b5f7a);
+  --cy-ink: #101a2c;
+  --cy-core: #f3f6fa;
+  --cy-spark: #0b5f7a;
+}
+.cy-wm .cy-ring,
+.cy-wm .cy-dia,
+.cy-wm .cy-flash {
+  transform-origin: 32px 32px;
+}
+.cy-wm .cy-ray-h,
+.cy-wm .cy-ray {
+  transform-origin: 45px 32px;
+}
+.cy-wm .cy-glyph,
+.cy-wm .cy-flare {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.cy-wm .cy-streak {
+  transform-box: fill-box;
+  transform-origin: left center;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .cy-wm.cy-play .cy-ring { animation: cy-ring-in 460ms cubic-bezier(.22, 1, .36, 1) backwards; }
+  .cy-wm.cy-play .cy-dia { animation: cy-dia-in 380ms cubic-bezier(.22, 1, .36, 1) 40ms backwards; }
+  .cy-wm.cy-play .cy-flash { animation: cy-flash-in 360ms ease-out 60ms backwards; }
+  .cy-wm.cy-play .cy-ray { animation: cy-ray-in 380ms cubic-bezier(.22, 1, .36, 1) 180ms backwards; }
+  .cy-wm.cy-play .cy-l { --cy-f0: 380ms; }
+  .cy-wm.cy-play .cy-l.cy-n { --cy-f0: 540ms; }
+  .cy-wm.cy-play .cy-l.cy-o { --cy-f0: 700ms; }
+  .cy-wm.cy-play .cy-streak { animation: cy-streak-in 220ms linear calc(var(--cy-f0) - 220ms) backwards; }
+  .cy-wm.cy-play .cy-flare { animation: cy-flare-in 320ms ease-out var(--cy-f0) backwards; }
+  .cy-wm.cy-play .cy-glyph { animation: cy-arrive 400ms cubic-bezier(.22, 1, .36, 1) calc(var(--cy-f0) + 40ms) backwards; }
+  .cy-wm.cy-play .cy-suffix { animation: cy-suffix-in 240ms ease-out 900ms backwards; }
+  /* quiet hover and focus: the ray reaches out, the lens flash shows faintly; the letters do not replay */
+  .cy-wm .cy-ray-h { transition: transform 240ms cubic-bezier(.22, 1, .36, 1); }
+  .cy-wm .cy-flash { transition: opacity 240ms; }
+  a:hover .cy-wm .cy-ray-h,
+  a:focus-visible .cy-wm .cy-ray-h,
+  .cy-wm:hover .cy-ray-h { transform: scaleX(1.22); }
+  a:hover .cy-wm .cy-flash,
+  a:focus-visible .cy-wm .cy-flash,
+  .cy-wm:hover .cy-flash { opacity: .55; }
+}
+@keyframes cy-ring-in {
+  0% { opacity: 0; transform: scale(.88); }
+  40% { opacity: 1; }
+  62% { transform: scale(1.045); }
+  100% { opacity: 1; transform: scale(1); }
+}
+@keyframes cy-dia-in {
+  0% { transform: scale(0); }
+  58% { transform: scale(1.22); }
+  100% { transform: scale(1); }
+}
+@keyframes cy-flash-in {
+  0% { opacity: 0; transform: scaleX(.15); }
+  35% { opacity: .95; transform: scaleX(1); }
+  100% { opacity: 0; transform: scaleX(1.12); }
+}
+@keyframes cy-ray-in {
+  0% { transform: scaleX(0); }
+  62% { transform: scaleX(1.18); }
+  100% { transform: scaleX(1); }
+}
+@keyframes cy-streak-in {
+  0% { opacity: 0; transform: scaleX(1); }
+  25% { opacity: .9; }
+  80% { opacity: 1; }
+  100% { opacity: 0; transform: scaleX(0); }
+}
+@keyframes cy-flare-in {
+  0% { opacity: 0; transform: scale(.4); }
+  18% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1.25); }
+}
+@keyframes cy-suffix-in {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+@keyframes cy-arrive {
+  0% { opacity: 0; transform: scale(1.12); }
+  45% { opacity: 1; }
+  100% { opacity: 1; transform: scale(1); }
+}

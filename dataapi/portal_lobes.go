@@ -6,6 +6,9 @@ import "eve-cyno.dev/go/data/catalog"
 type portalLobe struct {
 	Name  string
 	Tools []catalog.Tool
+	// Rows are the same tools as the page's tool rows: the tier and the live label the
+	// atlas marks them with.
+	Rows []toolRowView
 }
 
 type portalLobeSpec struct {
@@ -78,6 +81,7 @@ func portalLobes(offered []catalog.Tool) []portalLobe {
 		for _, n := range spec.tools {
 			if t, ok := byName[n]; ok {
 				l.Tools = append(l.Tools, t)
+				l.Rows = append(l.Rows, rowOf(t))
 			}
 		}
 		if len(l.Tools) > 0 {

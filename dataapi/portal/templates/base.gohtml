@@ -157,3 +157,99 @@
 {{.SearchIndex}}
 </script>
 <script src="{{.Assets}}/site.js" defer></script>{{end}}
+
+{{/* ======== The home page (the data-home design): its own head, header, wordmark and footer. The docs
+pages keep head, topbar-docs and footer above. ======== */}}
+{{define "head-home"}}<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>{{.Title}}</title>
+<meta name="description" content="{{.Description}}">
+<link rel="icon" href="{{.Assets}}/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="{{.Assets}}/favicon-small.svg" type="image/svg+xml" sizes="16x16">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="{{.Assets}}/site-base.css">
+<link rel="stylesheet" href="{{.Assets}}/wordmark-motion.css">
+<link rel="stylesheet" href="{{.Assets}}/home.css">
+</head>{{end}}
+
+{{/* The CYNO wordmark of the data product. The argument is an extra class: "cy-play" in the header
+(the ignition runs once per visit, wordmark-once.js) and "" in the footer. */}}
+{{define "wordmark-data"}}<svg class="cy-wm{{if .}} {{.}}{{end}}" viewBox="0 0 344 64" width="129" height="24" role="img" aria-label="EVE-Cyno Data" focusable="false">
+  <g class="cy-c">
+    <path class="cy-ring cy-as" stroke-width="6" d="M48.85 14.86A24 24 0 1 0 48.85 49.14"/>
+    <g class="cy-dia">
+      <path class="cy-a" d="M32 23L41 32L32 41L23 32Z"/>
+      <path class="cy-k" d="M32 28L36 32L32 36L28 32Z"/>
+    </g>
+    <g class="cy-ray-h"><path class="cy-ray cy-a" d="M45 29.5L63 32L45 34.5Z"/></g>
+    <ellipse class="cy-flash cy-fx cy-s" cx="32" cy="32" rx="34" ry="1.6"/>
+  </g>
+    <g class="cy-l cy-y">
+      <path class="cy-streak cy-fx cy-s" d="M91 30.4L151 32L91 33.6Z"/>
+      <g class="cy-glyph">
+        <path class="cy-i" d="M68 5L75.5 5L91 25.9L106.5 5L114 5L94 32L94 53L88 59L88 32Z"/>
+        <path class="cy-a" d="M91 24L99 32L91 40L83 32Z"/>
+        <path class="cy-k" d="M91 28.5L94.5 32L91 35.5L87.5 32Z"/>
+      </g>
+      <circle class="cy-flare cy-fx" cx="91" cy="32" r="13" fill="#549ad8" opacity=".35"/>
+      <circle class="cy-flare cy-fx" cx="91" cy="32" r="6.5" fill="#47caec" opacity=".9"/>
+    </g>
+    <g class="cy-l cy-n">
+      <path class="cy-streak cy-fx cy-s" d="M144 30.4L204 32L144 33.6Z"/>
+      <g class="cy-glyph">
+        <path class="cy-i" d="M122 53L122 5L128 5L128 59ZM160 5L166 11L166 59L160 59Z"/>
+        <path class="cy-a" d="M128 5L128 16L160 59L160 53.5Z"/>
+      </g>
+      <circle class="cy-flare cy-fx" cx="144" cy="32" r="13" fill="#549ad8" opacity=".35"/>
+      <circle class="cy-flare cy-fx" cx="144" cy="32" r="6.5" fill="#47caec" opacity=".9"/>
+    </g>
+    <g class="cy-l cy-o">
+      <path class="cy-streak cy-fx cy-s" d="M202 30.4L262 32L202 33.6Z"/>
+      <g class="cy-glyph">
+        <circle class="cy-is" cx="202" cy="32" r="24" stroke-width="6"/>
+        <path class="cy-a" d="M202 25.5L208.5 32L202 38.5L195.5 32Z"/>
+      </g>
+      <circle class="cy-flare cy-fx" cx="202" cy="32" r="13" fill="#549ad8" opacity=".35"/>
+      <circle class="cy-flare cy-fx" cx="202" cy="32" r="6.5" fill="#47caec" opacity=".9"/>
+    </g>
+    <g class="cy-suffix"><path class="cy-a" transform="translate(245 19) scale(1.3)" d="M0 0L10 0L14 4L14 16L10 20L0 20ZM3 17L8.76 17L11 14.76L11 5.24L8.76 3L3 3ZM24.8 0L28.2 0L34 20L30.4 20L26.5 6.6L22.6 20L19 20ZM23.5 12.5L29.5 12.5L29.5 15.5L23.5 15.5ZM36 0L50 0L50 3L44.5 3L44.5 20L41.5 20L41.5 3L36 3ZM57.8 0L61.2 0L67 20L63.4 20L59.5 6.6L55.6 20L52 20ZM56.5 12.5L62.5 12.5L62.5 15.5L56.5 15.5Z"/></g>
+</svg>{{end}}
+
+{{define "nav-home"}}<header class="nav"><div class="wrap nav-in">
+  <a class="brand" href="/" style="--cy-accent:#5fd0a8">
+{{template "wordmark-data" "cy-play"}}
+<script src="{{.Assets}}/wordmark-once.js"></script></a>
+</div></header>
+<div class="sitebar"><div class="wrap sitebar-in">
+  <nav class="site-links" aria-label="data.eve-cyno.dev">
+    <a href="/docs/">Docs</a>
+    <a href="/docs/claude-code">Claude Code</a>
+    <a href="/docs/tools">Tools</a>
+    <a href="#credits">Hall of Fame</a>
+  </nav>
+  <div class="search" role="search">
+    <input type="search" id="site-search" placeholder="Search tools and docs" aria-label="Search tools and docs" autocomplete="off" spellcheck="false" aria-expanded="false" aria-controls="search-res">
+    <kbd>/</kbd>
+    <div class="search-res" id="search-res" aria-label="Search results" hidden></div>
+  </div>
+  <a class="btn sm" href="https://discord.gg/XZzkH38dt9">Discord</a>
+</div></div>
+{{end}}
+
+{{define "footer-home"}}<footer class="foot"><div class="wrap">
+  <div class="foot-grid">
+    <div class="stack s"><span class="brand" style="--cy-accent:#5fd0a8">
+{{template "wordmark-data" ""}}
+</span><p>Deterministic EVE Online data for tools and AI agents. Hobby-run by Bythlak. Not an official EVE Online or Fenris Creations service.</p><p>A free, non-commercial fan project. Donations are voluntary and unlock nothing.</p></div>
+    <div><span class="label">Docs</span><ul><li><a href="/docs/">Getting started</a></li><li><a href="/docs/claude-code">Claude Code plugin</a></li><li><a href="/docs/mcp">MCP</a></li><li><a href="/docs/rest">REST &amp; OpenAPI</a></li><li><a href="/docs/tools">Tools reference</a></li></ul></div>
+    <div><span class="label">Machine-readable</span><ul><li><a href="{{.URL}}/llms.txt">llms.txt</a></li><li><a href="{{.URL}}/llms-full.txt">llms-full.txt</a></li><li><a href="{{.URL}}{{.Prefix}}/openapi.yaml">OpenAPI (YAML)</a></li><li><a href="{{.URL}}{{.Prefix}}/openapi.json">OpenAPI (JSON)</a></li><li><a href="https://github.com/eve-cyno/eve-cyno-data">Source code (MIT)</a></li></ul></div>
+    <div><span class="label">Service</span><ul><li><a href="https://discord.gg/XZzkH38dt9">Discord</a></li><li>In game: Bythlak</li><li><a href="{{.URL}}/terms">Terms</a></li><li><a href="#credits">Hall of Fame</a></li><li><a href="{{.URL}}{{.Prefix}}/health">Status</a></li></ul></div>
+    <div><span class="label">EVE-Cyno</span><ul><li><a href="https://eve-cyno.dev/">eve-cyno.dev (hub)</a></li><li><a href="https://desktop.eve-cyno.dev/">Desktop</a></li><li><a href="/">Data</a></li>{{if .SelfServe}}<li><a href="https://ai.eve-cyno.dev/">AI chat</a></li>{{end}}</ul></div>
+  </div>
+  <p class="legal">© 2014 Fenris Creations hf. All rights reserved. 'EVE', 'EVE Online', 'Fenris Creations', and all related logos and images are trademarks or registered trademarks of Fenris Creations hf. This material is used with limited permission of Fenris Creations. No official affiliation or endorsement by Fenris Creations is stated or implied. Created under the EVE Developer License Agreement.<br>Non-commercial. Some reference text is from the <a href="https://wiki.eveuniversity.org/">EVE University Wiki</a>, licensed <a href="https://creativecommons.org/licenses/by-sa/4.0/">CC BY-SA 4.0</a>. Community fits belong to their authors and sites.</p>
+</div></footer>
+{{end}}

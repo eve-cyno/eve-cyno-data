@@ -1,11 +1,14 @@
 package dataapi_test
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"net/http"
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -146,11 +149,14 @@ func TestPortal_CSPAndNoInlineScript(t *testing.T) {
 // JavaScript are served verbatim.
 func TestPortal_AssetsAreVersionedAndVerbatim(t *testing.T) {
 	api := portalAPI(t)
-	page := do(api, http.MethodGet, "/", "").Body.String()
-	urls := assetRE.FindAllStringSubmatch(page, -1)
-	require.GreaterOrEqual(t, len(urls), 5, "tokens.css, portal.css, favicon, lockup, site.js")
+	homePage := do(api, http.MethodGet, "/", "").Body.String()
+	docsPage := do(api, http.MethodGet, "/docs/", "").Body.String()
+	homeURLs := assetRE.FindAllStringSubmatch(homePage, -1)
+	docsURLs := assetRE.FindAllStringSubmatch(docsPage, -1)
+	require.GreaterOrEqual(t, len(homeURLs), 7, "favicons, site-base.css, wordmark-motion.css, home.css, wordmark-once.js, three.min.js, home.js")
+	require.GreaterOrEqual(t, len(docsURLs), 5, "tokens.css, portal.css, docs.css, favicon, lockup, site.js")
 	seen := map[string]bool{}
-	for _, m := range urls {
+	for _, m := range append(slices.Clone(homeURLs), docsURLs...) {
 		u := m[1]
 		if seen[u] {
 			continue
@@ -162,35 +168,105 @@ func TestPortal_AssetsAreVersionedAndVerbatim(t *testing.T) {
 		require.Equal(t, "nosniff", rec.Header().Get("X-Content-Type-Options"), u)
 		require.NotEmpty(t, rec.Body.Bytes(), u)
 	}
-	for _, f := range []string{"portal.css", "site.js"} {
-		require.True(t, seen["/assets/"+versionOf(t, urls)+"/"+f], f)
+	ver := versionOf(t, homeURLs)
+	for _, f := range []string{"site-base.css", "wordmark-motion.css", "home.css", "wordmark-once.js", "three.min.js", "home.js", "portal.css", "docs.css", "site.js"} {
+		require.True(t, seen["/assets/"+ver+"/"+f], f)
 	}
 
 	// a stale version still finds the file, but is only briefly cacheable
 	stale := do(api, http.MethodGet, "/assets/000000000000/portal.css", "")
 	require.Equal(t, http.StatusOK, stale.Code)
 	require.Equal(t, "public, max-age=300", stale.Header().Get("Cache-Control"))
-	requireError(t, do(api, http.MethodGet, "/assets/"+versionOf(t, urls)+"/nope.css", ""), http.StatusNotFound, "not_found")
+	requireError(t, do(api, http.MethodGet, "/assets/"+ver+"/nope.css", ""), http.StatusNotFound, "not_found")
 
 	// CSS and JS are the design files, byte for byte. The snapshots in testdata/design are
 	// copies of the Claude Design files the portal assets come from; line 1 of each names the
-	// design file and its etag (the project id is left out of this public repository). A design
-	// sync replaces the snapshots together with the assets, so this check fails until both
-	// agree. A missing snapshot fails the test: it never skips.
-	for _, asset := range []string{"portal.css", "docs.css", "site.js"} {
+	// design file and its version and sha256 (the design system's id is left out of this public
+	// repository). A design sync replaces the snapshots together with the assets, so this check
+	// fails until both agree. A missing snapshot fails the test: it never skips.
+	for _, asset := range []string{"portal.css", "docs.css", "site.js", "site-base.css", "wordmark-motion.css", "home.css", "wordmark-once.js", "home.js"} {
 		want, err := os.ReadFile(filepath.Join("testdata", "design", asset))
 		require.NoError(t, err, "design snapshot for %s", asset)
 		first, body, _ := strings.Cut(string(want), "\n")
-		require.Regexp(t, snapshotSourceRE, first, "line 1 of the %s snapshot names its design file and etag", asset)
-		got := do(api, http.MethodGet, "/assets/"+versionOf(t, urls)+"/"+asset, "").Body.String()
+		require.Regexp(t, snapshotSourceRE, first, "line 1 of the %s snapshot names its design file and version", asset)
+		require.NotContains(t, first, designToolHost, asset)
+		got := do(api, http.MethodGet, "/assets/"+ver+"/"+asset, "").Body.String()
 		require.Equal(t, body, got, "%s differs from the design snapshot", asset)
 	}
 }
 
+// The home page loads the files of the new design only; the docs pages load the old ones only.
+func TestPortal_HomeLoadsOnlyItsAssets(t *testing.T) {
+	api := portalAPI(t)
+	home := do(api, http.MethodGet, "/", "").Body.String()
+	for _, f := range []string{"site-base.css", "wordmark-motion.css", "home.css", "three.min.js", "wordmark-once.js", "home.js"} {
+		require.Regexp(t, `(?:href|src)="/assets/[0-9a-f]{12}/`+regexp.QuoteMeta(f)+`"`, home, f)
+	}
+	for _, f := range []string{"tokens.css", "portal.css", "docs.css", "site.js"} {
+		require.NotContains(t, home, "/"+f+`"`, "home must not load "+f)
+	}
+	docs := do(api, http.MethodGet, "/docs/", "").Body.String()
+	for _, f := range []string{"tokens.css", "portal.css", "docs.css", "site.js"} {
+		require.Regexp(t, `(?:href|src)="/assets/[0-9a-f]{12}/`+regexp.QuoteMeta(f)+`"`, docs, f)
+	}
+	for _, f := range []string{"site-base.css", "wordmark-motion.css", "home.css", "three.min.js", "wordmark-once.js", "home.js"} {
+		require.NotContains(t, docs, "/"+f+`"`, "docs must not load "+f)
+	}
+}
+
+// threeR128SHA256 is three.min.js r128 exactly as cdnjs serves it. The portal serves it from
+// its own origin (the CSP allows scripts from 'self' only).
+const threeR128SHA256 = "9274bbcec8d96168626c732b5d31c775aa8cfb7eaa0599bec0c175908a2c1ce2"
+
+func TestPortal_ThreeIsR128(t *testing.T) {
+	api := portalAPI(t)
+	home := do(api, http.MethodGet, "/", "").Body.String()
+	m := regexp.MustCompile(`src="(/assets/[0-9a-f]{12}/three\.min\.js)"`).FindStringSubmatch(home)
+	require.NotNil(t, m, "the home page loads three.min.js from its own assets")
+	rec := do(api, http.MethodGet, m[1], "")
+	require.Equal(t, http.StatusOK, rec.Code)
+	require.Contains(t, rec.Header().Get("Content-Type"), "text/javascript")
+	sum := sha256.Sum256(rec.Body.Bytes())
+	require.Equal(t, threeR128SHA256, hex.EncodeToString(sum[:]))
+
+	notice, err := os.ReadFile(filepath.Join("..", "THIRD_PARTY.md"))
+	require.NoError(t, err)
+	require.Contains(t, string(notice), "three.js", "THIRD_PARTY.md carries the three.js licence line")
+	require.Contains(t, string(notice), "r128")
+	require.Contains(t, string(notice), "MIT")
+}
+
+// designToolHost is the design tool's domain, spelled in two parts so this file never names it.
+const designToolHost = "claude" + ".ai"
+
+// The design files carry no proposal chrome and no link to the design tool or a CDN.
+func TestPortal_HomeHasNoProposalChrome(t *testing.T) {
+	api := portalAPI(t)
+	home := do(api, http.MethodGet, "/", "").Body.String()
+	for _, bad := range []string{designToolHost, "Design proposal", `aria-label="Proposals"`, `class="proposal"`, "cdnjs"} {
+		require.NotContains(t, home, bad)
+	}
+	for _, f := range []string{"home.css", "home.js", "site-base.css", "wordmark-motion.css", "wordmark-once.js"} {
+		body := do(api, http.MethodGet, "/assets/000000000000/"+f, "").Body.String()
+		require.NotEmpty(t, body, f)
+		for _, bad := range []string{designToolHost, "cdnjs", ".proposal"} {
+			require.NotContains(t, body, bad, f)
+		}
+	}
+}
+
+// The home page carries the full Fenris Creations notice, as every public page must.
+func TestPortal_HomeCarriesTheFCNotice(t *testing.T) {
+	const notice = "© 2014 Fenris Creations hf. All rights reserved. 'EVE', 'EVE Online', 'Fenris Creations', and all related logos and images are trademarks or registered trademarks of Fenris Creations hf. This material is used with limited permission of Fenris Creations. No official affiliation or endorsement by Fenris Creations is stated or implied. Created under the EVE Developer License Agreement."
+	home := do(portalAPI(t), http.MethodGet, "/", "").Body.String()
+	require.Contains(t, home, notice)
+	require.Contains(t, home, `<a href="https://wiki.eveuniversity.org/">EVE University Wiki</a>, licensed <a href="https://creativecommons.org/licenses/by-sa/4.0/">CC BY-SA 4.0</a>`)
+}
+
 // snapshotSourceRE is line 1 of a design snapshot: the Claude Design file and its etag, in a
-// CSS or JS comment. Since the design moved to an Artifact (2026-10-27) a sync writes the Artifact version
+// CSS or JS comment (a file under brand/ names that folder). Since the design moved to an Artifact (2026-10-27) a sync writes the Artifact version
 // and the sha256 instead of the etag; older snapshots keep the etag form.
-var snapshotSourceRE = regexp.MustCompile(`^(/\*|//) source: (claude-design eve-cyno/project/[a-z-]+\.(css|js) etag [0-9]+|claude-design-artifact version [0-9]+-[0-9a-f]+ project/eve-cyno/project/[a-z-]+\.(css|js) sha256 [0-9a-f]{64})( \*/)?$`)
+var snapshotSourceRE = regexp.MustCompile(`^(/\*|//) source: (claude-design eve-cyno/project/[a-z-]+\.(css|js) etag [0-9]+|claude-design-artifact version [0-9]+-[0-9a-f]+ project/eve-cyno/project/(brand/)?[a-z-]+\.(css|js) sha256 [0-9a-f]{64})( \*/)?$`)
 
 func versionOf(t *testing.T, urls [][]string) string {
 	t.Helper()
@@ -212,9 +288,17 @@ func TestPortal_RendersTheCatalogAndLimits(t *testing.T) {
 	require.Contains(t, home, `<span data-slot="tools_offered">32</span>`)
 	require.Contains(t, home, `<span data-slot="tools_public">31</span>`)
 	require.Contains(t, home, `<span data-slot="tools_upstream">10</span>`, "every live tool: eight ESI, one EvE-Scout, one zKillboard")
-	require.Contains(t, home, `<b data-slot="tools_upstream">10</b> tools · 9 calls/min per caller, shared`)
+	require.Contains(t, home, `<b><span data-slot="tools_upstream">10</span></b> tools · <span data-slot="limit_upstream">9</span> calls/min per caller, shared`)
 	require.Contains(t, home, `<span data-slot="limit_mcp">77</span>`)
-	require.Contains(t, home, "ESI, EvE-Scout and zKillboard, 9 calls/min shared")
+	require.Contains(t, home, `ESI, EvE-Scout and zKillboard, <span data-slot="limit_upstream">9</span> calls/min shared`)
+	require.Contains(t, home, `<span data-slot="tools_public_label">31 tools</span>`)
+	require.Contains(t, home, `<span data-slot="tools_keyed_label">1 tool</span>`)
+	require.Contains(t, home, `<span data-slot="lobe_total">6</span>`, "the lobes of the atlas")
+	for _, tl := range catalog.Tools() {
+		link := `<a href="/docs/tools/` + tl.Name + `">` + tl.Name + `</a>`
+		require.Equal(t, tl.Tier.Offered(), strings.Contains(home, link), "%s: the atlas lists exactly the offered tools", tl.Name)
+	}
+	require.Equal(t, 32, strings.Count(home, "<li data-tool"), "one atlas row per offered tool")
 	require.NotContains(t, home, "community_fits", "the community-fit count is not known to the service: the slot is hidden")
 	require.NotContains(t, home, "~8,150")
 
@@ -329,12 +413,14 @@ func TestPortal_LiveCopyByKind(t *testing.T) {
 	// The landing page counts and labels the same live tools, and credits EvE-Scout.
 	home := do(api, http.MethodGet, "/", "").Body.String()
 	for _, want := range []string{
-		`<dt><i aria-hidden="true"></i>Live tools</dt><dd><span data-slot="tools_upstream">10</span>`,
+		`<div class="k">Live tools</div><div class="n"><span data-slot="tools_upstream">10</span>`,
 		`<h3>Live ESI, EvE-Scout and zKillboard</h3><p>Market prices and history, type info, sovereignty, system activity and jump-route checks from ESI, through a shared cache that follows ESI's <code>Expires</code>; Thera and Turnur connections from EvE-Scout (Signal Cartel); the newest kills in a system from zKillboard.</p>`,
-		`href="/docs/tools/get_market_price">get_market_price</a><span class="tool-badges"><span class="badge badge-live">live ESI</span></span>`,
-		`<li class="tool-row" data-tier="public" data-upstream="true"><a class="tool-name" href="/docs/tools/get_thera_connections">get_thera_connections</a><span class="tool-badges"><span class="badge badge-live">live EvE-Scout</span></span>`,
-		`<li class="tool-row" data-tier="public" data-upstream="true"><a class="tool-name" href="/docs/tools/plan_jump_route">plan_jump_route</a><span class="tool-badges"><span class="badge badge-live">live with options</span></span>`,
-		`<h3>EvE-Scout / Signal Cartel</h3><span class="cr-cat">Community</span>`,
+		`<li data-tool><div class="th"><a href="/docs/tools/get_market_price">get_market_price</a><span class="chip live">live ESI</span></div>`,
+		`<li data-tool><div class="th"><a href="/docs/tools/get_thera_connections">get_thera_connections</a><span class="chip live">live EvE-Scout</span></div>`,
+		`<li data-tool><div class="th"><a href="/docs/tools/plan_jump_route">plan_jump_route</a><span class="chip live">live with options</span></div>`,
+		`<li data-tool><div class="th"><a href="/docs/tools/get_recent_kills">get_recent_kills</a><span class="chip live">live zKillboard</span></div>`,
+		`<li data-tool class="key"><div class="th"><a href="/docs/tools/analyze_battle">analyze_battle</a><span class="chip keyed">API key</span></div>`,
+		`<h3>EvE-Scout / Signal Cartel</h3>`,
 		"One shared cached copy: at most one request per cache lifetime, or one a minute while EvE-Scout does not answer.",
 		"live ESI, EvE-Scout and zKillboard reads and community fits",
 	} {
@@ -585,23 +671,24 @@ func TestPortal_TrialAccessCopyOnAKeyedService(t *testing.T) {
 	api := portalAPI(t)
 	home := do(api, http.MethodGet, "/", "").Body.String()
 	for _, want := range []string{
-		"Try it without a key or an account (trial limits, 200 requests a day)",
-		"requests/min per caller (120 with a key)",
-		"ESI, EvE-Scout and zKillboard, 5 calls/min shared (10 with a key)",
-		"community fits and 10 live tools (ESI, EvE-Scout and zKillboard)",
-		"live tools, REST &#43; MCP · 10 with a key", // html/template writes "+" as &#43;
-		"POST /v1/mcp · 120 with a key",
-		"POST /v1/tool/{name} · 60 with a key",
-		"GET /v1/fits/search · 240 with a key",
-		"GET /v1/items/search · 240 with a key",
-		`<b>200<small>/day</small></b><span>without a key, per client · 10,000 per key</span>`,
+		`Try it without a key or an account (trial limits, <span data-slot="limit_anon_day">200</span> requests a day)`,
+		`requests/min per caller (<span data-slot="limit_mcp_key">120</span> with a key)`,
+		`ESI, EvE-Scout and zKillboard, <span data-slot="limit_upstream">5</span> calls/min shared (<span data-slot="limit_upstream_key">10</span> with a key)`,
+		`community fits and <span data-slot="tools_upstream">10</span> live tools (ESI, EvE-Scout and zKillboard)`,
+		`<thead><tr><th>Limit</th><th>No key</th><th>Free key</th></tr></thead>`,
+		`<tr><td>MCP<small>POST /v1/mcp</small></td><td><span data-slot="limit_mcp">20</span>/min</td><td><span data-slot="limit_mcp_key">120</span>/min</td></tr>`,
+		`<tr><td>REST tool calls<small>POST /v1/tool/{name}</small></td><td><span data-slot="limit_rest">10</span>/min</td><td><span data-slot="limit_rest_key">60</span>/min</td></tr>`,
+		`<tr><td>Live tools<small>REST &#43; MCP</small></td><td><span data-slot="limit_upstream">5</span>/min</td><td><span data-slot="limit_upstream_key">10</span>/min</td></tr>`,
+		`<tr><td>Fit search<small>GET /v1/fits/search</small></td><td><span data-slot="limit_fits">30</span>/min</td><td><span data-slot="limit_fits_key">240</span>/min</td></tr>`,
+		`<tr><td>Item search<small>GET /v1/items/search</small></td><td><span data-slot="limit_items">120</span>/min</td><td><span data-slot="limit_items_key">240</span>/min</td></tr>`,
+		`<tr><td>Requests per day<small>UTC day; docs pages do not count</small></td><td><span data-slot="limit_anon_day">200</span></td><td><span data-slot="limit_key_day">10,000</span></td></tr>`,
 		"The daily cap is 200 requests per client without a key and 10,000 per key (UTC day; docs pages do not count)",
 		"including the daily trial count",
 		"Free-text fit search (<code>q</code> on <code>/v1/fits/search</code>) needs a key too",
 	} {
 		require.Contains(t, home, want)
 	}
-	require.Equal(t, 6, strings.Count(home, `<div class="limit">`), "five per-minute budgets and the daily one")
+	require.Equal(t, 6, strings.Count(home, "<tr><td>"), "five per-minute budgets and the daily one")
 
 	tools := do(api, http.MethodGet, "/docs/tools", "").Body.String()
 	require.Contains(t, tools, `data-tool="get_fits" data-tier="public"`)
@@ -636,7 +723,7 @@ func TestPortal_KeylessServiceHasNoTrialCopy(t *testing.T) {
 			require.NotContains(t, body, bad, p)
 		}
 	}
-	require.Equal(t, 5, strings.Count(do(api, http.MethodGet, "/", "").Body.String(), `<div class="limit">`))
+	require.Equal(t, 5, strings.Count(do(api, http.MethodGet, "/", "").Body.String(), "<tr><td>"), "five per-minute budgets, no daily one")
 }
 
 // The MCP page covers every client, the two install links survive html/template (their schemes
@@ -690,12 +777,13 @@ func TestPortal_MCPPageCoversEveryClientAndTheSkill(t *testing.T) {
 // lockup image is 172x32 with the alt "EVE-Cyno Data" on every page, and the head links the 16 px favicon.
 func TestPortal_LockupAndFaviconsFollowTheCynoWordmark(t *testing.T) {
 	api := portalAPI(t)
-	for _, path := range []string{"/", "/docs/"} {
-		page := do(api, http.MethodGet, path, "").Body.String()
-		require.Contains(t, page, `alt="EVE-Cyno Data" width="172" height="32"`, path)
-		require.NotContains(t, page, `alt="EVE-CYNO DATA"`, path)
-	}
+	docs := do(api, http.MethodGet, "/docs/", "").Body.String()
+	require.Contains(t, docs, `alt="EVE-Cyno Data" width="172" height="32"`, "the docs pages keep the lockup image")
+	require.NotContains(t, docs, `alt="EVE-CYNO DATA"`)
 	page := do(api, http.MethodGet, "/", "").Body.String()
+	require.Contains(t, page, `<svg class="cy-wm cy-play" viewBox="0 0 344 64" width="129" height="24" role="img" aria-label="EVE-Cyno Data" focusable="false">`, "the home page header carries the inline CYNO wordmark")
+	require.NotContains(t, page, "lockup-data.svg", "the home page draws no lockup image")
+	require.NotContains(t, page, `class="lockup-img"`)
 	m := regexp.MustCompile(`href="(/assets/[^"]+/favicon-small\.svg)"`).FindStringSubmatch(page)
 	require.NotNil(t, m, "the head links favicon-small.svg")
 	rec := do(api, http.MethodGet, m[1], "")

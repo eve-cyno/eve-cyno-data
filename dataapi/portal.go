@@ -147,7 +147,11 @@ type navGroup struct {
 type limitCard struct {
 	Max         int
 	KeyMax      int // the budget with an API key; 0 when a key does not raise it
+	Key         int // the budget with an API key, the same as Max where a key does not raise it
 	Unit, Label string
+	// Name is the row title of the home page's limits table and Slot its data-slot key
+	// ("limit_mcp"; the keyed figure is Slot + "_key").
+	Name, Slot string
 }
 
 type limitRowView struct {
@@ -510,20 +514,20 @@ func newPageData(in portalInput, assetVersion string) pageData {
 func limitCards(s Surface) []limitCard {
 	l, p := s.Limits, s.prefix()
 	var out []limitCard
-	add := func(on bool, r Rate, label string) {
+	add := func(on bool, r Rate, name, slot, label string) {
 		if on && r.Max > 0 && r.Window > 0 {
-			c := limitCard{Max: r.Max, Unit: windowUnit(r), Label: label}
+			c := limitCard{Max: r.Max, Key: r.Max, Unit: windowUnit(r), Name: name, Slot: slot, Label: label}
 			if k := s.keyedRate(r); k.Max > r.Max {
-				c.KeyMax = k.Max
+				c.KeyMax, c.Key = k.Max, k.Max
 			}
 			out = append(out, c)
 		}
 	}
-	add(s.MCP, l.MCP, "POST "+p+"/mcp")
-	add(s.ToolAPI == ToolAPIPublic, l.Tool, "POST "+p+"/tool/{name}")
-	add(s.ToolAPI != ToolAPIOff || s.MCP, l.UpstreamTool, "live tools, REST + MCP")
-	add(true, l.FitsSearch, "GET "+p+"/fits/search")
-	add(true, l.ItemsSearch, "GET "+p+"/items/search")
+	add(s.MCP, l.MCP, "MCP", "limit_mcp", "POST "+p+"/mcp")
+	add(s.ToolAPI == ToolAPIPublic, l.Tool, "REST tool calls", "limit_rest", "POST "+p+"/tool/{name}")
+	add(s.ToolAPI != ToolAPIOff || s.MCP, l.UpstreamTool, "Live tools", "limit_upstream", "REST + MCP")
+	add(true, l.FitsSearch, "Fit search", "limit_fits", "GET "+p+"/fits/search")
+	add(true, l.ItemsSearch, "Item search", "limit_items", "GET "+p+"/items/search")
 	return out
 }
 
