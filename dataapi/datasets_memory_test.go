@@ -56,12 +56,30 @@ func TestMemoryDataset_ServesPublishedBytes(t *testing.T) {
 }
 
 func TestMemoryDataset_UnpublishedIs503(t *testing.T) {
-	clk := newStepClock()
-	api := hubsAPI(t, dataapi.NewMemoryDataset(dataapi.MarketHubsMaxBytes), clk)
-	rec := do(api, http.MethodGet, "/v1/datasets/"+hubsName, "")
-	requireError(t, rec, http.StatusServiceUnavailable, "unavailable")
-	require.Equal(t, "no-store", rec.Header().Get("Cache-Control"))
-	require.Equal(t, "60", rec.Header().Get("Retry-After"))
+	cases := []struct {
+		name string
+		set  func(m *dataapi.MemoryDataset, now time.Time)
+		want string
+	}{
+		{"no attempt set: fallback", func(*dataapi.MemoryDataset, time.Time) {}, "300"},
+		{"zero attempt: fallback", func(m *dataapi.MemoryDataset, _ time.Time) { m.SetNextAttempt(time.Time{}) }, "300"},
+		{"past attempt: fallback", func(m *dataapi.MemoryDataset, now time.Time) { m.SetNextAttempt(now.Add(-time.Minute)) }, "300"},
+		{"future attempt: seconds to it", func(m *dataapi.MemoryDataset, now time.Time) { m.SetNextAttempt(now.Add(90 * time.Second)) }, "90"},
+		{"fraction rounds up", func(m *dataapi.MemoryDataset, now time.Time) { m.SetNextAttempt(now.Add(89*time.Second + time.Millisecond)) }, "90"},
+		{"under a second: at least 1", func(m *dataapi.MemoryDataset, now time.Time) { m.SetNextAttempt(now.Add(10 * time.Millisecond)) }, "1"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			clk := newStepClock()
+			mem := dataapi.NewMemoryDataset(dataapi.MarketHubsMaxBytes)
+			tc.set(mem, clk.now())
+			api := hubsAPI(t, mem, clk)
+			rec := do(api, http.MethodGet, "/v1/datasets/"+hubsName, "")
+			requireError(t, rec, http.StatusServiceUnavailable, "unavailable")
+			require.Equal(t, "no-store", rec.Header().Get("Cache-Control"))
+			require.Equal(t, tc.want, rec.Header().Get("Retry-After"))
+		})
+	}
 }
 
 func TestMemoryDataset_WorksWithoutDatasetDir(t *testing.T) {
@@ -84,6 +102,9 @@ func TestMemoryDataset_NoSourceRegisteredIs404(t *testing.T) {
 	}
 }
 
+// The test harness issues no keys, so the "keys" below are unknown bearer values: this proves
+// the answer does not depend on the remote address or on the Authorization header, not that two
+// real keys get the same bytes.
 func TestMemoryDataset_SameBytesForEveryCaller(t *testing.T) {
 	clk := newStepClock()
 	mem := dataapi.NewMemoryDataset(dataapi.MarketHubsMaxBytes)
@@ -110,7 +131,7 @@ func TestMemoryDataset_SameBytesForEveryCaller(t *testing.T) {
 	require.Equal(t, a.Header().Get("ETag"), c.Header().Get("ETag"))
 }
 
-func TestMemoryDataset_MaxAgeClamp(t *testing.T) {
+func TestMemoryDataset_MaxAge(t *testing.T) {
 	clk := newStepClock()
 	mem := dataapi.NewMemoryDataset(dataapi.MarketHubsMaxBytes)
 	next := clk.now().Add(time.Hour)
@@ -120,13 +141,45 @@ func TestMemoryDataset_MaxAgeClamp(t *testing.T) {
 		return do(api, http.MethodGet, "/v1/datasets/"+hubsName, "").Header().Get("Cache-Control")
 	}
 
-	require.Equal(t, "public, max-age=900", cc(), "far from nextBuildAt: upper clamp")
+	require.Equal(t, "public, max-age=900", cc(), "far from nextBuildAt: upper bound")
 	clk.add(time.Hour - 300*time.Second)
 	require.Equal(t, "public, max-age=300", cc(), "inside the range")
-	clk.add(250 * time.Second)
-	require.Equal(t, "public, max-age=60", cc(), "close to nextBuildAt: lower clamp")
+	clk.add(300*time.Second - 59900*time.Millisecond)
+	require.Equal(t, "public, max-age=59", cc(), "no floor: whole seconds, rounded down")
+	clk.add(59900 * time.Millisecond)
+	require.Equal(t, "public, max-age=0", cc(), "at nextBuildAt: revalidate")
 	clk.add(time.Hour)
-	require.Equal(t, "public, max-age=60", cc(), "past nextBuildAt: lower clamp")
+	require.Equal(t, "public, max-age=0", cc(), "past nextBuildAt: revalidate")
+}
+
+func TestMemoryDataset_HEAD(t *testing.T) {
+	clk := newStepClock()
+	mem := dataapi.NewMemoryDataset(dataapi.MarketHubsMaxBytes)
+	body := []byte(`{"hubs":[]}`)
+	require.NoError(t, mem.Publish(body, clk.now().Add(10*time.Minute)))
+	api := hubsAPI(t, mem, clk)
+	// A recorder does not strip a HEAD body (the net/http server does), so use a real server.
+	srv := httptest.NewServer(api)
+	t.Cleanup(srv.Close)
+	fetch := func(method string) (*http.Response, []byte) {
+		req, err := http.NewRequest(method, srv.URL+"/v1/datasets/"+hubsName, nil)
+		require.NoError(t, err)
+		req.Header.Set("Accept-Encoding", "identity")
+		resp, err := srv.Client().Do(req)
+		require.NoError(t, err)
+		defer resp.Body.Close()
+		b, err := io.ReadAll(resp.Body)
+		require.NoError(t, err)
+		return resp, b
+	}
+	get, gotBody := fetch(http.MethodGet)
+	head, headBody := fetch(http.MethodHead)
+	require.Equal(t, body, gotBody)
+	require.Equal(t, http.StatusOK, head.StatusCode)
+	require.Empty(t, headBody)
+	for _, h := range []string{"ETag", "Cache-Control", "Content-Type", "Vary", "X-Content-Type-Options"} {
+		require.Equal(t, get.Header.Get(h), head.Header.Get(h), h)
+	}
 }
 
 func TestMemoryDataset_OverCapRefusedKeepsPrevious(t *testing.T) {
@@ -154,7 +207,10 @@ func TestMemoryDataset_ConcurrentPublishAndReads(t *testing.T) {
 	go func() {
 		defer wg.Done()
 		for i := 0; i < 200; i++ {
-			require.NoError(t, mem.Publish(bodies[i%2], next))
+			if err := mem.Publish(bodies[i%2], next); err != nil {
+				t.Errorf("publish: %v", err)
+				return
+			}
 		}
 	}()
 	for g := 0; g < 4; g++ {

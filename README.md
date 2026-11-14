@@ -384,8 +384,8 @@ The intel collector publishes JSON snapshots (`intel-gates-now.json`, `intel-sys
 3. A breaking change (a field removed, renamed, retyped or given a new meaning) is a new major. A reader accepts every major it knows and answers "published in a newer format" for any other, never numbers. The reader that knows the new major deploys first and keeps reading the old one; the writer switches after.
 4. `intel-baselines.sqlite` stays at `schema_version 1`; `intelbase` is not read by `intelsnap`.
 
-`GET /v1/datasets/{file}` serves the three JSON files from `EVE_CORE_INTEL_DATASET_DIR`, byte for byte: the route does not decode
-them, so a file in a newer format is still served and its reader applies rule F1. Only those three names are served (never the
+`GET /v1/datasets/{file}` serves the three intel JSON files from `EVE_CORE_INTEL_DATASET_DIR`, byte for byte: the route does not decode
+them, so a file in a newer format is still served and its reader applies rule F1. Only those three intel names, and `market-hubs.json`, are served (never the
 baseline SQLite or any other file of the directory); a symlink, a directory or another special file under one of the names is
 refused (`500`, logged once per file version), and so is a file larger than 4 MiB (`dataapi.DatasetMaxBytes`). Each file is held
 in memory with a gzip copy and looked at again at most once a second, present or missing. The answer carries the file's
@@ -395,6 +395,8 @@ answers `304`. Like the portal assets, the route has no per-client limit, is not
 in-flight slot (a request with an API key still counts one unit of that key's daily cap). Because nothing limits it, a request with a
 query string may be refused with `400` (send none): the origin refuses one before it touches a file, because a cache that keys
 on the full URL would pass `?r=<random>` to the origin every time. Errors are `no-store`.
+
+The same route also serves `market-hubs.json`, the hub price table (it names its `source`, not a `credit`). It is not a file: the data API builds it in memory every `DATAAPI_HUB_PRICES_EVERY` (a Go duration; default `15m`, `0` turns the builder off, minimum `5m`) and serves the latest build with the same `ETag`, gzip and `304` behaviour, capped at 16 MiB (`dataapi.MarketHubsMaxBytes`). Its `Cache-Control` is `public, max-age=` the whole seconds until the next build (at most 900) and `max-age=0` once that time has passed, so the edge revalidates and the origin answers `304` from memory. Until the first complete build it answers `503` with `Retry-After` set to the seconds until the builder's next attempt (300 when unknown); with the builder off it answers `404`.
 
 ## Development
 

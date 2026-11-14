@@ -37,20 +37,20 @@ const datasetCheckEvery = time.Second
 //
 // A spec has a source: a file of Config.DatasetDir (policy is its fixed Cache-Control, max
 // the DatasetMaxBytes bound) or an in-memory body (memory is true; the Cache-Control follows
-// the published nextBuildAt, see MemoryDataset, so policy is empty and max is the cap
-// of the name's MemoryDataset).
+// the published nextBuildAt, see MemoryDataset, so policy and max are unset: the cap is what
+// the caller passes to NewMemoryDataset).
 var datasetTable = []datasetSpec{
 	{name: "intel-gates-now.json", policy: cacheDatasetGatesNow, max: DatasetMaxBytes},
 	{name: "intel-systems-hour.json", policy: cacheDatasetSystemsHour, max: DatasetMaxBytes},
 	{name: "intel-gates-profile.json", policy: cacheDatasetGatesProfile, max: DatasetMaxBytes},
-	{name: marketHubsName, memory: true, max: MarketHubsMaxBytes},
+	{name: marketHubsName, memory: true},
 }
 
 // datasetSpec is one allowlisted dataset name.
 type datasetSpec struct {
 	name   string
 	policy string // fixed Cache-Control of a file source
-	max    int    // size bound in bytes
+	max    int    // size bound in bytes of a file source
 	memory bool   // served from a MemoryDataset, not from a file
 }
 
@@ -66,7 +66,7 @@ func datasetHeaders() map[string]schema {
 	var policies []string
 	for _, e := range datasetTable {
 		if e.memory {
-			policies = append(policies, "`public, max-age=<seconds until the next build, 60 to 900>` for `"+e.name+"`")
+			policies = append(policies, "`public, max-age=<seconds until the next build, 0 to 900>` for `"+e.name+"`")
 			continue
 		}
 		policies = append(policies, "`"+e.policy+"` for `"+e.name+"`")
@@ -94,7 +94,7 @@ type datasetState int
 const (
 	datasetMissing    datasetState = iota // not published yet (os.ErrNotExist)
 	datasetServed                         // loaded: the version is set
-	datasetTooLarge                       // a regular file above DatasetMaxBytes
+	datasetTooLarge                       // a regular file above the name's max (DatasetMaxBytes)
 	datasetNotRegular                     // a symlink, a directory or another special file
 	datasetFailed                         // stat, open or read failed: tried again on the next look
 )
@@ -149,7 +149,7 @@ func newDatasets(dir string, mem map[string]*MemoryDataset, now func() time.Time
 	return d
 }
 
-// dataset answers GET {prefix}/datasets/{file}: one published intel snapshot, byte for byte
+// dataset answers GET {prefix}/datasets/{file}: one published dataset, byte for byte
 // as the collector wrote it. Nothing is decoded, so a file in a newer format is still served
 // and the reader applies the format rule. The route is outside the per-address limits, the
 // anonymous daily cap and the in-flight gate, so it touches no file for a request it refuses:

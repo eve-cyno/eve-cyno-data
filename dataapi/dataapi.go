@@ -55,9 +55,10 @@
 //     endpoint are no-store. Only a 200 (and a dataset's 304) is cacheable; every error is
 //     no-store.
 //   - GET {prefix}/datasets/{file} (Config.DatasetDir) serves the intel collector's published
-//     snapshot files as they are, and the in-memory market-hubs.json (Config.MarketHubs). Like the portal assets it has no per-address limit, is not
-//     counted by the anonymous daily cap and takes no in-flight slot; a request with a query
-//     string is refused (400) before any file is touched.
+//     snapshot files as they are, and the in-memory market-hubs.json (Config.MarketHubs).
+//     Like the portal assets it has no per-address limit, is not counted by the anonymous
+//     daily cap and takes no in-flight slot; a request with a query string is refused (400)
+//     before any file is touched.
 //
 // Dependencies arrive through Config, and the package has no globals.
 package dataapi
