@@ -3,12 +3,14 @@ package hubprices
 import (
 	"context"
 	"fmt"
+	"math"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strconv"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -185,7 +187,12 @@ func TestFailedRegionKeepsRowsAndAsOf(t *testing.T) {
 			res := build(t, f, first.Table)
 			j := statusOf(res, "jita")
 			require.False(t, j.Updated)
-			require.NotEmpty(t, j.Reason)
+			if name == "error" {
+				require.Equal(t, ReasonError, j.Reason)
+			} else {
+				require.Equal(t, ReasonDecode, j.Reason)
+			}
+			require.True(t, res.Complete)
 			require.Equal(t, first.Table.Hubs[0], res.Table.Hubs[0], "rows and asOf kept")
 			a := statusOf(res, "amarr")
 			require.True(t, a.Updated, "the other hubs still update")
@@ -211,7 +218,9 @@ func TestBackoffKeepsRows(t *testing.T) {
 	res, err := b.Build(context.Background(), first.Table, builtAt, nextAt)
 	require.NoError(t, err)
 	require.False(t, statusOf(res, "jita").Updated)
+	require.Equal(t, ReasonBackoff, statusOf(res, "jita").Reason)
 	require.Equal(t, first.Table.Hubs[0], res.Table.Hubs[0])
+	require.True(t, res.Complete)
 }
 
 func TestPartialRegionKeepsRows(t *testing.T) {
@@ -252,7 +261,7 @@ func TestInconsistentPagesFetchedOnceMoreThenAccepted(t *testing.T) {
 		require.True(t, j.Updated)
 		require.False(t, j.Inconsistent)
 		require.Equal(t, base, res.Table.Hubs[0].AsOf)
-		require.Equal(t, 2, f.fetch[10000002]-0)
+		require.Equal(t, 2, f.fetch[10000002])
 	})
 	t.Run("second read disagrees: accepted, oldest wins", func(t *testing.T) {
 		f := newFake(t)
@@ -288,6 +297,131 @@ func TestNoPreviousAndFailedRegionIsOmitted(t *testing.T) {
 		keys = append(keys, h.Key)
 	}
 	require.Equal(t, []string{"jita", "amarr", "dodixie", "hek"}, keys)
+	require.False(t, res.Complete)
+	require.Nil(t, res.JSON, "a four-hub table is never published")
+	require.ErrorIs(t, res.Problem, ErrIncomplete)
+}
+
+func TestFirstPageNotFoundIsError(t *testing.T) {
+	f := newFake(t)
+	f.serveAll()
+	f.script[10000002] = func(int, int) answer { return answer{status: 404, body: []byte(`{}`)} }
+	res := build(t, f, nil)
+	require.Equal(t, ReasonError, statusOf(res, "jita").Reason)
+}
+
+func TestDuplicateOrderAcrossPagesCountedOnce(t *testing.T) {
+	f := newFake(t)
+	f.serveAll()
+	o := `{"order_id":%d,"type_id":34,"price":5,"is_buy_order":false,"location_id":60003760,"volume_remain":100}`
+	p1 := []byte("[" + fmt.Sprintf(o, 1) + "," + fmt.Sprintf(o, 2) + "]")
+	p2 := []byte("[" + fmt.Sprintf(o, 2) + "," + fmt.Sprintf(o, 3) + "]") // order 2 on both pages
+	f.script[10000002] = func(page, _ int) answer {
+		if page == 1 {
+			return answer{body: p1, lm: base, pages: 2}
+		}
+		return answer{body: p2, lm: base, pages: 2}
+	}
+	res := build(t, f, nil)
+	require.True(t, res.Complete)
+	require.EqualValues(t, 300, res.Table.Hubs[0].Types[0].SellVolume)
+}
+
+func TestAsOfFallsBackToBuildTimeWithoutLastModified(t *testing.T) {
+	f := newFake(t)
+	f.serveAll()
+	body := fixture(t, "hek_page1.json")
+	f.script[10000042] = func(int, int) answer { return answer{body: body, pages: 1} }
+	res := build(t, f, nil)
+	require.True(t, statusOf(res, "hek").Updated)
+	require.Equal(t, builtAt, res.Table.Hubs[4].AsOf)
+}
+
+func TestMidBuildCancel(t *testing.T) {
+	f := newFake(t)
+	f.serveAll()
+	first := build(t, f, nil)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	// dodixie's answer cancels the build: jita and amarr were read before, rens and hek are not read.
+	body := fixture(t, "dodixie_page1.json")
+	f.script[10000032] = func(int, int) answer {
+		cancel()
+		return answer{body: body, lm: base.Add(2 * time.Minute), pages: 1}
+	}
+	res, err := New(f.client()).Build(ctx, first.Table, builtAt, nextAt)
+	require.ErrorIs(t, err, context.Canceled)
+	require.True(t, statusOf(res, "jita").Updated)
+	require.True(t, statusOf(res, "amarr").Updated)
+	for _, k := range []string{"rens", "hek"} {
+		require.False(t, statusOf(res, k).Updated, k)
+		require.Equal(t, ReasonCanceled, statusOf(res, k).Reason, k)
+	}
+	require.Equal(t, first.Table.Hubs[3], res.Table.Hubs[3])
+	require.Equal(t, first.Table.Hubs[4], res.Table.Hubs[4])
+	require.True(t, res.Complete, "all five hubs are held (kept rows)")
+
+	// Same cancel with no previous table: fewer than five hubs, not publishable.
+	ctx2, cancel2 := context.WithCancel(context.Background())
+	defer cancel2()
+	f.script[10000032] = func(int, int) answer {
+		cancel2()
+		return answer{body: body, lm: base, pages: 1}
+	}
+	res2, err := New(f.client()).Build(ctx2, nil, builtAt, nextAt)
+	require.ErrorIs(t, err, context.Canceled)
+	require.False(t, res2.Complete)
+	require.Nil(t, res2.JSON)
+}
+
+func validTable(t *testing.T) *Table {
+	f := newFake(t)
+	f.serveAll()
+	return build(t, f, nil).Table
+}
+
+func TestValidate(t *testing.T) {
+	require.NoError(t, validTable(t).Validate())
+	f := func(x float64) *float64 { return &x }
+	cases := map[string]func(*Table){
+		"missing hub":      func(x *Table) { x.Hubs = x.Hubs[:4] },
+		"hub order":        func(x *Table) { x.Hubs[0], x.Hubs[1] = x.Hubs[1], x.Hubs[0] },
+		"wrong station":    func(x *Table) { x.Hubs[2].Station++ },
+		"wrong region":     func(x *Table) { x.Hubs[2].Region++ },
+		"unsorted ids":     func(x *Table) { r := x.Hubs[0].Types; r[0], r[1] = r[1], r[0] },
+		"duplicate id":     func(x *Table) { x.Hubs[0].Types[1].ID = x.Hubs[0].Types[0].ID },
+		"zero id":          func(x *Table) { x.Hubs[0].Types[0].ID = 0 },
+		"zero price":       func(x *Table) { x.Hubs[0].Types[1].Sell = f(0) },
+		"negative price":   func(x *Table) { x.Hubs[0].Types[1].Buy = f(-1) },
+		"NaN price":        func(x *Table) { x.Hubs[0].Types[1].Sell = f(math.NaN()) },
+		"Inf price":        func(x *Table) { x.Hubs[0].Types[1].Buy = f(math.Inf(1)) },
+		"negative volume":  func(x *Table) { x.Hubs[0].Types[1].SellVolume = -1 },
+		"zero asOf":        func(x *Table) { x.Hubs[0].AsOf = time.Time{} },
+		"zero builtAt":     func(x *Table) { x.BuiltAt = time.Time{} },
+		"zero nextBuildAt": func(x *Table) { x.NextBuildAt = time.Time{} },
+	}
+	for name, mutate := range cases {
+		t.Run(name, func(t *testing.T) {
+			x := validTable(t)
+			mutate(x)
+			require.Error(t, x.Validate())
+		})
+	}
+}
+
+func TestValidateJSONRules(t *testing.T) {
+	good := string(fixture(t, "golden_table.json"))
+	require.NoError(t, ValidateJSON([]byte(good)))
+	bad := map[string]string{
+		"format":            strings.Replace(good, `"market-hubs"`, `"other"`, 1),
+		"version":           strings.Replace(good, `"version":1`, `"version":2`, 1),
+		"column length":     strings.Replace(good, `"sellVolume":[`, `"sellVolume":[1,`, 1),
+		"fractional volume": regexp.MustCompile(`"sellVolume":\[\d+`).ReplaceAllString(good, `"sellVolume":[1.5`),
+		"not json":          `{`,
+	}
+	for name, b := range bad {
+		t.Run(name, func(t *testing.T) { require.Error(t, ValidateJSON([]byte(b))) })
+	}
 }
 
 func TestContextCancelReturnsError(t *testing.T) {

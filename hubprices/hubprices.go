@@ -13,6 +13,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"net/http"
 	"net/url"
 	"sort"
@@ -75,7 +76,7 @@ type HubTable struct {
 }
 
 // Table is a whole market-hubs table. Hubs are in Hubs() order; a hub that never had a
-// successful read is absent.
+// successful read is absent, and such a table is not publishable (see Result.Complete).
 type Table struct {
 	BuiltAt, NextBuildAt time.Time
 	Hubs                 []HubTable
@@ -92,11 +93,21 @@ type HubStatus struct {
 	Inconsistent bool   // the pages still disagreed on Last-Modified after the second read
 }
 
+// ErrIncomplete is the Problem of a Result whose table does not hold all five hubs.
+var ErrIncomplete = errors.New("hubprices: table does not hold all five hubs")
+
 // Result is the outcome of one Build.
+//
+// Only a Complete result may be published: the table holds all five hubs and passed
+// Validate. Otherwise JSON is nil and Problem says why (ErrIncomplete, or the Validate
+// or Encode error); Table and Status are still set so the caller can log them and keep
+// the previous table. A missing hub is never filled with empty columns.
 type Result struct {
-	Table  *Table
-	JSON   []byte // Table.Encode()
-	Status []HubStatus
+	Table    *Table
+	JSON     []byte // Table.Encode(); nil unless Complete
+	Complete bool
+	Problem  error // nil when Complete
+	Status   []HubStatus
 }
 
 // Pager is the part of *esi.Client the builder uses.
@@ -121,12 +132,14 @@ type order struct {
 	IsBuyOrder   bool    `json:"is_buy_order"`
 	LocationID   int64   `json:"location_id"`
 	VolumeRemain int64   `json:"volume_remain"`
+	OrderID      int64   `json:"order_id"`
 }
 
 // Build reads every hub's region book and returns the new table. prev (nil on the first
 // build) supplies the rows of a hub whose read fails; such a hub keeps its rows and asOf
 // and the other hubs update. builtAt and nextBuildAt come from the caller. Build returns
-// an error only when ctx ends; the Result is still usable (all hubs kept) then.
+// an error only when ctx ends; the Result is still usable then (hubs read so far updated,
+// the rest kept) and is Complete only if all five hubs are held.
 func (b *Builder) Build(ctx context.Context, prev *Table, builtAt, nextBuildAt time.Time) (Result, error) {
 	t := &Table{BuiltAt: builtAt.UTC().Truncate(time.Second), NextBuildAt: nextBuildAt.UTC().Truncate(time.Second)}
 	var statuses []HubStatus
@@ -147,7 +160,16 @@ func (b *Builder) Build(ctx context.Context, prev *Table, builtAt, nextBuildAt t
 		}
 		statuses = append(statuses, st)
 	}
-	res := Result{Table: t, JSON: t.Encode(), Status: statuses}
+	res := Result{Table: t, Status: statuses}
+	if len(t.Hubs) != len(b.hubs) {
+		res.Problem = fmt.Errorf("%w: %d of %d", ErrIncomplete, len(t.Hubs), len(b.hubs))
+	} else if err := t.Validate(); err != nil {
+		res.Problem = err
+	} else if out, err := t.Encode(); err != nil {
+		res.Problem = err
+	} else {
+		res.JSON, res.Complete = out, true
+	}
 	return res, ctx.Err()
 }
 
@@ -179,11 +201,11 @@ func (b *Builder) readHub(ctx context.Context, h Hub, now time.Time) (HubTable, 
 	if err != nil {
 		st.Err = err
 		switch {
-		case errors.Is(err, esi.ErrBackedOff):
-			st.Reason = ReasonBackoff
 		case ctx.Err() != nil:
 			st.Reason = ReasonCanceled
-		case isNotFound(err):
+		case errors.Is(err, esi.ErrBackedOff):
+			st.Reason = ReasonBackoff
+		case len(pages) > 0 && isNotFound(err):
 			st.Reason = ReasonIncomplete // fewer pages than X-Pages announced
 		default:
 			st.Reason = ReasonError
@@ -196,6 +218,7 @@ func (b *Builder) readHub(ctx context.Context, h Hub, now time.Time) (HubTable, 
 	}
 
 	acc := map[int]*Row{}
+	seen := map[int64]bool{} // an order on two pages (accepted inconsistent read) counts once
 	var oldest time.Time
 	for _, p := range pages {
 		var batch []order
@@ -209,6 +232,12 @@ func (b *Builder) readHub(ctx context.Context, h Hub, now time.Time) (HubTable, 
 		for _, o := range batch {
 			if o.LocationID != int64(h.Station) {
 				continue
+			}
+			if o.OrderID != 0 {
+				if seen[o.OrderID] {
+					continue
+				}
+				seen[o.OrderID] = true
 			}
 			r := acc[o.TypeID]
 			if r == nil {
@@ -255,11 +284,13 @@ func pagesAnnounced(pages []*esi.Response) int {
 func ptr(f float64) *float64 { return &f }
 
 // Encode returns the table as compact JSON, byte-for-byte deterministic: fixed key order
-// (format, version, builtAt, nextBuildAt, source, hubs), hubs in Hubs() order, columns
+// (format, version, builtAt, nextBuildAt, source, hubs), hubs in the table's order, columns
 // id, sell, buy, sellVolume, buyVolume with ids ascending, numbers in Go's shortest
-// float form, null for a missing side, times in RFC 3339 UTC to the second.
-func (t *Table) Encode() []byte {
+// float form, null for a missing side, times in RFC 3339 UTC to the second. It fails
+// when a price is NaN or infinite.
+func (t *Table) Encode() ([]byte, error) {
 	var b bytes.Buffer
+	var encErr error
 	ts := func(x time.Time) string { return strconv.Quote(x.UTC().Format(time.RFC3339)) }
 	fmt.Fprintf(&b, `{"format":%q,"version":%d,"builtAt":%s,"nextBuildAt":%s,"source":%q,"hubs":[`,
 		Format, Version, ts(t.BuiltAt), ts(t.NextBuildAt), Source)
@@ -273,12 +304,19 @@ func (t *Table) Encode() []byte {
 			sep(&b, j)
 			b.WriteString(strconv.Itoa(r.ID))
 		}
+		numCol := func(f *float64) string {
+			s, err := num(f)
+			if err != nil && encErr == nil {
+				encErr = fmt.Errorf("hubprices: %s: %w", h.Key, err)
+			}
+			return s
+		}
 		for _, col := range []struct {
 			name string
 			get  func(Row) string
 		}{
-			{"sell", func(r Row) string { return num(r.Sell) }},
-			{"buy", func(r Row) string { return num(r.Buy) }},
+			{"sell", func(r Row) string { return numCol(r.Sell) }},
+			{"buy", func(r Row) string { return numCol(r.Buy) }},
 			{"sellVolume", func(r Row) string { return strconv.FormatInt(r.SellVolume, 10) }},
 			{"buyVolume", func(r Row) string { return strconv.FormatInt(r.BuyVolume, 10) }},
 		} {
@@ -291,7 +329,10 @@ func (t *Table) Encode() []byte {
 		b.WriteString(`]}}`)
 	}
 	b.WriteString(`]}`)
-	return b.Bytes()
+	if encErr != nil {
+		return nil, encErr
+	}
+	return b.Bytes(), nil
 }
 
 func sep(b *bytes.Buffer, i int) {
@@ -300,11 +341,102 @@ func sep(b *bytes.Buffer, i int) {
 	}
 }
 
-// num renders a price as encoding/json does (shortest round-trip form), or null.
-func num(f *float64) string {
+// num renders a price as encoding/json does (shortest round-trip form), or null. A NaN
+// or infinite price is an error, never an empty string.
+func num(f *float64) (string, error) {
 	if f == nil {
-		return "null"
+		return "null", nil
 	}
-	out, _ := json.Marshal(*f)
-	return string(out)
+	if math.IsNaN(*f) || math.IsInf(*f, 0) {
+		return "null", fmt.Errorf("price %v is not finite", *f)
+	}
+	out, err := json.Marshal(*f)
+	if err != nil {
+		return "null", err
+	}
+	return string(out), nil
+}
+
+// Validate is the all-or-nothing check the desktop applies to a downloaded table: see
+// ValidateJSON. It runs the rules on the table's own encoding, so what it accepts is what
+// would be published.
+func (t *Table) Validate() error {
+	b, err := t.Encode()
+	if err != nil {
+		return err
+	}
+	return ValidateJSON(b)
+}
+
+// ValidateJSON checks an encoded table: format "market-hubs" and version 1; builtAt and
+// nextBuildAt set; the five hubs exactly once, in Hubs() order, with their region and
+// station ids and a set asOf; per hub equal-length columns, ascending unique type ids
+// above 0, prices finite and above 0 or null, volumes integers >= 0.
+func ValidateJSON(data []byte) error {
+	var w struct {
+		Format      string `json:"format"`
+		Version     int    `json:"version"`
+		BuiltAt     string `json:"builtAt"`
+		NextBuildAt string `json:"nextBuildAt"`
+		Hubs        []struct {
+			Key     string `json:"key"`
+			Region  int    `json:"region"`
+			Station int    `json:"station"`
+			AsOf    string `json:"asOf"`
+			Types   struct {
+				ID         []int         `json:"id"`
+				Sell       []*float64    `json:"sell"`
+				Buy        []*float64    `json:"buy"`
+				SellVolume []json.Number `json:"sellVolume"`
+				BuyVolume  []json.Number `json:"buyVolume"`
+			} `json:"types"`
+		} `json:"hubs"`
+	}
+	if err := json.Unmarshal(data, &w); err != nil {
+		return fmt.Errorf("hubprices: invalid table: %w", err)
+	}
+	bad := func(format string, a ...any) error { return fmt.Errorf("hubprices: invalid table: "+format, a...) }
+	if w.Format != Format || w.Version != Version {
+		return bad("format %q version %d", w.Format, w.Version)
+	}
+	set := func(s string) bool {
+		x, err := time.Parse(time.RFC3339, s)
+		return err == nil && !x.IsZero()
+	}
+	if !set(w.BuiltAt) || !set(w.NextBuildAt) {
+		return bad("builtAt or nextBuildAt not set")
+	}
+	want := Hubs()
+	if len(w.Hubs) != len(want) {
+		return bad("%d hubs, want %d", len(w.Hubs), len(want))
+	}
+	for i, h := range w.Hubs {
+		if h.Key != want[i].Key || h.Region != want[i].Region || h.Station != want[i].Station {
+			return bad("hub %d is %q/%d/%d, want %q/%d/%d", i, h.Key, h.Region, h.Station, want[i].Key, want[i].Region, want[i].Station)
+		}
+		if !set(h.AsOf) {
+			return bad("%s: asOf not set", h.Key)
+		}
+		c := h.Types
+		n := len(c.ID)
+		if len(c.Sell) != n || len(c.Buy) != n || len(c.SellVolume) != n || len(c.BuyVolume) != n {
+			return bad("%s: columns differ in length", h.Key)
+		}
+		for j, id := range c.ID {
+			if id <= 0 || (j > 0 && id <= c.ID[j-1]) {
+				return bad("%s: type ids not ascending, unique and positive at %d", h.Key, j)
+			}
+			for _, p := range []*float64{c.Sell[j], c.Buy[j]} {
+				if p != nil && (math.IsNaN(*p) || math.IsInf(*p, 0) || *p <= 0) {
+					return bad("%s: price %v of type %d", h.Key, *p, id)
+				}
+			}
+			for _, v := range []json.Number{c.SellVolume[j], c.BuyVolume[j]} {
+				if x, err := strconv.ParseInt(v.String(), 10, 64); err != nil || x < 0 {
+					return bad("%s: volume %q of type %d", h.Key, v.String(), id)
+				}
+			}
+		}
+	}
+	return nil
 }
