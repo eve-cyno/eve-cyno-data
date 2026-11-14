@@ -96,6 +96,9 @@ func unmodelledEffects(s SDE, items []*Item) []string {
 			if _, ok := effectHandling[eff]; ok {
 				continue
 			}
+			if it.Idle && !effectActs(s.GetEffectCategory(eff), it) {
+				continue // an idle module's active effects do not act, so none is unmodelled
+			}
 			switch s.GetEffectCategory(eff) {
 			case 1, 2, 3: // active, target, area
 				seen[eff] = true

@@ -321,7 +321,7 @@ func TestCapacitor_AllV27Table(t *testing.T) {
 		{"qc2/q65_rifter.eft", false, 0.000000, 36.000000},
 		{"qc2/q69_cormorant.eft", true, 41.536758, 0.000000},
 		{"qc2/q79_gila.eft", true, 55.914475, 0.000000},
-		{"qc2/q97_drake.eft", false, 0.000000, 189.000000},
+		{"qc2/q97_drake.eft", true, 73.629307, 0.000000}, // the micro jump drive is online, not active (was unstable, 189 s)
 	}
 	require.Len(t, want, len(gate27))
 	for i, w := range want {

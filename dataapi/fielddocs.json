@@ -33,7 +33,7 @@
   "fit.RawLine.Mutated": "Mutated: the line was a mutated (abyssal) module. TypeID is its base item, so its CPU / PG / slot are the base item's, not the rolled ones.",
   "fit.RawLine.ParserSlot": "ParserSlot is the slot group the line's position in the block suggests (blank line separated sections: \"high\", \"mid\", \"low\", \"rig\", \"subsystem\"). It is only used for a name that resolves to no type, or when the SDE has no slot data.",
   "fit.RawLine.Qty": "Qty is the quantity written on the line (\"xN\"); 0 and 1 are one module. A slot line with Qty N is N modules, the way the engine, ToESI and Hash read it.",
-  "fit.RawLine.State": "State is the module's state marker: \"\" (online), \"offline\" or \"overheat\". An offline module is still charged its CPU / PG but does not boost the hull's output (an offline RCU adds no powergrid).",
+  "fit.RawLine.State": "State is the module's state marker: \"\" (online), \"offline\" or \"overheat\". An offline module uses no CPU or PG and does not boost the hull's output (an offline RCU adds no powergrid).",
   "fit.RawLine.TypeID": "TypeID is the resolved type, or 0 when the name resolved to nothing.",
   "fit.RawOptions.Alpha": "Alpha + Legality: the skill-based Alpha check (Legality.IsAlphaLegalType) of every slot module and of the hull — the same rule Validate applies. Without a Legality the Alpha check is skipped.",
   "fit.Report.Slots": "Slots is the modules in each slot group against the slots the hull has.",

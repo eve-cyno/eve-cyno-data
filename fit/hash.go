@@ -94,6 +94,8 @@ func RenderEFTFull(f Fit) string {
 			s += " /OFFLINE"
 		case "overheat":
 			s += " /OVERHEAT"
+		case "active":
+			s += " /ACTIVE" // a non-cycling module asked to run (gofa Item.Idle): a different fit
 		}
 		return s
 	}

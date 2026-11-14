@@ -132,7 +132,11 @@ func TestImplants_SlotDedupe(t *testing.T) {
 // Re-pinned for the capacitor with a cap booster (load and reload, the game's delta): CapStats gains
 // DeltaGJps and DeltaPct on all 27 fits, and maller-cap-heavy (100 -> 93.88 %) and harbinger-laser
 // (100 -> 90.13 %) settle lower; no other field of the 27 fits moved.
-const statsAllV27Hash = "1eb8a1cfabce7a02cf2a74dafe8df474c20b51c288bb31360ada7a2f544bddbc"
+// Re-pinned for the Fable fix round part F (2026-11-14): qc2/q97_drake holds a micro jump drive, which
+// is now online and not active, so its capacitor reads stable (0 -> 73.63 %, delta -12.08 -> +9.81 GJ/s)
+// and effect:4921 leaves Unmodelled; qc2/q215_leshak's active_rep_per_sec counts only local repair
+// (149.33 -> 0 HP/s, it carries a remote repairer). No other field of the 27 fits moved.
+const statsAllV27Hash = "17d9a04da1991e83d937a0edcb4c2a4def03a78c25021fa0fd29a691ee90df8b"
 
 // No implants changes nothing: nil and an empty list give today's bytes on the 27 fits.
 func TestImplants_NoneEqualsToday(t *testing.T) {

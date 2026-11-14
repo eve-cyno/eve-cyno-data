@@ -134,7 +134,7 @@ func tankWith(ship *Item, items []*Item, p fit.DamagePattern) fit.TankStats {
 	// a shield boost amount or an armor repair amount AND a duration > 0.
 	var activeRepPerSec float64
 	for _, it := range items {
-		if it.Kind != KindModule {
+		if it.Kind != KindModule || it.Idle {
 			continue
 		}
 		dur := it.Attrs[attrModuleDuration] // ms

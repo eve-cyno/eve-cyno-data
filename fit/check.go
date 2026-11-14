@@ -432,8 +432,11 @@ func check(s ValidateSDE, sp checkSpec) Report {
 				}
 			}
 
-			// An offline module is still charged its load but must not boost the
+			// An offline module uses no CPU and no powergrid and must not boost the
 			// ship: an offline RCU adds no powergrid.
+			if e.mod.State == "offline" {
+				cpu, pg = 0, 0
+			}
 			if e.mod.State != "offline" && !(e.slot == "subsystem" && subSlots == 0) {
 				if e.slot == "rig" {
 					capRigs = append(capRigs, d)
@@ -571,7 +574,7 @@ type RawLine struct {
 	Charge   string
 	ChargeID int
 	// State is the module's state marker: "" (online), "offline" or "overheat". An
-	// offline module is still charged its CPU / PG but does not boost the hull's
+	// offline module uses no CPU or PG and does not boost the hull's
 	// output (an offline RCU adds no powergrid).
 	State string
 	// Mutated: the line was a mutated (abyssal) module. TypeID is its base item, so

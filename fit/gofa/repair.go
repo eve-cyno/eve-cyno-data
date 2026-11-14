@@ -47,7 +47,7 @@ const sustainedReason = "peak repair scaled by capacitor supply over use; charge
 func repairSummary(ship *Item, items []*Item, groupOf func(int) *int) fit.RepairStats {
 	var rs fit.RepairStats
 	for i, it := range items {
-		if it.Kind != KindModule {
+		if it.Kind != KindModule || it.Idle {
 			continue
 		}
 		dur := it.Attrs[attrModuleDuration]

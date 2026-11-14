@@ -47,6 +47,13 @@ type Item struct {
 	// skill and hull modifiers, so its CPU / PG load is final) but none of its effects
 	// act. An offline module is still charged its load but must not boost the ship.
 	Inert bool
+	// Idle is a module that is online but not active: its active, target and area effects
+	// (effect categories 1, 2 and 3) do not act. The engine sets it on every module that cannot
+	// cycle (see nonCycling) unless the fit marks it "active" or "overheat"; its passive and
+	// online effects still apply (an Assault Damage Control keeps its passive resists, a cloak
+	// takes no speed). Siege, bastion and triage have no such attribute: they are modes and stay
+	// active.
+	Idle bool
 	// Slot is the fit slot group of a module unit ("hi", "mid", "low", "rig", "subsystem");
 	// empty for every other item.
 	Slot string
@@ -57,6 +64,46 @@ type Item struct {
 	// Other is the paired item an otherID modifier reaches: the loaded charge for a module,
 	// the host module for a charge. nil when nothing is paired.
 	Other *Item
+}
+
+// Effect categories of dgmEffects (the SDE's effectCategory): 0 passive, 1 active, 2 target,
+// 3 area, 4 online, 5 overload.
+const (
+	effectCatActive   = 1
+	effectCatTarget   = 2
+	effectCatArea     = 3
+	effectCatOverload = 5
+)
+
+// Attributes that mark a module as one that cannot cycle: disallowRepeatingActivation (1014)
+// and moduleReactivationDelay (669, ms).
+const (
+	attrDisallowRepeat   = 1014
+	attrReactivationDely = 669
+)
+
+// nonCycling reports whether the SDE says a module cannot be kept running: it disallows
+// repeating activation or it has a reactivation delay after each cycle (Assault Damage Control,
+// micro jump drives and field generators, cloaks, warp core stabilizers, interdiction
+// nullifiers, capital mobility modules). The rule reads the two attributes; no list of types.
+func nonCycling(attrs map[int]float64) bool {
+	return attrs[attrDisallowRepeat] == 1 || attrs[attrReactivationDely] > 0
+}
+
+// effectActs reports whether the effect of source takes part in the collect pass: an item that
+// is Inert has none; an overload effect needs Overheat; an idle module has no active, target or
+// area effect.
+func effectActs(category int, source *Item) bool {
+	if source.Inert {
+		return false
+	}
+	if category == effectCatOverload && !source.Overheat {
+		return false
+	}
+	if source.Idle && (category == effectCatActive || category == effectCatTarget || category == effectCatArea) {
+		return false
+	}
+	return true
 }
 
 // attrKey identifies a single (item, attribute) slot targeted by modifiers.
@@ -175,7 +222,7 @@ func resolveModifiers(s SDE, ship *Item, items []*Item, skills map[int]int) {
 				// module is overheated. Include them only for items flagged Overheat;
 				// otherwise skip (so e.g. the turret's +15% overloadSelfDamageBonus is
 				// not added to damageMultiplier in the normal state).
-				if s.GetEffectCategory(effectID) == 5 && !source.Overheat {
+				if !effectActs(s.GetEffectCategory(effectID), source) {
 					continue
 				}
 				for _, m := range s.GetEffectModifiers(effectID) {
@@ -407,6 +454,9 @@ func seedCharacterDefaults(s SDE, char *Item, items []*Item) {
 			continue
 		}
 		for _, effectID := range s.GetTypeEffectIDs(src.TypeID) {
+			if src.Idle && !effectActs(s.GetEffectCategory(effectID), src) {
+				continue
+			}
 			for _, m := range s.GetEffectModifiers(effectID) {
 				if m.Domain != "charID" || m.Func != "ItemModifier" {
 					continue

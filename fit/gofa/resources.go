@@ -53,8 +53,8 @@ var slotRank = map[string]int{"hi": 0, "mid": 1, "low": 2, "rig": 3, "subsystem"
 // launcher hardpoints and slots from the resolved attributes under opts (skills and
 // implants), instead of the all-V constant model of fit.OutputCapacity and fit.ModuleLoad.
 //
-// CPU and PG count every fitted module: an offline module is still charged its load, but it
-// is resolved as an inert item, so it adds nothing to the hull's output. Calibration counts
+// CPU and PG count every fitted module that is online: an offline module uses none (the
+// game rule) and, resolved as an inert item, adds nothing to the hull's output. Calibration counts
 // every rig, bandwidth the drones the pilot can launch (Stats' rule), the bay every drone.
 func (e *Engine) Resources(ctx context.Context, f fit.Fit, opts fit.StatsOpts) (fit.Resources, error) {
 	ship, items, _, drones, _, err := e.resolveCore(ctx, f, opts, true)
@@ -107,6 +107,9 @@ func (e *Engine) Resources(ctx context.Context, f fit.Fit, opts fit.StatsOpts) (
 			continue
 		}
 		cpu, pg := it.Attrs[attrCPULoad], it.Attrs[attrPowerLoad]
+		if it.Inert {
+			cpu, pg = 0, 0 // an offline module uses no CPU and no powergrid (coordinator ruling 5, 2026-11-14)
+		}
 		r.CPU.Used += cpu
 		r.PG.Used += pg
 		r.Modules = append(r.Modules, fit.ModuleResources{Slot: it.Slot, TypeID: it.TypeID, CPU: cpu, PG: pg})

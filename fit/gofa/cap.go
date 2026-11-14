@@ -248,7 +248,7 @@ func capLoadedOnly(evs []capEvent) []capEvent {
 func capEvents(items []*Item) []capEvent {
 	var evs []capEvent
 	for i, it := range items {
-		if it.Kind != KindModule {
+		if it.Kind != KindModule || it.Idle {
 			continue
 		}
 		need := it.Attrs[attrCapNeed]
@@ -264,6 +264,11 @@ func capEvents(items []*Item) []capEvent {
 			continue
 		}
 		ev := capEvent{cycleSec: dur / 1000.0}
+		// A non-cycling module that is asked to run is used once per duration plus its
+		// reactivation delay (attr 669, ms), not back to back (services-docs E-F2).
+		if nonCycling(it.Attrs) {
+			ev.cycleSec += it.Attrs[attrReactivationDely] / 1000.0
+		}
 		if need > 0 {
 			ev.need = need
 		}

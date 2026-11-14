@@ -175,6 +175,10 @@ func (e *Engine) resolveCore(ctx context.Context, f fit.Fit, opts fit.StatsOpts,
 				// resolveModifiers can mutate each independently.
 				attrs := sdeView.GetDogma(fm.TypeID)
 				modItem := &Item{TypeID: fm.TypeID, Kind: g.kind, Attrs: attrs, Overheat: fm.State == "overheat", Inert: offline, Slot: itemSlot(g.name)}
+				// A module that cannot cycle is online, not active, unless the fit says it is: State
+				// "active" (an engine input; EFT has no marker for it) or "overheat", which implies
+				// active. Owner ruling 2026-11-14.
+				modItem.Idle = g.kind == KindModule && (fm.State == "" || fm.State == "online") && nonCycling(attrs)
 				if g.kind == KindModule {
 					if gid := sdeView.GetGroupID(fm.TypeID); gid != nil && *gid == groupCapBooster {
 						modItem.CapBooster = true
@@ -705,6 +709,9 @@ func (e *Engine) Stats(ctx context.Context, f fit.Fit, opts fit.StatsOpts) (fit.
 	tankStats := tankWith(ship, items, pattern)
 	groupSDE := e.reader()
 	tankStats.Repair = repairSummary(ship, items, groupSDE.GetGroupID)
+	// The tank's own repair per second is the local repair of the three layers: a remote repairer
+	// or booster repairs another ship and a hull repairer repairs this one (services-docs F-M2).
+	tankStats.ActiveRepPerSec = tankStats.Repair.Local.Shield + tankStats.Repair.Local.Armor + tankStats.Repair.Local.Hull
 	return fit.FitStats{
 		Navigation: navigation(ship),
 		Capacitor:  capacitor(ship, items),
