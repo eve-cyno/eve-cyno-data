@@ -129,8 +129,8 @@ func TestPortalHomeView_HasEverySlotValue(t *testing.T) {
 	require.NotEmpty(t, d.AnonCap)
 	require.Equal(t, "10,000", d.KeyCap)
 
-	require.Equal(t, strconv.Itoa(pub)+" tools", d.ToolsPublicLabel)
-	require.Equal(t, strconv.Itoa(keyed)+" tool", d.ToolsKeyedLabel) // tools_keyed_label ("1 tool")
+	require.Equal(t, strconv.Itoa(pub)+" "+plural(pub, "tool"), d.ToolsPublicLabel)
+	require.Equal(t, strconv.Itoa(keyed)+" "+plural(keyed, "tool"), d.ToolsKeyedLabel) // tools_keyed_label
 
 	require.Len(t, d.Lobes, 6) // lobe_total
 	sum := 0

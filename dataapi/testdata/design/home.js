@@ -1,4 +1,4 @@
-/* source: claude-design-artifact version 1794618529-a236 project/eve-cyno/project/data-home.js sha256 bc4072e5aa60945fb6c660be831db6f36b89f1bcb0490cf48c041c7a7dbe2596 */
+/* source: claude-design-artifact version 1794629524-5957 project/eve-cyno/project/data-home.js sha256 251af783809d4461a404bdb1e1f7815dae9340035005d262dc2976aae18a594c */
 // Shared scene host: lazy start in view, DPR cap, pause when hidden or off screen, one still frame for reduced motion.
 window.CS = {
   reduced: matchMedia('(prefers-reduced-motion: reduce)').matches,
@@ -46,7 +46,9 @@ window.CS = {
   }
 };
 document.querySelectorAll('[data-copy]').forEach((b) => b.addEventListener('click', () => {
-  const txt = document.getElementById(b.dataset.copy).textContent;
+  const clone = document.getElementById(b.dataset.copy).cloneNode(true);
+  clone.querySelectorAll('[data-nocopy]').forEach((x) => x.remove());
+  const txt = clone.textContent;
   const done = () => { const o = b.textContent; b.textContent = 'Copied'; setTimeout(() => { b.textContent = o; }, 1400); };
   try { navigator.clipboard.writeText(txt).then(done, () => {}); } catch (e) { /* selection stays manual */ }
 }));
@@ -73,7 +75,7 @@ document.querySelectorAll('[data-copy]').forEach((b) => b.addEventListener('clic
   if (brain) brain.setAttribute('aria-label', 'A slowly turning graph of ' + total + ' tool nodes in ' + lobeWord + ' clusters, shaped like two hemispheres');
   const set = (g) => {
     hot = g;
-    if (cap) cap.innerHTML = g < 0 ? idle : '<b>' + names[g] + '</b> \u00b7 ' + counts[g] + ' tools';
+    if (cap) cap.innerHTML = g < 0 ? idle : '<b>' + names[g] + '</b> \u00b7 ' + counts[g] + (counts[g] === 1 ? ' tool' : ' tools');
     if (window.__brainStill) window.__brainStill();
   };
   lobeEls.forEach((el, g) => {

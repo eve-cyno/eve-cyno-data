@@ -116,6 +116,34 @@ func newExampleView(t catalog.Tool, fx exampleFixture, origin, prefix string) (e
 	return v, nil
 }
 
+// homeExample renders the example of the data home like the design: plain code with no prompt
+// markers (the copy button copies exactly what is shown), the tool name in the URL and the
+// "attribution" key in bold. The docs pages keep newExampleView's highlighted blocks.
+func homeExample(v exampleView, fx exampleFixture) exampleView {
+	v.Curl, v.Python, v.JS = homePlain(v.Curl, v.Tool), homePlain(v.Python, v.Tool), homePlain(v.JS, v.Tool)
+	if fx.Prompt != "" {
+		v.Claude = template.HTML(escText(fx.Prompt))
+	}
+	r := string(homePlain(v.Response, ""))
+	r = strings.Replace(r, "\n  \"attribution\":", "\n  <b>\"attribution\"</b>:", 1)
+	v.Response = template.HTML(r) // #nosec G203 -- the escaped, span-stripped output of highlightJSON plus one literal <b>
+	return v
+}
+
+var spanTags = regexp.MustCompile(`</?span[^>]*>`)
+
+// homePlain drops the token spans (and the prompt marker with its text) of an example block and
+// bolds tool in its "/tool/<name>" URL when tool is not empty.
+func homePlain(h template.HTML, tool string) template.HTML {
+	s := string(h)
+	s = regexp.MustCompile(`<span class="tk-p"[^>]*>[^<]*</span>`).ReplaceAllString(s, "")
+	s = spanTags.ReplaceAllString(s, "")
+	if tool != "" {
+		s = strings.ReplaceAll(s, "/tool/"+tool, "/tool/<b>"+tool+"</b>")
+	}
+	return template.HTML(s) // #nosec G203 -- already escaped by escText; only tags were removed or added
+}
+
 // exampleArgs decodes the arguments object of an example; nil when it is not an object.
 func exampleArgs(raw json.RawMessage) map[string]any {
 	var args map[string]any

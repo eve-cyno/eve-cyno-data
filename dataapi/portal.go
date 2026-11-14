@@ -221,6 +221,7 @@ type pageData struct {
 	Assets             string
 	URL                string       // PublicURL: prefix of links ("" keeps them relative)
 	Origin             string       // scheme and host for examples
+	DocPages           string       // how many static docs pages there are, as a word (the home's "Eight pages")
 	CursorInstall      template.URL // "Add to Cursor" deep link for the MCP endpoint
 	VSCodeInstall      template.URL // "Install in VS Code" deep link for the MCP endpoint
 	Host               string
@@ -484,6 +485,7 @@ func newPageData(in portalInput, assetVersion string) pageData {
 		Tools:             toolGroups{Public: rowsOf(pub), Keyed: rowsOf(keyed)},
 		Credits:           credits(),
 		Sources:           sourcesOf(offered),
+		DocPages:          numberWord(len(docsPages())),
 		KeyedNames:        codeNames(keyed),
 		LiveESITools:      liveGroup{Names: codeNames(liveESITools), N: len(liveESITools)},
 		LiveScoutTools:    liveGroup{Names: codeNames(liveScoutTools), N: len(liveScoutTools)},
@@ -767,6 +769,15 @@ func docsPages() []docsPage {
 	}
 }
 
+// numberWord spells a small count for a heading; larger counts stay digits.
+func numberWord(n int) string {
+	words := []string{"Zero", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten", "Eleven", "Twelve"}
+	if n >= 0 && n < len(words) {
+		return words[n]
+	}
+	return strconv.Itoa(n)
+}
+
 func pagePath(slug string) string {
 	if slug == "start" {
 		return "/docs/"
@@ -852,6 +863,7 @@ func buildPortal(in portalInput) (*portalSite, error) {
 	d.Example.Intro = "Ask for the Jita price of Tritanium (type ID 34)."
 	d.Example.TierSentence = "public: no key, no account."
 	landing := d
+	landing.Example = homeExample(d.Example, fx) // the docs pages keep the highlighted blocks
 	landing.Title = "EVE-CYNO DATA · EVE Online data for Claude Code, MCP and REST"
 	landing.Description = "Deterministic EVE Online data and calculations for Claude Code and any MCP client or HTTP stack: SDE lookups, the Gofa fit engine, live ESI, EvE-Scout and zKillboard reads and community fits. No LLM in the loop. Free, non-commercial."
 	if site.pages["/"], err = render("", "portal", landing); err != nil {

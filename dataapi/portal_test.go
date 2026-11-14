@@ -469,7 +469,8 @@ func TestPortal_KeysCopyFollowsConfig(t *testing.T) {
 	require.Contains(t, access, "daily cap of 1,234,567 requests per key")
 	require.Contains(t, access, "429 daily_quota_exceeded")
 	require.Contains(t, get(cfg, "/docs/mcp"), "and 1,234,567 a day with an API key")
-	require.Contains(t, get(cfg, "/"), "The daily cap is 200 requests per client without a key and 1,234,567 per key")
+	require.Contains(t, get(cfg, "/"), "Over the daily cap: <code>429 daily_quota_exceeded</code>")
+	require.Contains(t, get(cfg, "/"), `<span data-slot="limit_key_day">1,234,567</span>`, "the caps are in the limits table")
 	require.Contains(t, get(cfg, "/"), "No cookies, no analytics. An account only if you create an API key.")
 
 	cfg.KeyDailyCap = 0
@@ -682,7 +683,9 @@ func TestPortal_TrialAccessCopyOnAKeyedService(t *testing.T) {
 		`<tr><td>Fit search<small>GET /v1/fits/search</small></td><td><span data-slot="limit_fits">30</span>/min</td><td><span data-slot="limit_fits_key">240</span>/min</td></tr>`,
 		`<tr><td>Item search<small>GET /v1/items/search</small></td><td><span data-slot="limit_items">120</span>/min</td><td><span data-slot="limit_items_key">240</span>/min</td></tr>`,
 		`<tr><td>Requests per day<small>UTC day; docs pages do not count</small></td><td><span data-slot="limit_anon_day">200</span></td><td><span data-slot="limit_key_day">10,000</span></td></tr>`,
-		"The daily cap is 200 requests per client without a key and 10,000 per key (UTC day; docs pages do not count)",
+		"Over the daily cap: <code>429 daily_quota_exceeded</code>",
+		`<span data-slot="limit_anon_day">200</span>`,
+		`<span data-slot="limit_key_day">10,000</span>`,
 		"including the daily trial count",
 		"Free-text fit search (<code>q</code> on <code>/v1/fits/search</code>) needs a key too",
 	} {

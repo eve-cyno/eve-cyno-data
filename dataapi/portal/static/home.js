@@ -45,7 +45,9 @@ window.CS = {
   }
 };
 document.querySelectorAll('[data-copy]').forEach((b) => b.addEventListener('click', () => {
-  const txt = document.getElementById(b.dataset.copy).textContent;
+  const clone = document.getElementById(b.dataset.copy).cloneNode(true);
+  clone.querySelectorAll('[data-nocopy]').forEach((x) => x.remove());
+  const txt = clone.textContent;
   const done = () => { const o = b.textContent; b.textContent = 'Copied'; setTimeout(() => { b.textContent = o; }, 1400); };
   try { navigator.clipboard.writeText(txt).then(done, () => {}); } catch (e) { /* selection stays manual */ }
 }));
@@ -72,7 +74,7 @@ document.querySelectorAll('[data-copy]').forEach((b) => b.addEventListener('clic
   if (brain) brain.setAttribute('aria-label', 'A slowly turning graph of ' + total + ' tool nodes in ' + lobeWord + ' clusters, shaped like two hemispheres');
   const set = (g) => {
     hot = g;
-    if (cap) cap.innerHTML = g < 0 ? idle : '<b>' + names[g] + '</b> \u00b7 ' + counts[g] + ' tools';
+    if (cap) cap.innerHTML = g < 0 ? idle : '<b>' + names[g] + '</b> \u00b7 ' + counts[g] + (counts[g] === 1 ? ' tool' : ' tools');
     if (window.__brainStill) window.__brainStill();
   };
   lobeEls.forEach((el, g) => {

@@ -231,7 +231,7 @@
     <div class="wrap"><div class="stack l">
       <div class="stack">
         <p class="eyebrow"><span class="dia"></span>Docs</p>
-        <h2 class="display">Eight pages, and one for every tool.</h2>
+        <h2 class="display">{{.DocPages}} pages, and one for every tool.</h2>
         <p class="lead">Generated from the tool registry, so the reference matches the running service.</p>
       </div>
       <div class="docmap">
@@ -293,4 +293,4 @@
 {{/* The keys sentence of the keyed tier: today's branches on SelfServe, Auth and the number of keyed tools. */}}
 {{define "keysNote"}}{{if .SelfServe}}Free: run <code>/apikey create</code> in the <a href="https://discord.gg/XZzkH38dt9">EVE-Cyno Discord</a>, or sign in on ai.eve-cyno.dev → Settings → Data API keys. Without a key {{if eq (len .Tools.Keyed) 1}}this answers{{else}}these answer{{end}} <code>401 api_key_required</code>.{{else if .Auth}}Keys are issued by the operator of this service. Without a key {{if eq (len .Tools.Keyed) 1}}this answers{{else}}these answer{{end}} <code>401 api_key_required</code>.{{else}}No keys are issued yet; {{if eq (len .Tools.Keyed) 1}}this answers{{else}}these answer{{end}} <code>401 api_key_required</code>.{{end}}{{if .Auth}} Free-text fit search (<code>q</code> on <code>{{.Prefix}}/fits/search</code>) needs a key too; the filters do not.{{end}}{{end}}
 
-{{define "keyLimits"}}{{if .Auth}}{{if .KeysRaise}}A key raises the limits for daily use: the numbers above are the trial limit, the key limit follows. {{end}}{{if or .AnonCap .KeyCap}}The daily cap is {{if .AnonCap}}{{.AnonCap}} requests per client without a key{{if .KeyCap}} and {{.KeyCap}} per key{{end}}{{else}}{{.KeyCap}} requests per key{{end}} (UTC day{{if .AnonCap}}; docs pages do not count{{end}}): over it, <code>429 daily_quota_exceeded</code>, with <code>Retry-After</code> set to the seconds until 00:00 UTC. {{end}}{{end}}{{end}}
+{{define "keyLimits"}}{{if .Auth}}{{if or .AnonCap .KeyCap}}Over the daily cap: <code>429 daily_quota_exceeded</code>, with <code>Retry-After</code> set to the seconds until 00:00 UTC. {{end}}{{end}}{{end}}
