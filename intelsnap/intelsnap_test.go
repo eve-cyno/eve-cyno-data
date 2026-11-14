@@ -17,11 +17,11 @@ import (
 )
 
 var pinned = map[string]string{
-	"intel-gates-now.v1.golden.json":            "6fc7106ad30156714b6c0876c82b80a8a9a99616c11075df1d26ebad6e327b73",
+	"intel-gates-now.v1.golden.json":            "2c29624f98e0db3867ab538ec3ea479fe58f25b173d4e7cbfc84e77eaf00f6ce",
 	"intel-systems-hour.v1.golden.json":         "21d78a90b05510d8e3c32a68d5eb28d5b21cdd3b1a2979239708904840df1a86",
-	"intel-gates-profile.v1.golden.json":        "0b33e0ce984e974f2657109be85d09fd2877cf2f7818ced859fbcac45e8017ca",
-	"intel-gates-now.v1.empty.golden.json":      "33fd24d9f430cda315d4ac5432363b949ac67c8b72df89a40259dcc5dc4b2256",
-	"intel-gates-now.v1.trimmed.golden.json":    "723e64b258ece1c25f97aa5c43bf4b2204fd860a8fe64326496c5fd8b62a53d9",
+	"intel-gates-profile.v1.golden.json":        "19ea24678a03c321823341dcdec581aa2eab491363be17e6fb793add7c97d0dc",
+	"intel-gates-now.v1.empty.golden.json":      "294ffd7061f8cbc0d133b786e693d38dbef46b16ab64f9fae5f3c1a45f1d202c",
+	"intel-gates-now.v1.trimmed.golden.json":    "256d9edc35ef24a3474fb5343cd3f2e3261a427b7d7d14b440f4782d933cd4fc",
 	"intel-systems-hour.v1.partial.golden.json": "1ac420022680707c70f9177a6a6b4234e658f6ec989f8b99605fcfc3b0371bd3",
 	"intel-gates-profile.v1.empty.golden.json":  "63b92d04bc788a712f910a6e9bbbf5f18820b249811ebf37e87d02a7fb4b7a40",
 }
@@ -178,6 +178,45 @@ func TestDecode_UnknownFieldIgnored(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, g.Gates, 1)
 	require.EqualValues(t, 5, g.Gates[0].SystemID)
+}
+
+// The additive fields of the Task 24/25 writer are optional (rule F1): a file without them still
+// decodes, the camp window reads as 3600 s, and the trim counts are nil; a file with them reads them.
+func TestDecode_NewFieldsOptional(t *testing.T) {
+	old, err := DecodeGatesNow([]byte(`{"format":"intel-gates-now","version":1,"window_s":7200,"trimmed":true,"gates":[]}`))
+	require.NoError(t, err)
+	require.Zero(t, old.CampWindowS)
+	require.Equal(t, 3600, old.CampWindowSeconds())
+	require.True(t, old.Trimmed)
+	require.Nil(t, old.TrimmedGates)
+	require.Nil(t, old.TrimmedSystems)
+
+	g, err := DecodeGatesNow(golden(t, "intel-gates-now.v1.golden.json"))
+	require.NoError(t, err)
+	require.Equal(t, 3600, g.CampWindowS)
+	require.Equal(t, 3600, g.CampWindowSeconds())
+	require.Nil(t, g.TrimmedGates, "an untrimmed file carries no counts")
+
+	tr, err := DecodeGatesNow(golden(t, "intel-gates-now.v1.trimmed.golden.json"))
+	require.NoError(t, err)
+	require.True(t, tr.Trimmed)
+	require.NotNil(t, tr.TrimmedGates)
+	require.NotNil(t, tr.TrimmedSystems)
+	require.Equal(t, 1, *tr.TrimmedGates)
+	require.Equal(t, 0, *tr.TrimmedSystems)
+
+	other, err := DecodeGatesNow([]byte(`{"format":"intel-gates-now","version":1,"window_s":7200,"camp_window_s":1800,"gates":[]}`))
+	require.NoError(t, err)
+	require.Equal(t, 1800, other.CampWindowSeconds())
+
+	oldP, err := DecodeGatesProfile([]byte(`{"format":"intel-gates-profile","version":1,"trimmed":true,"gates":[{"system_id":1,"to_system_id":2,"ship_kills":4,"camp_days":1,"hours":[]}]}`))
+	require.NoError(t, err)
+	require.Nil(t, oldP.TrimmedGates)
+	require.Zero(t, oldP.Gates[0].KillDays)
+
+	p, err := DecodeGatesProfile(golden(t, "intel-gates-profile.v1.golden.json"))
+	require.NoError(t, err)
+	require.Equal(t, []int{1, 3}, []int{p.Gates[0].KillDays, p.Gates[len(p.Gates)-1].KillDays})
 }
 
 func TestDecode_WrongFormat(t *testing.T) {

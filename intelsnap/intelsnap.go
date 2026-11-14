@@ -64,12 +64,30 @@ type GatesNow struct {
 	Version     int              `json:"version"`
 	GeneratedAt time.Time        `json:"generated_at"`
 	WindowS     int              `json:"window_s"`
+	CampWindowS int              `json:"camp_window_s,omitempty"`
 	RadiusM     int              `json:"radius_m"`
 	Credit      string           `json:"credit"`
 	Feed        GatesNowFeed     `json:"feed"`
 	Gates       []GatesNowGate   `json:"gates"`
 	Systems     []GatesNowSystem `json:"systems"`
 	Trimmed     bool             `json:"trimmed,omitempty"`
+	// TrimmedGates and TrimmedSystems are the counts of what the collector dropped; the writer
+	// sets them only when Trimmed is true, so nil means "not trimmed" or "trimmed without counts".
+	TrimmedGates   *int `json:"trimmed_gates,omitempty"`
+	TrimmedSystems *int `json:"trimmed_systems,omitempty"`
+}
+
+// DefaultCampWindowS is the camp window of a file written before camp_window_s existed (rule F1:
+// a reader tolerates a missing additive field). It is the writer's one-hour window of that time.
+const DefaultCampWindowS = 3600
+
+// CampWindowSeconds is the camp window of the file: camp_window_s, or DefaultCampWindowS when the
+// file has no such field.
+func (g *GatesNow) CampWindowSeconds() int {
+	if g.CampWindowS > 0 {
+		return g.CampWindowS
+	}
+	return DefaultCampWindowS
 }
 
 // GatesNowFeed describes the freshness of the kill feed. The pointers are nil
@@ -156,16 +174,20 @@ type GatesProfile struct {
 	HistoryDays int                `json:"history_days"`
 	Gates       []GatesProfileGate `json:"gates"`
 	Trimmed     bool               `json:"trimmed,omitempty"`
+	// TrimmedGates is the count of gates the collector dropped; written only when Trimmed is true.
+	TrimmedGates *int `json:"trimmed_gates,omitempty"`
 }
 
 // GatesProfileGate is the 28-day profile of one gate; Hours counts ship kills
 // per UTC hour of day.
 type GatesProfileGate struct {
-	SystemID   int32   `json:"system_id"`
-	ToSystemID int32   `json:"to_system_id"`
-	ShipKills  int     `json:"ship_kills"`
-	CampDays   int     `json:"camp_days"`
-	Hours      [24]int `json:"hours"`
+	SystemID   int32 `json:"system_id"`
+	ToSystemID int32 `json:"to_system_id"`
+	ShipKills  int   `json:"ship_kills"`
+	CampDays   int   `json:"camp_days"`
+	// KillDays is the UTC days of the window with at least one ship kill on the gate.
+	KillDays int     `json:"kill_days"`
+	Hours    [24]int `json:"hours"`
 }
 
 // DecodeGatesNow decodes intel-gates-now.json. Unknown fields are ignored; a
