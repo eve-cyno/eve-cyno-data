@@ -42,8 +42,13 @@ type HubRefresherConfig struct {
 // one built (published or not), so keep-last per hub survives incomplete builds.
 //
 // The body's nextBuildAt is the expected publish time of the next table (next tick plus the
-// last measured build duration), because the
-// desktop asks again at that time. The same second-truncated time goes to MemoryDataset.Publish.
+// measured duration of the last complete build), because the desktop asks again at that
+// time. The same second-truncated time goes to MemoryDataset.Publish.
+//
+// Once a table is published the builds keep to a fixed grid (first build + n * Every): a late
+// wake-up does not move the next ticks, and a wake-up later than a whole cycle builds at the
+// latest grid tick it passed. Until then a retry runs at retryTime and is stamped with the
+// time it starts.
 //
 // On shutdown the build's context is canceled and a result that arrives after the cancel is
 // not published: a table built from an interrupted run is not worth the risk of a half-fresh
@@ -58,7 +63,7 @@ type HubRefresher struct {
 
 	prev      *hubprices.Table // last built table
 	published bool
-	lastBuild time.Duration // measured duration of the last build (0 before any)
+	lastBuild time.Duration // measured duration of the last complete build (0 before any)
 	lastRes   []hubprices.HubStatus
 }
 
@@ -114,14 +119,15 @@ func sleepCtx(ctx context.Context, d time.Duration) error {
 
 // Run builds at once, then at every cycle tick, until ctx ends. It blocks.
 func (r *HubRefresher) Run(ctx context.Context) {
+	tick := r.now()
 	for ctx.Err() == nil {
-		tick := r.now()
 		r.buildOnce(ctx, tick)
 		if ctx.Err() != nil {
 			return
 		}
 		var next time.Time
-		if !r.published {
+		scheduled := r.published
+		if !scheduled {
 			next = r.retryTime()
 		} else {
 			next = tick.Add(r.every)
@@ -137,6 +143,20 @@ func (r *HubRefresher) Run(ctx context.Context) {
 		if err := r.sleep(ctx, next.Sub(r.now())); err != nil {
 			return
 		}
+		if !scheduled {
+			tick = r.now() // a retry is stamped with its own start
+			continue
+		}
+		// The planned tick, not the wake-up time: late wake-ups do not drift the grid. A
+		// wake-up past a whole cycle builds at the latest grid tick it passed.
+		tick = next
+		skipped := 0
+		for now := r.now(); !tick.Add(r.every).After(now); tick = tick.Add(r.every) {
+			skipped++
+		}
+		if skipped > 0 {
+			r.log.Warn("hub prices: woke up late; ticks skipped", "skipped", skipped)
+		}
 	}
 }
 
@@ -144,6 +164,13 @@ func (r *HubRefresher) Run(ctx context.Context) {
 func (r *HubRefresher) buildOnce(ctx context.Context, tick time.Time) {
 	nextBuildAt := tick.Add(r.every + r.lastBuild).UTC().Truncate(time.Second)
 	started := r.now()
+	// The planned end of this build, for the route's Retry-After while nothing is published:
+	// the start plus the last complete build's duration, else the fallback.
+	planned := hubRetryFallback
+	if r.lastBuild > 0 {
+		planned = r.lastBuild
+	}
+	r.ds.SetNextAttempt(started.Add(planned))
 	res, err := r.b.Build(ctx, r.prev, tick, nextBuildAt)
 	took := r.now().Sub(started)
 	if res.Table != nil {
@@ -153,17 +180,19 @@ func (r *HubRefresher) buildOnce(ctx context.Context, tick time.Time) {
 		r.log.Info("hub prices: build canceled; result not published", "error", err)
 		return
 	}
-	r.lastBuild = took
 	r.lastRes = res.Status
 	if err != nil {
 		r.log.Warn("hub prices: build failed", "error", err, "duration_ms", took.Milliseconds())
 		return
 	}
 	if !res.Complete {
+		// An incomplete build is often a fast one (every hub backed off): it says nothing about
+		// how long a real build takes, so lastBuild stays.
 		r.log.Warn("hub prices: build not complete; the last published table stays",
 			append([]any{"problem", res.Problem, "published_before", r.published, "duration_ms", took.Milliseconds()}, statusAttrs(res.Status)...)...)
 		return
 	}
+	r.lastBuild = took
 	if err := r.ds.Publish(res.JSON, nextBuildAt); err != nil {
 		r.log.Warn("hub prices: publish refused", "error", err, "bytes", len(res.JSON))
 		return

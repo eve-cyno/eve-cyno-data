@@ -73,6 +73,13 @@ type Request struct {
 
 	// CompatibilityDate overrides the client's pinned X-Compatibility-Date for this request.
 	CompatibilityDate string
+
+	// NoStore keeps this request out of the response cache and the Store: it neither reads a
+	// cached answer (no local hit, no If-None-Match) nor writes its own, and it does not join
+	// other callers' in-flight request. For bulk reads that would evict every other cached
+	// answer (the market-hubs builder pages whole region books each cycle) and that keep to
+	// ESI's Expires by their own schedule. The zero value caches as before.
+	NoStore bool
 }
 
 // Response is an ESI answer. A non-2xx status is not a Go error (as with net/http); use
@@ -320,7 +327,7 @@ func (c *Client) prepare(req Request) (*prepared, error) {
 	p.cacheScope = req.Scope
 	p.route = routeKey(p.method, req.Path)
 
-	cacheable := p.method == http.MethodGet && c.cache != nil && (req.AccessToken == "" || req.Scope != "")
+	cacheable := p.method == http.MethodGet && c.cache != nil && !req.NoStore && (req.AccessToken == "" || req.Scope != "")
 	if cacheable {
 		p.key = cacheKey(p.method, p.url, req.Scope, req.CachePartition, p.compat, p.header.Get("Accept-Language")+"|"+p.header.Get("X-Tenant"))
 	}

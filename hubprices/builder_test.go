@@ -453,27 +453,124 @@ func TestHubsEqualToolsList(t *testing.T) {
 	require.Equal(t, want, Hubs())
 }
 
-func TestHubDroppingToZeroRowsIsNotComplete(t *testing.T) {
-	f := newFake(t)
-	f.serveAll()
-	first := build(t, f, nil)
-	require.True(t, first.Complete)
-	require.NotEmpty(t, first.Table.Hubs[1].Types)
-	// amarr suddenly answers a well-formed but empty book: an ESI glitch, not a market.
+// emptyAmarr scripts amarr to answer a well-formed but empty book (an ESI glitch, not a market).
+func emptyAmarr(f *fakeESI) {
 	f.script[10000043] = func(page, _ int) answer {
 		return answer{body: []byte(`[]`), lm: base.Add(time.Hour), expires: base.Add(time.Hour + 5*time.Minute), pages: 1}
 	}
-	res := build(t, f, first.Table)
+}
+
+func TestHubDroppingToZeroRowsKeepsItsRowsOnce(t *testing.T) {
+	f := newFake(t)
+	f.serveAll()
+	b := New(f.client())
+	first, err := b.Build(context.Background(), nil, builtAt, nextAt)
+	require.NoError(t, err)
+	require.True(t, first.Complete)
+	require.NotEmpty(t, first.Table.Hubs[1].Types)
+	emptyAmarr(f)
+	f.serve(10000002, base.Add(30*time.Minute), "jita_page1.json", "jita_page2.json") // jita moves on
+
+	// First empty read: amarr is treated like a failed read, the others update, the table publishes.
+	res, err := b.Build(context.Background(), first.Table, builtAt.Add(15*time.Minute), nextAt.Add(15*time.Minute))
+	require.NoError(t, err)
 	st := statusOf(res, "amarr")
-	require.False(t, st.RetryAt.IsZero(), "the status carries the read's Expires for the retry")
 	require.False(t, st.Updated)
 	require.Equal(t, ReasonEmpty, st.Reason)
+	require.ErrorIs(t, st.Err, ErrEmptyHub)
+	require.False(t, st.RetryAt.IsZero(), "the status carries the read's Expires")
 	require.Equal(t, len(first.Table.Hubs[1].Types), st.Rows, "the previous rows are kept")
-	require.Equal(t, first.Table.Hubs[1], res.Table.Hubs[1])
-	require.False(t, res.Complete)
-	require.Nil(t, res.JSON)
-	require.ErrorIs(t, res.Problem, ErrEmptyHub)
+	require.Equal(t, first.Table.Hubs[1], res.Table.Hubs[1], "rows and asOf kept")
 	require.True(t, statusOf(res, "jita").Updated, "the other hubs still update")
+	require.Equal(t, base.Add(30*time.Minute), res.Table.Hubs[0].AsOf)
+	require.True(t, res.Complete, "one empty hub does not hold back the other four")
+	require.NoError(t, res.Problem)
+	require.NotNil(t, res.JSON)
+
+	// Second consecutive empty read (the next cycle): the empty book is accepted.
+	res2, err := b.Build(context.Background(), res.Table, builtAt.Add(30*time.Minute), nextAt.Add(30*time.Minute))
+	require.NoError(t, err)
+	st = statusOf(res2, "amarr")
+	require.True(t, st.Updated)
+	require.Empty(t, st.Reason)
+	require.Zero(t, st.Rows)
+	require.Empty(t, res2.Table.Hubs[1].Types)
+	require.Equal(t, base.Add(time.Hour), res2.Table.Hubs[1].AsOf)
+	require.True(t, res2.Complete)
+}
+
+func TestNonEmptyReadResetsTheEmptyStreak(t *testing.T) {
+	f := newFake(t)
+	f.serveAll()
+	b := New(f.client())
+	run := func(prev *Table) Result {
+		t.Helper()
+		res, err := b.Build(context.Background(), prev, builtAt, nextAt)
+		require.NoError(t, err)
+		return res
+	}
+	res := run(nil)
+	emptyAmarr(f)
+	res = run(res.Table)
+	require.Equal(t, ReasonEmpty, statusOf(res, "amarr").Reason, "streak 1")
+	f.serveAll()
+	res = run(res.Table)
+	require.True(t, statusOf(res, "amarr").Updated, "a non-empty read")
+	emptyAmarr(f)
+	res = run(res.Table)
+	require.Equal(t, ReasonEmpty, statusOf(res, "amarr").Reason, "the streak restarted at 1: the rows are kept again")
+	require.NotEmpty(t, res.Table.Hubs[1].Types)
+}
+
+func TestFailedReadDoesNotEndTheEmptyStreak(t *testing.T) {
+	f := newFake(t)
+	f.serveAll()
+	b := New(f.client())
+	run := func(prev *Table) Result {
+		t.Helper()
+		res, err := b.Build(context.Background(), prev, builtAt, nextAt)
+		require.NoError(t, err)
+		return res
+	}
+	res := run(nil)
+	emptyAmarr(f)
+	res = run(res.Table)
+	require.Equal(t, ReasonEmpty, statusOf(res, "amarr").Reason)
+	f.script[10000043] = func(int, int) answer { return answer{status: 500, body: []byte(`{}`)} }
+	res = run(res.Table)
+	require.Equal(t, ReasonError, statusOf(res, "amarr").Reason)
+	emptyAmarr(f)
+	res = run(res.Table)
+	require.True(t, statusOf(res, "amarr").Updated, "a failed read in between says nothing about the book: the second empty read is accepted")
+	require.Empty(t, res.Table.Hubs[1].Types)
+}
+
+// recordingPager records the requests the builder sends and fails every read.
+type recordingPager struct{ reqs []esi.Request }
+
+func (p *recordingPager) GetAllPages(_ context.Context, req esi.Request, _ esi.PageOptions) ([]*esi.Response, error) {
+	p.reqs = append(p.reqs, req)
+	return nil, &esi.RateLimitError{Method: "GET", Path: req.Path, Status: 429, RetryAfter: time.Minute}
+}
+
+func TestHubReadsSkipTheESIResponseCache(t *testing.T) {
+	p := &recordingPager{}
+	_, err := New(p).Build(context.Background(), nil, builtAt, nextAt)
+	require.NoError(t, err)
+	require.Len(t, p.reqs, 5)
+	for _, r := range p.reqs {
+		require.True(t, r.NoStore, "%s: a hub read must not flush the tools' cached answers", r.Path)
+	}
+}
+
+func TestRateLimitRetryCountsFromTheRead(t *testing.T) {
+	// The 429 arrives seven minutes into the build: its Retry-After counts from then, not from builtAt.
+	readAt := builtAt.Add(7 * time.Minute)
+	res, err := New(&recordingPager{}, WithClock(func() time.Time { return readAt })).Build(context.Background(), nil, builtAt, nextAt)
+	require.NoError(t, err)
+	st := statusOf(res, "jita")
+	require.Equal(t, ReasonError, st.Reason)
+	require.Equal(t, readAt.Add(time.Minute), st.RetryAt)
 }
 
 func TestEmptyFirstReadIsAccepted(t *testing.T) {

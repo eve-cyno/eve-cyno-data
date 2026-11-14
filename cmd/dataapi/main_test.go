@@ -5,7 +5,6 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -13,8 +12,8 @@ import (
 	"net/netip"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -910,11 +909,12 @@ func TestHubPricesOffCreatesNoSourceAndNoGoroutine(t *testing.T) {
 	require.Nil(t, hubPricesSource(0))
 	require.NotNil(t, hubPricesSource(15*time.Minute))
 
-	before := runtime.NumGoroutine()
-	stop, err := startHubPrices(context.Background(), 0, nil, nil, slog.New(slog.DiscardHandler))
+	var logs bytes.Buffer
+	stop, err := startHubPrices(context.Background(), 0, nil, panicPager{}, slog.New(slog.NewTextHandler(&logs, nil)))
 	require.NoError(t, err)
-	stop()
-	require.Equal(t, before, runtime.NumGoroutine(), "the off switch starts no goroutine")
+	returnsWithin(t, stop, 5*time.Second)
+	require.Contains(t, logs.String(), "hub price builder off")
+	require.NotContains(t, logs.String(), "hub price builder started", "the off switch starts no refresher")
 
 	h, err := newHandler(&bootstrap.Deps{Tools: &tools.Deps{}}, exposure{datasetDir: t.TempDir()}, slog.Default())
 	require.NoError(t, err)
@@ -931,15 +931,62 @@ func TestHubPricesOnServes503UntilFirstBuildAndStopsOnCancel(t *testing.T) {
 	h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/v1/datasets/market-hubs.json", nil))
 	require.Equal(t, http.StatusServiceUnavailable, rec.Code)
 
-	// A pager that fails at once: the first build is incomplete, nothing is published, and
-	// stop returns (the build is canceled, the goroutine ends).
-	stop, err := startHubPrices(context.Background(), 15*time.Minute, ds, failingPager{}, slog.New(slog.DiscardHandler))
+	// A pager that blocks until its context ends: stop cancels the build mid-read and returns
+	// only once the refresher goroutine has ended (stop waits for it).
+	p := &blockingPager{started: make(chan struct{}), ended: make(chan struct{})}
+	stop, err := startHubPrices(context.Background(), 15*time.Minute, ds, p, slog.New(slog.DiscardHandler))
 	require.NoError(t, err)
-	stop()
+	select {
+	case <-p.started:
+	case <-time.After(5 * time.Second):
+		t.Fatal("the refresher did not start a build")
+	}
+	returnsWithin(t, stop, 5*time.Second)
+	select {
+	case <-p.ended:
+	default:
+		t.Fatal("stop returned before the build's read ended")
+	}
+	rec = httptest.NewRecorder()
+	h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/v1/datasets/market-hubs.json", nil))
+	require.Equal(t, http.StatusServiceUnavailable, rec.Code, "nothing was published")
 }
 
-type failingPager struct{}
+// returnsWithin fails the test when f does not return within d.
+func returnsWithin(t *testing.T, f func(), d time.Duration) {
+	t.Helper()
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		f()
+	}()
+	select {
+	case <-done:
+	case <-time.After(d):
+		t.Fatalf("did not return within %s", d)
+	}
+}
 
-func (failingPager) GetAllPages(context.Context, esi.Request, esi.PageOptions) ([]*esi.Response, error) {
-	return nil, errors.New("no network in tests")
+type panicPager struct{}
+
+func (panicPager) GetAllPages(context.Context, esi.Request, esi.PageOptions) ([]*esi.Response, error) {
+	panic("the off switch must not read ESI")
+}
+
+// blockingPager blocks the first read until its context ends; later reads fail at once.
+type blockingPager struct {
+	once           sync.Once
+	started, ended chan struct{}
+}
+
+func (p *blockingPager) GetAllPages(ctx context.Context, _ esi.Request, _ esi.PageOptions) ([]*esi.Response, error) {
+	first := false
+	p.once.Do(func() { first = true })
+	if !first {
+		return nil, ctx.Err()
+	}
+	close(p.started)
+	<-ctx.Done()
+	close(p.ended)
+	return nil, ctx.Err()
 }

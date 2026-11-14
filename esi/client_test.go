@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -685,4 +686,36 @@ func TestSharedRequestsDoNotReuseAnEarlierCallersContext(t *testing.T) {
 	require.Zero(t, reused, "caller contexts that ran more than one upstream request")
 	require.Zero(t, expired.Load(), "calls that failed on an earlier request's deadline")
 	require.Zero(t, repeated.Load(), "calls answered by a request no newer than the caller's previous answer")
+}
+
+func TestNoStoreRequestLeavesTheCacheAlone(t *testing.T) {
+	f := newFakeESI(t, func(w http.ResponseWriter, r *http.Request, n int) {
+		ok200(w, `{"n":`+strconv.Itoa(n)+`}`, map[string]string{"ETag": `"e"`, "Date": httpDate(t0), "Expires": httpDate(t0.Add(time.Hour))})
+	})
+	c, _ := newTestClient(t, f, Config{})
+	ctx := context.Background()
+
+	// A normal request caches; a no-store request for the same URL neither reads that entry
+	// nor writes its own answer over it.
+	r1, err := c.Do(ctx, Request{Path: "/markets/10000002/orders"})
+	require.NoError(t, err)
+	require.False(t, r1.FromCache)
+	require.Equal(t, 1, c.cache.len())
+
+	for i := 0; i < 2; i++ {
+		r, err := c.Do(ctx, Request{Path: "/markets/10000002/orders", NoStore: true})
+		require.NoError(t, err)
+		require.False(t, r.FromCache, "a no-store request always asks ESI")
+		require.Equal(t, 200, r.Status)
+	}
+	require.Equal(t, 3, f.Count())
+	require.Equal(t, 1, c.cache.len(), "no-store answers are not cached")
+	_, err = c.Do(ctx, Request{Path: "/markets/10000043/orders", NoStore: true})
+	require.NoError(t, err)
+	require.Equal(t, 1, c.cache.len())
+
+	r2, err := c.Do(ctx, Request{Path: "/markets/10000002/orders"})
+	require.NoError(t, err)
+	require.True(t, r2.FromCache)
+	require.Equal(t, `{"n":1}`, string(r2.Body), "the cached entry is still the normal request's answer")
 }

@@ -20,6 +20,7 @@ type hubCall struct {
 	prev                 *hubprices.Table
 	builtAt, nextBuildAt time.Time
 	at                   time.Time // the clock when Build started
+	attempt              time.Time // the dataset's NextAttempt when Build started
 }
 
 // hubHarness runs a HubRefresher on a fake clock: Sleep advances the clock, Build is scripted.
@@ -32,7 +33,8 @@ type hubHarness struct {
 	calls   []hubCall
 	sleeps  []time.Duration
 	script  []func(c hubCall) (res hubprices.Result, took time.Duration)
-	onSleep func(n int) // n: 1-based count of sleeps so far, runs before the clock moves
+	onSleep func(n int)               // n: 1-based count of sleeps so far, runs before the clock moves
+	late    func(n int) time.Duration // how late the n-th wake-up is (nil: on time)
 	busy    atomic.Int32
 }
 
@@ -41,7 +43,7 @@ func (h *hubHarness) Build(ctx context.Context, prev *hubprices.Table, builtAt, 
 		h.t.Error("two builds at once")
 	}
 	defer h.busy.Add(-1)
-	c := hubCall{prev: prev, builtAt: builtAt, nextBuildAt: nextBuildAt, at: h.clk.now()}
+	c := hubCall{prev: prev, builtAt: builtAt, nextBuildAt: nextBuildAt, at: h.clk.now(), attempt: h.mem.NextAttempt()}
 	h.calls = append(h.calls, c)
 	if len(h.calls) > len(h.script) {
 		h.t.Errorf("unexpected build %d", len(h.calls))
@@ -70,6 +72,9 @@ func newHubHarness(t *testing.T, every time.Duration) (*hubHarness, *dataapi.Hub
 				return ctx.Err()
 			}
 			h.clk.add(d)
+			if h.late != nil {
+				h.clk.add(h.late(len(h.sleeps)))
+			}
 			return nil
 		},
 	})
@@ -86,6 +91,15 @@ func complete(c hubCall, took time.Duration) (hubprices.Result, time.Duration) {
 
 func incomplete(c hubCall, took time.Duration) (hubprices.Result, time.Duration) {
 	return incompleteAt(c, took, time.Time{})
+}
+
+// failedAt is incomplete with the given hub statuses.
+func failedAt(c hubCall, took time.Duration, st ...hubprices.HubStatus) (hubprices.Result, time.Duration) {
+	return hubprices.Result{
+		Table:   &hubprices.Table{BuiltAt: c.builtAt, NextBuildAt: c.nextBuildAt},
+		Problem: hubprices.ErrIncomplete,
+		Status:  st,
+	}, took
 }
 
 // incompleteAt is incomplete with the failed hub's ESI Expires set to retryAt.
@@ -174,7 +188,7 @@ func TestHubRefresher_FirstIncompleteIsRetriedAtExpires(t *testing.T) {
 			code, body, cc := h.get()
 			require.Equal(t, http.StatusOK, code)
 			require.Contains(t, body, h.calls[2].builtAt.UTC().Format(time.RFC3339))
-			require.Equal(t, "public, max-age=600", cc) // body nextBuildAt (tick+10m+30s measured) minus the 30 s build
+			require.Equal(t, "public, max-age=570", cc) // body nextBuildAt (tick+10m: no complete build measured yet) minus the 30 s build
 			h.cancel()
 		}
 	}
@@ -183,6 +197,111 @@ func TestHubRefresher_FirstIncompleteIsRetriedAtExpires(t *testing.T) {
 	require.Equal(t, 90*time.Second, h.sleeps[0], "retry at the failed region's Expires")
 	require.Equal(t, 300*time.Second, h.sleeps[1], "fallback when ESI gave none")
 	require.Equal(t, t0.Add(2*time.Minute), h.calls[1].builtAt, "retry builds are stamped with their own start")
+}
+
+func TestHubRefresher_RetryAtInThePastFallsBack(t *testing.T) {
+	h, r, ctx := newHubHarness(t, 10*time.Minute)
+	t0 := h.clk.now()
+	h.script = []func(hubCall) (hubprices.Result, time.Duration){
+		// The failed region's Expires passed during the 30 s build: retrying at it would be a
+		// retry in the past, so the 300 s fallback applies.
+		func(c hubCall) (hubprices.Result, time.Duration) {
+			return incompleteAt(c, 30*time.Second, t0.Add(10*time.Second))
+		},
+	}
+	h.onSleep = func(int) { h.cancel() }
+	r.Run(ctx)
+	require.Equal(t, []time.Duration{300 * time.Second}, h.sleeps)
+}
+
+func TestHubRefresher_UpdatedHubRetryAtIsIgnored(t *testing.T) {
+	h, r, ctx := newHubHarness(t, 10*time.Minute)
+	t0 := h.clk.now()
+	h.script = []func(hubCall) (hubprices.Result, time.Duration){
+		// jita updated (its Expires is far out) and amarr failed with no Expires: the retry is
+		// the fallback, not jita's Expires.
+		func(c hubCall) (hubprices.Result, time.Duration) {
+			return failedAt(c, 30*time.Second,
+				hubprices.HubStatus{Key: "jita", Updated: true, RetryAt: t0.Add(20 * time.Minute)},
+				hubprices.HubStatus{Key: "amarr", Reason: hubprices.ReasonError, Err: fmt.Errorf("500")})
+		},
+	}
+	h.onSleep = func(int) { h.cancel() }
+	r.Run(ctx)
+	require.Equal(t, []time.Duration{300 * time.Second}, h.sleeps)
+}
+
+func TestHubRefresher_FailedBuildDoesNotChangeTheMeasuredDuration(t *testing.T) {
+	h, r, ctx := newHubHarness(t, 10*time.Minute)
+	h.script = []func(hubCall) (hubprices.Result, time.Duration){
+		func(c hubCall) (hubprices.Result, time.Duration) { return complete(c, 30*time.Second) },
+		func(c hubCall) (hubprices.Result, time.Duration) { return incomplete(c, time.Second) }, // every hub backed off at once
+		func(c hubCall) (hubprices.Result, time.Duration) { return complete(c, 30*time.Second) },
+	}
+	h.onSleep = func(n int) {
+		if n == 3 {
+			h.cancel()
+		}
+	}
+	r.Run(ctx)
+	require.Len(t, h.calls, 3)
+	require.Equal(t, h.calls[2].builtAt.Add(10*time.Minute+30*time.Second), h.calls[2].nextBuildAt,
+		"the expected publish time uses the last complete build, not the 1 s failed one")
+}
+
+func TestHubRefresher_LateWakeUpsStayOnTheGrid(t *testing.T) {
+	h, r, ctx := newHubHarness(t, 10*time.Minute)
+	t0 := h.clk.now()
+	step := func(c hubCall) (hubprices.Result, time.Duration) { return complete(c, 30*time.Second) }
+	h.script = []func(hubCall) (hubprices.Result, time.Duration){step, step, step, step}
+	h.late = func(n int) time.Duration {
+		if n == 3 {
+			return 12 * time.Minute // the process stalled through a whole tick
+		}
+		return 7 * time.Second
+	}
+	h.onSleep = func(n int) {
+		if n == 4 {
+			h.cancel()
+		}
+	}
+	r.Run(ctx)
+	require.Len(t, h.calls, 4)
+	for i, want := range []time.Duration{0, 10 * time.Minute, 20 * time.Minute, 40 * time.Minute} {
+		require.Equal(t, t0.Add(want), h.calls[i].builtAt, "build %d lands on the planned grid", i)
+	}
+	require.Equal(t, t0.Add(10*time.Minute+7*time.Second), h.calls[1].at, "the wake-up itself was late")
+	require.Equal(t, []time.Duration{
+		9*time.Minute + 30*time.Second,
+		9*time.Minute + 23*time.Second, // from 10:37 to the planned 20:00, not 20:07
+		9*time.Minute + 23*time.Second,
+		7*time.Minute + 30*time.Second, // woke at 42:00 (12 min late): the 40:00 tick, done 42:30, next 50:00
+	}, h.sleeps)
+}
+
+func TestHubRefresher_NextAttemptIsSetAtBuildStart(t *testing.T) {
+	h, r, ctx := newHubHarness(t, 10*time.Minute)
+	h.script = []func(hubCall) (hubprices.Result, time.Duration){
+		func(c hubCall) (hubprices.Result, time.Duration) {
+			code, _, _ := h.get()
+			require.Equal(t, http.StatusServiceUnavailable, code)
+			return incomplete(c, 30*time.Second)
+		},
+		func(c hubCall) (hubprices.Result, time.Duration) { return complete(c, 40*time.Second) },
+		func(c hubCall) (hubprices.Result, time.Duration) { return complete(c, 40*time.Second) },
+	}
+	h.onSleep = func(n int) {
+		if n == 3 {
+			h.cancel()
+		}
+	}
+	r.Run(ctx)
+	require.Len(t, h.calls, 3)
+	// No complete build yet: the planned end is the 300 s fallback.
+	require.Equal(t, h.calls[0].at.Add(300*time.Second), h.calls[0].attempt)
+	require.Equal(t, h.calls[1].at.Add(300*time.Second), h.calls[1].attempt, "an incomplete build measures nothing")
+	// After a complete build: start plus its measured duration.
+	require.Equal(t, h.calls[2].at.Add(40*time.Second), h.calls[2].attempt)
 }
 
 func TestHubRefresher_LaterIncompleteKeepsPublishedTable(t *testing.T) {
