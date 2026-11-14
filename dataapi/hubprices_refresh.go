@@ -41,14 +41,18 @@ type HubRefresherConfig struct {
 // table stays and the failure is logged. The previous table passed to Build is the last
 // one built (published or not), so keep-last per hub survives incomplete builds.
 //
-// The body's nextBuildAt is the expected publish time of the next table (next tick plus the
-// measured duration of the last complete build), because the desktop asks again at that
-// time. The same second-truncated time goes to MemoryDataset.Publish.
+// The body's nextBuildAt is the expected publish time of the next table, because the desktop
+// asks again at that time: the next build starts at the first grid tick after this build's
+// expected end (its start plus the measured duration of the last complete build) and takes
+// that duration again. The same second-truncated time goes to MemoryDataset.Publish.
 //
 // Once a table is published the builds keep to a fixed grid (first build + n * Every): a late
 // wake-up does not move the next ticks, and a wake-up later than a whole cycle builds at the
 // latest grid tick it passed. Until then a retry runs at retryTime and is stamped with the
-// time it starts.
+// time it starts. The grid runs on the monotonic clock; builtAt and nextBuildAt are stamped
+// with the wall time read at the build's start plus the grid point's offset from it, so a
+// step of the wall clock after the start (an NTP step at boot, a VM restore) moves the stamps
+// with it and leaves the cadence alone.
 //
 // On shutdown the build's context is canceled and a result that arrives after the cancel is
 // not published: a table built from an interrupted run is not worth the risk of a half-fresh
@@ -130,11 +134,8 @@ func (r *HubRefresher) Run(ctx context.Context) {
 		if !scheduled {
 			next = r.retryTime()
 		} else {
-			next = tick.Add(r.every)
-			skipped := 0
-			for end := r.now(); !next.After(end); next = next.Add(r.every) {
-				skipped++
-			}
+			var skipped int
+			next, skipped = r.nextTick(tick, r.now())
 			if skipped > 0 {
 				r.log.Warn("hub prices: build overran the cycle; ticks skipped", "skipped", skipped)
 			}
@@ -160,10 +161,26 @@ func (r *HubRefresher) Run(ctx context.Context) {
 	}
 }
 
+// nextTick is the first grid tick (tick + n * Every, n >= 1) after end, and how many ticks
+// it skipped (those at or before end).
+func (r *HubRefresher) nextTick(tick, end time.Time) (next time.Time, skipped int) {
+	next = tick.Add(r.every)
+	for !next.After(end) {
+		next = next.Add(r.every)
+		skipped++
+	}
+	return next, skipped
+}
+
 // buildOnce runs and, when complete, publishes one build.
 func (r *HubRefresher) buildOnce(ctx context.Context, tick time.Time) {
-	nextBuildAt := tick.Add(r.every + r.lastBuild).UTC().Truncate(time.Second)
 	started := r.now()
+	// The next table is published when the next build ends: it starts at the first tick after
+	// this build's expected end and takes as long (the next tick alone before any complete
+	// build). Stamps are the wall time read now plus the grid point's monotonic offset from now.
+	next, _ := r.nextTick(tick, started.Add(r.lastBuild))
+	builtAt := started.Add(tick.Sub(started))
+	nextBuildAt := started.Add(next.Add(r.lastBuild).Sub(started)).UTC().Truncate(time.Second)
 	// The planned end of this build, for the route's Retry-After while nothing is published:
 	// the start plus the last complete build's duration, else the fallback.
 	planned := hubRetryFallback
@@ -171,7 +188,7 @@ func (r *HubRefresher) buildOnce(ctx context.Context, tick time.Time) {
 		planned = r.lastBuild
 	}
 	r.ds.SetNextAttempt(started.Add(planned))
-	res, err := r.b.Build(ctx, r.prev, tick, nextBuildAt)
+	res, err := r.b.Build(ctx, r.prev, builtAt, nextBuildAt)
 	took := r.now().Sub(started)
 	if res.Table != nil {
 		r.prev = res.Table
@@ -204,7 +221,7 @@ func (r *HubRefresher) buildOnce(ctx context.Context, tick time.Time) {
 		pages += s.Pages
 	}
 	r.log.Info("hub prices: published", append([]any{"rows", rows, "pages", pages, "bytes", len(res.JSON),
-		"duration_ms", took.Milliseconds(), "built_at", tick, "next_build_at", nextBuildAt}, statusAttrs(res.Status)...)...)
+		"duration_ms", took.Milliseconds(), "built_at", builtAt, "next_build_at", nextBuildAt}, statusAttrs(res.Status)...)...)
 }
 
 // statusAttrs renders the per-hub status as one log attribute per hub.

@@ -69,6 +69,9 @@ func TestMemoryDataset_UnpublishedIs503(t *testing.T) {
 			m.SetNextAttempt(now.Add(89*time.Second + time.Millisecond))
 		}, "90"},
 		{"under a second: at least 1", func(m *dataapi.MemoryDataset, now time.Time) { m.SetNextAttempt(now.Add(10 * time.Millisecond)) }, "1"},
+		{"past the Duration range: still a valid header", func(m *dataapi.MemoryDataset, now time.Time) {
+			m.SetNextAttempt(now.AddDate(300, 0, 0))
+		}, "1"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

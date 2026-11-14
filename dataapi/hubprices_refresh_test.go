@@ -9,6 +9,7 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+	"unsafe"
 
 	"github.com/stretchr/testify/require"
 
@@ -35,7 +36,34 @@ type hubHarness struct {
 	script  []func(c hubCall) (res hubprices.Result, took time.Duration)
 	onSleep func(n int)               // n: 1-based count of sleeps so far, runs before the clock moves
 	late    func(n int) time.Duration // how late the n-th wake-up is (nil: on time)
+	wall    time.Duration             // a step of the wall clock: every read after it is set moves by it
 	busy    atomic.Int32
+}
+
+// now is the harness clock: the step clock with its wall time moved by h.wall; the monotonic
+// reading (when the clock has one) does not move.
+func (h *hubHarness) now() time.Time {
+	t := h.clk.now()
+	if h.wall != 0 {
+		t = wallStepped(t, h.wall)
+	}
+	return t
+}
+
+// wallStepped is t after the system clock was stepped by d: the wall time moves by d, the
+// monotonic reading stays, as time.Now returns after an NTP step or a VM restore. The time
+// package has no API for it, so this copies the monotonic field back over the one Add moved
+// (time.Time is {wall uint64; ext int64; loc *Location}, and ext holds the monotonic reading
+// when there is one). TestHubRefresher_WallClockStepMovesStampsNotCadence checks the layout.
+func wallStepped(t time.Time, d time.Duration) time.Time {
+	type timeLayout struct {
+		wall uint64
+		ext  int64
+		loc  *time.Location
+	}
+	s := t.Add(d)
+	(*timeLayout)(unsafe.Pointer(&s)).ext = (*timeLayout)(unsafe.Pointer(&t)).ext
+	return s
 }
 
 func (h *hubHarness) Build(ctx context.Context, prev *hubprices.Table, builtAt, nextBuildAt time.Time) (hubprices.Result, error) {
@@ -43,7 +71,7 @@ func (h *hubHarness) Build(ctx context.Context, prev *hubprices.Table, builtAt, 
 		h.t.Error("two builds at once")
 	}
 	defer h.busy.Add(-1)
-	c := hubCall{prev: prev, builtAt: builtAt, nextBuildAt: nextBuildAt, at: h.clk.now(), attempt: h.mem.NextAttempt()}
+	c := hubCall{prev: prev, builtAt: builtAt, nextBuildAt: nextBuildAt, at: h.now(), attempt: h.mem.NextAttempt()}
 	h.calls = append(h.calls, c)
 	if len(h.calls) > len(h.script) {
 		h.t.Errorf("unexpected build %d", len(h.calls))
@@ -57,12 +85,12 @@ func (h *hubHarness) Build(ctx context.Context, prev *hubprices.Table, builtAt, 
 
 func newHubHarness(t *testing.T, every time.Duration) (*hubHarness, *dataapi.HubRefresher, context.Context) {
 	h := &hubHarness{t: t, clk: newStepClock(), mem: dataapi.NewMemoryDataset(dataapi.MarketHubsMaxBytes)}
-	h.api = hubsAPI(t, h.mem, h.clk)
+	h.api = newAPI(t, dataapi.Config{DatasetDir: t.TempDir(), MarketHubs: h.mem, Now: h.now})
 	ctx, cancel := context.WithCancel(context.Background())
 	h.cancel = cancel
 	t.Cleanup(cancel)
 	r, err := dataapi.NewHubRefresher(dataapi.HubRefresherConfig{
-		Builder: h, Dataset: h.mem, Every: every, Now: h.clk.now, Logger: slog.New(slog.DiscardHandler),
+		Builder: h, Dataset: h.mem, Every: every, Now: h.now, Logger: slog.New(slog.DiscardHandler),
 		Sleep: func(ctx context.Context, d time.Duration) error {
 			h.sleeps = append(h.sleeps, d)
 			if h.onSleep != nil {
@@ -358,8 +386,80 @@ func TestHubRefresher_OverrunSkipsTicks(t *testing.T) {
 	require.Len(t, h.calls, 2, "ticks at 10 and 20 minutes fell inside the first build and are skipped")
 	require.Equal(t, 5*time.Minute, h.sleeps[0])
 	require.Equal(t, t0.Add(30*time.Minute), h.calls[1].builtAt)
-	// The measured duration (25 min) enters the next expected publish time.
-	require.Equal(t, h.calls[1].builtAt.Add(10*time.Minute+25*time.Minute), h.calls[1].nextBuildAt)
+	// The measured duration (25 min) enters the next expected publish time: a 25-minute build
+	// from 30:00 ends at 55:00, skips the 40 and 50 ticks, and the next one (60:00) publishes
+	// at 85:00.
+	require.Equal(t, h.calls[1].builtAt.Add(30*time.Minute+25*time.Minute), h.calls[1].nextBuildAt)
+}
+
+func TestHubRefresher_LateWakeUpNextBuildAtIsTheNextPublish(t *testing.T) {
+	h, r, ctx := newHubHarness(t, 10*time.Minute)
+	t0 := h.clk.now()
+	step := func(c hubCall) (hubprices.Result, time.Duration) { return complete(c, 30*time.Second) }
+	h.script = []func(hubCall) (hubprices.Result, time.Duration){step, step, step}
+	h.late = func(n int) time.Duration {
+		if n == 1 {
+			return 9*time.Minute + 40*time.Second // woke at 19:40 for the 10:00 tick
+		}
+		return 0
+	}
+	var cc string
+	h.onSleep = func(n int) {
+		switch n {
+		case 2:
+			_, _, cc = h.get() // at 20:10, just after the late build published
+		case 3:
+			h.cancel()
+		}
+	}
+	r.Run(ctx)
+	require.Len(t, h.calls, 3)
+	late := h.calls[1]
+	require.Equal(t, t0.Add(10*time.Minute), late.builtAt, "the late build keeps its tick")
+	published := late.at.Add(30 * time.Second)
+	require.True(t, late.nextBuildAt.After(published), "nextBuildAt %s is after the publish at %s", late.nextBuildAt, published)
+	require.Equal(t, t0.Add(30*time.Minute), h.calls[2].builtAt, "the 20:00 tick fell inside the late build")
+	require.Equal(t, h.calls[2].attempt, late.nextBuildAt, "nextBuildAt is the next build's planned end")
+	require.Equal(t, "public, max-age=620", cc, "from 20:10 to the next publish at 30:30, not 20 s to 20:30")
+}
+
+func TestHubRefresher_WallClockStepMovesStampsNotCadence(t *testing.T) {
+	h, r, ctx := newHubHarness(t, 10*time.Minute)
+	// A clock reading with a monotonic part, as in production, on a whole wall second.
+	base := time.Now()
+	h.clk.t = base.Add(-time.Duration(base.Nanosecond()))
+	t0 := h.now()
+	require.Contains(t, t0.String(), " m=", "the clock carries a monotonic reading")
+	stepped := wallStepped(t0, time.Hour)
+	require.Zero(t, stepped.Sub(t0), "time.Time layout: the monotonic reading stays")
+	require.Equal(t, time.Hour, stepped.Round(0).Sub(t0.Round(0)), "time.Time layout: the wall time moves")
+
+	step := func(c hubCall) (hubprices.Result, time.Duration) { return complete(c, 30*time.Second) }
+	h.script = []func(hubCall) (hubprices.Result, time.Duration){step, step, step}
+	var cc string
+	h.onSleep = func(n int) {
+		switch n {
+		case 1:
+			h.wall = time.Hour // the system clock is stepped by +1 h during the first wait
+		case 2:
+			_, _, cc = h.get()
+		case 3:
+			h.cancel()
+		}
+	}
+	r.Run(ctx)
+	require.Len(t, h.calls, 3)
+	require.Equal(t, []time.Duration{9*time.Minute + 30*time.Second, 9*time.Minute + 30*time.Second, 9*time.Minute + 30*time.Second},
+		h.sleeps, "the cadence runs on the monotonic clock")
+	w0 := t0.UTC()
+	require.Equal(t, w0, h.calls[0].builtAt.UTC())
+	for i := 1; i < 3; i++ {
+		want := w0.Add(time.Hour + time.Duration(i)*10*time.Minute)
+		require.Equal(t, want, h.calls[i].builtAt.UTC(), "build %d: builtAt follows the new wall time", i)
+		require.Equal(t, h.calls[i].at.UTC(), h.calls[i].builtAt.UTC(), "build %d started on its tick", i)
+		require.Equal(t, want.Add(10*time.Minute+30*time.Second), h.calls[i].nextBuildAt, "build %d: nextBuildAt on the new wall time", i)
+	}
+	require.Equal(t, "public, max-age=600", cc, "max-age from the stepped wall time on both sides")
 }
 
 func TestHubRefresher_PublishedNextBuildEqualsBody(t *testing.T) {
