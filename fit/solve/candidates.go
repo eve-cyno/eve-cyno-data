@@ -43,6 +43,10 @@ const (
 	attrMetaLevel  = 633
 	attrRigSize    = 1547
 	attrChargeSize = 128
+	// attrModuleCapacity (38, m3) is the hold of a module that takes charges, attrChargeVolume
+	// (161, m3) the volume of one charge: the game refuses a charge larger than the hold.
+	attrModuleCapacity = 38
+	attrChargeVolume   = 161
 
 	effectLauncherFitted = 40
 	effectTurretFitted   = 42
@@ -700,6 +704,9 @@ size:
 		if got, has := ch.attrs[attrChargeSize]; has && got != sz {
 			return false
 		}
+	}
+	if capacity, vol := mod.attrs[attrModuleCapacity], ch.attrs[attrChargeVolume]; capacity > 0 && vol > capacity {
+		return false
 	}
 	return true
 }

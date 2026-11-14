@@ -27,6 +27,8 @@ const (
 	attrTurretModifier  = 1368
 	attrLauncherMod     = 1369
 	attrChargeSize      = 128
+	attrModuleCapacity  = 38  // capacity (m3): the hold of a module that takes charges
+	attrChargeVolume    = 161 // volume (m3) of one charge
 
 	effectLauncherFitted = 40
 	effectTurretFitted   = 42
@@ -133,10 +135,22 @@ func checkE18(s ValidateSDE, entries []placed, ship map[int]float64, subsystems 
 				legal = false
 			}
 		}
-		if !legal {
+		tooBig := false
+		if legal {
+			// The game refuses a charge larger than the module's hold (coordinator ruling 6,
+			// 2026-11-14): volume (attr 161) against capacity (attr 38). No data on either side
+			// means no check.
+			capacity, vol := md[attrModuleCapacity], s.GetDogma(e.mod.ChargeID)[attrChargeVolume]
+			tooBig = capacity > 0 && vol > capacity
+		}
+		if !legal || tooBig {
+			msg := fmt.Sprintf("%s cannot load %s", e.mod.Name, strings.TrimSpace(e.mod.Charge))
+			if tooBig {
+				msg += ": one charge is larger than the module holds"
+			}
 			rep.Violations = append(rep.Violations, Violation{
 				Severity: Hard, Code: CodeChargeIllegal,
-				Message: fmt.Sprintf("%s cannot load %s", e.mod.Name, strings.TrimSpace(e.mod.Charge)),
+				Message: msg,
 				Names:   []string{e.mod.Name, e.mod.Charge},
 			})
 		}

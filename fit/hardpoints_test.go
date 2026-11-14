@@ -153,3 +153,24 @@ func TestCheckRaw_SlotLineQtyCountsEveryUnit(t *testing.T) {
 	}}, RawOptions{})
 	require.Contains(t, codes(rep), CodeFitTooLarge)
 }
+
+// A charge larger than the module's hold is no legal fit (coordinator ruling 6, 2026-11-14; the
+// game refuses to load it): a Medium Capacitor Booster II holds 40 m3, Navy Cap Booster 3200
+// is 96 m3.
+func TestValidate_ChargeVolumeAgainstCapacity(t *testing.T) {
+	s := e18Fixture()
+	run := func() map[Code]Violation {
+		return byCode(Validate(context.Background(), s, Fit{HullID: 100, High: []FitModule{{TypeID: 20, Name: "M", ChargeID: 30, Charge: "C"}}}, nil, false))
+	}
+	require.NotContains(t, run(), CodeChargeIllegal, "no capacity or volume data: no check")
+	s.dogma[20][38] = 40 // capacity
+	s.dogma[30][161] = 2 // volume of one charge
+	require.NotContains(t, run(), CodeChargeIllegal, "a charge that fits")
+	s.dogma[30][161] = 40
+	require.NotContains(t, run(), CodeChargeIllegal, "volume equal to the capacity holds exactly one")
+	s.dogma[30][161] = 96
+	v, has := run()[CodeChargeIllegal]
+	require.True(t, has, "96 m3 into 40 m3")
+	require.Equal(t, Hard, v.Severity)
+	require.Contains(t, v.Message, "larger than the module holds")
+}

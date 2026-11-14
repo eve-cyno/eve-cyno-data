@@ -532,3 +532,17 @@ func TestCandidates_CapKeepsTechIBeforeFactionAndDeadspace(t *testing.T) {
 	require.Equal(t, []int{701, 706, 705, 704, 703, 702, 700, 751, 752, 733, 732, 0}, got)
 	require.NotContains(t, got, 750, "Officer cut before any Faction or Deadspace type")
 }
+
+// chargeFits refuses a charge larger than the module's hold (coordinator ruling 6, 2026-11-14):
+// a Medium Capacitor Booster II holds 40 m3 and Navy Cap Booster 3200 is 96 m3.
+func TestChargeFits_VolumeAgainstCapacity(t *testing.T) {
+	c := &Catalog{}
+	mod := &typeInfo{attrs: map[int]float64{attrChargeGroups[0]: 83, attrModuleCapacity: 40}}
+	ch := func(vol float64) *typeInfo {
+		return &typeInfo{group: 83, attrs: map[int]float64{attrChargeVolume: vol}}
+	}
+	require.True(t, c.chargeFits(mod, ch(2)), "a charge that fits")
+	require.True(t, c.chargeFits(mod, ch(40)), "exactly the hold")
+	require.False(t, c.chargeFits(mod, ch(96)), "96 m3 into 40 m3")
+	require.True(t, c.chargeFits(&typeInfo{attrs: map[int]float64{attrChargeGroups[0]: 83}}, ch(96)), "no capacity data: no check")
+}
