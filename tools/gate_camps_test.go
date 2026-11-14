@@ -2,7 +2,9 @@ package tools
 
 import (
 	"context"
+	"crypto/sha256"
 	"database/sql"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"math"
@@ -262,21 +264,109 @@ func TestGateCamps_NoAllianceWording(t *testing.T) {
 	require.Contains(t, text, "by Example Alliance 1 (2) and attackers in no alliance (1). Gank")
 }
 
-// Every state word, the pod clause, the interdictor sentence, three alliances, a structure-only fight.
+// The shared wording fixture. The desktop Intel plugin pins the same bytes, so any change
+// here is a change of both repositories.
+const (
+	gcWordingFile   = "testdata/gate-camps-wording-cases.json"
+	gcWordingSHA256 = "f3c6d41fc817c6ceeaabbc487ba703c53493fd81c372683be89c340a7c33cc17"
+)
+
+type gcWordingCase struct {
+	Name         string                 `json:"name"`
+	Kind         string                 `json:"kind"`
+	GeneratedAt  time.Time              `json:"generated_at"`
+	From         string                 `json:"from"`
+	To           string                 `json:"to"`
+	TrueSecurity float64                `json:"true_security"`
+	Gate         intelsnap.GatesNowGate `json:"gate"`
+	Now          time.Time              `json:"now"`
+	Snapshot     *intelsnap.GatesNow    `json:"snapshot"`
+	Request      map[string]any         `json:"request"`
+	Expected     json.RawMessage        `json:"expected"`
+}
+
+func gcLoadWording(t *testing.T) []gcWordingCase {
+	t.Helper()
+	raw, err := os.ReadFile(gcWordingFile)
+	require.NoError(t, err)
+	var f struct {
+		Doc   string          `json:"doc"`
+		Cases []gcWordingCase `json:"cases"`
+	}
+	require.NoError(t, json.Unmarshal(raw, &f))
+	require.NotEmpty(t, f.Doc)
+	require.NotEmpty(t, f.Cases)
+	return f.Cases
+}
+
+// The desktop repository pins the same digest. Change the file only together with that pin.
+func TestGateCamps_WordingFixturePinned(t *testing.T) {
+	raw, err := os.ReadFile(gcWordingFile)
+	require.NoError(t, err)
+	sum := sha256.Sum256(raw)
+	require.Equal(t, gcWordingSHA256, hex.EncodeToString(sum[:]))
+}
+
+// Every expected sentence comes from the shared JSON: rows, display security, whole answers.
+func TestGateCamps_WordingCases(t *testing.T) {
+	kinds := map[string]int{}
+	for _, c := range gcLoadWording(t) {
+		kinds[c.Kind]++
+		t.Run(c.Kind+"/"+c.Name, func(t *testing.T) {
+			switch c.Kind {
+			case "row":
+				var want string
+				require.NoError(t, json.Unmarshal(c.Expected, &want))
+				g := c.Gate
+				shown, band := displaySecurity(c.TrueSecurity)
+				r := GateCampRow{
+					From: c.From, To: c.To, Security: shown, Band: band, State: g.State,
+					ShipKills60m: g.ShipKills60m, PodKills60m: g.PodKills60m,
+					ShipKills120m: g.ShipKills120m, PodKills120m: g.PodKills120m,
+					StructureKills60m: g.StructureKills60m, FirstKill: g.FirstKill, LastKill: g.LastKill,
+					NoAllianceKills: g.NoAllianceKills, DictorHIC: g.DictorHIC, MaxAttackers: g.MaxAttackers,
+				}
+				for _, a := range g.Attackers {
+					r.Attackers = append(r.Attackers, GateCampAttacker{AllianceID: int(a.AllianceID), Name: a.Name, Kills: a.Kills})
+				}
+				require.Equal(t, want, gateCampRowText(r, c.GeneratedAt))
+			case "security":
+				var want struct {
+					Shown    string `json:"shown"`
+					Band     string `json:"band"`
+					BandWord string `json:"band_word"`
+				}
+				require.NoError(t, json.Unmarshal(c.Expected, &want))
+				shown, band := displaySecurity(c.TrueSecurity)
+				require.Equal(t, want.Shown, fmt.Sprintf("%.1f", shown))
+				require.Equal(t, want.Band, band)
+				require.Equal(t, want.BandWord, band+"-sec")
+			case "answer":
+				var want string
+				require.NoError(t, json.Unmarshal(c.Expected, &want))
+				require.NotNil(t, c.Snapshot)
+				d := testDeps(t)
+				d.GateCamps = gcSource{snap: c.Snapshot}
+				gcClock(t, c.Now)
+				text, _ := gcCall(t, d, c.Request)
+				require.Equal(t, want, text)
+			default:
+				t.Fatalf("unknown case kind %q", c.Kind)
+			}
+		})
+	}
+	require.GreaterOrEqual(t, kinds["row"], 12)
+	require.GreaterOrEqual(t, kinds["security"], 12)
+	require.GreaterOrEqual(t, kinds["answer"], 12)
+}
+
+// The six fixture gates through the whole tool, sorted: the rows the JSON holds, joined.
 func TestGateCamps_RowWordingExact(t *testing.T) {
 	d := gcDeps(t, gcFixture())
 	text, _ := gcCall(t, d, map[string]any{"min_state": "kills"})
 	for _, row := range []string{gcRowTama, gcRowJita, gcRowSivala, gcRowRancer, gcRowPerim, gcRowAla} {
 		require.Contains(t, text, row+"\n")
 	}
-
-	// a row without any attacker and without a pod
-	snap := gcFixture()
-	snap.Gates = snap.Gates[4:5]
-	snap.Gates[0].PodKills120m = 0
-	d = gcDeps(t, snap)
-	text, _ = gcCall(t, d, map[string]any{"min_state": "kills"})
-	require.Contains(t, text, "Perimeter > Jita gate in Perimeter (0.9 high-sec): 1 ship kill in the last 90 min. Kills, no camp pattern.\n")
 }
 
 // A structure-only fight reads with the structure count; a fight with ships keeps the ship sentence.
