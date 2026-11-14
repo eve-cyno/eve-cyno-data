@@ -63,7 +63,7 @@ func TestDatasetFile_OlderClockReadingNeverMovesTheLookBack(t *testing.T) {
 	}
 	t0 := time.Date(2026, 11, 14, 12, 0, 0, 0, time.UTC)
 	clk := &gateClock{t: t0, read: make(chan struct{}), release: make(chan struct{})}
-	a := &API{datasets: newDatasets(dir, clk.now, slog.New(slog.DiscardHandler))}
+	a := &API{datasets: newDatasets(dir, nil, clk.now, slog.New(slog.DiscardHandler))}
 	get := func() string {
 		req := httptest.NewRequest(http.MethodGet, "/v1/datasets/"+name, nil)
 		req.SetPathValue("file", name)
@@ -122,7 +122,7 @@ func TestLoadDataset_BufferFitsTheFile(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "intel-gates-profile.json")
 	for _, size := range []int{0, 1, 4096, 3<<20 + 7, DatasetMaxBytes} {
 		require.NoError(t, os.WriteFile(path, make([]byte, size), 0o644))
-		state, _, ver, err := loadDataset(path)
+		state, _, ver, err := loadDataset(path, DatasetMaxBytes)
 		require.NoError(t, err, size)
 		require.Equal(t, datasetServed, state, size)
 		require.Len(t, ver.body, size)

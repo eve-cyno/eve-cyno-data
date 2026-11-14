@@ -34,18 +34,42 @@ const datasetCheckEvery = time.Second
 // datasetTable is the allowlist of the dataset route, in the order the documents list it:
 // the file names it serves and the Cache-Control of each, which follows the cadence at which
 // the intel collector rewrites it. No other name is ever opened.
-var datasetTable = []struct{ name, policy string }{
-	{"intel-gates-now.json", cacheDatasetGatesNow},
-	{"intel-systems-hour.json", cacheDatasetSystemsHour},
-	{"intel-gates-profile.json", cacheDatasetGatesProfile},
+//
+// A spec has a source: a file of Config.DatasetDir (policy is its fixed Cache-Control, max
+// the DatasetMaxBytes bound) or an in-memory body (memory is true; the Cache-Control follows
+// the published nextBuildAt, see MemoryDataset, so policy is empty and max is the cap
+// of the name's MemoryDataset).
+var datasetTable = []datasetSpec{
+	{name: "intel-gates-now.json", policy: cacheDatasetGatesNow, max: DatasetMaxBytes},
+	{name: "intel-systems-hour.json", policy: cacheDatasetSystemsHour, max: DatasetMaxBytes},
+	{name: "intel-gates-profile.json", policy: cacheDatasetGatesProfile, max: DatasetMaxBytes},
+	{name: marketHubsName, memory: true, max: MarketHubsMaxBytes},
 }
+
+// datasetSpec is one allowlisted dataset name.
+type datasetSpec struct {
+	name   string
+	policy string // fixed Cache-Control of a file source
+	max    int    // size bound in bytes
+	memory bool   // served from a MemoryDataset, not from a file
+}
+
+// marketHubsName is the in-memory dataset the market-hub price refresher publishes.
+const marketHubsName = "market-hubs.json"
+
+// MarketHubsMaxBytes bounds the body of the market-hubs.json dataset.
+const MarketHubsMaxBytes = 16 << 20
 
 // datasetHeaders documents the caching headers of a served dataset (the 200 and the 304).
 func datasetHeaders() map[string]schema {
 	str := schema{"type": "string"}
-	policies := make([]string, len(datasetTable))
-	for i, e := range datasetTable {
-		policies[i] = "`" + e.policy + "` for `" + e.name + "`"
+	var policies []string
+	for _, e := range datasetTable {
+		if e.memory {
+			policies = append(policies, "`public, max-age=<seconds until the next build, 60 to 900>` for `"+e.name+"`")
+			continue
+		}
+		policies = append(policies, "`"+e.policy+"` for `"+e.name+"`")
 	}
 	return map[string]schema{
 		"ETag": {"description": "A strong tag of the served version: the first 32 hex digits of the SHA-256 of the bytes as " +
@@ -88,6 +112,7 @@ type datasetVersion struct {
 // changes the identity.
 type datasetFile struct {
 	name, path, policy string
+	max                int // size bound of the file in bytes
 
 	mu      sync.Mutex
 	checked time.Time // when the file was last looked at; zero: never
@@ -96,24 +121,30 @@ type datasetFile struct {
 	ver     *datasetVersion
 }
 
-// datasets serves the published intel snapshot files of one directory (Config.DatasetDir).
+// datasets serves the published intel snapshot files of one directory (Config.DatasetDir)
+// and the in-memory datasets handed over by the caller.
 type datasets struct {
 	files map[string]*datasetFile // nil when no directory is configured
-	now   func() time.Time
-	log   *slog.Logger
+	// mem holds the memory sources by name. A memory name without an entry is not published.
+	mem map[string]*MemoryDataset
+	now func() time.Time
+	log *slog.Logger
 }
 
-func newDatasets(dir string, now func() time.Time, log *slog.Logger) *datasets {
+func newDatasets(dir string, mem map[string]*MemoryDataset, now func() time.Time, log *slog.Logger) *datasets {
 	if now == nil {
 		now = time.Now
 	}
-	d := &datasets{now: now, log: log}
+	d := &datasets{now: now, log: log, mem: mem}
 	if dir == "" {
 		return d
 	}
 	d.files = map[string]*datasetFile{}
 	for _, e := range datasetTable {
-		d.files[e.name] = &datasetFile{name: e.name, path: filepath.Join(dir, e.name), policy: e.policy}
+		if e.memory {
+			continue
+		}
+		d.files[e.name] = &datasetFile{name: e.name, path: filepath.Join(dir, e.name), policy: e.policy, max: e.max}
 	}
 	return d
 }
@@ -127,6 +158,10 @@ func newDatasets(dir string, now func() time.Time, log *slog.Logger) *datasets {
 func (a *API) dataset(w http.ResponseWriter, r *http.Request) {
 	if r.URL.RawQuery != "" || r.URL.ForceQuery {
 		datasetError(w, r, http.StatusBadRequest, "invalid_request", "this route takes no query string")
+		return
+	}
+	if spec, ok := memorySpec(r.PathValue("file")); ok {
+		a.serveMemory(w, r, spec)
 		return
 	}
 	if a.datasets.files == nil {
@@ -149,8 +184,14 @@ func (a *API) dataset(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	writeVersion(w, r, f.policy, ver)
+}
+
+// writeVersion answers a served dataset version: the 304 on a matching If-None-Match, else
+// the body (gzip when accepted), with the given Cache-Control on both.
+func writeVersion(w http.ResponseWriter, r *http.Request, policy string, ver *datasetVersion) {
 	h := w.Header()
-	h.Set("Cache-Control", f.policy)
+	h.Set("Cache-Control", policy)
 	h.Set("ETag", ver.etag)
 	h.Set("Vary", "Accept-Encoding")
 	if etagMatches(r.Header.Values("If-None-Match"), ver.etag) {
@@ -210,11 +251,11 @@ func (f *datasetFile) look(log *slog.Logger) {
 		return
 	case (f.state == datasetServed || f.state == datasetTooLarge) && sameVersion(f.info, lfi):
 		return // unchanged
-	case lfi.Size() > DatasetMaxBytes:
+	case lfi.Size() > int64(f.max):
 		f.set(datasetTooLarge, lfi, nil, nil, log)
 		return
 	}
-	state, fi, ver, err := loadDataset(f.path)
+	state, fi, ver, err := loadDataset(f.path, f.max)
 	if state == datasetServed && f.state == datasetServed && sameVersion(f.info, fi) {
 		return // replaced between the stat and the open by the version already served
 	}
@@ -233,7 +274,7 @@ func (f *datasetFile) set(state datasetState, fi os.FileInfo, ver *datasetVersio
 	case datasetServed:
 		log.Info("dataset_loaded", "file", f.name, "bytes", len(ver.body), "etag", ver.etag)
 	case datasetTooLarge:
-		log.Error("dataset_too_large", "file", f.name, "bytes", fi.Size(), "max_bytes", DatasetMaxBytes)
+		log.Error("dataset_too_large", "file", f.name, "bytes", fi.Size(), "max_bytes", f.max)
 	case datasetNotRegular:
 		log.Error("dataset_not_regular", "file", f.name, "mode", fi.Mode().String())
 	case datasetFailed:
@@ -251,9 +292,9 @@ func sameVersion(a, b os.FileInfo) bool {
 }
 
 // loadDataset opens path without following a symlink, checks that it is a regular file within
-// DatasetMaxBytes and builds its version. The FileInfo is the opened file's, so the version key
+// max bytes and builds its version. The FileInfo is the opened file's, so the version key
 // and the bytes belong together.
-func loadDataset(path string) (datasetState, os.FileInfo, *datasetVersion, error) {
+func loadDataset(path string, max int) (datasetState, os.FileInfo, *datasetVersion, error) {
 	file, err := intelsnap.OpenNoFollow(path)
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
@@ -273,15 +314,15 @@ func loadDataset(path string) (datasetState, os.FileInfo, *datasetVersion, error
 	if !fi.Mode().IsRegular() {
 		return datasetNotRegular, fi, nil, nil
 	}
-	if fi.Size() > DatasetMaxBytes {
+	if fi.Size() > int64(max) {
 		return datasetTooLarge, fi, nil, nil
 	}
 	// Bounded even when the file grows after the stat.
-	body, err := readSized(io.LimitReader(file, DatasetMaxBytes+1), fi.Size())
+	body, err := readSized(io.LimitReader(file, int64(max)+1), fi.Size())
 	if err != nil {
 		return datasetFailed, nil, nil, err
 	}
-	if len(body) > DatasetMaxBytes {
+	if len(body) > max {
 		return datasetTooLarge, fi, nil, nil
 	}
 	ver, err := newDatasetVersion(body)

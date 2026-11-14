@@ -404,11 +404,11 @@ func routeTable() []route {
 			handle: (*API).dataset,
 			cache:  cacheNone,
 			doc: &opDoc{
-				id: "getDataset", tag: "datasets", summary: "Download a published intel dataset",
-				description: "Serves one file the intel collector publishes, byte for byte: `intel-gates-now.json` (killmails on stargates over the " +
+				id: "getDataset", tag: "datasets", summary: "Download a published dataset",
+				description: "Serves one published dataset, byte for byte. The intel collector publishes `intel-gates-now.json` (killmails on stargates over the " +
 					"last two hours, rewritten every minute; `Cache-Control: public, max-age=60`), `intel-systems-hour.json` (the latest ESI hour of " +
 					"jumps and kills per system; `max-age=300`) and `intel-gates-profile.json` (the 28-day profile of kills per gate and UTC hour, " +
-					"rebuilt daily; `max-age=3600`). Each file names its own `format` and major `version`; a reader accepts the majors it knows and " +
+					"rebuilt daily; `max-age=3600`); `market-hubs.json` is the hub price table: for the five trade hubs (Jita, Amarr, Dodixie, Rens, Hek), the best sell and buy price and the volumes at the hub station for each tracked type, rebuilt every 15 minutes from ESI (Fenris Creations game data); its `Cache-Control` is `public, max-age=` the seconds until the next build, from 60 to 900, and it answers `503` (`Retry-After: 60`) before the first build. Each file names its own `format` and major `version`; a reader accepts the majors it knows and " +
 					"ignores fields it does not know. The killmail-based files credit zKillboard; all of it is Fenris Creations game data (ESI), " +
 					"and each file carries its `credit` line. " +
 					"The answer carries a strong `ETag` (the first 32 hex digits of the body's SHA-256); `If-None-Match` with that tag, weak or " +
@@ -418,14 +418,14 @@ func routeTable() []route {
 					"with `If-None-Match`. " +
 					"`404` means the file is not published yet, or this service serves no datasets. Errors are never cached.",
 				pathParams: []queryParam{
-					{name: "file", description: "The dataset file name.", schema: schema{"enum": stringsToAny(datasetNames())}},
+					{name: "file", description: "The dataset name.", schema: schema{"enum": stringsToAny(datasetNames())}},
 				},
 				ok: okDoc{
-					description: "The dataset file as published.", media: "application/json", raw: schema{"type": "object"},
+					description: "The dataset as published.", media: "application/json", raw: schema{"type": "object"},
 					headers: datasetHeaders(),
 				},
 				notModified: "The `If-None-Match` names the served version: no body.",
-				errors:      []int{http.StatusBadRequest, http.StatusNotFound, http.StatusInternalServerError},
+				errors:      []int{http.StatusBadRequest, http.StatusNotFound, http.StatusInternalServerError, http.StatusServiceUnavailable},
 			},
 		},
 		{

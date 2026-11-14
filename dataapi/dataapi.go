@@ -55,7 +55,7 @@
 //     endpoint are no-store. Only a 200 (and a dataset's 304) is cacheable; every error is
 //     no-store.
 //   - GET {prefix}/datasets/{file} (Config.DatasetDir) serves the intel collector's published
-//     snapshot files as they are. Like the portal assets it has no per-address limit, is not
+//     snapshot files as they are, and the in-memory market-hubs.json (Config.MarketHubs). Like the portal assets it has no per-address limit, is not
 //     counted by the anonymous daily cap and takes no in-flight slot; a request with a query
 //     string is refused (400) before any file is touched.
 //
@@ -418,6 +418,12 @@ type Config struct {
 	// gate. Each file is looked at again at most once a second (Now is the clock). Empty
 	// means the route answers 404 "not configured" and reads nothing.
 	DatasetDir string
+
+	// MarketHubs is the in-memory source of the market-hubs.json dataset, created by the
+	// caller (NewMemoryDataset(MarketHubsMaxBytes)) and handed both to the builder that
+	// publishes into it and to the API. It works with or without DatasetDir. Nil means the
+	// builder is off: the name answers 404, like an unpublished file.
+	MarketHubs *MemoryDataset
 }
 
 // API is the data API. It implements http.Handler.
@@ -471,7 +477,7 @@ type API struct {
 	trialFree map[string]bool
 	// corpusProbe is nil unless Deps.Retriever implements Pinger.
 	corpusProbe *corpusProbe
-	// datasets serves Config.DatasetDir.
+	// datasets serves Config.DatasetDir and Config.MarketHubs.
 	datasets *datasets
 }
 
@@ -559,7 +565,11 @@ func New(cfg Config) (*API, error) {
 	if a.log == nil {
 		a.log = slog.New(slog.DiscardHandler)
 	}
-	a.datasets = newDatasets(cfg.DatasetDir, cfg.Now, a.log)
+	var mem map[string]*MemoryDataset
+	if cfg.MarketHubs != nil {
+		mem = map[string]*MemoryDataset{marketHubsName: cfg.MarketHubs}
+	}
+	a.datasets = newDatasets(cfg.DatasetDir, mem, cfg.Now, a.log)
 	if anonCap > 0 {
 		a.anon = newAnonQuota(maxAnonClients, cfg.Now, a.log)
 		a.anonCap = anonCap
