@@ -2,6 +2,7 @@ package tools
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"math"
@@ -15,6 +16,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"eve-cyno.dev/go/data/intelsnap"
+	"eve-cyno.dev/go/data/sde"
 )
 
 // Public SDE ids used by the gate camp fixtures.
@@ -524,4 +526,89 @@ func TestGateCamps_TypedResultMatchesText(t *testing.T) {
 	require.Contains(t, string(b), `"from_system_id":30002813`)
 	require.Contains(t, string(b), `"generated_at":"2026-11-14T12:00:00Z"`)
 	require.NotEmpty(t, res.Attribution)
+}
+
+// gcOneGate is a snapshot with the given gates only.
+func gcOneGate(g ...intelsnap.GatesNowGate) *intelsnap.GatesNow {
+	snap := gcFixture()
+	snap.Gates = g
+	return snap
+}
+
+func TestGateCamps_WindowFollowsFirstKill(t *testing.T) {
+	// no ship kill in the last hour, but a pod kill: the counts and the minutes come from
+	// the 120-minute window, as the first kill does
+	d := gcDeps(t, gcOneGate(intelsnap.GatesNowGate{
+		SystemID: gcPerimeter, ToSystemID: gcJita, State: "kills",
+		PodKills60m: 1, ShipKills120m: 2, FirstKill: gcAt(10, 20), LastKill: gcAt(11, 50),
+		Attackers: []intelsnap.GatesNowAttacker{},
+	}))
+	text, _ := gcCall(t, d, map[string]any{"min_state": "kills"})
+	require.Contains(t, text, "2 ship kills in the last 100 min.")
+	require.NotContains(t, text, "pod")
+}
+
+func TestGateCamps_BelowThresholdAnswer(t *testing.T) {
+	want := "No gate of Perimeter is at possible_camp or above; 1 gate had kills in the last 2 hours at a lower state. Set min_state to kills to list them. That is not proof of safety: only kills that reached zKillboard count.\n" + gcFootClose
+	d := gcDeps(t, gcFixture())
+	text, data := gcCall(t, d, map[string]any{"system_names": []any{"Perimeter"}})
+	require.Equal(t, want, text)
+	require.Empty(t, data.Rows)
+
+	// a state this reader does not know counts as below, never as "no kills"
+	d = gcDeps(t, gcOneGate(intelsnap.GatesNowGate{
+		SystemID: gcPerimeter, ToSystemID: gcJita, State: "mystery",
+		ShipKills60m: 1, ShipKills120m: 1, FirstKill: gcAt(11, 30), LastKill: gcAt(11, 30),
+		Attackers: []intelsnap.GatesNowAttacker{},
+	}))
+	text, _ = gcCall(t, d, map[string]any{"system_names": []any{"Perimeter"}})
+	require.Equal(t, want, text)
+	require.NotContains(t, text, "No kills seen")
+}
+
+func TestGateCamps_NoKillHasReachedTheFeed(t *testing.T) {
+	snap := gcFixture()
+	snap.Gates = nil
+	snap.Feed.NewestKillmailTime = nil
+	d := gcDeps(t, snap)
+	text, data := gcCall(t, d, nil)
+	require.Equal(t, "No kills seen on gates of New Eden in the last 2 hours. That is not proof of safety: only kills that reached zKillboard count.\nNo kill has reached the feed yet; snapshot 12:00 UTC.", text)
+	require.True(t, data.NewestKillmail.IsZero())
+}
+
+func TestGateCamps_DelayUnderOneMinute(t *testing.T) {
+	snap := gcFixture()
+	p50 := int64(29)
+	snap.Feed.DelayP50S = &p50
+	d := gcDeps(t, snap)
+	text, _ := gcCall(t, d, nil)
+	require.Contains(t, text, "zKillboard published kills a median of under 1 min after they happened (last 24 hours).")
+	p50 = 30
+	text, _ = gcCall(t, d, nil)
+	require.Contains(t, text, "a median of 1 min after")
+}
+
+func TestGateCamps_NullSystemNamesIsAbsent(t *testing.T) {
+	d := gcDeps(t, gcFixture())
+	want, _ := gcCall(t, d, nil)
+	text, _ := gcCall(t, d, map[string]any{"system_names": nil})
+	require.Equal(t, want, text)
+}
+
+func TestGateCamps_RegionWithoutSystemsIsReadError(t *testing.T) {
+	// an SDE that knows the region but holds no systems: never an all-clear
+	path := filepath.Join(t.TempDir(), "sde.sqlite")
+	db, err := sql.Open("sqlite", path)
+	require.NoError(t, err)
+	_, err = db.Exec(`CREATE TABLE mapRegions (regionID INTEGER, regionName TEXT); INSERT INTO mapRegions VALUES (10000002, 'The Forge')`)
+	require.NoError(t, err)
+	require.NoError(t, db.Close())
+	s, err := sde.Open(path)
+	require.NoError(t, err)
+	t.Cleanup(func() { s.Close() })
+	d := &Deps{SDE: s, GateCamps: gcSource{snap: gcFixture()}}
+	text, data := gcCall(t, d, map[string]any{"region_name": "The Forge"})
+	require.Equal(t, gateCampsReadError, text)
+	require.NotContains(t, text, "No kills seen")
+	require.Nil(t, data)
 }

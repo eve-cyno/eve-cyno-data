@@ -2247,7 +2247,7 @@ paths:
       description: |-
         Recent kills on EVE stargates and the camp state of each gate, from zKillboard killmails matched to gate positions by the EVE-Cyno collector and refreshed every minute: kill counts in the last hour, the attacking alliances, interdictor use, and a state (likely camp, possible camp, fight, high-sec gank pattern). Give system names or a region, or nothing for the busiest gates of New Eden. Kills that never reached zKillboard are not counted.
 
-        Sources: zKillboard (killmail counts); ESI (EVE Swagger Interface); EVE Static Data Export (via Fuzzwork). `result.data` is a `GateCamps` object when the call succeeds.
+        Sources: zKillboard (gate kill counts); ESI (EVE Swagger Interface); EVE Static Data Export (via Fuzzwork). `result.data` is a `GateCamps` object when the call succeeds.
 
         Access tier: **public**. No key needed.
 

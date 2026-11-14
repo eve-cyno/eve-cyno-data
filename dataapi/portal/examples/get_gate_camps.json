@@ -14,9 +14,9 @@
   "response": {
     "attribution": [
       {
-        "name": "zKillboard (killmail counts)",
+        "name": "zKillboard (gate kill counts)",
         "url": "https://zkillboard.com/",
-        "license": "Public R2Z2 API under zKillboard's usage etiquette; only per-system counts and ISK sums derived from it are published; killmails are Fenris Creations game data (EVE Developer License Agreement)"
+        "license": "Public R2Z2 API under zKillboard's usage etiquette; only per-gate kill counts and the leading attacking alliances (alliance ids, names from ESI, kill counts) derived from it are published, never a killmail, pilot or corporation; killmails are Fenris Creations game data (EVE Developer License Agreement)"
       },
       {
         "name": "ESI (EVE Swagger Interface)",

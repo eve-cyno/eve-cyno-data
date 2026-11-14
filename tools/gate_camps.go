@@ -62,7 +62,7 @@ var campStateWord = map[string]string{
 func getGateCamps(ctx context.Context, deps *Deps, args map[string]any) (string, *GateCamps, error) {
 	const tool = "get_gate_camps"
 	var names []string
-	if _, ok := args["system_names"]; ok {
+	if v, ok := args["system_names"]; ok && v != nil {
 		names = stringSlice(args["system_names"])
 		if len(names) == 0 || len(names) > gateCampsMaxSystems {
 			return fmt.Sprintf("system_names: give 1 to %d system names.", gateCampsMaxSystems), nil, nil
@@ -117,6 +117,11 @@ func getGateCamps(ctx context.Context, deps *Deps, args map[string]any) (string,
 				inScope[int32(sid)] = true
 			}
 		}
+		if len(inScope) == 0 {
+			// the SDE could not list the region: never answer "no kills seen" from an empty scope
+			slog.Error("region has no systems in the SDE", "tool", tool, "region", region)
+			return gateCampsReadError, nil, nil
+		}
 		if n := deps.SDE.GetRegionName(*id); n != nil {
 			scope = *n
 		}
@@ -131,11 +136,11 @@ func getGateCamps(ctx context.Context, deps *Deps, args map[string]any) (string,
 	picked := make([]intelsnap.GatesNowGate, 0, len(snap.Gates))
 	below := 0
 	for _, g := range snap.Gates {
-		rank := campRank[g.State]
-		if rank == 0 || (inScope != nil && !inScope[g.SystemID]) {
+		if inScope != nil && !inScope[g.SystemID] {
 			continue
 		}
-		if rank < minRank {
+		// a state this reader does not know (rank 0) counts as below the threshold
+		if rank := campRank[g.State]; rank < minRank {
 			below++
 			continue
 		}
@@ -208,7 +213,7 @@ func getGateCamps(ctx context.Context, deps *Deps, args map[string]any) (string,
 		}
 		b.WriteByte('\n')
 	case below > 0:
-		fmt.Fprintf(&b, "No gate of %s is at %s or above in the last 2 hours; %s saw kills below that. Set min_state to kills to list them.\n",
+		fmt.Fprintf(&b, "No gate of %s is at %s or above; %s had kills in the last 2 hours at a lower state. Set min_state to kills to list them. That is not proof of safety: only kills that reached zKillboard count.\n",
 			scope, strings.TrimSpace(minName), countNoun(below, "gate"))
 	default:
 		fmt.Fprintf(&b, "No kills seen on gates of %s in the last 2 hours. That is not proof of safety: only kills that reached zKillboard count.\n", scope)
@@ -234,7 +239,11 @@ func gateCampsFooter(res *GateCamps, generated time.Time, full bool) string {
 	}
 	if full {
 		if res.DelayP50S != nil {
-			fmt.Fprintf(&b, "\nzKillboard published kills a median of %d min after they happened (last 24 hours).", int(math.Floor(float64(*res.DelayP50S)/60+0.5)))
+			med := "under 1"
+			if m := int(math.Floor(float64(*res.DelayP50S)/60 + 0.5)); m > 0 {
+				med = strconv.Itoa(m)
+			}
+			fmt.Fprintf(&b, "\nzKillboard published kills a median of %s min after they happened (last 24 hours).", med)
 		}
 		b.WriteString("\n" + gateCampsCaveat)
 	}
@@ -249,7 +258,7 @@ func gateCampRowText(r GateCampRow, generated time.Time) string {
 			countNoun(r.StructureKills60m, "structure kill"), minutesSince(generated, r.FirstKill, 60), campStateWord[r.State])
 	}
 	ships, pods, limit := r.ShipKills60m, r.PodKills60m, 60
-	if ships == 0 && pods == 0 {
+	if r.ShipKills60m == 0 {
 		ships, pods, limit = r.ShipKills120m, r.PodKills120m, 120
 	}
 	var b strings.Builder

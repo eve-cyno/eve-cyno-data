@@ -43,6 +43,13 @@ var (
 		URL:     "https://zkillboard.com/",
 		License: "Public R2Z2 API under zKillboard's usage etiquette; only per-system counts and ISK sums derived from it are published; killmails are Fenris Creations game data (EVE Developer License Agreement)",
 	}
+	// sourceZKillboardGateKills is the killmail side of get_gate_camps: per-gate kill counts
+	// and the leading attacking alliances, never a killmail.
+	sourceZKillboardGateKills = Source{
+		Name:    "zKillboard (gate kill counts)",
+		URL:     "https://zkillboard.com/",
+		License: "Public R2Z2 API under zKillboard's usage etiquette; only per-gate kill counts and the leading attacking alliances (alliance ids, names from ESI, kill counts) derived from it are published, never a killmail, pilot or corporation; killmails are Fenris Creations game data (EVE Developer License Agreement)",
+	}
 	sourceWarBeacon = Source{
 		Name:    "WarBeacon",
 		URL:     "https://warbeacon.net/",
@@ -153,7 +160,7 @@ var toolAttribution = map[string][]Source{
 
 	// Gate camps: zKillboard killmails matched to gate positions by the collector, alliance
 	// names from ESI, system names and security from the SDE.
-	"get_gate_camps": {sourceZKillboardKillmails, sourceESI, sourceSDE},
+	"get_gate_camps": {sourceZKillboardGateKills, sourceESI, sourceSDE},
 
 	// The community fit corpus.
 	"get_fits":  communityFits,

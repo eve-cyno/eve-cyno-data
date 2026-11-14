@@ -552,7 +552,7 @@ Recent kills on EVE stargates and the camp state of each gate, from zKillboard k
   - `region_name` (string): Region name, e.g. 'The Forge'; every gate in that region. Not together with system_names.
   - `system_names` (array of string): Solar system names (case-insensitive); every gate of those systems. Not together with region_name.
 - Typed result (`result.data`): GateCamps with fields `generated_at`, `newest_killmail`, `feed_behind`, `delay_p50_s`, `rows`, `trimmed`
-- Sources: zKillboard (killmail counts); ESI (EVE Swagger Interface); EVE Static Data Export (via Fuzzwork)
+- Sources: zKillboard (gate kill counts); ESI (EVE Swagger Interface); EVE Static Data Export (via Fuzzwork)
 
 ### compare_activity_to_baseline
 
@@ -647,5 +647,6 @@ Sources behind the tool answers:
 - br.evetools.org <https://br.evetools.org/>: No licence published; one report per user-supplied URL
 - Janice <https://janice.e-351.com/>: Private API used with a key granted by its creator
 - zKillboard (killmail counts) <https://zkillboard.com/>: Public R2Z2 API under zKillboard's usage etiquette; only per-system counts and ISK sums derived from it are published; killmails are Fenris Creations game data (EVE Developer License Agreement)
+- zKillboard (gate kill counts) <https://zkillboard.com/>: Public R2Z2 API under zKillboard's usage etiquette; only per-gate kill counts and the leading attacking alliances (alliance ids, names from ESI, kill counts) derived from it are published, never a killmail, pilot or corporation; killmails are Fenris Creations game data (EVE Developer License Agreement)
 - EVE University Wiki (ice belt systems) <https://wiki.eveuniversity.org/Ice_harvesting>: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/); credit EVE University; the dataset stays CC BY-SA
 - EvE-Scout / Signal Cartel <https://www.eve-scout.com/>: Public API without published terms, used with attribution; live scanning data by Signal Cartel
