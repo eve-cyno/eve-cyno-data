@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"math"
 	"os"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -30,7 +31,7 @@ const (
 	gateCampsMaxLimit   = 50
 	gateCampsMaxStates  = 4
 	// gateCampsChatResultChars mirrors LOOP.toolResultChars of the desktop AI chat
-	// (eve-cyno-desktop/plugins/aichat/src/logic/toolloop.ts:34): the chat cuts
+	// (eve-cyno-desktop/plugins/aichat/src/logic/toolloop.ts, the constant LOOP.toolResultChars): the chat cuts
 	// JSON.stringify({ text, data }) of a data tool result at this many UTF-16 units and appends
 	// "[truncated]". It is the only answer budget a surface defines.
 	gateCampsChatResultChars = 16_000
@@ -135,13 +136,13 @@ func gateCampsStates(args map[string]any) ([]string, string) {
 		return out, ""
 	}
 	if minName == "" {
-		return campDefaultStates, ""
+		return slices.Clone(campDefaultStates), ""
 	}
 	set, ok := campMinStates[minName]
 	if !ok {
 		return nil, "min_state must be kills, possible_camp or likely_camp."
 	}
-	return set, ""
+	return slices.Clone(set), ""
 }
 
 // getGateCamps answers get_gate_camps from the published gate snapshot. Every failure is
@@ -331,9 +332,10 @@ func getGateCamps(ctx context.Context, deps *Deps, args map[string]any) (string,
 	if freshness == gateCampsOutOfDate {
 		// no rows: an old empty list would read as safe
 		res.Rows = []GateCampRow{}
+		res.NotListed = 0
 	}
 	text := gateCampsText(res, gateCampsLayout{
-		Scope: scope, Now: now, CampMin: snap.CampWindowSeconds() / 60, Hours: max(1, snap.WindowS/3600), Below: below, Limit: limit,
+		Scope: scope, Now: now, CampMin: snap.CampWindowSeconds() / 60, WindowS: snap.WindowS, Below: below, Limit: limit,
 	})
 	return text, res, nil
 }
@@ -362,7 +364,7 @@ type gateCampsLayout struct {
 	Scope   string    // the asked scope, as named in the sentences
 	Now     time.Time // the clock of the answer
 	CampMin int       // the camp window in whole minutes (camp_window_s / 60)
-	Hours   int       // the file's window in whole hours (window_s / 3600, at least 1)
+	WindowS int       // the file's window_s: the horizon of the sentences that name it
 	Below   int       // gates of the scope that had kills, in states that were not asked
 	Limit   int       // the limit in force; 0 when none
 }
@@ -380,7 +382,7 @@ func gateCampsText(res *GateCamps, l gateCampsLayout) string {
 	switch {
 	case len(res.Rows) > 0:
 		for _, r := range res.Rows {
-			b.WriteString(gateCampRowText(r, res.GeneratedAt, l.CampMin))
+			b.WriteString(gateCampRowText(r, res.GeneratedAt, l.CampMin, l.WindowS/60))
 			b.WriteByte('\n')
 		}
 		if res.NotListed > 0 {
@@ -396,18 +398,27 @@ func gateCampsText(res *GateCamps, l gateCampsLayout) string {
 			noun = "state"
 		}
 		fmt.Fprintf(&b, "No gate of %s is in the listed %s (%s); %s had kills in the last %s in other states. Add those states to list them. That is not proof of safety: only kills that reached zKillboard count.\n",
-			l.Scope, noun, strings.Join(res.States, ", "), countNoun(l.Below, "gate"), countNoun(l.Hours, "hour"))
+			l.Scope, noun, strings.Join(res.States, ", "), countNoun(l.Below, "gate"), windowPhrase(l.WindowS))
 		if trim != "" {
 			b.WriteString(trim + "\n")
 		}
 	default:
-		fmt.Fprintf(&b, "No kills seen on gates of %s in the last 2 hours. That is not proof of safety: only kills that reached zKillboard count.\n", l.Scope)
+		fmt.Fprintf(&b, "No kills seen on gates of %s in the last %s. That is not proof of safety: only kills that reached zKillboard count.\n", l.Scope, windowPhrase(l.WindowS))
 		if trim != "" {
 			b.WriteString(trim + "\n")
 		}
 	}
 	b.WriteString(gateCampsFooter(res, res.GeneratedAt, l.Now, len(res.Rows) > 0))
 	return b.String()
+}
+
+// windowPhrase names the file's window_s: whole hours when it is a multiple of 3600 ("2 hours"),
+// else whole minutes ("30 min").
+func windowPhrase(windowS int) string {
+	if windowS%3600 == 0 {
+		return countNoun(max(1, windowS/3600), "hour")
+	}
+	return fmt.Sprintf("%d min", windowS/60)
 }
 
 // gateCampsTrimLine says what the collector left out of a trimmed snapshot; empty when it trimmed
@@ -468,8 +479,9 @@ func gateCampsFooter(res *GateCamps, generated, now time.Time, full bool) string
 }
 
 // gateCampRowText is the exact sentence of one gate. campMin is the snapshot's camp window in
-// whole minutes: the structure-kill facts of a row cover that window.
-func gateCampRowText(r GateCampRow, generated time.Time, campMin int) string {
+// whole minutes: the structure-kill facts of a row cover that window. windowMin is the file's
+// window_s in whole minutes: the clamp of a row that holds only older kills.
+func gateCampRowText(r GateCampRow, generated time.Time, campMin, windowMin int) string {
 	head := fmt.Sprintf("%s > %s gate in %s (%.1f %s-sec): ", r.From, r.To, r.From, r.Security, r.Band)
 	if r.ShipKills60m == 0 && r.ShipKills120m == 0 && r.PodKills120m == 0 && r.StructureKills60m > 0 {
 		return head + fmt.Sprintf("%s in the last %d min. %s.",
@@ -477,7 +489,7 @@ func gateCampRowText(r GateCampRow, generated time.Time, campMin int) string {
 	}
 	ships, pods, limit := r.ShipKills60m, r.PodKills60m, campMin
 	if r.ShipKills60m == 0 {
-		ships, pods, limit = r.ShipKills120m, r.PodKills120m, 120
+		ships, pods, limit = r.ShipKills120m, r.PodKills120m, windowMin
 	}
 	// A fight with ship kills in the camp window names ships, pods and structures together over that
 	// window; every other row with a structure kill gets the fight facts after its state word.

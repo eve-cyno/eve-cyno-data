@@ -271,9 +271,9 @@ func TestGateCamps_NoAllianceWording(t *testing.T) {
 // here is a change of both repositories.
 const (
 	gcWordingFile    = "testdata/gate-camps-wording-cases.json"
-	gcWordingSHA256  = "51a9e6f2b879b819fd226894ecb87d8b4a57f322909e0771462265d30cbf7a66"
-	gcWordingRows    = 21
-	gcWordingAnswers = 50
+	gcWordingSHA256  = "1588a368a83ffa64cee5cb1c99170032d9838d46f81bba92a249c4353903779d"
+	gcWordingRows    = 22
+	gcWordingAnswers = 53
 )
 
 type gcWordingCase struct {
@@ -336,7 +336,7 @@ func TestGateCamps_WordingCases(t *testing.T) {
 				}
 				r.Groups, r.MoreAlliances = g.Groups, max(0, g.Groups-len(g.Attackers))
 				// the shared row cases read the default camp window: a file without camp_window_s
-				require.Equal(t, want, gateCampRowText(r, c.GeneratedAt, intelsnap.DefaultCampWindowS/60))
+				require.Equal(t, want, gateCampRowText(r, c.GeneratedAt, intelsnap.DefaultCampWindowS/60, 120))
 			case "security":
 				var want struct {
 					Shown    string `json:"shown"`
@@ -1257,7 +1257,7 @@ func gcWorstAnswer(t *testing.T, from, to, state string, n int) (string, *GateCa
 		Rows: gcWorstRows(from, to, state, n), Trimmed: true, TrimmedGates: &trimmed, TrimmedSystems: &none,
 		Freshness: "old", SnapshotAgeS: 7200, NotListed: 1904, States: []string{"fight", "likely_camp", "gank"},
 	}
-	return gateCampsText(res, gateCampsLayout{Scope: "New Eden", Now: gcAt(14, 0), CampMin: 60, Hours: 2, Limit: n}), res
+	return gateCampsText(res, gateCampsLayout{Scope: "New Eden", Now: gcAt(14, 0), CampMin: 60, WindowS: 7200, Limit: n}), res
 }
 
 // The New Eden default is the largest n whose n worst-case rows fit the chat's tool-result budget
@@ -1298,4 +1298,71 @@ func TestGateCamps_SchemaNamesTheNewEdenDefault(t *testing.T) {
 	raw, err := os.ReadFile("tool_schemas.json")
 	require.NoError(t, err)
 	require.Contains(t, string(raw), fmt.Sprintf("New Eden lists the first %d;", gateCampsNewEdenDefaultLimit))
+}
+
+// Numbers come from the file: the window phrase reads window_s, whole hours only when it is one.
+func TestGateCamps_WindowPhrase(t *testing.T) {
+	for s, want := range map[int]string{7200: "2 hours", 3600: "1 hour", 1800: "30 min", 5400: "90 min", 600: "10 min", 60: "1 min"} {
+		require.Equal(t, want, windowPhrase(s), "window_s %d", s)
+	}
+}
+
+func TestGateCamps_WindowFromFile(t *testing.T) {
+	below := intelsnap.GatesNowGate{
+		SystemID: gcPerimeter, ToSystemID: gcJita, State: "kills", ShipKills120m: 1,
+		FirstKill: gcAt(11, 40), LastKill: gcAt(11, 41), Attackers: []intelsnap.GatesNowAttacker{},
+	}
+	snap := gcOneGate(below)
+	snap.WindowS = 1800
+	d := gcDeps(t, snap)
+	text, _ := gcCall(t, d, map[string]any{"system_names": []any{"Perimeter"}})
+	require.Contains(t, text, "had kills in the last 30 min in other states")
+
+	snap = gcOneGate()
+	snap.WindowS = 1800
+	d = gcDeps(t, snap)
+	text, _ = gcCall(t, d, map[string]any{"system_names": []any{"Perimeter"}})
+	require.Contains(t, text, "No kills seen on gates of Perimeter in the last 30 min.")
+
+	// the older-kills clamp follows window_s (90 min), not a fixed 120
+	snap = gcOneGate(intelsnap.GatesNowGate{
+		SystemID: gcSivala, ToSystemID: gcTama, State: "fight", ShipKills120m: 2,
+		FirstKill: gcAt(9, 0), LastKill: gcAt(9, 5), Attackers: []intelsnap.GatesNowAttacker{},
+	})
+	snap.WindowS = 5400
+	snap.Feed.NewestKillmailTime = nil
+	d = gcDeps(t, snap)
+	text, _ = gcCall(t, d, map[string]any{"system_names": []any{"Sivala"}})
+	require.Contains(t, text, "2 ship kills in the last 90 min.")
+}
+
+// out_of_date lists no rows, so it cuts none: not_listed is 0.
+func TestGateCamps_OutOfDateNotListedZero(t *testing.T) {
+	snap := gcFixture()
+	d := gcDeps(t, snap)
+	gcClock(t, gcAt(15, 1))
+	text, data := gcCall(t, d, map[string]any{"min_state": "kills", "limit": 1})
+	require.Contains(t, text, "out of date")
+	require.Empty(t, data.Rows)
+	require.Equal(t, 0, data.NotListed)
+}
+
+// The typed States never alias the package sets.
+func TestGateCamps_StatesAreCopies(t *testing.T) {
+	d := gcDeps(t, gcFixture())
+	_, data := gcCall(t, d, nil)
+	data.States[0] = "mutated"
+	_, data = gcCall(t, d, map[string]any{"min_state": "kills"})
+	data.States[0] = "mutated"
+	_, data = gcCall(t, d, nil)
+	require.Equal(t, []string{"fight", "likely_camp", "gank"}, data.States)
+	_, data = gcCall(t, d, map[string]any{"min_state": "kills"})
+	require.NotEqual(t, "mutated", data.States[0])
+}
+
+// An empty min_state counts as absent: states alone is a valid call.
+func TestGateCamps_EmptyMinStateWithStates(t *testing.T) {
+	d := gcDeps(t, gcFixture())
+	_, data := gcCall(t, d, map[string]any{"states": []any{"gank"}, "min_state": ""})
+	require.Equal(t, []string{"gank"}, data.States)
 }

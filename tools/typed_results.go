@@ -1443,7 +1443,8 @@ type GateCamps struct {
 	// empty when freshness is out_of_date.
 	Rows []GateCampRow `json:"rows"`
 	// NotListed is how many gates in scope and in the asked states fell past the limit and are
-	// not in rows; 0 when nothing was cut.
+	// not in rows; 0 when nothing was cut and when freshness is out_of_date (rows is then empty,
+	// so nothing was cut from it).
 	NotListed int `json:"not_listed"`
 	// Trimmed is true when the collector dropped gates or systems to keep the snapshot small.
 	Trimmed bool `json:"trimmed"`

@@ -4492,7 +4492,7 @@ components:
             $ref: '#/components/schemas/GateCampRow'
         not_listed:
           type: integer
-          description: NotListed is how many gates in scope and in the asked states fell past the limit and are not in rows; 0 when nothing was cut.
+          description: NotListed is how many gates in scope and in the asked states fell past the limit and are not in rows; 0 when nothing was cut and when freshness is out_of_date (rows is then empty, so nothing was cut from it).
         trimmed:
           type: boolean
           description: Trimmed is true when the collector dropped gates or systems to keep the snapshot small.
