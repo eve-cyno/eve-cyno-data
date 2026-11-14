@@ -77,3 +77,13 @@ func TestIntelBaselinePath(t *testing.T) {
 	t.Setenv("EVE_CORE_INTEL_BASELINE_PATH", "  /data/intel-baselines.sqlite ")
 	require.Equal(t, "/data/intel-baselines.sqlite", Load().IntelBaselinePath)
 }
+
+// EVE_CORE_INTEL_DATASET_DIR switches the dataset route on; unset or blank is off.
+func TestIntelDatasetDir(t *testing.T) {
+	t.Setenv("EVE_CORE_INTEL_DATASET_DIR", "")
+	require.Empty(t, Load().IntelDatasetDir)
+	t.Setenv("EVE_CORE_INTEL_DATASET_DIR", "   ")
+	require.Empty(t, Load().IntelDatasetDir)
+	t.Setenv("EVE_CORE_INTEL_DATASET_DIR", "  /data/intel-pub ")
+	require.Equal(t, "/data/intel-pub", Load().IntelDatasetDir)
+}

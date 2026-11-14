@@ -129,6 +129,13 @@ func llmsFullTxt(s Surface) string {
 			continue
 		}
 		fmt.Fprintf(&w, "### %s %s\n\n%s%s%s\n\n", rt.method, p+rt.path, d.description, searchKeyNote(s, d), rateSentence(s, rt.rate(s)))
+		if len(d.pathParams) > 0 {
+			w.WriteString("Path parameters:\n\n")
+			for _, q := range d.pathParams {
+				fmt.Fprintf(&w, "- `%s`%s: %s\n", q.name, requiredMark(true), q.description+enumNote(q.schema))
+			}
+			w.WriteString("\n")
+		}
 		if len(d.query) > 0 {
 			w.WriteString("Query parameters:\n\n")
 			for _, q := range d.query {

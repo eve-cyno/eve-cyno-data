@@ -146,9 +146,11 @@ type route struct {
 // opDoc documents one operation.
 type opDoc struct {
 	id, tag, summary, description string
-	query                         []queryParam
-	body                          *bodyDoc
-	ok                            okDoc
+	// pathParams document the {name} segments of the path (always required).
+	pathParams []queryParam
+	query      []queryParam
+	body       *bodyDoc
+	ok         okDoc
 	// errors are the non-2xx statuses the operation can answer (405 and the request-ID
 	// header are common to every route and stated once).
 	errors []int
@@ -190,6 +192,15 @@ func mcpOn(s Surface) bool     { return s.MCP }
 func docsOn(s Surface) bool    { return s.Docs }
 
 func unlimited(Surface) Rate { return Rate{} }
+
+// stringsToAny converts a string list to the []any of a schema enum.
+func stringsToAny(ss []string) []any {
+	out := make([]any, len(ss))
+	for i, s := range ss {
+		out[i] = s
+	}
+	return out
+}
 
 // errorCodes are the stable `error.code` values of the JSON error shape.
 func errorCodes() []string {
@@ -378,6 +389,33 @@ func routeTable() []route {
 					"`corpus_configured` is true when a corpus is wired at all, reachable or not. `sde_build` is the build id of the SDE " +
 					"the service reads, when known.",
 				ok: okDoc{description: "The service is up.", typ: reflect.TypeFor[healthResponse]()},
+			},
+		},
+		{
+			// Public files rewritten on a fixed cadence and served from memory: like the portal
+			// assets, no per-address limit, no anonymous daily cap and no in-flight slot. The
+			// handler sets each file's Cache-Control; anything it leaves unset is no-store.
+			method: http.MethodGet, path: "/datasets/{file}", when: always, rate: unlimited, trialFree: true,
+			handle: (*API).dataset,
+			cache:  cacheNone,
+			doc: &opDoc{
+				id: "getDataset", tag: "datasets", summary: "Download a published intel dataset",
+				description: "Serves one file the intel collector publishes, byte for byte: `intel-gates-now.json` (killmails on stargates over the " +
+					"last two hours, rewritten every minute; `Cache-Control: public, max-age=60`), `intel-systems-hour.json` (the latest ESI hour of " +
+					"jumps and kills per system; `max-age=300`) and `intel-gates-profile.json` (the 28-day profile of kills per gate and UTC hour, " +
+					"rebuilt daily; `max-age=3600`). Each file names its own `format` and major `version`; a reader accepts the majors it knows and " +
+					"ignores fields it does not know. The killmail-based files credit zKillboard; all of it is Fenris Creations game data (ESI), " +
+					"and each file carries its `credit` line. " +
+					"The answer carries a strong `ETag` (the first 32 hex digits of the body's SHA-256); `If-None-Match` with that tag, weak or " +
+					"strong, answers `304` with no body. `Accept-Encoding: gzip` gets the same bytes gzip-compressed, with the same `ETag`. " +
+					"The route has no rate limit and is never counted against the anonymous daily request cap; " +
+					"it takes no query string (`400`), so poll at the file's `max-age` and revalidate with `If-None-Match`. " +
+					"`404` means the file is not published yet, or this service serves no datasets. Errors are never cached.",
+				pathParams: []queryParam{
+					{name: "file", description: "The dataset file name.", schema: schema{"enum": stringsToAny(datasetNames())}},
+				},
+				ok:     okDoc{description: "The dataset file as published.", media: "application/json", raw: schema{"type": "object"}},
+				errors: []int{http.StatusBadRequest, http.StatusNotFound, http.StatusInternalServerError},
 			},
 		},
 		{

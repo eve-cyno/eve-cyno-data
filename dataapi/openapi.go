@@ -180,6 +180,7 @@ var tagDescriptions = []oaTag{
 	{"items", "SDE item search."},
 	{"tools", "The deterministic tool layer behind the EVE-Cyno assistant, one operation per tool."},
 	{"mcp", "The same tools over the Model Context Protocol."},
+	{"datasets", "Files the intel collector publishes, served as they are, outside the rate limits and the daily cap."},
 	{"meta", "Service health and the descriptions of this API."},
 }
 
@@ -495,6 +496,14 @@ func (b *schemaBuilder) operation(s Surface, rt route, rate Rate) *oaOperation {
 		Description: d.description + searchKeyNote(s, d) + rateSentence(s, rate),
 		OperationID: d.id,
 		Parameters:  []any{schema{"$ref": "#/components/parameters/RequestID"}},
+	}
+	for _, q := range d.pathParams {
+		sch := schema{"type": "string"}
+		for k, v := range q.schema {
+			sch[k] = v
+		}
+		op.Parameters = append(op.Parameters, ordered(
+			"name", q.name, "in", "path", "required", true, "description", q.description, "schema", sch))
 	}
 	for _, q := range d.query {
 		sch := schema{"type": "string"}

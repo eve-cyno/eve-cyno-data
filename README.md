@@ -212,6 +212,7 @@ The numbers:
 | `GET /v1/items/search` | 120 | `DATAAPI_KEYED_LIMIT_FACTOR` times (default 2): 240 |
 | `POST /v1/fits/detail`, `/v1/fit/stats`, `/v1/fit/suggest` | 60 | 120 |
 | `GET /`, `/docs/*`, `/terms*`, `/v1/openapi.*`, `/llms*.txt` (the static files under `/assets/` are not limited) | 60 | 120 |
+| `GET /v1/datasets/{file}` (see [Published snapshot files](#published-snapshot-files-rule-f1)) | not limited | not limited |
 
 Keyless connector calls from Anthropic's published outbound ranges (claude.ai and Claude Desktop connectors, `DATAAPI_ANTHROPIC_RANGES`) have limits of
 their own, set in `Limits.Range`: on `POST /v1/mcp` 60 requests a minute per address and 300 a minute shared by all of them, for the live upstream tools 15 per
@@ -223,7 +224,8 @@ one gets `DATAAPI_KEYED_LIMIT_FACTOR` times its limit. Daily caps, all in UTC da
 `Retry-After` set to the seconds until 00:00 UTC:
 
 - a client without a key: 200 requests a day (`DATAAPI_ANON_DAILY_CAP`, `0` = none), counted in memory per client IP (IPv6 per /64), never persisted
-  or logged. The documentation pages, the portal assets and `/health` are not counted, so browsing the docs never spends the trial.
+  or logged. The documentation pages, the portal assets, the published datasets and `/health` are not counted, so browsing the docs
+  never spends the trial.
   The table is bounded (100,000 clients a day; beyond that new clients are served uncounted and a warning is logged once a day);
 - a key: 10,000 requests a day with a key store (`DATAAPI_KEY_DAILY_CAP`, default 10000, `0` = none).
 
@@ -295,6 +297,7 @@ Both read `EVE_CYNO_URL` (default `http://localhost:8092`) and an optional `EVE_
 BASE=http://localhost:8092
 
 curl -s $BASE/v1/health
+curl -s --compressed $BASE/v1/datasets/intel-gates-now.json                 # needs EVE_CORE_INTEL_DATASET_DIR
 curl -s "$BASE/v1/items/search?q=heavy+neutron&kind=module&limit=5"
 curl -s "$BASE/v1/fits/search?ship=Megathron&activity=pve&limit=5"          # needs the fit corpus
 
@@ -350,6 +353,7 @@ Read from the process environment; the commands do not read a `.env` file.
 | `EVE_CORE_SDE_PATH` | both | the SDE SQLite; default `data/sde/sde.sqlite` found upward from the working directory. The process cannot start without it |
 | `EVE_CORE_SDE_RELOAD_INTERVAL` | both | how often to check for a replaced SDE file (Go duration; `off` disables) |
 | `EVE_CORE_INTEL_BASELINE_PATH` | dataapi | the published intel baseline SQLite behind `get_activity_baseline` and `compare_activity_to_baseline`; unset: the tools answer that baselines are not configured. The file may not exist yet (the tools then say it is not published) and a replaced or newly published file is picked up on the SDE reload interval, or every 5 minutes when that is `off` |
+| `EVE_CORE_INTEL_DATASET_DIR` | dataapi | the directory the intel collector publishes its snapshot files to, served by `GET /v1/datasets/{file}`; unset: the route answers `404` "not configured" and reads nothing. A file that is not there yet answers `404`; a replaced file is served within a second |
 | `DATAAPI_ADDR` | dataapi | listen address, default `:8092` |
 | `DATAAPI_EXPOSE_TOOL_API` | dataapi | `true` registers `POST /v1/tool/{name}` (default off) |
 | `DATAAPI_EXPOSE_MCP` | dataapi | `true` mounts `POST /v1/mcp` (default off) |
@@ -379,6 +383,18 @@ The intel collector publishes JSON snapshots (`intel-gates-now.json`, `intel-sys
 2. An additive change (a new field, table or optional key) keeps the major. Readers ignore what they do not know.
 3. A breaking change (a field removed, renamed, retyped or given a new meaning) is a new major. A reader accepts every major it knows and answers "published in a newer format" for any other, never numbers. The reader that knows the new major deploys first and keeps reading the old one; the writer switches after.
 4. `intel-baselines.sqlite` stays at `schema_version 1`; `intelbase` is not read by `intelsnap`.
+
+`GET /v1/datasets/{file}` serves the three JSON files from `EVE_CORE_INTEL_DATASET_DIR`, byte for byte: the route does not decode
+them, so a file in a newer format is still served and its reader applies rule F1. Only those three names are served (never the
+baseline SQLite or any other file of the directory); a symlink, a directory or another special file under one of the names is
+refused (`500`, logged once per file version), and so is a file larger than 4 MiB (`dataapi.DatasetMaxBytes`). Each file is held
+in memory with a gzip copy and looked at again at most once a second, present or missing. The answer carries the file's
+`Cache-Control` (`public, max-age=60` for `intel-gates-now.json`, `300` for `intel-systems-hour.json`, `3600` for
+`intel-gates-profile.json`) and a strong `ETag` (the first 32 hex digits of the SHA-256); `If-None-Match`, weak or strong,
+answers `304`. Like the portal assets, the route has no per-client limit, is not counted by the anonymous daily cap and takes no
+in-flight slot (a request with an API key still counts one unit of that key's daily cap). Because nothing limits it, it refuses
+any query string (`400`, before a file is touched): a cache in front keys on the full URL, so `?r=<random>` would reach the
+origin every time. Errors are `no-store`.
 
 ## Development
 

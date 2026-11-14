@@ -877,3 +877,28 @@ func TestAnthropicRanges_RejectsLongIPv6Prefix(t *testing.T) {
 		t.Fatalf("error %v: want the variable and the /64 rule, not the value", err)
 	}
 }
+
+// The dataset directory of the config reaches the route; without it the route answers
+// "not configured".
+func TestNewHandler_ServesTheDatasetDir(t *testing.T) {
+	dir := t.TempDir()
+	body := []byte(`{"format":"intel-gates-now","version":1}`)
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "intel-gates-now.json"), body, 0o644))
+	get := func(h http.Handler) *httptest.ResponseRecorder {
+		rec := httptest.NewRecorder()
+		h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/v1/datasets/intel-gates-now.json", nil))
+		return rec
+	}
+
+	h, err := newHandler(&bootstrap.Deps{Tools: &tools.Deps{}}, exposure{datasetDir: dir}, slog.Default())
+	require.NoError(t, err)
+	rec := get(h)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	require.Equal(t, body, rec.Body.Bytes())
+
+	off, err := newHandler(&bootstrap.Deps{Tools: &tools.Deps{}}, exposure{}, slog.Default())
+	require.NoError(t, err)
+	rec = get(off)
+	require.Equal(t, http.StatusNotFound, rec.Code)
+	require.Contains(t, rec.Body.String(), "not configured")
+}

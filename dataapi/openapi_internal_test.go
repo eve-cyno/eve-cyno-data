@@ -119,10 +119,14 @@ func TestOpenAPI_IsDeterministic(t *testing.T) {
 // API built for the same Surface: none may be a router miss (404 not_found / 405).
 func TestOpenAPI_EveryDocumentedOperationIsServed(t *testing.T) {
 	s := PublicSurface()
+	// A published dataset, so the dataset route answers for its documented name.
+	dir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(dir, datasetNames()[0]), []byte("{}"), 0o644))
 	api, err := New(Config{
-		ToolAPI: s.ToolAPI,
-		Docs:    true,
-		MCP:     http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusOK) }),
+		ToolAPI:    s.ToolAPI,
+		Docs:       true,
+		DatasetDir: dir,
+		MCP:        http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusOK) }),
 	})
 	require.NoError(t, err)
 
@@ -131,7 +135,8 @@ func TestOpenAPI_EveryDocumentedOperationIsServed(t *testing.T) {
 	for path, item := range doc["paths"].(map[string]any) {
 		for method := range item.(map[string]any) {
 			n++
-			req := httptest.NewRequest(strings.ToUpper(method), "/v1"+path, strings.NewReader("{}"))
+			target := strings.ReplaceAll(path, "{file}", datasetNames()[0])
+			req := httptest.NewRequest(strings.ToUpper(method), "/v1"+target, strings.NewReader("{}"))
 			rec := httptest.NewRecorder()
 			api.ServeHTTP(rec, req)
 			require.NotEqual(t, http.StatusMethodNotAllowed, rec.Code, "%s %s", method, path)

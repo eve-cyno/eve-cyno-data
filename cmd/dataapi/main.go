@@ -485,6 +485,9 @@ type exposure struct {
 	maxInFlightUpstream int
 	// sdeBuild yields the SDE build id /v1/health reports at request time ("" when unknown).
 	sdeBuild func() string
+	// datasetDir is EVE_CORE_INTEL_DATASET_DIR: the intel collector's published snapshot files
+	// behind /v1/datasets/{file} ("" = not configured).
+	datasetDir string
 }
 
 // publicURL resolves DATAAPI_PUBLIC_URL: unset is fine, a value that is not an https origin
@@ -553,6 +556,7 @@ func newHandler(d *bootstrap.Deps, ex exposure, log *slog.Logger) (http.Handler,
 		MaxInFlight:         ex.maxInFlight,
 		MaxInFlightUpstream: ex.maxInFlightUpstream,
 		SDEBuildFunc:        ex.sdeBuild,
+		DatasetDir:          ex.datasetDir,
 	}
 	if ex.store != nil {
 		cfg.SelfServe = true
@@ -688,6 +692,10 @@ func run(log *slog.Logger) error {
 		toolAPI: exposeToolAPI(os.Getenv), mcp: exposeMCP(os.Getenv), auth: auth, publicURL: pub,
 		upstream: &upstream, logSalt: logSalt(os.Getenv, log), anthropicRanges: ranges,
 		store: store, keyedFactor: factor, dailyCap: dayCap, anonDailyCap: anonCap, maxInFlight: maxIF, maxInFlightUpstream: maxIFUp, sdeBuild: followSDEBuild(cfg.SDEPath, deps.Tools.SDE, log),
+		datasetDir: cfg.IntelDatasetDir,
+	}
+	if ex.datasetDir != "" {
+		log.Info("intel datasets served outside the limits", "env", "EVE_CORE_INTEL_DATASET_DIR", "dir", ex.datasetDir)
 	}
 	log.Info("ESI pass-through tools: shared Expires cache, fail-fast budget guard",
 		"upstream_tool_limit_per_min", upstream.Max, "upstream_tool_limit_per_min_keyed", upstream.KeyedMax, "esi_guard_percent", guard)

@@ -10,6 +10,12 @@ const (
 	cacheSDE = "public, max-age=300"
 	// cacheNone: liveness, POSTs and the MCP stream must never be cached.
 	cacheNone = "no-store"
+
+	// The published intel datasets (GET {prefix}/datasets/{file}), each for the cadence at
+	// which the collector rewrites it. The dataset handler sets them itself, on 200 and 304.
+	cacheDatasetGatesNow     = "public, max-age=60"   // rewritten every minute
+	cacheDatasetSystemsHour  = "public, max-age=300"  // a new ESI hour
+	cacheDatasetGatesProfile = "public, max-age=3600" // rebuilt daily
 )
 
 // cached sets Cache-Control for one route. A route policy other than no-store applies to

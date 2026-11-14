@@ -26,6 +26,11 @@ type CoreConfig struct {
 	// again on every reload interval.
 	IntelBaselinePath string
 
+	// IntelDatasetDir is the directory the intel collector publishes its snapshot files to,
+	// served by GET /v1/datasets/{file}: EVE_CORE_INTEL_DATASET_DIR. Empty (the default) means
+	// the route answers that datasets are not configured. The files may not exist yet.
+	IntelDatasetDir string
+
 	// SDEReloadInterval is how often (at most) a running process checks whether the
 	// ingest replaced the SDE file and reopens it: EVE_CORE_SDE_RELOAD_INTERVAL as a
 	// Go duration ("5m"). 0 (unset) = the sde package default; < 0 ("0"/"off") =
@@ -60,6 +65,7 @@ func Load() CoreConfig {
 		JaniceAPIKey: os.Getenv("JANICE_API_KEY"),
 
 		IntelBaselinePath: strings.TrimSpace(os.Getenv("EVE_CORE_INTEL_BASELINE_PATH")),
+		IntelDatasetDir:   strings.TrimSpace(os.Getenv("EVE_CORE_INTEL_DATASET_DIR")),
 
 		SDEReloadInterval: parseReloadInterval(os.Getenv("EVE_CORE_SDE_RELOAD_INTERVAL")),
 

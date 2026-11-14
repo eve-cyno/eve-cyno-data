@@ -19,6 +19,7 @@ EVE Online and its game data are the property of Fenris Creations and are used u
 - [POST /v1/fit/suggest](/v1/openapi.yaml): Suggest modules for an empty slot
 - [GET /v1/items/search](/v1/openapi.yaml): Search modules, charges and drones
 - [POST /v1/tool/{name}](/llms-full.txt#tools): run one of the tools below; the body is its arguments object
+- [GET /v1/datasets/{file}](/v1/openapi.yaml): Download a published intel dataset
 
 ## Tools (public: no key needed)
 

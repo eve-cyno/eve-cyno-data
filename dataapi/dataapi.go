@@ -50,8 +50,14 @@
 //     index at GET / (HTML, or JSON for Accept: application/json) and the service terms at
 //     GET /terms (HTML) and /terms.md.
 //   - Cache-Control: descriptions, index and terms are public for an hour, pure-SDE reads
-//     (items search) for five minutes, and /health, every POST and the MCP endpoint are
-//     no-store. Only a 200 is cacheable; every error is no-store.
+//     (items search) for five minutes, each published dataset for its own rewrite cadence
+//     (with a strong ETag; If-None-Match answers 304), and /health, every POST and the MCP
+//     endpoint are no-store. Only a 200 (and a dataset's 304) is cacheable; every error is
+//     no-store.
+//   - GET {prefix}/datasets/{file} (Config.DatasetDir) serves the intel collector's published
+//     snapshot files as they are. Like the portal assets it has no per-address limit, is not
+//     counted by the anonymous daily cap and takes no in-flight slot; a request with a query
+//     string is refused (400) before any file is touched.
 //
 // Dependencies arrive through Config, and the package has no globals.
 package dataapi
@@ -315,8 +321,9 @@ type Config struct {
 	AnonDailyCap int
 
 	// Now returns the current time (nil means time.Now). It is a test seam for the daily
-	// caps, the UTC day of the caller token and the windows of the range tier (Limits.Range);
-	// every other per-minute limiter reads time.Now.
+	// caps, the UTC day of the caller token, the windows of the range tier (Limits.Range) and
+	// the once-a-second look at the dataset files (DatasetDir); every other per-minute limiter
+	// reads time.Now.
 	Now func() time.Time
 
 	// Quota, when non-nil, is spent once per request of an authenticated caller; a refused
@@ -404,6 +411,13 @@ type Config struct {
 	// Logger receives the access log and handler diagnostics; every line carries
 	// request_id. Nil discards.
 	Logger *slog.Logger
+
+	// DatasetDir is the directory the intel collector publishes its snapshot files to;
+	// GET {prefix}/datasets/{file} serves the allowlisted ones byte for byte (see
+	// API.dataset), outside the per-address limits, the anonymous daily cap and the in-flight
+	// gate. Each file is looked at again at most once a second (Now is the clock). Empty
+	// means the route answers 404 "not configured" and reads nothing.
+	DatasetDir string
 }
 
 // API is the data API. It implements http.Handler.
@@ -457,6 +471,8 @@ type API struct {
 	trialFree map[string]bool
 	// corpusProbe is nil unless Deps.Retriever implements Pinger.
 	corpusProbe *corpusProbe
+	// datasets serves Config.DatasetDir.
+	datasets *datasets
 }
 
 // New builds the API and its routes. It fails on an invalid Prefix, an unknown mode, or a
@@ -543,6 +559,7 @@ func New(cfg Config) (*API, error) {
 	if a.log == nil {
 		a.log = slog.New(slog.DiscardHandler)
 	}
+	a.datasets = newDatasets(cfg.DatasetDir, cfg.Now, a.log)
 	if anonCap > 0 {
 		a.anon = newAnonQuota(maxAnonClients, cfg.Now, a.log)
 		a.anonCap = anonCap
