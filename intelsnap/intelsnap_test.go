@@ -129,11 +129,9 @@ func TestGolden_RoundTrip(t *testing.T) {
 			v = new(GatesProfile)
 		}
 		require.NoError(t, json.Unmarshal(b, v), name)
-		var out bytes.Buffer
-		enc := json.NewEncoder(&out)
-		enc.SetEscapeHTML(false)
-		require.NoError(t, enc.Encode(v), name)
-		require.Equal(t, string(bytes.TrimSpace(b)), string(bytes.TrimSpace(out.Bytes())), name)
+		out, err := json.Marshal(v)
+		require.NoError(t, err, name)
+		require.Equal(t, string(bytes.TrimSpace(b)), string(out), name)
 	}
 }
 

@@ -12,7 +12,8 @@ import (
 // re-reads its file only when the inode, size or modification time changed,
 // and otherwise returns the value it decoded before; callers share that value
 // and must not modify it. A missing file returns an error matching
-// os.ErrNotExist ("not published yet"). A Reader is safe for concurrent use.
+// os.ErrNotExist ("not published yet"). A file that fails to decode returns the
+// same error until it changes. A Reader is safe for concurrent use.
 type Reader struct {
 	dir      string
 	gatesNow cached[GatesNow]
