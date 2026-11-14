@@ -378,7 +378,7 @@ The intel collector publishes JSON snapshots (`intel-gates-now.json`, `intel-sys
 1. Each file names its format and major version inside itself: JSON files carry top-level `"format"` (the file name without `.json`) and `"version"` (an integer); the SQLite file carries `meta.schema_version`.
 2. An additive change (a new field, table or optional key) keeps the major. Readers ignore what they do not know.
 3. A breaking change (a field removed, renamed, retyped or given a new meaning) is a new major. A reader accepts every major it knows and answers "published in a newer format" for any other, never numbers. The reader that knows the new major deploys first and keeps reading the old one; the writer switches after.
-4. `intel-baselines.sqlite` stays at `schema_version 1`; `intelbase` is unchanged.
+4. `intel-baselines.sqlite` stays at `schema_version 1`; `intelbase` is not read by `intelsnap`.
 
 ## Development
 

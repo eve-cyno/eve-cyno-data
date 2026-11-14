@@ -1,6 +1,7 @@
 package intelsnap
 
 import (
+	"io"
 	"os"
 	"path/filepath"
 	"sync"
@@ -37,13 +38,21 @@ func (r *Reader) GatesProfile() (*GatesProfile, error) {
 	return load(&r.profile, filepath.Join(r.dir, FormatGatesProfile+".json"), DecodeGatesProfile)
 }
 
-// cached holds the last good decode of one file and the stat it came from.
+// cached holds the last decode of one file, good or bad, and the stat it came
+// from. A decode error is cached under the same key, so an unchanged bad file
+// is read and parsed once.
 type cached[T any] struct {
 	mu    sync.Mutex
 	info  os.FileInfo
 	size  int64
 	mtime time.Time
+	done  bool
 	val   *T
+	err   error
+}
+
+func (c *cached[T]) fresh(fi os.FileInfo) bool {
+	return c.done && os.SameFile(c.info, fi) && c.size == fi.Size() && c.mtime.Equal(fi.ModTime())
 }
 
 func load[T any](c *cached[T], path string, dec func([]byte) (*T, error)) (*T, error) {
@@ -53,18 +62,24 @@ func load[T any](c *cached[T], path string, dec func([]byte) (*T, error)) (*T, e
 	if err != nil {
 		return nil, err
 	}
-	if c.val != nil && os.SameFile(c.info, fi) && c.size == fi.Size() && c.mtime.Equal(fi.ModTime()) {
-		return c.val, nil
+	if c.fresh(fi) {
+		return c.val, c.err
 	}
-	b, err := os.ReadFile(path)
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	// The stat and the bytes come from one open file, so they match.
+	fi, err = f.Stat()
+	if err != nil {
+		return nil, err
+	}
+	b, err := io.ReadAll(f)
 	if err != nil {
 		return nil, err
 	}
 	v, err := dec(b)
-	if err != nil {
-		c.val = nil
-		return nil, err
-	}
-	c.info, c.size, c.mtime, c.val = fi, fi.Size(), fi.ModTime(), v
-	return v, nil
+	c.info, c.size, c.mtime, c.done, c.val, c.err = fi, fi.Size(), fi.ModTime(), true, v, err
+	return v, err
 }

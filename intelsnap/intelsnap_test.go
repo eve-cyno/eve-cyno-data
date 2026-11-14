@@ -12,6 +12,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
 )
 
 var pinned = map[string]string{
@@ -27,9 +29,7 @@ var pinned = map[string]string{
 func golden(t testing.TB, name string) []byte {
 	t.Helper()
 	b, err := os.ReadFile(filepath.Join("testdata", name))
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	return b
 }
 
@@ -37,17 +37,13 @@ func strict(t *testing.T, b []byte, v any) {
 	t.Helper()
 	d := json.NewDecoder(bytes.NewReader(b))
 	d.DisallowUnknownFields()
-	if err := d.Decode(v); err != nil {
-		t.Fatalf("strict decode: %v", err)
-	}
+	require.NoError(t, d.Decode(v), "strict decode")
 }
 
 func TestGolden_SHA256Pinned(t *testing.T) {
 	for name, want := range pinned {
 		sum := sha256.Sum256(golden(t, name))
-		if got := hex.EncodeToString(sum[:]); got != want {
-			t.Errorf("%s: sha256 %s, want %s", name, got, want)
-		}
+		require.Equal(t, want, hex.EncodeToString(sum[:]), name)
 	}
 }
 
@@ -58,57 +54,86 @@ func TestDecode_Goldens(t *testing.T) {
 		case strings.HasPrefix(name, "intel-gates-now"):
 			var s GatesNow
 			strict(t, b, &s)
-			if _, err := DecodeGatesNow(b); err != nil {
-				t.Errorf("%s: %v", name, err)
-			}
+			_, err := DecodeGatesNow(b)
+			require.NoError(t, err, name)
 		case strings.HasPrefix(name, "intel-systems-hour"):
 			var s SystemsHour
 			strict(t, b, &s)
-			if _, err := DecodeSystemsHour(b); err != nil {
-				t.Errorf("%s: %v", name, err)
-			}
+			_, err := DecodeSystemsHour(b)
+			require.NoError(t, err, name)
 		default:
 			var s GatesProfile
 			strict(t, b, &s)
-			if _, err := DecodeGatesProfile(b); err != nil {
-				t.Errorf("%s: %v", name, err)
-			}
+			_, err := DecodeGatesProfile(b)
+			require.NoError(t, err, name)
 		}
 	}
 
-	g, _ := DecodeGatesNow(golden(t, "intel-gates-now.v1.golden.json"))
-	if g.Credit == "" || g.Version != 1 || g.Trimmed || len(g.Gates) == 0 || len(g.Systems) == 0 {
-		t.Errorf("gates-now golden: %+v", g)
-	}
-	if g.Feed.NewestKillmailTime == nil || g.Feed.DelayP50S == nil || g.Feed.DelayP90S == nil || g.Feed.DelaySamples == 0 {
-		t.Errorf("gates-now feed: %+v", g.Feed)
-	}
-	if g.Gates[0].StructureKills60m != 2 {
-		t.Errorf("structure_kills_60m = %d, want 2", g.Gates[0].StructureKills60m)
-	}
-	e, _ := DecodeGatesNow(golden(t, "intel-gates-now.v1.empty.golden.json"))
-	if e.Feed.NewestKillmailTime != nil || e.Feed.DelayP50S != nil || e.Feed.DelayP90S != nil {
-		t.Errorf("empty feed should hold nil pointers: %+v", e.Feed)
-	}
-	tr, _ := DecodeGatesNow(golden(t, "intel-gates-now.v1.trimmed.golden.json"))
-	if !tr.Trimmed {
-		t.Error("trimmed golden: Trimmed false")
-	}
-	sh, _ := DecodeSystemsHour(golden(t, "intel-systems-hour.v1.golden.json"))
-	if sh.Credit == "" || !sh.Collected.Jumps || !sh.Collected.Kills || len(sh.Systems) == 0 {
-		t.Errorf("systems-hour golden: %+v", sh)
-	}
-	sp, _ := DecodeSystemsHour(golden(t, "intel-systems-hour.v1.partial.golden.json"))
-	if sp.Collected.Kills {
-		t.Error("partial golden: collected.kills should be false")
-	}
-	p, _ := DecodeGatesProfile(golden(t, "intel-gates-profile.v1.golden.json"))
-	if p.Credit == "" || p.HistoryDays == 0 || len(p.Gates) == 0 {
-		t.Errorf("profile golden: %+v", p)
-	}
-	pe, _ := DecodeGatesProfile(golden(t, "intel-gates-profile.v1.empty.golden.json"))
-	if pe.HistoryDays != 0 || pe.Trimmed {
-		t.Errorf("empty profile: %+v", pe)
+	g, err := DecodeGatesNow(golden(t, "intel-gates-now.v1.golden.json"))
+	require.NoError(t, err)
+	require.NotEmpty(t, g.Credit)
+	require.Equal(t, 1, g.Version)
+	require.False(t, g.Trimmed)
+	require.NotEmpty(t, g.Gates)
+	require.NotEmpty(t, g.Systems)
+	require.NotNil(t, g.Feed.NewestKillmailTime)
+	require.NotNil(t, g.Feed.DelayP50S)
+	require.NotNil(t, g.Feed.DelayP90S)
+	require.NotZero(t, g.Feed.DelaySamples)
+	require.Equal(t, 2, g.Gates[0].StructureKills60m)
+
+	e, err := DecodeGatesNow(golden(t, "intel-gates-now.v1.empty.golden.json"))
+	require.NoError(t, err)
+	require.Nil(t, e.Feed.NewestKillmailTime)
+	require.Nil(t, e.Feed.DelayP50S)
+	require.Nil(t, e.Feed.DelayP90S)
+
+	tr, err := DecodeGatesNow(golden(t, "intel-gates-now.v1.trimmed.golden.json"))
+	require.NoError(t, err)
+	require.True(t, tr.Trimmed)
+
+	sh, err := DecodeSystemsHour(golden(t, "intel-systems-hour.v1.golden.json"))
+	require.NoError(t, err)
+	require.NotEmpty(t, sh.Credit)
+	require.True(t, sh.Collected.Jumps)
+	require.True(t, sh.Collected.Kills)
+	require.NotEmpty(t, sh.Systems)
+
+	sp, err := DecodeSystemsHour(golden(t, "intel-systems-hour.v1.partial.golden.json"))
+	require.NoError(t, err)
+	require.False(t, sp.Collected.Kills)
+
+	p, err := DecodeGatesProfile(golden(t, "intel-gates-profile.v1.golden.json"))
+	require.NoError(t, err)
+	require.NotEmpty(t, p.Credit)
+	require.NotZero(t, p.HistoryDays)
+	require.NotEmpty(t, p.Gates)
+
+	pe, err := DecodeGatesProfile(golden(t, "intel-gates-profile.v1.empty.golden.json"))
+	require.NoError(t, err)
+	require.Zero(t, pe.HistoryDays)
+	require.False(t, pe.Trimmed)
+}
+
+// The mirror types marshal back to the exact bytes of every golden.
+func TestGolden_RoundTrip(t *testing.T) {
+	for name := range pinned {
+		b := golden(t, name)
+		var v any
+		switch {
+		case strings.HasPrefix(name, "intel-gates-now"):
+			v = new(GatesNow)
+		case strings.HasPrefix(name, "intel-systems-hour"):
+			v = new(SystemsHour)
+		default:
+			v = new(GatesProfile)
+		}
+		require.NoError(t, json.Unmarshal(b, v), name)
+		var out bytes.Buffer
+		enc := json.NewEncoder(&out)
+		enc.SetEscapeHTML(false)
+		require.NoError(t, enc.Encode(v), name)
+		require.Equal(t, string(bytes.TrimSpace(b)), string(bytes.TrimSpace(out.Bytes())), name)
 	}
 }
 
@@ -119,115 +144,169 @@ func TestDecode_UnknownMajor(t *testing.T) {
 		"intel-gates-profile": func(b []byte) error { _, err := DecodeGatesProfile(b); return err },
 	}
 	for format, dec := range cases {
-		for _, v := range []string{"2", "0"} {
-			err := dec([]byte(`{"format":"` + format + `","version":` + v + `}`))
+		err := dec([]byte(`{"format":"` + format + `","version":2}`))
+		var fe *FormatError
+		require.ErrorAs(t, err, &fe, format)
+		require.Equal(t, format, fe.Format)
+		require.Equal(t, 2, fe.Version)
+		require.Contains(t, err.Error(), "newer format")
+	}
+}
+
+// A malformed version is a bad file, not a newer format.
+func TestDecode_InvalidVersionIsNotNewerFormat(t *testing.T) {
+	cases := map[string]func([]byte) error{
+		"intel-gates-now":     func(b []byte) error { _, err := DecodeGatesNow(b); return err },
+		"intel-systems-hour":  func(b []byte) error { _, err := DecodeSystemsHour(b); return err },
+		"intel-gates-profile": func(b []byte) error { _, err := DecodeGatesProfile(b); return err },
+	}
+	for format, dec := range cases {
+		for name, body := range map[string]string{
+			"zero":     `{"format":"` + format + `","version":0}`,
+			"missing":  `{"format":"` + format + `"}`,
+			"negative": `{"format":"` + format + `","version":-1}`,
+		} {
+			err := dec([]byte(body))
+			require.Error(t, err, format+" "+name)
 			var fe *FormatError
-			if !errors.As(err, &fe) {
-				t.Fatalf("%s v%s: want *FormatError, got %v", format, v, err)
-			}
-			if fe.Format != format || fe.Version == 1 {
-				t.Errorf("%s v%s: %+v", format, v, fe)
-			}
-			if !strings.Contains(err.Error(), "newer format") {
-				t.Errorf("message: %q", err)
-			}
+			require.False(t, errors.As(err, &fe), "%s %s: got *FormatError: %v", format, name, err)
+			require.NotContains(t, err.Error(), "newer format")
 		}
 	}
 }
 
 func TestDecode_UnknownFieldIgnored(t *testing.T) {
 	g, err := DecodeGatesNow([]byte(`{"format":"intel-gates-now","version":1,"future":{"a":1},"gates":[{"system_id":5,"extra":true}]}`))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(g.Gates) != 1 || g.Gates[0].SystemID != 5 {
-		t.Errorf("%+v", g)
-	}
+	require.NoError(t, err)
+	require.Len(t, g.Gates, 1)
+	require.EqualValues(t, 5, g.Gates[0].SystemID)
 }
 
 func TestDecode_WrongFormat(t *testing.T) {
 	_, err := DecodeGatesNow([]byte(`{"format":"intel-systems-hour","version":1}`))
 	var fe *FormatError
-	if err == nil || errors.As(err, &fe) {
-		t.Errorf("want plain error, got %v", err)
-	}
-	if _, err := DecodeSystemsHour([]byte(`{"version":1}`)); err == nil {
-		t.Error("missing format accepted")
-	}
-	if _, err := DecodeGatesProfile([]byte(`not json`)); err == nil {
-		t.Error("garbage accepted")
-	}
+	require.Error(t, err)
+	require.False(t, errors.As(err, &fe))
+	_, err = DecodeSystemsHour([]byte(`{"version":1}`))
+	require.Error(t, err, "missing format accepted")
+	_, err = DecodeGatesProfile([]byte(`not json`))
+	require.Error(t, err, "garbage accepted")
 }
 
 func put(t testing.TB, dir, name string, b []byte) {
 	t.Helper()
 	tmp := filepath.Join(dir, name+".tmp")
 	if err := os.WriteFile(tmp, b, 0o644); err != nil {
-		t.Fatal(err)
+		t.Error(err)
+		return
 	}
 	if err := os.Rename(tmp, filepath.Join(dir, name)); err != nil {
-		t.Fatal(err)
+		t.Error(err)
 	}
 }
 
 func TestReader_RereadsOnChange(t *testing.T) {
 	dir := t.TempDir()
 	r := NewReader(dir)
+	p := filepath.Join(dir, "intel-gates-now.json")
 	put(t, dir, "intel-gates-now.json", golden(t, "intel-gates-now.v1.golden.json"))
 	a, err := r.GatesNow()
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	b, err := r.GatesNow()
-	if err != nil || a != b {
-		t.Fatalf("unchanged file must return the cached value (err %v)", err)
-	}
+	require.NoError(t, err)
+	require.Same(t, a, b, "unchanged file must return the cached value")
+
 	// replaced file: new inode, other size
 	put(t, dir, "intel-gates-now.json", golden(t, "intel-gates-now.v1.empty.golden.json"))
 	c, err := r.GatesNow()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if c == a || len(c.Gates) != 0 {
-		t.Errorf("replaced file not re-read: %+v", c)
-	}
+	require.NoError(t, err)
+	require.NotSame(t, a, c)
+	require.Empty(t, c.Gates)
+
 	// same size, same inode, new mtime
-	p := filepath.Join(dir, "intel-gates-now.json")
-	if err := os.Chtimes(p, time.Now(), time.Now().Add(time.Hour)); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, os.Chtimes(p, time.Now(), time.Now().Add(time.Hour)))
 	d, err := r.GatesNow()
-	if err != nil || d == c {
-		t.Errorf("mtime change not re-read (err %v)", err)
-	}
-	// a bad file reports an error and is not cached
+	require.NoError(t, err)
+	require.NotSame(t, c, d, "mtime change not re-read")
+
+	// a bad file reports an error
 	put(t, dir, "intel-gates-now.json", []byte(`{"format":"intel-gates-now","version":2}`))
 	var fe *FormatError
-	if _, err := r.GatesNow(); !errors.As(err, &fe) {
-		t.Errorf("want FormatError, got %v", err)
-	}
+	_, err = r.GatesNow()
+	require.ErrorAs(t, err, &fe)
 
 	put(t, dir, "intel-systems-hour.json", golden(t, "intel-systems-hour.v1.golden.json"))
 	put(t, dir, "intel-gates-profile.json", golden(t, "intel-gates-profile.v1.golden.json"))
-	if s, err := r.SystemsHour(); err != nil || len(s.Systems) == 0 {
-		t.Errorf("systems hour: %v", err)
-	}
-	if s, err := r.GatesProfile(); err != nil || len(s.Gates) == 0 {
-		t.Errorf("gates profile: %v", err)
-	}
+	s, err := r.SystemsHour()
+	require.NoError(t, err)
+	require.NotEmpty(t, s.Systems)
+	gp, err := r.GatesProfile()
+	require.NoError(t, err)
+	require.NotEmpty(t, gp.Gates)
+}
+
+// Only the inode changes: same size, same modification time.
+func TestReader_RereadsOnInodeChangeOnly(t *testing.T) {
+	dir := t.TempDir()
+	r := NewReader(dir)
+	p := filepath.Join(dir, "intel-gates-now.json")
+	orig := golden(t, "intel-gates-now.v1.golden.json")
+	require.True(t, bytes.Contains(orig, []byte(`"state":"fight"`)))
+	put(t, dir, "intel-gates-now.json", orig)
+	fi, err := os.Stat(p)
+	require.NoError(t, err)
+	a, err := r.GatesNow()
+	require.NoError(t, err)
+	require.Equal(t, "fight", a.Gates[0].State)
+
+	other := bytes.Replace(orig, []byte(`"state":"fight"`), []byte(`"state":"quiet"`), 1)
+	require.Len(t, other, len(orig))
+	put(t, dir, "intel-gates-now.json", other)
+	require.NoError(t, os.Chtimes(p, fi.ModTime(), fi.ModTime()))
+	fi2, err := os.Stat(p)
+	require.NoError(t, err)
+	require.Equal(t, fi.Size(), fi2.Size())
+	require.True(t, fi.ModTime().Equal(fi2.ModTime()))
+	require.False(t, os.SameFile(fi, fi2), "test needs a new inode")
+
+	b, err := r.GatesNow()
+	require.NoError(t, err)
+	require.Equal(t, "quiet", b.Gates[0].State)
+}
+
+// A bad file is decoded once; a changed file is read again.
+func TestReader_CachesDecodeError(t *testing.T) {
+	dir := t.TempDir()
+	p := filepath.Join(dir, "intel-gates-now.json")
+	put(t, dir, "intel-gates-now.json", []byte(`{"format":"intel-gates-now","version":2}`))
+	var c cached[GatesNow]
+	reads := 0
+	dec := func(b []byte) (*GatesNow, error) { reads++; return DecodeGatesNow(b) }
+
+	var fe *FormatError
+	_, err1 := load(&c, p, dec)
+	require.ErrorAs(t, err1, &fe)
+	_, err2 := load(&c, p, dec)
+	require.ErrorAs(t, err2, &fe)
+	_, err3 := load(&c, p, dec)
+	require.ErrorAs(t, err3, &fe)
+	require.Equal(t, 1, reads, "unchanged bad file must be decoded once")
+
+	put(t, dir, "intel-gates-now.json", golden(t, "intel-gates-now.v1.golden.json"))
+	g, err := load(&c, p, dec)
+	require.NoError(t, err)
+	require.NotEmpty(t, g.Gates)
+	require.Equal(t, 2, reads)
 }
 
 func TestReader_MissingFile(t *testing.T) {
 	r := NewReader(t.TempDir())
-	if _, err := r.GatesNow(); !errors.Is(err, os.ErrNotExist) {
-		t.Errorf("gates now: %v", err)
-	}
-	if _, err := r.SystemsHour(); !errors.Is(err, os.ErrNotExist) {
-		t.Errorf("systems hour: %v", err)
-	}
-	if _, err := r.GatesProfile(); !errors.Is(err, os.ErrNotExist) {
-		t.Errorf("gates profile: %v", err)
-	}
+	_, err := r.GatesNow()
+	require.ErrorIs(t, err, os.ErrNotExist)
+	_, err = r.SystemsHour()
+	require.ErrorIs(t, err, os.ErrNotExist)
+	_, err = r.GatesProfile()
+	require.ErrorIs(t, err, os.ErrNotExist)
 }
 
 func TestReader_ConcurrentUse(t *testing.T) {

@@ -69,7 +69,7 @@ type GatesNow struct {
 	Feed        GatesNowFeed     `json:"feed"`
 	Gates       []GatesNowGate   `json:"gates"`
 	Systems     []GatesNowSystem `json:"systems"`
-	Trimmed     bool             `json:"trimmed"`
+	Trimmed     bool             `json:"trimmed,omitempty"`
 }
 
 // GatesNowFeed describes the freshness of the kill feed. The pointers are nil
@@ -155,7 +155,7 @@ type GatesProfile struct {
 	WindowEnd   time.Time          `json:"window_end"`
 	HistoryDays int                `json:"history_days"`
 	Gates       []GatesProfileGate `json:"gates"`
-	Trimmed     bool               `json:"trimmed"`
+	Trimmed     bool               `json:"trimmed,omitempty"`
 }
 
 // GatesProfileGate is the 28-day profile of one gate; Hours counts ship kills
@@ -194,6 +194,9 @@ func decode[T any](b []byte, format string, major int) (*T, error) {
 	}
 	if head.Format != format {
 		return nil, fmt.Errorf("intelsnap: file format %q, want %q", head.Format, format)
+	}
+	if head.Version < 1 {
+		return nil, fmt.Errorf("intelsnap: %s: missing or invalid version %d", format, head.Version)
 	}
 	if head.Version != major {
 		return nil, &FormatError{Format: format, Version: head.Version}
