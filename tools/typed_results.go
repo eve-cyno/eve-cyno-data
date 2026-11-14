@@ -1428,22 +1428,36 @@ type GateCamps struct {
 	// NewestKillmail is the time of the newest killmail the collector had seen; the zero
 	// time when it had seen none.
 	NewestKillmail time.Time `json:"newest_killmail"`
-	// FeedBehind is true when the newest killmail is more than 15 minutes older than the
-	// snapshot: the killmail feed may be behind.
+	// FeedBehind is true when the newest killmail is older than the snapshot by more than the
+	// upload delay the file reports for 9 in 10 kills (delay_p90_s), or by more than the
+	// file's window_s when it reports none: the killmail feed may be behind.
 	FeedBehind bool `json:"feed_behind"`
 	// DelayP50S is the median seconds zKillboard took to publish a kill over the last 24
 	// hours; null below 100 samples.
 	DelayP50S *int `json:"delay_p50_s"`
-	// Rows holds the gates, by state (fight, likely_camp, gank, possible_camp, kills), then
-	// by ship kills in the last 60 minutes; empty when no gate matches; also empty when freshness is
-	// out_of_date.
+	// States is the set of states the call asked for, in sort order (fight, likely_camp, gank,
+	// kills): the states argument, or the set min_state stands for, or every state but kills.
+	States []string `json:"states"`
+	// Rows holds the gates in the asked states, by state (fight, likely_camp, gank, kills), then
+	// by ship kills in the last 60 minutes, at most the limit; empty when no gate matches; also
+	// empty when freshness is out_of_date.
 	Rows []GateCampRow `json:"rows"`
-	// Trimmed is true when the collector dropped the weakest rows to keep the snapshot small.
+	// NotListed is how many gates in scope and in the asked states fell past the limit and are
+	// not in rows; 0 when nothing was cut.
+	NotListed int `json:"not_listed"`
+	// Trimmed is true when the collector dropped gates or systems to keep the snapshot small.
 	Trimmed bool `json:"trimmed"`
-	// Freshness is how old the snapshot is against the server clock: "current" (up to 10
-	// minutes, and any snapshot dated after now), "old" (over 10 minutes, up to 2 hours; the
-	// rows are shown and the text warns that camps may have changed) or "out_of_date" (over 2
-	// hours; rows is empty, because an old empty list would read as safe).
+	// TrimmedGates is how many gates with kills only the collector dropped, anywhere in New
+	// Eden; 0 when the snapshot is not trimmed, null when it says trimmed without a count.
+	TrimmedGates *int `json:"trimmed_gates"`
+	// TrimmedSystems is how many systems with the oldest kills the collector dropped; 0 when the
+	// snapshot is not trimmed, null when it says trimmed without a count.
+	TrimmedSystems *int `json:"trimmed_systems"`
+	// Freshness is how old the snapshot is against the server clock: "current" (younger than the
+	// tool's old threshold, and any snapshot dated after now), "old" (past that threshold, up to
+	// the snapshot's own window_s; the rows are shown and the text warns that camps may have
+	// changed) or "out_of_date" (older than window_s; rows is empty, because an old empty list
+	// would read as safe).
 	Freshness string `json:"freshness"`
 	// SnapshotAgeS is the age of the snapshot in whole seconds, rounded down; 0 when the
 	// snapshot is dated after now.
@@ -1465,8 +1479,8 @@ type GateCampRow struct {
 	Security float64 `json:"security"`
 	// Band is "high", "low" or "null" (null-sec), read from the shown security.
 	Band string `json:"band"`
-	// State is "fight", "likely_camp", "gank" (high-sec gank pattern), "possible_camp" or
-	// "kills" (kills without a camp pattern).
+	// State is "fight", "likely_camp", "gank" (high-sec gank pattern) or "kills" (kills
+	// without a camp pattern).
 	State string `json:"state"`
 	// ShipKills60m is the ships killed on the gate in the last 60 minutes.
 	ShipKills60m int `json:"ship_kills_60m"`
@@ -1476,15 +1490,20 @@ type GateCampRow struct {
 	ShipKills120m int `json:"ship_kills_120m"`
 	// PodKills120m is the capsules killed on the gate in the last 120 minutes.
 	PodKills120m int `json:"pod_kills_120m"`
-	// StructureKills60m is the structures killed on the gate in the last 60 minutes; the
-	// only count of a row that is a structure-only fight.
+	// StructureKills60m is the structures killed on the gate in the last 60 minutes (the
+	// snapshot's camp window); on a likely camp or a gank row they come with the state, never
+	// demoting it.
 	StructureKills60m int `json:"structure_kills_60m"`
 	// FirstKill is the time of the first counted kill of the row's window.
 	FirstKill time.Time `json:"first_kill"`
 	// LastKill is the time of the last counted kill of the row's window.
 	LastKill time.Time `json:"last_kill"`
+	// Groups is the number of attacking alliances of the last 60 minutes.
+	Groups int `json:"groups"`
 	// Attackers lists up to three attacking alliances of the last 60 minutes, most kills first.
 	Attackers []GateCampAttacker `json:"attackers"`
+	// MoreAlliances is the alliances beyond the three in attackers (groups minus the list).
+	MoreAlliances int `json:"more_alliances"`
 	// NoAllianceKills is the ship kills of the last 60 minutes whose top attacker has no alliance.
 	NoAllianceKills int `json:"no_alliance_kills"`
 	// DictorHIC is true when an interdictor or heavy interdictor took part in a ship kill of

@@ -1079,7 +1079,7 @@
     "type": "function",
     "function": {
       "name": "get_gate_camps",
-      "description": "Recent kills on EVE stargates and the camp state of each gate, from zKillboard killmails matched to gate positions by the EVE-Cyno collector and refreshed every minute: kill counts in the last hour, the attacking alliances, interdictor use, and a state (likely camp, possible camp, fight, high-sec gank pattern). Give system names or a region, or nothing for the busiest gates of New Eden. Kills that never reached zKillboard are not counted.",
+      "description": "Recent kills on EVE stargates and the camp state of each gate, from zKillboard killmails matched to gate positions by the EVE-Cyno collector and refreshed every minute: kill counts in the last hour, the attacking alliances, interdictor use, and a state (fight, likely camp, high-sec gank pattern, or kills without a camp pattern). Give system names or a region, or nothing for the busiest gates of New Eden. Every cut is named in the answer: gates past the limit, and gates the collector trimmed from its snapshot. Kills that never reached zKillboard are not counted.",
       "parameters": {
         "type": "object",
         "properties": {
@@ -1096,6 +1096,22 @@
             "type": "string",
             "description": "Region name, e.g. 'The Forge'; every gate in that region. Not together with system_names."
           },
+          "states": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "fight",
+                "likely_camp",
+                "gank",
+                "kills"
+              ]
+            },
+            "minItems": 1,
+            "maxItems": 4,
+            "uniqueItems": true,
+            "description": "The states to list. Default: every state but kills. Not together with min_state."
+          },
           "min_state": {
             "type": "string",
             "enum": [
@@ -1103,13 +1119,13 @@
               "possible_camp",
               "likely_camp"
             ],
-            "description": "Weakest state to list: kills (any kill), possible_camp (default) or likely_camp (likely camps and fights)."
+            "description": "Older form of states: kills lists all four states, possible_camp (default) every state but kills, likely_camp likely camps, gank patterns and fights. Not together with states."
           },
           "limit": {
             "type": "integer",
             "minimum": 1,
             "maximum": 50,
-            "description": "How many gates to list, strongest first (default 15)."
+            "description": "How many gates to list, strongest first. Without it a system or region lists every gate in the asked states, and New Eden lists the first 9; the answer says how many more were not listed."
           }
         }
       }

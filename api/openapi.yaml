@@ -2245,7 +2245,7 @@ paths:
         - tools
       summary: Recent kills on EVE stargates and the camp state of each gate, from zKillboard killmails matched to gate positions by…
       description: |-
-        Recent kills on EVE stargates and the camp state of each gate, from zKillboard killmails matched to gate positions by the EVE-Cyno collector and refreshed every minute: kill counts in the last hour, the attacking alliances, interdictor use, and a state (likely camp, possible camp, fight, high-sec gank pattern). Give system names or a region, or nothing for the busiest gates of New Eden. Kills that never reached zKillboard are not counted.
+        Recent kills on EVE stargates and the camp state of each gate, from zKillboard killmails matched to gate positions by the EVE-Cyno collector and refreshed every minute: kill counts in the last hour, the attacking alliances, interdictor use, and a state (fight, likely camp, high-sec gank pattern, or kills without a camp pattern). Give system names or a region, or nothing for the busiest gates of New Eden. Every cut is named in the answer: gates past the limit, and gates the collector trimmed from its snapshot. Kills that never reached zKillboard are not counted.
 
         Sources: zKillboard (gate kill counts); ESI (EVE Swagger Interface); EVE Static Data Export (via Fuzzwork). `result.data` is a `GateCamps` object when the call succeeds.
 
@@ -2264,12 +2264,12 @@ paths:
               properties:
                 limit:
                   type: integer
-                  description: How many gates to list, strongest first (default 15).
+                  description: How many gates to list, strongest first. Without it a system or region lists every gate in the asked states, and New Eden lists the first 9; the answer says how many more were not listed.
                   minimum: 1
                   maximum: 50
                 min_state:
                   type: string
-                  description: 'Weakest state to list: kills (any kill), possible_camp (default) or likely_camp (likely camps and fights).'
+                  description: 'Older form of states: kills lists all four states, possible_camp (default) every state but kills, likely_camp likely camps, gank patterns and fights. Not together with states.'
                   enum:
                     - kills
                     - possible_camp
@@ -2277,6 +2277,19 @@ paths:
                 region_name:
                   type: string
                   description: Region name, e.g. 'The Forge'; every gate in that region. Not together with system_names.
+                states:
+                  type: array
+                  description: 'The states to list. Default: every state but kills. Not together with min_state.'
+                  items:
+                    type: string
+                    enum:
+                      - fight
+                      - likely_camp
+                      - gank
+                      - kills
+                  maxItems: 4
+                  minItems: 1
+                  uniqueItems: true
                 system_names:
                   type: array
                   description: Solar system names (case-insensitive); every gate of those systems. Not together with region_name.
@@ -4383,7 +4396,7 @@ components:
           description: Band is "high", "low" or "null" (null-sec), read from the shown security.
         state:
           type: string
-          description: State is "fight", "likely_camp", "gank" (high-sec gank pattern), "possible_camp" or "kills" (kills without a camp pattern).
+          description: State is "fight", "likely_camp", "gank" (high-sec gank pattern) or "kills" (kills without a camp pattern).
         ship_kills_60m:
           type: integer
           description: ShipKills60m is the ships killed on the gate in the last 60 minutes.
@@ -4398,7 +4411,7 @@ components:
           description: PodKills120m is the capsules killed on the gate in the last 120 minutes.
         structure_kills_60m:
           type: integer
-          description: StructureKills60m is the structures killed on the gate in the last 60 minutes; the only count of a row that is a structure-only fight.
+          description: StructureKills60m is the structures killed on the gate in the last 60 minutes (the snapshot's camp window); on a likely camp or a gank row they come with the state, never demoting it.
         first_kill:
           type: string
           format: date-time
@@ -4407,11 +4420,17 @@ components:
           type: string
           format: date-time
           description: LastKill is the time of the last counted kill of the row's window.
+        groups:
+          type: integer
+          description: Groups is the number of attacking alliances of the last 60 minutes.
         attackers:
           type: array
           description: Attackers lists up to three attacking alliances of the last 60 minutes, most kills first.
           items:
             $ref: '#/components/schemas/GateCampAttacker'
+        more_alliances:
+          type: integer
+          description: MoreAlliances is the alliances beyond the three in attackers (groups minus the list).
         no_alliance_kills:
           type: integer
           description: NoAllianceKills is the ship kills of the last 60 minutes whose top attacker has no alliance.
@@ -4436,7 +4455,9 @@ components:
         - structure_kills_60m
         - first_kill
         - last_kill
+        - groups
         - attackers
+        - more_alliances
         - no_alliance_kills
         - dictor_hic
         - max_attackers
@@ -4453,23 +4474,41 @@ components:
           description: NewestKillmail is the time of the newest killmail the collector had seen; the zero time when it had seen none.
         feed_behind:
           type: boolean
-          description: 'FeedBehind is true when the newest killmail is more than 15 minutes older than the snapshot: the killmail feed may be behind.'
+          description: 'FeedBehind is true when the newest killmail is older than the snapshot by more than the upload delay the file reports for 9 in 10 kills (delay_p90_s), or by more than the file''s window_s when it reports none: the killmail feed may be behind.'
         delay_p50_s:
           type:
             - integer
             - "null"
           description: DelayP50S is the median seconds zKillboard took to publish a kill over the last 24 hours; null below 100 samples.
+        states:
+          type: array
+          description: 'States is the set of states the call asked for, in sort order (fight, likely_camp, gank, kills): the states argument, or the set min_state stands for, or every state but kills.'
+          items:
+            type: string
         rows:
           type: array
-          description: Rows holds the gates, by state (fight, likely_camp, gank, possible_camp, kills), then by ship kills in the last 60 minutes; empty when no gate matches; also empty when freshness is out_of_date.
+          description: Rows holds the gates in the asked states, by state (fight, likely_camp, gank, kills), then by ship kills in the last 60 minutes, at most the limit; empty when no gate matches; also empty when freshness is out_of_date.
           items:
             $ref: '#/components/schemas/GateCampRow'
+        not_listed:
+          type: integer
+          description: NotListed is how many gates in scope and in the asked states fell past the limit and are not in rows; 0 when nothing was cut.
         trimmed:
           type: boolean
-          description: Trimmed is true when the collector dropped the weakest rows to keep the snapshot small.
+          description: Trimmed is true when the collector dropped gates or systems to keep the snapshot small.
+        trimmed_gates:
+          type:
+            - integer
+            - "null"
+          description: TrimmedGates is how many gates with kills only the collector dropped, anywhere in New Eden; 0 when the snapshot is not trimmed, null when it says trimmed without a count.
+        trimmed_systems:
+          type:
+            - integer
+            - "null"
+          description: TrimmedSystems is how many systems with the oldest kills the collector dropped; 0 when the snapshot is not trimmed, null when it says trimmed without a count.
         freshness:
           type: string
-          description: 'Freshness is how old the snapshot is against the server clock: "current" (up to 10 minutes, and any snapshot dated after now), "old" (over 10 minutes, up to 2 hours; the rows are shown and the text warns that camps may have changed) or "out_of_date" (over 2 hours; rows is empty, because an old empty list would read as safe).'
+          description: 'Freshness is how old the snapshot is against the server clock: "current" (younger than the tool''s old threshold, and any snapshot dated after now), "old" (past that threshold, up to the snapshot''s own window_s; the rows are shown and the text warns that camps may have changed) or "out_of_date" (older than window_s; rows is empty, because an old empty list would read as safe).'
         snapshot_age_s:
           type: integer
           description: SnapshotAgeS is the age of the snapshot in whole seconds, rounded down; 0 when the snapshot is dated after now.
@@ -4478,8 +4517,12 @@ components:
         - newest_killmail
         - feed_behind
         - delay_p50_s
+        - states
         - rows
+        - not_listed
         - trimmed
+        - trimmed_gates
+        - trimmed_systems
         - freshness
         - snapshot_age_s
     GateCampsToolResponse:

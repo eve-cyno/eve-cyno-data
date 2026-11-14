@@ -26,16 +26,24 @@ var gateCampsNow = time.Now
 
 // Limits of the tool's inputs.
 const (
-	gateCampsMaxSystems   = 50
-	gateCampsMaxLimit     = 50
-	gateCampsDefaultLimit = 15
-	// gateCampsFeedBehind is how much older than the snapshot the newest killmail may be
-	// before the answer says the killmail feed may be behind.
-	gateCampsFeedBehind = 15 * time.Minute
+	gateCampsMaxSystems = 50
+	gateCampsMaxLimit   = 50
+	gateCampsMaxStates  = 4
+	// gateCampsChatResultChars mirrors LOOP.toolResultChars of the desktop AI chat
+	// (eve-cyno-desktop/plugins/aichat/src/logic/toolloop.ts:34): the chat cuts
+	// JSON.stringify({ text, data }) of a data tool result at this many UTF-16 units and appends
+	// "[truncated]". It is the only answer budget a surface defines.
+	gateCampsChatResultChars = 16_000
+	// gateCampsNewEdenDefaultLimit is how many gates a New Eden call lists without a limit: the
+	// largest count of worst-case rows that fits gateCampsChatResultChars (see
+	// TestGateCamps_NewEdenDefaultFitsChatBudget, which computes it). A call with system_names or
+	// region_name and no limit lists every gate.
+	gateCampsNewEdenDefaultLimit = 9
 	// gateCampsOldAfter is the snapshot age above which the answer says camps may have changed.
+	// It waits for the edge-age log of the intel collector (plan Safety amendment section 6, "Old"):
+	// the rule there is the measured p99.9 of the edge age plus the host floor and the plugin
+	// tick, rounded up to a whole minute, and the value is not decided yet.
 	gateCampsOldAfter = 10 * time.Minute
-	// gateCampsOutOfDateAfter is the snapshot age above which the answer shows no rows.
-	gateCampsOutOfDateAfter = 2 * time.Hour
 )
 
 // Snapshot freshness, as GateCamps.Freshness.
@@ -54,18 +62,86 @@ const (
 	gateCampsCaveat        = "Only kills that reached zKillboard count; a camp that kills nothing is invisible."
 )
 
-// campRank orders the states of the camp rules; a state not in the table is not shown.
-var campRank = map[string]int{"kills": 1, "possible_camp": 2, "gank": 3, "likely_camp": 4, "fight": 5}
+// campStates are the states of the camp rules in sort order: the order of a typed result's states
+// and of its rows. A state a file holds that is not in the list is in no set, so it is never shown.
+var campStates = []string{"fight", "likely_camp", "gank", "kills"}
 
-// campMinStates are the values min_state accepts.
-var campMinStates = map[string]int{"kills": 1, "possible_camp": 2, "likely_camp": 4}
+// campRank sorts rows: the higher the rank, the earlier the row.
+var campRank = map[string]int{"kills": 1, "gank": 2, "likely_camp": 3, "fight": 4}
+
+// campMinStates are the values min_state accepts, each an input alias for a set of states.
+var campMinStates = map[string][]string{
+	"kills":         {"fight", "likely_camp", "gank", "kills"},
+	"possible_camp": {"fight", "likely_camp", "gank"},
+	"likely_camp":   {"fight", "likely_camp", "gank"},
+}
+
+// campDefaultStates is the set of a call with neither states nor min_state: every state but
+// kills, so the below-threshold sentence can name what the default hides.
+var campDefaultStates = []string{"fight", "likely_camp", "gank"}
 
 var campStateWord = map[string]string{
-	"likely_camp":   "Likely camp",
-	"possible_camp": "Possible camp",
-	"fight":         "A fight, not a camp",
-	"gank":          "Gank pattern (high-sec)",
-	"kills":         "Kills, no camp pattern",
+	"likely_camp": "Likely camp",
+	"fight":       "A fight, not a camp",
+	"gank":        "Gank pattern (high-sec)",
+	"kills":       "Kills, no camp pattern",
+}
+
+// gateCampsStates reads the states and min_state arguments into the effective set, in sort order.
+// A non-empty text is the answer to a bad input.
+func gateCampsStates(args map[string]any) ([]string, string) {
+	rawStates, hasStates := args["states"]
+	hasStates = hasStates && rawStates != nil
+	minName, _ := args["min_state"].(string)
+	minName = strings.TrimSpace(minName)
+	if hasStates && args["min_state"] != nil && minName != "" {
+		return nil, "Give states or min_state, not both."
+	}
+	if hasStates {
+		var items []any
+		switch v := rawStates.(type) {
+		case []any:
+			items = v
+		case []string:
+			for _, e := range v {
+				items = append(items, e)
+			}
+		default:
+			return nil, fmt.Sprintf("states: give 1 to %d states.", gateCampsMaxStates)
+		}
+		if len(items) == 0 || len(items) > gateCampsMaxStates {
+			return nil, fmt.Sprintf("states: give 1 to %d states.", gateCampsMaxStates)
+		}
+		set := map[string]bool{}
+		dup := false
+		for _, e := range items {
+			name, _ := e.(string)
+			name = strings.TrimSpace(name)
+			if _, ok := campRank[name]; !ok {
+				return nil, "states: each must be fight, likely_camp, gank or kills."
+			}
+			dup = dup || set[name]
+			set[name] = true
+		}
+		if dup {
+			return nil, "states: name each state once."
+		}
+		var out []string
+		for _, st := range campStates {
+			if set[st] {
+				out = append(out, st)
+			}
+		}
+		return out, ""
+	}
+	if minName == "" {
+		return campDefaultStates, ""
+	}
+	set, ok := campMinStates[minName]
+	if !ok {
+		return nil, "min_state must be kills, possible_camp or likely_camp."
+	}
+	return set, ""
 }
 
 // getGateCamps answers get_gate_camps from the published gate snapshot. Every failure is
@@ -84,17 +160,22 @@ func getGateCamps(ctx context.Context, deps *Deps, args map[string]any) (string,
 	if len(names) > 0 && region != "" {
 		return "Give system_names or region_name, not both.", nil, nil
 	}
-	minName, _ := args["min_state"].(string)
-	if strings.TrimSpace(minName) == "" {
-		minName = "possible_camp"
+	asked, bad := gateCampsStates(args)
+	if bad != "" {
+		return bad, nil, nil
 	}
-	minRank, ok := campMinStates[strings.TrimSpace(minName)]
-	if !ok {
-		return "min_state must be kills, possible_camp or likely_camp.", nil, nil
+	askedSet := make(map[string]bool, len(asked))
+	for _, st := range asked {
+		askedSet[st] = true
 	}
-	limit := cappedIntArg(args, "limit", gateCampsDefaultLimit)
-	if limit < 1 || limit > gateCampsMaxLimit {
-		return fmt.Sprintf("limit must be 1 to %d.", gateCampsMaxLimit), nil, nil
+	// limit is optional. A call without one lists every gate of a scope given by names or by region,
+	// and gateCampsNewEdenDefaultLimit gates of New Eden (decided below, once the scope is known).
+	limit, hasLimit := 0, false
+	if v, ok := args["limit"]; ok && v != nil {
+		limit, hasLimit = cappedIntArg(args, "limit", 0), true
+		if limit < 1 || limit > gateCampsMaxLimit {
+			return fmt.Sprintf("limit must be 1 to %d.", gateCampsMaxLimit), nil, nil
+		}
 	}
 	if deps.GateCamps == nil {
 		return gateCampsNotConfigured, nil, nil
@@ -142,13 +223,20 @@ func getGateCamps(ctx context.Context, deps *Deps, args map[string]any) (string,
 	if err != nil {
 		return gateCampsReadFailure(ctx, tool, err)
 	}
+	// window_s is the horizon of the file: the out-of-date age and the feed-behind fallback read it,
+	// so a file without a positive one cannot be judged and is malformed.
+	if snap.WindowS <= 0 {
+		slog.Error("gate camp snapshot has no positive window_s", "tool", tool, "window_s", snap.WindowS)
+		return gateCampsReadError, nil, nil
+	}
+	window := time.Duration(snap.WindowS) * time.Second
 
 	// A negative age (the clock behind the file) is current, however large.
 	now := gateCampsNow() // read once: the age and the footer share one instant
 	age := now.Sub(snap.GeneratedAt)
 	freshness := gateCampsCurrent
 	switch {
-	case age > gateCampsOutOfDateAfter:
+	case age > window:
 		freshness = gateCampsOutOfDate
 	case age > gateCampsOldAfter:
 		freshness = gateCampsOld
@@ -161,8 +249,8 @@ func getGateCamps(ctx context.Context, deps *Deps, args map[string]any) (string,
 		if inScope != nil && !inScope[g.SystemID] {
 			continue
 		}
-		// a state this reader does not know (rank 0) counts as below the threshold
-		if rank := campRank[g.State]; rank < minRank {
+		// a state this reader does not know is in no set, so it counts as below
+		if !askedSet[g.State] {
 			below++
 			continue
 		}
@@ -181,15 +269,27 @@ func getGateCamps(ctx context.Context, deps *Deps, args map[string]any) (string,
 		}
 		return a.ToSystemID < b.ToSystemID
 	})
-	if len(picked) > limit {
+	if !hasLimit && inScope == nil {
+		limit, hasLimit = gateCampsNewEdenDefaultLimit, true
+	}
+	notListed := 0
+	if hasLimit && len(picked) > limit {
+		notListed = len(picked) - limit
 		picked = picked[:limit]
 	}
 
-	res := &GateCamps{GeneratedAt: snap.GeneratedAt, Rows: make([]GateCampRow, 0, len(picked)), Trimmed: snap.Trimmed,
-		Freshness: freshness, SnapshotAgeS: int(max(age, 0) / time.Second)}
+	res := &GateCamps{GeneratedAt: snap.GeneratedAt, States: asked, Rows: make([]GateCampRow, 0, len(picked)), NotListed: notListed,
+		Trimmed: snap.Trimmed, Freshness: freshness, SnapshotAgeS: int(max(age, 0) / time.Second)}
+	// A file that is not trimmed has no counts: 0 for both. A trimmed file without counts leaves them null.
+	zero := 0
+	if snap.Trimmed {
+		res.TrimmedGates, res.TrimmedSystems = copyInt(snap.TrimmedGates), copyInt(snap.TrimmedSystems)
+	} else {
+		res.TrimmedGates, res.TrimmedSystems = &zero, &zero
+	}
 	if t := snap.Feed.NewestKillmailTime; t != nil {
 		res.NewestKillmail = *t
-		res.FeedBehind = snap.GeneratedAt.Sub(*t) > gateCampsFeedBehind
+		res.FeedBehind = snap.GeneratedAt.Sub(*t) > gateCampsFeedBehindAfter(snap)
 	}
 	if p := snap.Feed.DelayP50S; p != nil {
 		v := int(*p)
@@ -218,40 +318,110 @@ func getGateCamps(ctx context.Context, deps *Deps, args map[string]any) (string,
 			ShipKills120m: g.ShipKills120m, PodKills120m: g.PodKills120m,
 			StructureKills60m: g.StructureKills60m,
 			FirstKill:         g.FirstKill, LastKill: g.LastKill,
+			Groups:          g.Groups,
 			Attackers:       make([]GateCampAttacker, 0, len(g.Attackers)),
 			NoAllianceKills: g.NoAllianceKills, DictorHIC: g.DictorHIC, MaxAttackers: g.MaxAttackers,
 		}
 		for _, a := range g.Attackers {
 			row.Attackers = append(row.Attackers, GateCampAttacker{AllianceID: int(a.AllianceID), Name: a.Name, Kills: a.Kills})
 		}
+		row.MoreAlliances = max(0, g.Groups-len(row.Attackers))
 		res.Rows = append(res.Rows, row)
 	}
-
 	if freshness == gateCampsOutOfDate {
-		// no rows, no empty or below-threshold sentence: an old empty list would read as safe
+		// no rows: an old empty list would read as safe
 		res.Rows = []GateCampRow{}
-		return fmt.Sprintf("Gate camp data is out of date (last update %d h ago).\n%s", int(age/time.Hour), gateCampsDatedFooter(res, snap.GeneratedAt)), res, nil
 	}
+	text := gateCampsText(res, gateCampsLayout{
+		Scope: scope, Now: now, CampMin: snap.CampWindowSeconds() / 60, Hours: max(1, snap.WindowS/3600), Below: below, Limit: limit,
+	})
+	return text, res, nil
+}
 
-	var b strings.Builder
-	if freshness == gateCampsOld {
-		fmt.Fprintf(&b, "This snapshot is %d min old; camps may have changed.\n", int(age/time.Minute))
+// gateCampsFeedBehindAfter is how much older than the snapshot the newest killmail may be before
+// the killmail feed may be behind: the delay in which zKillboard published 9 in 10 kills
+// (delay_p90_s), or the file's window_s when it reports none (past it no kill of the file is inside
+// its own window).
+func gateCampsFeedBehindAfter(snap *intelsnap.GatesNow) time.Duration {
+	if p := snap.Feed.DelayP90S; p != nil {
+		return time.Duration(*p) * time.Second
 	}
+	return time.Duration(snap.WindowS) * time.Second
+}
+
+func copyInt(p *int) *int {
+	if p == nil {
+		return nil
+	}
+	v := *p
+	return &v
+}
+
+// gateCampsLayout is what the text of an answer needs besides the typed result.
+type gateCampsLayout struct {
+	Scope   string    // the asked scope, as named in the sentences
+	Now     time.Time // the clock of the answer
+	CampMin int       // the camp window in whole minutes (camp_window_s / 60)
+	Hours   int       // the file's window in whole hours (window_s / 3600, at least 1)
+	Below   int       // gates of the scope that had kills, in states that were not asked
+	Limit   int       // the limit in force; 0 when none
+}
+
+// gateCampsText is the text of an answer for a filled-in typed result.
+func gateCampsText(res *GateCamps, l gateCampsLayout) string {
+	if res.Freshness == gateCampsOutOfDate {
+		return fmt.Sprintf("Gate camp data is out of date (last update %d h ago).\n%s", res.SnapshotAgeS/3600, gateCampsDatedFooter(res, res.GeneratedAt))
+	}
+	var b strings.Builder
+	if res.Freshness == gateCampsOld {
+		fmt.Fprintf(&b, "This snapshot is %d min old; camps may have changed.\n", res.SnapshotAgeS/60)
+	}
+	trim := gateCampsTrimLine(res)
 	switch {
 	case len(res.Rows) > 0:
 		for _, r := range res.Rows {
-			b.WriteString(gateCampRowText(r, snap.GeneratedAt))
+			b.WriteString(gateCampRowText(r, res.GeneratedAt, l.CampMin))
 			b.WriteByte('\n')
 		}
+		if res.NotListed > 0 {
+			fmt.Fprintf(&b, "%s in the asked states not listed (limit %d).\n", countNoun(res.NotListed, "more gate"), l.Limit)
+		}
+		if trim != "" {
+			b.WriteString(trim + "\n")
+		}
 		b.WriteByte('\n')
-	case below > 0:
-		fmt.Fprintf(&b, "No gate of %s is at %s or above; %s had kills in the last 2 hours at a lower state. Set min_state to kills to list them. That is not proof of safety: only kills that reached zKillboard count.\n",
-			scope, strings.TrimSpace(minName), countNoun(below, "gate"))
+	case l.Below > 0:
+		noun := "states"
+		if len(res.States) == 1 {
+			noun = "state"
+		}
+		fmt.Fprintf(&b, "No gate of %s is in the listed %s (%s); %s had kills in the last %s in other states. Add those states to list them. That is not proof of safety: only kills that reached zKillboard count.\n",
+			l.Scope, noun, strings.Join(res.States, ", "), countNoun(l.Below, "gate"), countNoun(l.Hours, "hour"))
+		if trim != "" {
+			b.WriteString(trim + "\n")
+		}
 	default:
-		fmt.Fprintf(&b, "No kills seen on gates of %s in the last 2 hours. That is not proof of safety: only kills that reached zKillboard count.\n", scope)
+		fmt.Fprintf(&b, "No kills seen on gates of %s in the last 2 hours. That is not proof of safety: only kills that reached zKillboard count.\n", l.Scope)
+		if trim != "" {
+			b.WriteString(trim + "\n")
+		}
 	}
-	b.WriteString(gateCampsFooter(res, snap.GeneratedAt, now, len(res.Rows) > 0))
-	return b.String(), res, nil
+	b.WriteString(gateCampsFooter(res, res.GeneratedAt, l.Now, len(res.Rows) > 0))
+	return b.String()
+}
+
+// gateCampsTrimLine says what the collector left out of a trimmed snapshot; empty when it trimmed
+// no gates (only systems were dropped, and the tool does not read systems).
+func gateCampsTrimLine(res *GateCamps) string {
+	switch {
+	case !res.Trimmed:
+		return ""
+	case res.TrimmedGates == nil:
+		return "More gates with kills only, anywhere in New Eden, may be missing: the collector trimmed the snapshot to keep it small."
+	case *res.TrimmedGates <= 0:
+		return ""
+	}
+	return fmt.Sprintf("%s with kills only, anywhere in New Eden, not listed: the collector trimmed the snapshot to keep it small.", countNoun(*res.TrimmedGates, "more gate"))
 }
 
 // gateCampsDatedFooter is footer line 1 alone, with the date before each time, for a snapshot
@@ -297,23 +467,35 @@ func gateCampsFooter(res *GateCamps, generated, now time.Time, full bool) string
 	return b.String()
 }
 
-// gateCampRowText is the exact sentence of one gate.
-func gateCampRowText(r GateCampRow, generated time.Time) string {
+// gateCampRowText is the exact sentence of one gate. campMin is the snapshot's camp window in
+// whole minutes: the structure-kill facts of a row cover that window.
+func gateCampRowText(r GateCampRow, generated time.Time, campMin int) string {
 	head := fmt.Sprintf("%s > %s gate in %s (%.1f %s-sec): ", r.From, r.To, r.From, r.Security, r.Band)
 	if r.ShipKills60m == 0 && r.ShipKills120m == 0 && r.PodKills120m == 0 && r.StructureKills60m > 0 {
 		return head + fmt.Sprintf("%s in the last %d min. %s.",
-			countNoun(r.StructureKills60m, "structure kill"), minutesSince(generated, r.FirstKill, 60), campStateWord[r.State])
+			countNoun(r.StructureKills60m, "structure kill"), minutesSince(generated, r.FirstKill, campMin), campStateWord[r.State])
 	}
-	ships, pods, limit := r.ShipKills60m, r.PodKills60m, 60
+	ships, pods, limit := r.ShipKills60m, r.PodKills60m, campMin
 	if r.ShipKills60m == 0 {
 		ships, pods, limit = r.ShipKills120m, r.PodKills120m, 120
 	}
+	// A fight with ship kills in the camp window names ships, pods and structures together over that
+	// window; every other row with a structure kill gets the fight facts after its state word.
+	fightCounts := r.State == "fight" && r.StructureKills60m > 0 && r.ShipKills60m > 0
 	var b strings.Builder
-	b.WriteString(head + countNoun(ships, "ship kill"))
-	if pods > 0 {
-		b.WriteString(" and " + countNoun(pods, "pod"))
+	if fightCounts {
+		b.WriteString(head + countNoun(ships, "ship kill"))
+		if pods > 0 {
+			b.WriteString(", " + countNoun(pods, "pod"))
+		}
+		fmt.Fprintf(&b, " and %s in the last %d min", countNoun(r.StructureKills60m, "structure kill"), campMin)
+	} else {
+		b.WriteString(head + countNoun(ships, "ship kill"))
+		if pods > 0 {
+			b.WriteString(" and " + countNoun(pods, "pod"))
+		}
+		fmt.Fprintf(&b, " in the last %d min", minutesSince(generated, r.FirstKill, limit))
 	}
-	fmt.Fprintf(&b, " in the last %d min", minutesSince(generated, r.FirstKill, limit))
 	var by []string
 	for _, a := range r.Attackers {
 		name := a.Name
@@ -323,13 +505,21 @@ func gateCampRowText(r GateCampRow, generated time.Time) string {
 		by = append(by, fmt.Sprintf("%s (%d)", name, a.Kills))
 	}
 	list := strings.Join(by, ", ")
+	more := ""
+	if r.MoreAlliances > 0 {
+		more = countNoun(r.MoreAlliances, "more alliance")
+	}
+	none := ""
 	if r.NoAllianceKills > 0 {
-		none := fmt.Sprintf("attackers in no alliance (%d)", r.NoAllianceKills)
-		if list == "" {
-			list = none
-		} else {
-			list += " and " + none
-		}
+		none = fmt.Sprintf("attackers in no alliance (%d)", r.NoAllianceKills)
+	}
+	switch {
+	case more != "" && none != "":
+		list = joinNonEmpty(list, ", ") + more + " and " + none
+	case more != "":
+		list = joinNonEmpty(list, " and ") + more
+	case none != "":
+		list = joinNonEmpty(list, " and ") + none
 	}
 	if list != "" {
 		b.WriteString(", by " + list)
@@ -339,7 +529,18 @@ func gateCampRowText(r GateCampRow, generated time.Time) string {
 		b.WriteString(" Interdictor or HIC seen.")
 	}
 	b.WriteString(" " + campStateWord[r.State] + ".")
+	if !fightCounts && r.StructureKills60m > 0 && (r.State == "likely_camp" || r.State == "gank" || r.State == "fight") {
+		fmt.Fprintf(&b, " Also a fight pattern in the last %d min: %s.", campMin, countNoun(r.StructureKills60m, "structure kill"))
+	}
 	return b.String()
+}
+
+// joinNonEmpty is s followed by sep, or nothing when s is empty.
+func joinNonEmpty(s, sep string) string {
+	if s == "" {
+		return ""
+	}
+	return s + sep
 }
 
 // minutesSince is the whole minutes from first to the snapshot, between 0 and limit.

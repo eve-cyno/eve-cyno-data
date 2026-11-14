@@ -1,5 +1,5 @@
 {
- "doc": "Wording cases for the get_gate_camps answer and for the desktop Intel plugin, which must print the same sentences. Both repositories pin this file by sha256 and copy it byte for byte; change it in the data repository first. Inputs use the field names of the intel-gates-now snapshot (format 1: generated_at, feed, gates[]); times are RFC 3339 UTC. kind row: one gate sentence from the gate object, the two system names and the true security (the sentence shows the display security and band word). kind security: display security (one decimal) and band for a true security. kind answer: the whole text for a snapshot, the clock now and the tool request (system_names, min_state). Systems are real SDE ids; alliances are made up. In answer cases the snapshot age is now minus generated_at: over 10 minutes the answer starts with the old sentence, over 2 hours it is the out-of-date sentence and a dated footer line 1 only; a negative age is current.",
+ "doc": "Wording cases for the get_gate_camps answer and for the desktop Intel plugin, which must print the same sentences. Both repositories pin this file by sha256 and copy it byte for byte; change it in the data repository first. Inputs use the field names of the intel-gates-now snapshot (format 1: generated_at, feed, gates[]); times are RFC 3339 UTC. kind row: one gate sentence from the gate object, the two system names and the true security (the sentence shows the display security and band word). kind security: display security (one decimal) and band for a true security. kind answer: the whole text for a snapshot, the clock now and the tool request (system_names, region_name, states, min_state, limit). Systems are real SDE ids; alliances are made up. In answer cases the snapshot age is now minus generated_at: over 10 minutes the answer starts with the old sentence, over 2 hours it is the out-of-date sentence and a dated footer line 1 only; a negative age is current. Gate states in these cases are inputs the tool does not recompute, but each one is what the collector's camp rule gives for the gate's own numbers: n is ship_kills_60m and span runs from first_kill to last_kill; outside null-sec a gate is likely (gank in high-sec, likely_camp otherwise) at n >= 3 and span >= 30 min, or n >= 4 and span >= 15 min; in null-sec (security 0.0 or less) at n >= 6 and span >= 45 min; otherwise a structure kill in the camp window makes it a fight, otherwise any kill in the window makes it kills. A state this reader does not know is in no set. A snapshot without camp_window_s reads as 3600 s; the row cases read the default and the answer cases that carry the field use it for the minutes of the fight facts. Feed behind: generated_at minus newest_killmail_time is past delay_p90_s, or past window_s when delay_p90_s is null. Out of date: age past window_s. The New Eden default of 9 rows is the budget the Go test computes.",
  "cases": [
   {
    "name": "likely_camp, three alliances, pods plural, interdictor",
@@ -55,8 +55,8 @@
     "system_id": 30000142,
     "to_system_id": 30000144,
     "state": "gank",
-    "ship_kills_60m": 3,
-    "ship_kills_120m": 3,
+    "ship_kills_60m": 4,
+    "ship_kills_120m": 4,
     "pod_kills_60m": 0,
     "pod_kills_120m": 0,
     "structure_kills_60m": 0,
@@ -67,7 +67,7 @@
      {
       "alliance_id": 2004,
       "name": "",
-      "kills": 3
+      "kills": 4
      }
     ],
     "no_alliance_kills": 0,
@@ -75,10 +75,10 @@
     "smartbomb": false,
     "max_attackers": 4
    },
-   "expected": "Jita > Perimeter gate in Jita (0.9 high-sec): 3 ship kills in the last 20 min, by an alliance not yet named (3). Gank pattern (high-sec)."
+   "expected": "Jita > Perimeter gate in Jita (0.9 high-sec): 4 ship kills in the last 20 min, by an alliance not yet named (4). Gank pattern (high-sec)."
   },
   {
-   "name": "fight, one pod singular, one alliance and no alliance",
+   "name": "fight with a structure kill, one pod singular, one alliance and no alliance",
    "kind": "row",
    "generated_at": "2026-11-14T12:00:00Z",
    "from": "Sivala",
@@ -92,7 +92,7 @@
     "ship_kills_120m": 7,
     "pod_kills_60m": 1,
     "pod_kills_120m": 1,
-    "structure_kills_60m": 0,
+    "structure_kills_60m": 1,
     "first_kill": "2026-11-14T11:50:00Z",
     "last_kill": "2026-11-14T11:58:00Z",
     "groups": 1,
@@ -108,10 +108,10 @@
     "smartbomb": false,
     "max_attackers": 45
    },
-   "expected": "Sivala > Tama gate in Sivala (0.6 high-sec): 6 ship kills and 1 pod in the last 10 min, by Example Alliance 1 (4) and attackers in no alliance (2). A fight, not a camp."
+   "expected": "Sivala > Tama gate in Sivala (0.6 high-sec): 6 ship kills, 1 pod and 1 structure kill in the last 60 min, by Example Alliance 1 (4) and attackers in no alliance (2). A fight, not a camp."
   },
   {
-   "name": "possible_camp, interdictor",
+   "name": "kills, two ships never make a camp, interdictor",
    "kind": "row",
    "generated_at": "2026-11-14T12:00:00Z",
    "from": "Rancer",
@@ -120,7 +120,7 @@
    "gate": {
     "system_id": 30002718,
     "to_system_id": 30002537,
-    "state": "possible_camp",
+    "state": "kills",
     "ship_kills_60m": 2,
     "ship_kills_120m": 2,
     "pod_kills_60m": 0,
@@ -141,7 +141,7 @@
     "smartbomb": false,
     "max_attackers": 3
    },
-   "expected": "Rancer > Amamake gate in Rancer (0.4 low-sec): 2 ship kills in the last 30 min, by Example Alliance 5 (2). Interdictor or HIC seen. Possible camp."
+   "expected": "Rancer > Amamake gate in Rancer (0.4 low-sec): 2 ship kills in the last 30 min, by Example Alliance 5 (2). Interdictor or HIC seen. Kills, no camp pattern."
   },
   {
    "name": "kills, 120-min window row (ship_kills_60m 0), singular ship kill and pod",
@@ -279,7 +279,7 @@
    "expected": "Ala > Otela gate in Ala (-1.0 null-sec): 1 structure kill in the last 15 min. A fight, not a camp."
   },
   {
-   "name": "fight with ship kills ignores its structure kills",
+   "name": "fight with ship kills, one pod and several structure kills in one sentence",
    "kind": "row",
    "generated_at": "2026-11-14T12:00:00Z",
    "from": "Sivala",
@@ -309,10 +309,10 @@
     "smartbomb": false,
     "max_attackers": 45
    },
-   "expected": "Sivala > Tama gate in Sivala (0.6 high-sec): 6 ship kills and 1 pod in the last 10 min, by Example Alliance 1 (4) and attackers in no alliance (2). A fight, not a camp."
+   "expected": "Sivala > Tama gate in Sivala (0.6 high-sec): 6 ship kills, 1 pod and 3 structure kills in the last 60 min, by Example Alliance 1 (4) and attackers in no alliance (2). A fight, not a camp."
   },
   {
-   "name": "two alliances",
+   "name": "kills, two alliances, three ships in 20 min",
    "kind": "row",
    "generated_at": "2026-11-14T12:00:00Z",
    "from": "Tama",
@@ -321,7 +321,7 @@
    "gate": {
     "system_id": 30002813,
     "to_system_id": 30002765,
-    "state": "possible_camp",
+    "state": "kills",
     "ship_kills_60m": 3,
     "ship_kills_120m": 3,
     "pod_kills_60m": 0,
@@ -347,10 +347,10 @@
     "smartbomb": false,
     "max_attackers": 0
    },
-   "expected": "Tama > Sivala gate in Tama (0.3 low-sec): 3 ship kills in the last 30 min, by Example Alliance 1 (2), Example Alliance 2 (1). Possible camp."
+   "expected": "Tama > Sivala gate in Tama (0.3 low-sec): 3 ship kills in the last 30 min, by Example Alliance 1 (2), Example Alliance 2 (1). Kills, no camp pattern."
   },
   {
-   "name": "two alliances and attackers in no alliance",
+   "name": "likely camp, two alliances and attackers in no alliance (4 kills in 20 min)",
    "kind": "row",
    "generated_at": "2026-11-14T12:00:00Z",
    "from": "Tama",
@@ -359,7 +359,7 @@
    "gate": {
     "system_id": 30002813,
     "to_system_id": 30002765,
-    "state": "possible_camp",
+    "state": "likely_camp",
     "ship_kills_60m": 4,
     "ship_kills_120m": 4,
     "pod_kills_60m": 0,
@@ -385,7 +385,7 @@
     "smartbomb": false,
     "max_attackers": 0
    },
-   "expected": "Tama > Sivala gate in Tama (0.3 low-sec): 4 ship kills in the last 30 min, by Example Alliance 1 (2), Example Alliance 2 (1) and attackers in no alliance (1). Possible camp."
+   "expected": "Tama > Sivala gate in Tama (0.3 low-sec): 4 ship kills in the last 30 min, by Example Alliance 1 (2), Example Alliance 2 (1) and attackers in no alliance (1). Likely camp."
   },
   {
    "name": "attackers in no alliance only",
@@ -398,8 +398,8 @@
     "system_id": 30000142,
     "to_system_id": 30000144,
     "state": "gank",
-    "ship_kills_60m": 3,
-    "ship_kills_120m": 3,
+    "ship_kills_60m": 4,
+    "ship_kills_120m": 4,
     "pod_kills_60m": 0,
     "pod_kills_120m": 0,
     "structure_kills_60m": 0,
@@ -407,12 +407,12 @@
     "last_kill": "2026-11-14T11:58:00Z",
     "groups": 0,
     "attackers": [],
-    "no_alliance_kills": 3,
+    "no_alliance_kills": 4,
     "dictor_hic": false,
     "smartbomb": false,
     "max_attackers": 0
    },
-   "expected": "Jita > Perimeter gate in Jita (0.9 high-sec): 3 ship kills in the last 20 min, by attackers in no alliance (3). Gank pattern (high-sec)."
+   "expected": "Jita > Perimeter gate in Jita (0.9 high-sec): 4 ship kills in the last 20 min, by attackers in no alliance (4). Gank pattern (high-sec)."
   },
   {
    "name": "minutes are capped at the 60-min window",
@@ -446,6 +446,257 @@
     "max_attackers": 0
    },
    "expected": "Tama > Sivala gate in Tama (0.3 low-sec): 3 ship kills in the last 60 min, by Example Alliance 1 (3). Likely camp."
+  },
+  {
+   "name": "likely camp with a structure kill keeps its state, fight facts follow",
+   "kind": "row",
+   "generated_at": "2026-11-14T12:00:00Z",
+   "from": "Tama",
+   "to": "Sivala",
+   "true_security": 0.3,
+   "gate": {
+    "system_id": 30002813,
+    "to_system_id": 30002765,
+    "state": "likely_camp",
+    "ship_kills_60m": 4,
+    "ship_kills_120m": 4,
+    "pod_kills_60m": 0,
+    "pod_kills_120m": 0,
+    "structure_kills_60m": 2,
+    "first_kill": "2026-11-14T11:20:00Z",
+    "last_kill": "2026-11-14T11:55:00Z",
+    "groups": 1,
+    "attackers": [
+     {
+      "alliance_id": 2001,
+      "name": "Example Alliance 1",
+      "kills": 4
+     }
+    ],
+    "no_alliance_kills": 0,
+    "dictor_hic": false,
+    "smartbomb": false,
+    "max_attackers": 6
+   },
+   "expected": "Tama > Sivala gate in Tama (0.3 low-sec): 4 ship kills in the last 40 min, by Example Alliance 1 (4). Likely camp. Also a fight pattern in the last 60 min: 2 structure kills."
+  },
+  {
+   "name": "gank (high-sec likely camp) with a structure kill",
+   "kind": "row",
+   "generated_at": "2026-11-14T12:00:00Z",
+   "from": "Jita",
+   "to": "Perimeter",
+   "true_security": 0.9,
+   "gate": {
+    "system_id": 30000142,
+    "to_system_id": 30000144,
+    "state": "gank",
+    "ship_kills_60m": 4,
+    "ship_kills_120m": 4,
+    "pod_kills_60m": 0,
+    "pod_kills_120m": 0,
+    "structure_kills_60m": 1,
+    "first_kill": "2026-11-14T11:40:00Z",
+    "last_kill": "2026-11-14T11:58:00Z",
+    "groups": 1,
+    "attackers": [
+     {
+      "alliance_id": 2004,
+      "name": "Example Alliance 4",
+      "kills": 4
+     }
+    ],
+    "no_alliance_kills": 0,
+    "dictor_hic": false,
+    "smartbomb": false,
+    "max_attackers": 4
+   },
+   "expected": "Jita > Perimeter gate in Jita (0.9 high-sec): 4 ship kills in the last 20 min, by Example Alliance 4 (4). Gank pattern (high-sec). Also a fight pattern in the last 60 min: 1 structure kill."
+  },
+  {
+   "name": "fight with a structure kill and no pod: the pods part is left out",
+   "kind": "row",
+   "generated_at": "2026-11-14T12:00:00Z",
+   "from": "Sivala",
+   "to": "Tama",
+   "true_security": 0.6,
+   "gate": {
+    "system_id": 30002765,
+    "to_system_id": 30002813,
+    "state": "fight",
+    "ship_kills_60m": 6,
+    "ship_kills_120m": 6,
+    "pod_kills_60m": 0,
+    "pod_kills_120m": 0,
+    "structure_kills_60m": 2,
+    "first_kill": "2026-11-14T11:50:00Z",
+    "last_kill": "2026-11-14T11:58:00Z",
+    "groups": 1,
+    "attackers": [
+     {
+      "alliance_id": 2001,
+      "name": "Example Alliance 1",
+      "kills": 4
+     }
+    ],
+    "no_alliance_kills": 2,
+    "dictor_hic": false,
+    "smartbomb": false,
+    "max_attackers": 45
+   },
+   "expected": "Sivala > Tama gate in Sivala (0.6 high-sec): 6 ship kills and 2 structure kills in the last 60 min, by Example Alliance 1 (4) and attackers in no alliance (2). A fight, not a camp."
+  },
+  {
+   "name": "three alliances named and 2 more alliances",
+   "kind": "row",
+   "generated_at": "2026-11-14T12:00:00Z",
+   "from": "Tama",
+   "to": "Sivala",
+   "true_security": 0.3,
+   "gate": {
+    "system_id": 30002813,
+    "to_system_id": 30002765,
+    "state": "likely_camp",
+    "ship_kills_60m": 9,
+    "ship_kills_120m": 9,
+    "pod_kills_60m": 0,
+    "pod_kills_120m": 0,
+    "structure_kills_60m": 0,
+    "first_kill": "2026-11-14T11:20:00Z",
+    "last_kill": "2026-11-14T11:55:00Z",
+    "groups": 5,
+    "attackers": [
+     {
+      "alliance_id": 2001,
+      "name": "Example Alliance 1",
+      "kills": 3
+     },
+     {
+      "alliance_id": 2002,
+      "name": "Example Alliance 2",
+      "kills": 2
+     },
+     {
+      "alliance_id": 2003,
+      "name": "Example Alliance 3",
+      "kills": 2
+     }
+    ],
+    "no_alliance_kills": 0,
+    "dictor_hic": false,
+    "smartbomb": false,
+    "max_attackers": 9
+   },
+   "expected": "Tama > Sivala gate in Tama (0.3 low-sec): 9 ship kills in the last 40 min, by Example Alliance 1 (3), Example Alliance 2 (2), Example Alliance 3 (2) and 2 more alliances. Likely camp."
+  },
+  {
+   "name": "three alliances, 1 more alliance and attackers in no alliance",
+   "kind": "row",
+   "generated_at": "2026-11-14T12:00:00Z",
+   "from": "Tama",
+   "to": "Sivala",
+   "true_security": 0.3,
+   "gate": {
+    "system_id": 30002813,
+    "to_system_id": 30002765,
+    "state": "likely_camp",
+    "ship_kills_60m": 9,
+    "ship_kills_120m": 9,
+    "pod_kills_60m": 0,
+    "pod_kills_120m": 0,
+    "structure_kills_60m": 0,
+    "first_kill": "2026-11-14T11:20:00Z",
+    "last_kill": "2026-11-14T11:55:00Z",
+    "groups": 4,
+    "attackers": [
+     {
+      "alliance_id": 2001,
+      "name": "Example Alliance 1",
+      "kills": 3
+     },
+     {
+      "alliance_id": 2002,
+      "name": "Example Alliance 2",
+      "kills": 2
+     },
+     {
+      "alliance_id": 2003,
+      "name": "Example Alliance 3",
+      "kills": 2
+     }
+    ],
+    "no_alliance_kills": 2,
+    "dictor_hic": false,
+    "smartbomb": false,
+    "max_attackers": 9
+   },
+   "expected": "Tama > Sivala gate in Tama (0.3 low-sec): 9 ship kills in the last 40 min, by Example Alliance 1 (3), Example Alliance 2 (2), Example Alliance 3 (2), 1 more alliance and attackers in no alliance (2). Likely camp."
+  },
+  {
+   "name": "null-sec likely camp: 6 ship kills over 45 min",
+   "kind": "row",
+   "generated_at": "2026-11-14T12:00:00Z",
+   "from": "Ala",
+   "to": "Otela",
+   "true_security": -1.0,
+   "gate": {
+    "system_id": 30002652,
+    "to_system_id": 30000157,
+    "state": "likely_camp",
+    "ship_kills_60m": 6,
+    "ship_kills_120m": 6,
+    "pod_kills_60m": 0,
+    "pod_kills_120m": 0,
+    "structure_kills_60m": 0,
+    "first_kill": "2026-11-14T11:10:00Z",
+    "last_kill": "2026-11-14T11:55:00Z",
+    "groups": 1,
+    "attackers": [
+     {
+      "alliance_id": 2001,
+      "name": "Example Alliance 1",
+      "kills": 6
+     }
+    ],
+    "no_alliance_kills": 0,
+    "dictor_hic": true,
+    "smartbomb": false,
+    "max_attackers": 3
+   },
+   "expected": "Ala > Otela gate in Ala (-1.0 null-sec): 6 ship kills in the last 50 min, by Example Alliance 1 (6). Interdictor or HIC seen. Likely camp."
+  },
+  {
+   "name": "null-sec: 6 ship kills over 44 min are kills, no camp pattern",
+   "kind": "row",
+   "generated_at": "2026-11-14T12:00:00Z",
+   "from": "Ala",
+   "to": "Otela",
+   "true_security": -1.0,
+   "gate": {
+    "system_id": 30002652,
+    "to_system_id": 30000157,
+    "state": "kills",
+    "ship_kills_60m": 6,
+    "ship_kills_120m": 6,
+    "pod_kills_60m": 0,
+    "pod_kills_120m": 0,
+    "structure_kills_60m": 0,
+    "first_kill": "2026-11-14T11:11:00Z",
+    "last_kill": "2026-11-14T11:55:00Z",
+    "groups": 1,
+    "attackers": [
+     {
+      "alliance_id": 2001,
+      "name": "Example Alliance 1",
+      "kills": 6
+     }
+    ],
+    "no_alliance_kills": 0,
+    "dictor_hic": false,
+    "smartbomb": false,
+    "max_attackers": 3
+   },
+   "expected": "Ala > Otela gate in Ala (-1.0 null-sec): 6 ship kills in the last 49 min, by Example Alliance 1 (6). Kills, no camp pattern."
   },
   {
    "name": "security 0.04",
@@ -599,8 +850,8 @@
       "system_id": 30000142,
       "to_system_id": 30000144,
       "state": "gank",
-      "ship_kills_60m": 3,
-      "ship_kills_120m": 3,
+      "ship_kills_60m": 4,
+      "ship_kills_120m": 4,
       "pod_kills_60m": 0,
       "pod_kills_120m": 0,
       "structure_kills_60m": 0,
@@ -611,7 +862,7 @@
        {
         "alliance_id": 2004,
         "name": "",
-        "kills": 3
+        "kills": 4
        }
       ],
       "no_alliance_kills": 0,
@@ -627,7 +878,7 @@
      "Jita"
     ]
    },
-   "expected": "Jita > Perimeter gate in Jita (0.9 high-sec): 3 ship kills in the last 20 min, by an alliance not yet named (3). Gank pattern (high-sec).\n\nKills up to 11:58 UTC (5 min ago); snapshot 12:00 UTC.\nzKillboard published kills a median of 3 min after they happened (last 24 hours).\nOnly kills that reached zKillboard count; a camp that kills nothing is invisible."
+   "expected": "Jita > Perimeter gate in Jita (0.9 high-sec): 4 ship kills in the last 20 min, by an alliance not yet named (4). Gank pattern (high-sec).\n\nKills up to 11:58 UTC (5 min ago); snapshot 12:00 UTC.\nzKillboard published kills a median of 3 min after they happened (last 24 hours).\nOnly kills that reached zKillboard count; a camp that kills nothing is invisible."
   },
   {
    "name": "footer line 1: feed behind (newest kill 20 min before the snapshot)",
@@ -651,8 +902,8 @@
       "system_id": 30000142,
       "to_system_id": 30000144,
       "state": "gank",
-      "ship_kills_60m": 3,
-      "ship_kills_120m": 3,
+      "ship_kills_60m": 4,
+      "ship_kills_120m": 4,
       "pod_kills_60m": 0,
       "pod_kills_120m": 0,
       "structure_kills_60m": 0,
@@ -663,7 +914,7 @@
        {
         "alliance_id": 2004,
         "name": "",
-        "kills": 3
+        "kills": 4
        }
       ],
       "no_alliance_kills": 0,
@@ -679,10 +930,10 @@
      "Jita"
     ]
    },
-   "expected": "Jita > Perimeter gate in Jita (0.9 high-sec): 3 ship kills in the last 20 min, by an alliance not yet named (3). Gank pattern (high-sec).\n\nKills up to 11:40 UTC (23 min ago); snapshot 12:00 UTC. The killmail feed may be behind.\nzKillboard published kills a median of 3 min after they happened (last 24 hours).\nOnly kills that reached zKillboard count; a camp that kills nothing is invisible."
+   "expected": "Jita > Perimeter gate in Jita (0.9 high-sec): 4 ship kills in the last 20 min, by an alliance not yet named (4). Gank pattern (high-sec).\n\nKills up to 11:40 UTC (23 min ago); snapshot 12:00 UTC. The killmail feed may be behind.\nzKillboard published kills a median of 3 min after they happened (last 24 hours).\nOnly kills that reached zKillboard count; a camp that kills nothing is invisible."
   },
   {
-   "name": "footer line 1: exactly 15 min behind is not behind",
+   "name": "footer line 1: feed behind: lag exactly delay_p90_s is not behind",
    "kind": "answer",
    "now": "2026-11-14T12:03:00Z",
    "snapshot": {
@@ -693,7 +944,7 @@
     "radius_m": 150000,
     "credit": "zKillboard; killmails are Fenris Creations game data (ESI)",
     "feed": {
-     "newest_killmail_time": "2026-11-14T11:45:00Z",
+     "newest_killmail_time": "2026-11-14T11:51:00Z",
      "delay_p50_s": 180,
      "delay_p90_s": 540,
      "delay_samples": 400
@@ -703,8 +954,8 @@
       "system_id": 30000142,
       "to_system_id": 30000144,
       "state": "gank",
-      "ship_kills_60m": 3,
-      "ship_kills_120m": 3,
+      "ship_kills_60m": 4,
+      "ship_kills_120m": 4,
       "pod_kills_60m": 0,
       "pod_kills_120m": 0,
       "structure_kills_60m": 0,
@@ -715,7 +966,7 @@
        {
         "alliance_id": 2004,
         "name": "",
-        "kills": 3
+        "kills": 4
        }
       ],
       "no_alliance_kills": 0,
@@ -731,7 +982,7 @@
      "Jita"
     ]
    },
-   "expected": "Jita > Perimeter gate in Jita (0.9 high-sec): 3 ship kills in the last 20 min, by an alliance not yet named (3). Gank pattern (high-sec).\n\nKills up to 11:45 UTC (18 min ago); snapshot 12:00 UTC.\nzKillboard published kills a median of 3 min after they happened (last 24 hours).\nOnly kills that reached zKillboard count; a camp that kills nothing is invisible."
+   "expected": "Jita > Perimeter gate in Jita (0.9 high-sec): 4 ship kills in the last 20 min, by an alliance not yet named (4). Gank pattern (high-sec).\n\nKills up to 11:51 UTC (12 min ago); snapshot 12:00 UTC.\nzKillboard published kills a median of 3 min after they happened (last 24 hours).\nOnly kills that reached zKillboard count; a camp that kills nothing is invisible."
   },
   {
    "name": "footer line 1: no kill has reached the feed",
@@ -755,8 +1006,8 @@
       "system_id": 30000142,
       "to_system_id": 30000144,
       "state": "gank",
-      "ship_kills_60m": 3,
-      "ship_kills_120m": 3,
+      "ship_kills_60m": 4,
+      "ship_kills_120m": 4,
       "pod_kills_60m": 0,
       "pod_kills_120m": 0,
       "structure_kills_60m": 0,
@@ -767,7 +1018,7 @@
        {
         "alliance_id": 2004,
         "name": "",
-        "kills": 3
+        "kills": 4
        }
       ],
       "no_alliance_kills": 0,
@@ -783,7 +1034,7 @@
      "Jita"
     ]
    },
-   "expected": "Jita > Perimeter gate in Jita (0.9 high-sec): 3 ship kills in the last 20 min, by an alliance not yet named (3). Gank pattern (high-sec).\n\nNo kill has reached the feed yet; snapshot 12:00 UTC.\nzKillboard published kills a median of 3 min after they happened (last 24 hours).\nOnly kills that reached zKillboard count; a camp that kills nothing is invisible."
+   "expected": "Jita > Perimeter gate in Jita (0.9 high-sec): 4 ship kills in the last 20 min, by an alliance not yet named (4). Gank pattern (high-sec).\n\nNo kill has reached the feed yet; snapshot 12:00 UTC.\nzKillboard published kills a median of 3 min after they happened (last 24 hours).\nOnly kills that reached zKillboard count; a camp that kills nothing is invisible."
   },
   {
    "name": "footer line 2: 29 s is under 1 min",
@@ -799,7 +1050,7 @@
     "feed": {
      "newest_killmail_time": "2026-11-14T11:58:00Z",
      "delay_p50_s": 29,
-     "delay_p90_s": 87,
+     "delay_p90_s": 540,
      "delay_samples": 400
     },
     "gates": [
@@ -807,8 +1058,8 @@
       "system_id": 30000142,
       "to_system_id": 30000144,
       "state": "gank",
-      "ship_kills_60m": 3,
-      "ship_kills_120m": 3,
+      "ship_kills_60m": 4,
+      "ship_kills_120m": 4,
       "pod_kills_60m": 0,
       "pod_kills_120m": 0,
       "structure_kills_60m": 0,
@@ -819,7 +1070,7 @@
        {
         "alliance_id": 2004,
         "name": "",
-        "kills": 3
+        "kills": 4
        }
       ],
       "no_alliance_kills": 0,
@@ -835,7 +1086,7 @@
      "Jita"
     ]
    },
-   "expected": "Jita > Perimeter gate in Jita (0.9 high-sec): 3 ship kills in the last 20 min, by an alliance not yet named (3). Gank pattern (high-sec).\n\nKills up to 11:58 UTC (5 min ago); snapshot 12:00 UTC.\nzKillboard published kills a median of under 1 min after they happened (last 24 hours).\nOnly kills that reached zKillboard count; a camp that kills nothing is invisible."
+   "expected": "Jita > Perimeter gate in Jita (0.9 high-sec): 4 ship kills in the last 20 min, by an alliance not yet named (4). Gank pattern (high-sec).\n\nKills up to 11:58 UTC (5 min ago); snapshot 12:00 UTC.\nzKillboard published kills a median of under 1 min after they happened (last 24 hours).\nOnly kills that reached zKillboard count; a camp that kills nothing is invisible."
   },
   {
    "name": "footer line 2: 30 s rounds half up to 1 min",
@@ -851,7 +1102,7 @@
     "feed": {
      "newest_killmail_time": "2026-11-14T11:58:00Z",
      "delay_p50_s": 30,
-     "delay_p90_s": 90,
+     "delay_p90_s": 540,
      "delay_samples": 400
     },
     "gates": [
@@ -859,8 +1110,8 @@
       "system_id": 30000142,
       "to_system_id": 30000144,
       "state": "gank",
-      "ship_kills_60m": 3,
-      "ship_kills_120m": 3,
+      "ship_kills_60m": 4,
+      "ship_kills_120m": 4,
       "pod_kills_60m": 0,
       "pod_kills_120m": 0,
       "structure_kills_60m": 0,
@@ -871,7 +1122,7 @@
        {
         "alliance_id": 2004,
         "name": "",
-        "kills": 3
+        "kills": 4
        }
       ],
       "no_alliance_kills": 0,
@@ -887,7 +1138,7 @@
      "Jita"
     ]
    },
-   "expected": "Jita > Perimeter gate in Jita (0.9 high-sec): 3 ship kills in the last 20 min, by an alliance not yet named (3). Gank pattern (high-sec).\n\nKills up to 11:58 UTC (5 min ago); snapshot 12:00 UTC.\nzKillboard published kills a median of 1 min after they happened (last 24 hours).\nOnly kills that reached zKillboard count; a camp that kills nothing is invisible."
+   "expected": "Jita > Perimeter gate in Jita (0.9 high-sec): 4 ship kills in the last 20 min, by an alliance not yet named (4). Gank pattern (high-sec).\n\nKills up to 11:58 UTC (5 min ago); snapshot 12:00 UTC.\nzKillboard published kills a median of 1 min after they happened (last 24 hours).\nOnly kills that reached zKillboard count; a camp that kills nothing is invisible."
   },
   {
    "name": "footer line 2: 90 s rounds half up to 2 min",
@@ -903,7 +1154,7 @@
     "feed": {
      "newest_killmail_time": "2026-11-14T11:58:00Z",
      "delay_p50_s": 90,
-     "delay_p90_s": 270,
+     "delay_p90_s": 540,
      "delay_samples": 400
     },
     "gates": [
@@ -911,8 +1162,8 @@
       "system_id": 30000142,
       "to_system_id": 30000144,
       "state": "gank",
-      "ship_kills_60m": 3,
-      "ship_kills_120m": 3,
+      "ship_kills_60m": 4,
+      "ship_kills_120m": 4,
       "pod_kills_60m": 0,
       "pod_kills_120m": 0,
       "structure_kills_60m": 0,
@@ -923,7 +1174,7 @@
        {
         "alliance_id": 2004,
         "name": "",
-        "kills": 3
+        "kills": 4
        }
       ],
       "no_alliance_kills": 0,
@@ -939,7 +1190,7 @@
      "Jita"
     ]
    },
-   "expected": "Jita > Perimeter gate in Jita (0.9 high-sec): 3 ship kills in the last 20 min, by an alliance not yet named (3). Gank pattern (high-sec).\n\nKills up to 11:58 UTC (5 min ago); snapshot 12:00 UTC.\nzKillboard published kills a median of 2 min after they happened (last 24 hours).\nOnly kills that reached zKillboard count; a camp that kills nothing is invisible."
+   "expected": "Jita > Perimeter gate in Jita (0.9 high-sec): 4 ship kills in the last 20 min, by an alliance not yet named (4). Gank pattern (high-sec).\n\nKills up to 11:58 UTC (5 min ago); snapshot 12:00 UTC.\nzKillboard published kills a median of 2 min after they happened (last 24 hours).\nOnly kills that reached zKillboard count; a camp that kills nothing is invisible."
   },
   {
    "name": "footer line 2: no delay line below 100 samples (delay fields null)",
@@ -963,8 +1214,8 @@
       "system_id": 30000142,
       "to_system_id": 30000144,
       "state": "gank",
-      "ship_kills_60m": 3,
-      "ship_kills_120m": 3,
+      "ship_kills_60m": 4,
+      "ship_kills_120m": 4,
       "pod_kills_60m": 0,
       "pod_kills_120m": 0,
       "structure_kills_60m": 0,
@@ -975,7 +1226,7 @@
        {
         "alliance_id": 2004,
         "name": "",
-        "kills": 3
+        "kills": 4
        }
       ],
       "no_alliance_kills": 0,
@@ -991,7 +1242,7 @@
      "Jita"
     ]
    },
-   "expected": "Jita > Perimeter gate in Jita (0.9 high-sec): 3 ship kills in the last 20 min, by an alliance not yet named (3). Gank pattern (high-sec).\n\nKills up to 11:58 UTC (5 min ago); snapshot 12:00 UTC.\nOnly kills that reached zKillboard count; a camp that kills nothing is invisible."
+   "expected": "Jita > Perimeter gate in Jita (0.9 high-sec): 4 ship kills in the last 20 min, by an alliance not yet named (4). Gank pattern (high-sec).\n\nKills up to 11:58 UTC (5 min ago); snapshot 12:00 UTC.\nOnly kills that reached zKillboard count; a camp that kills nothing is invisible."
   },
   {
    "name": "empty answer, one system",
@@ -1119,10 +1370,10 @@
      "Perimeter"
     ]
    },
-   "expected": "No gate of Perimeter is at possible_camp or above; 1 gate had kills in the last 2 hours at a lower state. Set min_state to kills to list them. That is not proof of safety: only kills that reached zKillboard count.\nKills up to 11:58 UTC (5 min ago); snapshot 12:00 UTC."
+   "expected": "No gate of Perimeter is in the listed states (fight, likely_camp, gank); 1 gate had kills in the last 2 hours in other states. Add those states to list them. That is not proof of safety: only kills that reached zKillboard count.\nKills up to 11:58 UTC (5 min ago); snapshot 12:00 UTC."
   },
   {
-   "name": "below threshold, two gates, min_state likely_camp",
+   "name": "below threshold, two gates, states fight and likely_camp",
    "kind": "answer",
    "now": "2026-11-14T12:03:00Z",
    "snapshot": {
@@ -1160,7 +1411,7 @@
      {
       "system_id": 30000142,
       "to_system_id": 30000144,
-      "state": "possible_camp",
+      "state": "kills",
       "ship_kills_60m": 2,
       "ship_kills_120m": 2,
       "pod_kills_60m": 0,
@@ -1189,9 +1440,12 @@
      "Jita",
      "Perimeter"
     ],
-    "min_state": "likely_camp"
+    "states": [
+     "fight",
+     "likely_camp"
+    ]
    },
-   "expected": "No gate of Jita, Perimeter is at likely_camp or above; 2 gates had kills in the last 2 hours at a lower state. Set min_state to kills to list them. That is not proof of safety: only kills that reached zKillboard count.\nKills up to 11:58 UTC (5 min ago); snapshot 12:00 UTC."
+   "expected": "No gate of Jita, Perimeter is in the listed states (fight, likely_camp); 2 gates had kills in the last 2 hours in other states. Add those states to list them. That is not proof of safety: only kills that reached zKillboard count.\nKills up to 11:58 UTC (5 min ago); snapshot 12:00 UTC."
   },
   {
    "name": "below threshold, a state this reader does not know",
@@ -1237,7 +1491,7 @@
      "Perimeter"
     ]
    },
-   "expected": "No gate of Perimeter is at possible_camp or above; 1 gate had kills in the last 2 hours at a lower state. Set min_state to kills to list them. That is not proof of safety: only kills that reached zKillboard count.\nKills up to 11:58 UTC (5 min ago); snapshot 12:00 UTC."
+   "expected": "No gate of Perimeter is in the listed states (fight, likely_camp, gank); 1 gate had kills in the last 2 hours in other states. Add those states to list them. That is not proof of safety: only kills that reached zKillboard count.\nKills up to 11:58 UTC (5 min ago); snapshot 12:00 UTC."
   },
   {
    "name": "snapshot age 9 min: no sentence",
@@ -1261,8 +1515,8 @@
       "system_id": 30000142,
       "to_system_id": 30000144,
       "state": "gank",
-      "ship_kills_60m": 3,
-      "ship_kills_120m": 3,
+      "ship_kills_60m": 4,
+      "ship_kills_120m": 4,
       "pod_kills_60m": 0,
       "pod_kills_120m": 0,
       "structure_kills_60m": 0,
@@ -1273,7 +1527,7 @@
        {
         "alliance_id": 2004,
         "name": "",
-        "kills": 3
+        "kills": 4
        }
       ],
       "no_alliance_kills": 0,
@@ -1289,7 +1543,7 @@
      "Jita"
     ]
    },
-   "expected": "Jita > Perimeter gate in Jita (0.9 high-sec): 3 ship kills in the last 20 min, by an alliance not yet named (3). Gank pattern (high-sec).\n\nKills up to 11:58 UTC (11 min ago); snapshot 12:00 UTC.\nzKillboard published kills a median of 3 min after they happened (last 24 hours).\nOnly kills that reached zKillboard count; a camp that kills nothing is invisible."
+   "expected": "Jita > Perimeter gate in Jita (0.9 high-sec): 4 ship kills in the last 20 min, by an alliance not yet named (4). Gank pattern (high-sec).\n\nKills up to 11:58 UTC (11 min ago); snapshot 12:00 UTC.\nzKillboard published kills a median of 3 min after they happened (last 24 hours).\nOnly kills that reached zKillboard count; a camp that kills nothing is invisible."
   },
   {
    "name": "snapshot age exactly 10 min: no sentence",
@@ -1313,8 +1567,8 @@
       "system_id": 30000142,
       "to_system_id": 30000144,
       "state": "gank",
-      "ship_kills_60m": 3,
-      "ship_kills_120m": 3,
+      "ship_kills_60m": 4,
+      "ship_kills_120m": 4,
       "pod_kills_60m": 0,
       "pod_kills_120m": 0,
       "structure_kills_60m": 0,
@@ -1325,7 +1579,7 @@
        {
         "alliance_id": 2004,
         "name": "",
-        "kills": 3
+        "kills": 4
        }
       ],
       "no_alliance_kills": 0,
@@ -1341,7 +1595,7 @@
      "Jita"
     ]
    },
-   "expected": "Jita > Perimeter gate in Jita (0.9 high-sec): 3 ship kills in the last 20 min, by an alliance not yet named (3). Gank pattern (high-sec).\n\nKills up to 11:58 UTC (12 min ago); snapshot 12:00 UTC.\nzKillboard published kills a median of 3 min after they happened (last 24 hours).\nOnly kills that reached zKillboard count; a camp that kills nothing is invisible."
+   "expected": "Jita > Perimeter gate in Jita (0.9 high-sec): 4 ship kills in the last 20 min, by an alliance not yet named (4). Gank pattern (high-sec).\n\nKills up to 11:58 UTC (12 min ago); snapshot 12:00 UTC.\nzKillboard published kills a median of 3 min after they happened (last 24 hours).\nOnly kills that reached zKillboard count; a camp that kills nothing is invisible."
   },
   {
    "name": "snapshot age 10 min 1 s: old",
@@ -1365,8 +1619,8 @@
       "system_id": 30000142,
       "to_system_id": 30000144,
       "state": "gank",
-      "ship_kills_60m": 3,
-      "ship_kills_120m": 3,
+      "ship_kills_60m": 4,
+      "ship_kills_120m": 4,
       "pod_kills_60m": 0,
       "pod_kills_120m": 0,
       "structure_kills_60m": 0,
@@ -1377,7 +1631,7 @@
        {
         "alliance_id": 2004,
         "name": "",
-        "kills": 3
+        "kills": 4
        }
       ],
       "no_alliance_kills": 0,
@@ -1393,7 +1647,7 @@
      "Jita"
     ]
    },
-   "expected": "This snapshot is 10 min old; camps may have changed.\nJita > Perimeter gate in Jita (0.9 high-sec): 3 ship kills in the last 20 min, by an alliance not yet named (3). Gank pattern (high-sec).\n\nKills up to 11:58 UTC (12 min ago); snapshot 12:00 UTC.\nzKillboard published kills a median of 3 min after they happened (last 24 hours).\nOnly kills that reached zKillboard count; a camp that kills nothing is invisible."
+   "expected": "This snapshot is 10 min old; camps may have changed.\nJita > Perimeter gate in Jita (0.9 high-sec): 4 ship kills in the last 20 min, by an alliance not yet named (4). Gank pattern (high-sec).\n\nKills up to 11:58 UTC (12 min ago); snapshot 12:00 UTC.\nzKillboard published kills a median of 3 min after they happened (last 24 hours).\nOnly kills that reached zKillboard count; a camp that kills nothing is invisible."
   },
   {
    "name": "snapshot age 11 min: old",
@@ -1417,8 +1671,8 @@
       "system_id": 30000142,
       "to_system_id": 30000144,
       "state": "gank",
-      "ship_kills_60m": 3,
-      "ship_kills_120m": 3,
+      "ship_kills_60m": 4,
+      "ship_kills_120m": 4,
       "pod_kills_60m": 0,
       "pod_kills_120m": 0,
       "structure_kills_60m": 0,
@@ -1429,7 +1683,7 @@
        {
         "alliance_id": 2004,
         "name": "",
-        "kills": 3
+        "kills": 4
        }
       ],
       "no_alliance_kills": 0,
@@ -1445,7 +1699,7 @@
      "Jita"
     ]
    },
-   "expected": "This snapshot is 11 min old; camps may have changed.\nJita > Perimeter gate in Jita (0.9 high-sec): 3 ship kills in the last 20 min, by an alliance not yet named (3). Gank pattern (high-sec).\n\nKills up to 11:58 UTC (13 min ago); snapshot 12:00 UTC.\nzKillboard published kills a median of 3 min after they happened (last 24 hours).\nOnly kills that reached zKillboard count; a camp that kills nothing is invisible."
+   "expected": "This snapshot is 11 min old; camps may have changed.\nJita > Perimeter gate in Jita (0.9 high-sec): 4 ship kills in the last 20 min, by an alliance not yet named (4). Gank pattern (high-sec).\n\nKills up to 11:58 UTC (13 min ago); snapshot 12:00 UTC.\nzKillboard published kills a median of 3 min after they happened (last 24 hours).\nOnly kills that reached zKillboard count; a camp that kills nothing is invisible."
   },
   {
    "name": "snapshot age 1 h 59 min: old",
@@ -1469,8 +1723,8 @@
       "system_id": 30000142,
       "to_system_id": 30000144,
       "state": "gank",
-      "ship_kills_60m": 3,
-      "ship_kills_120m": 3,
+      "ship_kills_60m": 4,
+      "ship_kills_120m": 4,
       "pod_kills_60m": 0,
       "pod_kills_120m": 0,
       "structure_kills_60m": 0,
@@ -1481,7 +1735,7 @@
        {
         "alliance_id": 2004,
         "name": "",
-        "kills": 3
+        "kills": 4
        }
       ],
       "no_alliance_kills": 0,
@@ -1497,7 +1751,7 @@
      "Jita"
     ]
    },
-   "expected": "This snapshot is 119 min old; camps may have changed.\nJita > Perimeter gate in Jita (0.9 high-sec): 3 ship kills in the last 20 min, by an alliance not yet named (3). Gank pattern (high-sec).\n\nKills up to 11:58 UTC (121 min ago); snapshot 12:00 UTC.\nzKillboard published kills a median of 3 min after they happened (last 24 hours).\nOnly kills that reached zKillboard count; a camp that kills nothing is invisible."
+   "expected": "This snapshot is 119 min old; camps may have changed.\nJita > Perimeter gate in Jita (0.9 high-sec): 4 ship kills in the last 20 min, by an alliance not yet named (4). Gank pattern (high-sec).\n\nKills up to 11:58 UTC (121 min ago); snapshot 12:00 UTC.\nzKillboard published kills a median of 3 min after they happened (last 24 hours).\nOnly kills that reached zKillboard count; a camp that kills nothing is invisible."
   },
   {
    "name": "snapshot age exactly 2 h: old, rows kept",
@@ -1521,8 +1775,8 @@
       "system_id": 30000142,
       "to_system_id": 30000144,
       "state": "gank",
-      "ship_kills_60m": 3,
-      "ship_kills_120m": 3,
+      "ship_kills_60m": 4,
+      "ship_kills_120m": 4,
       "pod_kills_60m": 0,
       "pod_kills_120m": 0,
       "structure_kills_60m": 0,
@@ -1533,7 +1787,7 @@
        {
         "alliance_id": 2004,
         "name": "",
-        "kills": 3
+        "kills": 4
        }
       ],
       "no_alliance_kills": 0,
@@ -1549,7 +1803,7 @@
      "Jita"
     ]
    },
-   "expected": "This snapshot is 120 min old; camps may have changed.\nJita > Perimeter gate in Jita (0.9 high-sec): 3 ship kills in the last 20 min, by an alliance not yet named (3). Gank pattern (high-sec).\n\nKills up to 11:58 UTC (122 min ago); snapshot 12:00 UTC.\nzKillboard published kills a median of 3 min after they happened (last 24 hours).\nOnly kills that reached zKillboard count; a camp that kills nothing is invisible."
+   "expected": "This snapshot is 120 min old; camps may have changed.\nJita > Perimeter gate in Jita (0.9 high-sec): 4 ship kills in the last 20 min, by an alliance not yet named (4). Gank pattern (high-sec).\n\nKills up to 11:58 UTC (122 min ago); snapshot 12:00 UTC.\nzKillboard published kills a median of 3 min after they happened (last 24 hours).\nOnly kills that reached zKillboard count; a camp that kills nothing is invisible."
   },
   {
    "name": "snapshot age 2 h 1 s: out of date",
@@ -1573,8 +1827,8 @@
       "system_id": 30000142,
       "to_system_id": 30000144,
       "state": "gank",
-      "ship_kills_60m": 3,
-      "ship_kills_120m": 3,
+      "ship_kills_60m": 4,
+      "ship_kills_120m": 4,
       "pod_kills_60m": 0,
       "pod_kills_120m": 0,
       "structure_kills_60m": 0,
@@ -1585,7 +1839,7 @@
        {
         "alliance_id": 2004,
         "name": "",
-        "kills": 3
+        "kills": 4
        }
       ],
       "no_alliance_kills": 0,
@@ -1625,8 +1879,8 @@
       "system_id": 30000142,
       "to_system_id": 30000144,
       "state": "gank",
-      "ship_kills_60m": 3,
-      "ship_kills_120m": 3,
+      "ship_kills_60m": 4,
+      "ship_kills_120m": 4,
       "pod_kills_60m": 0,
       "pod_kills_120m": 0,
       "structure_kills_60m": 0,
@@ -1637,7 +1891,7 @@
        {
         "alliance_id": 2004,
         "name": "",
-        "kills": 3
+        "kills": 4
        }
       ],
       "no_alliance_kills": 0,
@@ -1677,8 +1931,8 @@
       "system_id": 30000142,
       "to_system_id": 30000144,
       "state": "gank",
-      "ship_kills_60m": 3,
-      "ship_kills_120m": 3,
+      "ship_kills_60m": 4,
+      "ship_kills_120m": 4,
       "pod_kills_60m": 0,
       "pod_kills_120m": 0,
       "structure_kills_60m": 0,
@@ -1689,7 +1943,7 @@
        {
         "alliance_id": 2004,
         "name": "",
-        "kills": 3
+        "kills": 4
        }
       ],
       "no_alliance_kills": 0,
@@ -1775,8 +2029,8 @@
       "system_id": 30000142,
       "to_system_id": 30000144,
       "state": "gank",
-      "ship_kills_60m": 3,
-      "ship_kills_120m": 3,
+      "ship_kills_60m": 4,
+      "ship_kills_120m": 4,
       "pod_kills_60m": 0,
       "pod_kills_120m": 0,
       "structure_kills_60m": 0,
@@ -1787,7 +2041,7 @@
        {
         "alliance_id": 2004,
         "name": "",
-        "kills": 3
+        "kills": 4
        }
       ],
       "no_alliance_kills": 0,
@@ -1827,8 +2081,8 @@
       "system_id": 30000142,
       "to_system_id": 30000144,
       "state": "gank",
-      "ship_kills_60m": 3,
-      "ship_kills_120m": 3,
+      "ship_kills_60m": 4,
+      "ship_kills_120m": 4,
       "pod_kills_60m": 0,
       "pod_kills_120m": 0,
       "structure_kills_60m": 0,
@@ -1839,7 +2093,7 @@
        {
         "alliance_id": 2004,
         "name": "",
-        "kills": 3
+        "kills": 4
        }
       ],
       "no_alliance_kills": 0,
@@ -1879,8 +2133,8 @@
       "system_id": 30000142,
       "to_system_id": 30000144,
       "state": "gank",
-      "ship_kills_60m": 3,
-      "ship_kills_120m": 3,
+      "ship_kills_60m": 4,
+      "ship_kills_120m": 4,
       "pod_kills_60m": 0,
       "pod_kills_120m": 0,
       "structure_kills_60m": 0,
@@ -1891,7 +2145,7 @@
        {
         "alliance_id": 2004,
         "name": "",
-        "kills": 3
+        "kills": 4
        }
       ],
       "no_alliance_kills": 0,
@@ -1931,8 +2185,8 @@
       "system_id": 30000142,
       "to_system_id": 30000144,
       "state": "gank",
-      "ship_kills_60m": 3,
-      "ship_kills_120m": 3,
+      "ship_kills_60m": 4,
+      "ship_kills_120m": 4,
       "pod_kills_60m": 0,
       "pod_kills_120m": 0,
       "structure_kills_60m": 0,
@@ -1943,7 +2197,7 @@
        {
         "alliance_id": 2004,
         "name": "",
-        "kills": 3
+        "kills": 4
        }
       ],
       "no_alliance_kills": 0,
@@ -1983,8 +2237,8 @@
       "system_id": 30000142,
       "to_system_id": 30000144,
       "state": "gank",
-      "ship_kills_60m": 3,
-      "ship_kills_120m": 3,
+      "ship_kills_60m": 4,
+      "ship_kills_120m": 4,
       "pod_kills_60m": 0,
       "pod_kills_120m": 0,
       "structure_kills_60m": 0,
@@ -1995,7 +2249,7 @@
        {
         "alliance_id": 2004,
         "name": "",
-        "kills": 3
+        "kills": 4
        }
       ],
       "no_alliance_kills": 0,
@@ -2011,7 +2265,7 @@
      "Jita"
     ]
    },
-   "expected": "Jita > Perimeter gate in Jita (0.9 high-sec): 3 ship kills in the last 20 min, by an alliance not yet named (3). Gank pattern (high-sec).\n\nKills up to 11:58 UTC (just now); snapshot 12:00 UTC.\nzKillboard published kills a median of 3 min after they happened (last 24 hours).\nOnly kills that reached zKillboard count; a camp that kills nothing is invisible."
+   "expected": "Jita > Perimeter gate in Jita (0.9 high-sec): 4 ship kills in the last 20 min, by an alliance not yet named (4). Gank pattern (high-sec).\n\nKills up to 11:58 UTC (just now); snapshot 12:00 UTC.\nzKillboard published kills a median of 3 min after they happened (last 24 hours).\nOnly kills that reached zKillboard count; a camp that kills nothing is invisible."
   },
   {
    "name": "the newest kill exactly now is 0 min ago",
@@ -2035,8 +2289,8 @@
       "system_id": 30000142,
       "to_system_id": 30000144,
       "state": "gank",
-      "ship_kills_60m": 3,
-      "ship_kills_120m": 3,
+      "ship_kills_60m": 4,
+      "ship_kills_120m": 4,
       "pod_kills_60m": 0,
       "pod_kills_120m": 0,
       "structure_kills_60m": 0,
@@ -2047,7 +2301,7 @@
        {
         "alliance_id": 2004,
         "name": "",
-        "kills": 3
+        "kills": 4
        }
       ],
       "no_alliance_kills": 0,
@@ -2063,7 +2317,7 @@
      "Jita"
     ]
    },
-   "expected": "Jita > Perimeter gate in Jita (0.9 high-sec): 3 ship kills in the last 20 min, by an alliance not yet named (3). Gank pattern (high-sec).\n\nKills up to 11:58 UTC (0 min ago); snapshot 12:00 UTC.\nzKillboard published kills a median of 3 min after they happened (last 24 hours).\nOnly kills that reached zKillboard count; a camp that kills nothing is invisible."
+   "expected": "Jita > Perimeter gate in Jita (0.9 high-sec): 4 ship kills in the last 20 min, by an alliance not yet named (4). Gank pattern (high-sec).\n\nKills up to 11:58 UTC (0 min ago); snapshot 12:00 UTC.\nzKillboard published kills a median of 3 min after they happened (last 24 hours).\nOnly kills that reached zKillboard count; a camp that kills nothing is invisible."
   },
   {
    "name": "snapshot 3 h ahead of the clock: current, never out of date",
@@ -2087,8 +2341,8 @@
       "system_id": 30000142,
       "to_system_id": 30000144,
       "state": "gank",
-      "ship_kills_60m": 3,
-      "ship_kills_120m": 3,
+      "ship_kills_60m": 4,
+      "ship_kills_120m": 4,
       "pod_kills_60m": 0,
       "pod_kills_120m": 0,
       "structure_kills_60m": 0,
@@ -2099,7 +2353,7 @@
        {
         "alliance_id": 2004,
         "name": "",
-        "kills": 3
+        "kills": 4
        }
       ],
       "no_alliance_kills": 0,
@@ -2115,7 +2369,7 @@
      "Jita"
     ]
    },
-   "expected": "Jita > Perimeter gate in Jita (0.9 high-sec): 3 ship kills in the last 20 min, by an alliance not yet named (3). Gank pattern (high-sec).\n\nKills up to 11:58 UTC (just now); snapshot 12:00 UTC.\nzKillboard published kills a median of 3 min after they happened (last 24 hours).\nOnly kills that reached zKillboard count; a camp that kills nothing is invisible."
+   "expected": "Jita > Perimeter gate in Jita (0.9 high-sec): 4 ship kills in the last 20 min, by an alliance not yet named (4). Gank pattern (high-sec).\n\nKills up to 11:58 UTC (just now); snapshot 12:00 UTC.\nzKillboard published kills a median of 3 min after they happened (last 24 hours).\nOnly kills that reached zKillboard count; a camp that kills nothing is invisible."
   },
   {
    "name": "old and below threshold: the sentence comes first",
@@ -2161,7 +2415,1658 @@
      "Perimeter"
     ]
    },
-   "expected": "This snapshot is 15 min old; camps may have changed.\nNo gate of Perimeter is at possible_camp or above; 1 gate had kills in the last 2 hours at a lower state. Set min_state to kills to list them. That is not proof of safety: only kills that reached zKillboard count.\nKills up to 11:58 UTC (17 min ago); snapshot 12:00 UTC."
+   "expected": "This snapshot is 15 min old; camps may have changed.\nNo gate of Perimeter is in the listed states (fight, likely_camp, gank); 1 gate had kills in the last 2 hours in other states. Add those states to list them. That is not proof of safety: only kills that reached zKillboard count.\nKills up to 11:58 UTC (17 min ago); snapshot 12:00 UTC."
+  },
+  {
+   "name": "feed behind: lag delay_p90_s plus 1 s",
+   "kind": "answer",
+   "now": "2026-11-14T12:03:00Z",
+   "snapshot": {
+    "format": "intel-gates-now",
+    "version": 1,
+    "generated_at": "2026-11-14T12:00:00Z",
+    "window_s": 7200,
+    "radius_m": 150000,
+    "credit": "zKillboard; killmails are Fenris Creations game data (ESI)",
+    "feed": {
+     "newest_killmail_time": "2026-11-14T11:50:59Z",
+     "delay_p50_s": 180,
+     "delay_p90_s": 540,
+     "delay_samples": 400
+    },
+    "gates": [
+     {
+      "system_id": 30000142,
+      "to_system_id": 30000144,
+      "state": "gank",
+      "ship_kills_60m": 4,
+      "ship_kills_120m": 4,
+      "pod_kills_60m": 0,
+      "pod_kills_120m": 0,
+      "structure_kills_60m": 0,
+      "first_kill": "2026-11-14T11:40:00Z",
+      "last_kill": "2026-11-14T11:58:00Z",
+      "groups": 1,
+      "attackers": [
+       {
+        "alliance_id": 2004,
+        "name": "",
+        "kills": 4
+       }
+      ],
+      "no_alliance_kills": 0,
+      "dictor_hic": false,
+      "smartbomb": false,
+      "max_attackers": 4
+     }
+    ],
+    "systems": []
+   },
+   "request": {
+    "system_names": [
+     "Jita"
+    ]
+   },
+   "expected": "Jita > Perimeter gate in Jita (0.9 high-sec): 4 ship kills in the last 20 min, by an alliance not yet named (4). Gank pattern (high-sec).\n\nKills up to 11:50 UTC (12 min ago); snapshot 12:00 UTC. The killmail feed may be behind.\nzKillboard published kills a median of 3 min after they happened (last 24 hours).\nOnly kills that reached zKillboard count; a camp that kills nothing is invisible."
+  },
+  {
+   "name": "feed behind without delay_p90_s: lag exactly window_s is not behind",
+   "kind": "answer",
+   "now": "2026-11-14T12:03:00Z",
+   "snapshot": {
+    "format": "intel-gates-now",
+    "version": 1,
+    "generated_at": "2026-11-14T12:00:00Z",
+    "window_s": 7200,
+    "radius_m": 150000,
+    "credit": "zKillboard; killmails are Fenris Creations game data (ESI)",
+    "feed": {
+     "newest_killmail_time": "2026-11-14T10:00:00Z",
+     "delay_p50_s": null,
+     "delay_p90_s": null,
+     "delay_samples": 40
+    },
+    "gates": [],
+    "systems": []
+   },
+   "request": {
+    "system_names": [
+     "Tama"
+    ]
+   },
+   "expected": "No kills seen on gates of Tama in the last 2 hours. That is not proof of safety: only kills that reached zKillboard count.\nKills up to 10:00 UTC (123 min ago); snapshot 12:00 UTC."
+  },
+  {
+   "name": "feed behind without delay_p90_s: lag past window_s",
+   "kind": "answer",
+   "now": "2026-11-14T12:03:00Z",
+   "snapshot": {
+    "format": "intel-gates-now",
+    "version": 1,
+    "generated_at": "2026-11-14T12:00:00Z",
+    "window_s": 7200,
+    "radius_m": 150000,
+    "credit": "zKillboard; killmails are Fenris Creations game data (ESI)",
+    "feed": {
+     "newest_killmail_time": "2026-11-14T09:59:59Z",
+     "delay_p50_s": null,
+     "delay_p90_s": null,
+     "delay_samples": 40
+    },
+    "gates": [],
+    "systems": []
+   },
+   "request": {
+    "system_names": [
+     "Tama"
+    ]
+   },
+   "expected": "No kills seen on gates of Tama in the last 2 hours. That is not proof of safety: only kills that reached zKillboard count.\nKills up to 09:59 UTC (123 min ago); snapshot 12:00 UTC. The killmail feed may be behind."
+  },
+  {
+   "name": "out of date follows window_s 3600 at 1 h 1 s",
+   "kind": "answer",
+   "now": "2026-11-14T13:00:01Z",
+   "snapshot": {
+    "format": "intel-gates-now",
+    "version": 1,
+    "generated_at": "2026-11-14T12:00:00Z",
+    "window_s": 3600,
+    "radius_m": 150000,
+    "credit": "zKillboard; killmails are Fenris Creations game data (ESI)",
+    "feed": {
+     "newest_killmail_time": "2026-11-14T11:58:00Z",
+     "delay_p50_s": 180,
+     "delay_p90_s": 540,
+     "delay_samples": 400
+    },
+    "gates": [
+     {
+      "system_id": 30000142,
+      "to_system_id": 30000144,
+      "state": "gank",
+      "ship_kills_60m": 4,
+      "ship_kills_120m": 4,
+      "pod_kills_60m": 0,
+      "pod_kills_120m": 0,
+      "structure_kills_60m": 0,
+      "first_kill": "2026-11-14T11:40:00Z",
+      "last_kill": "2026-11-14T11:58:00Z",
+      "groups": 1,
+      "attackers": [
+       {
+        "alliance_id": 2004,
+        "name": "",
+        "kills": 4
+       }
+      ],
+      "no_alliance_kills": 0,
+      "dictor_hic": false,
+      "smartbomb": false,
+      "max_attackers": 4
+     }
+    ],
+    "systems": []
+   },
+   "request": {
+    "system_names": [
+     "Jita"
+    ]
+   },
+   "expected": "Gate camp data is out of date (last update 1 h ago).\nKills up to 2026-11-14 11:58 UTC; snapshot 2026-11-14 12:00 UTC."
+  },
+  {
+   "name": "old up to window_s 3600 at exactly 1 h",
+   "kind": "answer",
+   "now": "2026-11-14T13:00:00Z",
+   "snapshot": {
+    "format": "intel-gates-now",
+    "version": 1,
+    "generated_at": "2026-11-14T12:00:00Z",
+    "window_s": 3600,
+    "radius_m": 150000,
+    "credit": "zKillboard; killmails are Fenris Creations game data (ESI)",
+    "feed": {
+     "newest_killmail_time": "2026-11-14T11:58:00Z",
+     "delay_p50_s": 180,
+     "delay_p90_s": 540,
+     "delay_samples": 400
+    },
+    "gates": [
+     {
+      "system_id": 30000142,
+      "to_system_id": 30000144,
+      "state": "gank",
+      "ship_kills_60m": 4,
+      "ship_kills_120m": 4,
+      "pod_kills_60m": 0,
+      "pod_kills_120m": 0,
+      "structure_kills_60m": 0,
+      "first_kill": "2026-11-14T11:40:00Z",
+      "last_kill": "2026-11-14T11:58:00Z",
+      "groups": 1,
+      "attackers": [
+       {
+        "alliance_id": 2004,
+        "name": "",
+        "kills": 4
+       }
+      ],
+      "no_alliance_kills": 0,
+      "dictor_hic": false,
+      "smartbomb": false,
+      "max_attackers": 4
+     }
+    ],
+    "systems": []
+   },
+   "request": {
+    "system_names": [
+     "Jita"
+    ]
+   },
+   "expected": "This snapshot is 60 min old; camps may have changed.\nJita > Perimeter gate in Jita (0.9 high-sec): 4 ship kills in the last 20 min, by an alliance not yet named (4). Gank pattern (high-sec).\n\nKills up to 11:58 UTC (62 min ago); snapshot 12:00 UTC.\nzKillboard published kills a median of 3 min after they happened (last 24 hours).\nOnly kills that reached zKillboard count; a camp that kills nothing is invisible."
+  },
+  {
+   "name": "states: gank only lists the high-sec gank row",
+   "kind": "answer",
+   "now": "2026-11-14T12:03:00Z",
+   "snapshot": {
+    "format": "intel-gates-now",
+    "version": 1,
+    "generated_at": "2026-11-14T12:00:00Z",
+    "window_s": 7200,
+    "radius_m": 150000,
+    "credit": "zKillboard; killmails are Fenris Creations game data (ESI)",
+    "feed": {
+     "newest_killmail_time": "2026-11-14T11:58:00Z",
+     "delay_p50_s": 180,
+     "delay_p90_s": 540,
+     "delay_samples": 400
+    },
+    "gates": [
+     {
+      "system_id": 30002813,
+      "to_system_id": 30002765,
+      "state": "likely_camp",
+      "ship_kills_60m": 4,
+      "ship_kills_120m": 6,
+      "pod_kills_60m": 2,
+      "pod_kills_120m": 3,
+      "structure_kills_60m": 0,
+      "first_kill": "2026-11-14T11:20:00Z",
+      "last_kill": "2026-11-14T11:55:00Z",
+      "groups": 2,
+      "attackers": [
+       {
+        "alliance_id": 2001,
+        "name": "Example Alliance 1",
+        "kills": 2
+       },
+       {
+        "alliance_id": 2002,
+        "name": "Example Alliance 2",
+        "kills": 1
+       },
+       {
+        "alliance_id": 2003,
+        "name": "Example Alliance 3",
+        "kills": 1
+       }
+      ],
+      "no_alliance_kills": 0,
+      "dictor_hic": true,
+      "smartbomb": false,
+      "max_attackers": 8
+     },
+     {
+      "system_id": 30000142,
+      "to_system_id": 30000144,
+      "state": "gank",
+      "ship_kills_60m": 4,
+      "ship_kills_120m": 4,
+      "pod_kills_60m": 0,
+      "pod_kills_120m": 0,
+      "structure_kills_60m": 0,
+      "first_kill": "2026-11-14T11:40:00Z",
+      "last_kill": "2026-11-14T11:58:00Z",
+      "groups": 1,
+      "attackers": [
+       {
+        "alliance_id": 2004,
+        "name": "",
+        "kills": 4
+       }
+      ],
+      "no_alliance_kills": 0,
+      "dictor_hic": false,
+      "smartbomb": false,
+      "max_attackers": 4
+     },
+     {
+      "system_id": 30000144,
+      "to_system_id": 30000142,
+      "state": "kills",
+      "ship_kills_60m": 0,
+      "ship_kills_120m": 1,
+      "pod_kills_60m": 0,
+      "pod_kills_120m": 1,
+      "structure_kills_60m": 0,
+      "first_kill": "2026-11-14T10:30:00Z",
+      "last_kill": "2026-11-14T10:31:00Z",
+      "groups": 0,
+      "attackers": [],
+      "no_alliance_kills": 0,
+      "dictor_hic": false,
+      "smartbomb": false,
+      "max_attackers": 0
+     }
+    ],
+    "systems": [],
+    "camp_window_s": 3600
+   },
+   "request": {
+    "system_names": [
+     "Jita",
+     "Tama"
+    ],
+    "states": [
+     "gank"
+    ]
+   },
+   "expected": "Jita > Perimeter gate in Jita (0.9 high-sec): 4 ship kills in the last 20 min, by an alliance not yet named (4). Gank pattern (high-sec).\n\nKills up to 11:58 UTC (5 min ago); snapshot 12:00 UTC.\nzKillboard published kills a median of 3 min after they happened (last 24 hours).\nOnly kills that reached zKillboard count; a camp that kills nothing is invisible."
+  },
+  {
+   "name": "states: likely_camp only, the gank gate is not listed",
+   "kind": "answer",
+   "now": "2026-11-14T12:03:00Z",
+   "snapshot": {
+    "format": "intel-gates-now",
+    "version": 1,
+    "generated_at": "2026-11-14T12:00:00Z",
+    "window_s": 7200,
+    "radius_m": 150000,
+    "credit": "zKillboard; killmails are Fenris Creations game data (ESI)",
+    "feed": {
+     "newest_killmail_time": "2026-11-14T11:58:00Z",
+     "delay_p50_s": 180,
+     "delay_p90_s": 540,
+     "delay_samples": 400
+    },
+    "gates": [
+     {
+      "system_id": 30002813,
+      "to_system_id": 30002765,
+      "state": "likely_camp",
+      "ship_kills_60m": 4,
+      "ship_kills_120m": 6,
+      "pod_kills_60m": 2,
+      "pod_kills_120m": 3,
+      "structure_kills_60m": 0,
+      "first_kill": "2026-11-14T11:20:00Z",
+      "last_kill": "2026-11-14T11:55:00Z",
+      "groups": 2,
+      "attackers": [
+       {
+        "alliance_id": 2001,
+        "name": "Example Alliance 1",
+        "kills": 2
+       },
+       {
+        "alliance_id": 2002,
+        "name": "Example Alliance 2",
+        "kills": 1
+       },
+       {
+        "alliance_id": 2003,
+        "name": "Example Alliance 3",
+        "kills": 1
+       }
+      ],
+      "no_alliance_kills": 0,
+      "dictor_hic": true,
+      "smartbomb": false,
+      "max_attackers": 8
+     },
+     {
+      "system_id": 30000142,
+      "to_system_id": 30000144,
+      "state": "gank",
+      "ship_kills_60m": 4,
+      "ship_kills_120m": 4,
+      "pod_kills_60m": 0,
+      "pod_kills_120m": 0,
+      "structure_kills_60m": 0,
+      "first_kill": "2026-11-14T11:40:00Z",
+      "last_kill": "2026-11-14T11:58:00Z",
+      "groups": 1,
+      "attackers": [
+       {
+        "alliance_id": 2004,
+        "name": "",
+        "kills": 4
+       }
+      ],
+      "no_alliance_kills": 0,
+      "dictor_hic": false,
+      "smartbomb": false,
+      "max_attackers": 4
+     },
+     {
+      "system_id": 30000144,
+      "to_system_id": 30000142,
+      "state": "kills",
+      "ship_kills_60m": 0,
+      "ship_kills_120m": 1,
+      "pod_kills_60m": 0,
+      "pod_kills_120m": 1,
+      "structure_kills_60m": 0,
+      "first_kill": "2026-11-14T10:30:00Z",
+      "last_kill": "2026-11-14T10:31:00Z",
+      "groups": 0,
+      "attackers": [],
+      "no_alliance_kills": 0,
+      "dictor_hic": false,
+      "smartbomb": false,
+      "max_attackers": 0
+     }
+    ],
+    "systems": [],
+    "camp_window_s": 3600
+   },
+   "request": {
+    "system_names": [
+     "Jita",
+     "Tama"
+    ],
+    "states": [
+     "likely_camp"
+    ]
+   },
+   "expected": "Tama > Sivala gate in Tama (0.3 low-sec): 4 ship kills and 2 pods in the last 40 min, by Example Alliance 1 (2), Example Alliance 2 (1), Example Alliance 3 (1). Interdictor or HIC seen. Likely camp.\n\nKills up to 11:58 UTC (5 min ago); snapshot 12:00 UTC.\nzKillboard published kills a median of 3 min after they happened (last 24 hours).\nOnly kills that reached zKillboard count; a camp that kills nothing is invisible."
+  },
+  {
+   "name": "states: gank only, the likely camp is below",
+   "kind": "answer",
+   "now": "2026-11-14T12:03:00Z",
+   "snapshot": {
+    "format": "intel-gates-now",
+    "version": 1,
+    "generated_at": "2026-11-14T12:00:00Z",
+    "window_s": 7200,
+    "radius_m": 150000,
+    "credit": "zKillboard; killmails are Fenris Creations game data (ESI)",
+    "feed": {
+     "newest_killmail_time": "2026-11-14T11:58:00Z",
+     "delay_p50_s": 180,
+     "delay_p90_s": 540,
+     "delay_samples": 400
+    },
+    "gates": [
+     {
+      "system_id": 30002813,
+      "to_system_id": 30002765,
+      "state": "likely_camp",
+      "ship_kills_60m": 4,
+      "ship_kills_120m": 6,
+      "pod_kills_60m": 2,
+      "pod_kills_120m": 3,
+      "structure_kills_60m": 0,
+      "first_kill": "2026-11-14T11:20:00Z",
+      "last_kill": "2026-11-14T11:55:00Z",
+      "groups": 2,
+      "attackers": [
+       {
+        "alliance_id": 2001,
+        "name": "Example Alliance 1",
+        "kills": 2
+       },
+       {
+        "alliance_id": 2002,
+        "name": "Example Alliance 2",
+        "kills": 1
+       },
+       {
+        "alliance_id": 2003,
+        "name": "Example Alliance 3",
+        "kills": 1
+       }
+      ],
+      "no_alliance_kills": 0,
+      "dictor_hic": true,
+      "smartbomb": false,
+      "max_attackers": 8
+     },
+     {
+      "system_id": 30000142,
+      "to_system_id": 30000144,
+      "state": "gank",
+      "ship_kills_60m": 4,
+      "ship_kills_120m": 4,
+      "pod_kills_60m": 0,
+      "pod_kills_120m": 0,
+      "structure_kills_60m": 0,
+      "first_kill": "2026-11-14T11:40:00Z",
+      "last_kill": "2026-11-14T11:58:00Z",
+      "groups": 1,
+      "attackers": [
+       {
+        "alliance_id": 2004,
+        "name": "",
+        "kills": 4
+       }
+      ],
+      "no_alliance_kills": 0,
+      "dictor_hic": false,
+      "smartbomb": false,
+      "max_attackers": 4
+     },
+     {
+      "system_id": 30000144,
+      "to_system_id": 30000142,
+      "state": "kills",
+      "ship_kills_60m": 0,
+      "ship_kills_120m": 1,
+      "pod_kills_60m": 0,
+      "pod_kills_120m": 1,
+      "structure_kills_60m": 0,
+      "first_kill": "2026-11-14T10:30:00Z",
+      "last_kill": "2026-11-14T10:31:00Z",
+      "groups": 0,
+      "attackers": [],
+      "no_alliance_kills": 0,
+      "dictor_hic": false,
+      "smartbomb": false,
+      "max_attackers": 0
+     }
+    ],
+    "systems": [],
+    "camp_window_s": 3600
+   },
+   "request": {
+    "system_names": [
+     "Tama"
+    ],
+    "states": [
+     "gank"
+    ]
+   },
+   "expected": "No gate of Tama is in the listed state (gank); 1 gate had kills in the last 2 hours in other states. Add those states to list them. That is not proof of safety: only kills that reached zKillboard count.\nKills up to 11:58 UTC (5 min ago); snapshot 12:00 UTC."
+  },
+  {
+   "name": "min_state likely_camp lists gank",
+   "kind": "answer",
+   "now": "2026-11-14T12:03:00Z",
+   "snapshot": {
+    "format": "intel-gates-now",
+    "version": 1,
+    "generated_at": "2026-11-14T12:00:00Z",
+    "window_s": 7200,
+    "radius_m": 150000,
+    "credit": "zKillboard; killmails are Fenris Creations game data (ESI)",
+    "feed": {
+     "newest_killmail_time": "2026-11-14T11:58:00Z",
+     "delay_p50_s": 180,
+     "delay_p90_s": 540,
+     "delay_samples": 400
+    },
+    "gates": [
+     {
+      "system_id": 30002813,
+      "to_system_id": 30002765,
+      "state": "likely_camp",
+      "ship_kills_60m": 4,
+      "ship_kills_120m": 6,
+      "pod_kills_60m": 2,
+      "pod_kills_120m": 3,
+      "structure_kills_60m": 0,
+      "first_kill": "2026-11-14T11:20:00Z",
+      "last_kill": "2026-11-14T11:55:00Z",
+      "groups": 2,
+      "attackers": [
+       {
+        "alliance_id": 2001,
+        "name": "Example Alliance 1",
+        "kills": 2
+       },
+       {
+        "alliance_id": 2002,
+        "name": "Example Alliance 2",
+        "kills": 1
+       },
+       {
+        "alliance_id": 2003,
+        "name": "Example Alliance 3",
+        "kills": 1
+       }
+      ],
+      "no_alliance_kills": 0,
+      "dictor_hic": true,
+      "smartbomb": false,
+      "max_attackers": 8
+     },
+     {
+      "system_id": 30000142,
+      "to_system_id": 30000144,
+      "state": "gank",
+      "ship_kills_60m": 4,
+      "ship_kills_120m": 4,
+      "pod_kills_60m": 0,
+      "pod_kills_120m": 0,
+      "structure_kills_60m": 0,
+      "first_kill": "2026-11-14T11:40:00Z",
+      "last_kill": "2026-11-14T11:58:00Z",
+      "groups": 1,
+      "attackers": [
+       {
+        "alliance_id": 2004,
+        "name": "",
+        "kills": 4
+       }
+      ],
+      "no_alliance_kills": 0,
+      "dictor_hic": false,
+      "smartbomb": false,
+      "max_attackers": 4
+     },
+     {
+      "system_id": 30000144,
+      "to_system_id": 30000142,
+      "state": "kills",
+      "ship_kills_60m": 0,
+      "ship_kills_120m": 1,
+      "pod_kills_60m": 0,
+      "pod_kills_120m": 1,
+      "structure_kills_60m": 0,
+      "first_kill": "2026-11-14T10:30:00Z",
+      "last_kill": "2026-11-14T10:31:00Z",
+      "groups": 0,
+      "attackers": [],
+      "no_alliance_kills": 0,
+      "dictor_hic": false,
+      "smartbomb": false,
+      "max_attackers": 0
+     }
+    ],
+    "systems": [],
+    "camp_window_s": 3600
+   },
+   "request": {
+    "system_names": [
+     "Jita",
+     "Tama"
+    ],
+    "min_state": "likely_camp"
+   },
+   "expected": "Tama > Sivala gate in Tama (0.3 low-sec): 4 ship kills and 2 pods in the last 40 min, by Example Alliance 1 (2), Example Alliance 2 (1), Example Alliance 3 (1). Interdictor or HIC seen. Likely camp.\nJita > Perimeter gate in Jita (0.9 high-sec): 4 ship kills in the last 20 min, by an alliance not yet named (4). Gank pattern (high-sec).\n\nKills up to 11:58 UTC (5 min ago); snapshot 12:00 UTC.\nzKillboard published kills a median of 3 min after they happened (last 24 hours).\nOnly kills that reached zKillboard count; a camp that kills nothing is invisible."
+  },
+  {
+   "name": "limit 1 cuts: 1 more gate not listed",
+   "kind": "answer",
+   "now": "2026-11-14T12:03:00Z",
+   "snapshot": {
+    "format": "intel-gates-now",
+    "version": 1,
+    "generated_at": "2026-11-14T12:00:00Z",
+    "window_s": 7200,
+    "radius_m": 150000,
+    "credit": "zKillboard; killmails are Fenris Creations game data (ESI)",
+    "feed": {
+     "newest_killmail_time": "2026-11-14T11:58:00Z",
+     "delay_p50_s": 180,
+     "delay_p90_s": 540,
+     "delay_samples": 400
+    },
+    "gates": [
+     {
+      "system_id": 30002813,
+      "to_system_id": 30002765,
+      "state": "likely_camp",
+      "ship_kills_60m": 4,
+      "ship_kills_120m": 6,
+      "pod_kills_60m": 2,
+      "pod_kills_120m": 3,
+      "structure_kills_60m": 0,
+      "first_kill": "2026-11-14T11:20:00Z",
+      "last_kill": "2026-11-14T11:55:00Z",
+      "groups": 2,
+      "attackers": [
+       {
+        "alliance_id": 2001,
+        "name": "Example Alliance 1",
+        "kills": 2
+       },
+       {
+        "alliance_id": 2002,
+        "name": "Example Alliance 2",
+        "kills": 1
+       },
+       {
+        "alliance_id": 2003,
+        "name": "Example Alliance 3",
+        "kills": 1
+       }
+      ],
+      "no_alliance_kills": 0,
+      "dictor_hic": true,
+      "smartbomb": false,
+      "max_attackers": 8
+     },
+     {
+      "system_id": 30000142,
+      "to_system_id": 30000144,
+      "state": "gank",
+      "ship_kills_60m": 4,
+      "ship_kills_120m": 4,
+      "pod_kills_60m": 0,
+      "pod_kills_120m": 0,
+      "structure_kills_60m": 0,
+      "first_kill": "2026-11-14T11:40:00Z",
+      "last_kill": "2026-11-14T11:58:00Z",
+      "groups": 1,
+      "attackers": [
+       {
+        "alliance_id": 2004,
+        "name": "",
+        "kills": 4
+       }
+      ],
+      "no_alliance_kills": 0,
+      "dictor_hic": false,
+      "smartbomb": false,
+      "max_attackers": 4
+     },
+     {
+      "system_id": 30000144,
+      "to_system_id": 30000142,
+      "state": "kills",
+      "ship_kills_60m": 0,
+      "ship_kills_120m": 1,
+      "pod_kills_60m": 0,
+      "pod_kills_120m": 1,
+      "structure_kills_60m": 0,
+      "first_kill": "2026-11-14T10:30:00Z",
+      "last_kill": "2026-11-14T10:31:00Z",
+      "groups": 0,
+      "attackers": [],
+      "no_alliance_kills": 0,
+      "dictor_hic": false,
+      "smartbomb": false,
+      "max_attackers": 0
+     }
+    ],
+    "systems": [],
+    "camp_window_s": 3600
+   },
+   "request": {
+    "system_names": [
+     "Jita",
+     "Tama"
+    ],
+    "limit": 1
+   },
+   "expected": "Tama > Sivala gate in Tama (0.3 low-sec): 4 ship kills and 2 pods in the last 40 min, by Example Alliance 1 (2), Example Alliance 2 (1), Example Alliance 3 (1). Interdictor or HIC seen. Likely camp.\n1 more gate in the asked states not listed (limit 1).\n\nKills up to 11:58 UTC (5 min ago); snapshot 12:00 UTC.\nzKillboard published kills a median of 3 min after they happened (last 24 hours).\nOnly kills that reached zKillboard count; a camp that kills nothing is invisible."
+  },
+  {
+   "name": "New Eden default: 9 rows and the not-listed line",
+   "kind": "answer",
+   "now": "2026-11-14T12:03:00Z",
+   "snapshot": {
+    "format": "intel-gates-now",
+    "version": 1,
+    "generated_at": "2026-11-14T12:00:00Z",
+    "window_s": 7200,
+    "radius_m": 150000,
+    "credit": "zKillboard; killmails are Fenris Creations game data (ESI)",
+    "feed": {
+     "newest_killmail_time": "2026-11-14T11:58:00Z",
+     "delay_p50_s": 180,
+     "delay_p90_s": 540,
+     "delay_samples": 400
+    },
+    "gates": [
+     {
+      "system_id": 30000157,
+      "to_system_id": 30000142,
+      "state": "fight",
+      "ship_kills_60m": 0,
+      "ship_kills_120m": 0,
+      "pod_kills_60m": 0,
+      "pod_kills_120m": 0,
+      "structure_kills_60m": 1,
+      "first_kill": "2026-11-14T11:40:00Z",
+      "last_kill": "2026-11-14T11:45:00Z",
+      "groups": 0,
+      "attackers": [],
+      "no_alliance_kills": 0,
+      "dictor_hic": false,
+      "smartbomb": false,
+      "max_attackers": 0
+     },
+     {
+      "system_id": 30000157,
+      "to_system_id": 30000144,
+      "state": "fight",
+      "ship_kills_60m": 0,
+      "ship_kills_120m": 0,
+      "pod_kills_60m": 0,
+      "pod_kills_120m": 0,
+      "structure_kills_60m": 1,
+      "first_kill": "2026-11-14T11:40:00Z",
+      "last_kill": "2026-11-14T11:45:00Z",
+      "groups": 0,
+      "attackers": [],
+      "no_alliance_kills": 0,
+      "dictor_hic": false,
+      "smartbomb": false,
+      "max_attackers": 0
+     },
+     {
+      "system_id": 30000157,
+      "to_system_id": 30002537,
+      "state": "fight",
+      "ship_kills_60m": 0,
+      "ship_kills_120m": 0,
+      "pod_kills_60m": 0,
+      "pod_kills_120m": 0,
+      "structure_kills_60m": 1,
+      "first_kill": "2026-11-14T11:40:00Z",
+      "last_kill": "2026-11-14T11:45:00Z",
+      "groups": 0,
+      "attackers": [],
+      "no_alliance_kills": 0,
+      "dictor_hic": false,
+      "smartbomb": false,
+      "max_attackers": 0
+     },
+     {
+      "system_id": 30000157,
+      "to_system_id": 30002652,
+      "state": "fight",
+      "ship_kills_60m": 0,
+      "ship_kills_120m": 0,
+      "pod_kills_60m": 0,
+      "pod_kills_120m": 0,
+      "structure_kills_60m": 1,
+      "first_kill": "2026-11-14T11:40:00Z",
+      "last_kill": "2026-11-14T11:45:00Z",
+      "groups": 0,
+      "attackers": [],
+      "no_alliance_kills": 0,
+      "dictor_hic": false,
+      "smartbomb": false,
+      "max_attackers": 0
+     },
+     {
+      "system_id": 30000157,
+      "to_system_id": 30002718,
+      "state": "fight",
+      "ship_kills_60m": 0,
+      "ship_kills_120m": 0,
+      "pod_kills_60m": 0,
+      "pod_kills_120m": 0,
+      "structure_kills_60m": 1,
+      "first_kill": "2026-11-14T11:40:00Z",
+      "last_kill": "2026-11-14T11:45:00Z",
+      "groups": 0,
+      "attackers": [],
+      "no_alliance_kills": 0,
+      "dictor_hic": false,
+      "smartbomb": false,
+      "max_attackers": 0
+     },
+     {
+      "system_id": 30000157,
+      "to_system_id": 30002765,
+      "state": "fight",
+      "ship_kills_60m": 0,
+      "ship_kills_120m": 0,
+      "pod_kills_60m": 0,
+      "pod_kills_120m": 0,
+      "structure_kills_60m": 1,
+      "first_kill": "2026-11-14T11:40:00Z",
+      "last_kill": "2026-11-14T11:45:00Z",
+      "groups": 0,
+      "attackers": [],
+      "no_alliance_kills": 0,
+      "dictor_hic": false,
+      "smartbomb": false,
+      "max_attackers": 0
+     },
+     {
+      "system_id": 30000157,
+      "to_system_id": 30002813,
+      "state": "fight",
+      "ship_kills_60m": 0,
+      "ship_kills_120m": 0,
+      "pod_kills_60m": 0,
+      "pod_kills_120m": 0,
+      "structure_kills_60m": 1,
+      "first_kill": "2026-11-14T11:40:00Z",
+      "last_kill": "2026-11-14T11:45:00Z",
+      "groups": 0,
+      "attackers": [],
+      "no_alliance_kills": 0,
+      "dictor_hic": false,
+      "smartbomb": false,
+      "max_attackers": 0
+     },
+     {
+      "system_id": 30002652,
+      "to_system_id": 30000142,
+      "state": "fight",
+      "ship_kills_60m": 0,
+      "ship_kills_120m": 0,
+      "pod_kills_60m": 0,
+      "pod_kills_120m": 0,
+      "structure_kills_60m": 1,
+      "first_kill": "2026-11-14T11:40:00Z",
+      "last_kill": "2026-11-14T11:45:00Z",
+      "groups": 0,
+      "attackers": [],
+      "no_alliance_kills": 0,
+      "dictor_hic": false,
+      "smartbomb": false,
+      "max_attackers": 0
+     },
+     {
+      "system_id": 30002652,
+      "to_system_id": 30000144,
+      "state": "fight",
+      "ship_kills_60m": 0,
+      "ship_kills_120m": 0,
+      "pod_kills_60m": 0,
+      "pod_kills_120m": 0,
+      "structure_kills_60m": 1,
+      "first_kill": "2026-11-14T11:40:00Z",
+      "last_kill": "2026-11-14T11:45:00Z",
+      "groups": 0,
+      "attackers": [],
+      "no_alliance_kills": 0,
+      "dictor_hic": false,
+      "smartbomb": false,
+      "max_attackers": 0
+     },
+     {
+      "system_id": 30002652,
+      "to_system_id": 30000157,
+      "state": "fight",
+      "ship_kills_60m": 0,
+      "ship_kills_120m": 0,
+      "pod_kills_60m": 0,
+      "pod_kills_120m": 0,
+      "structure_kills_60m": 1,
+      "first_kill": "2026-11-14T11:40:00Z",
+      "last_kill": "2026-11-14T11:45:00Z",
+      "groups": 0,
+      "attackers": [],
+      "no_alliance_kills": 0,
+      "dictor_hic": false,
+      "smartbomb": false,
+      "max_attackers": 0
+     },
+     {
+      "system_id": 30002652,
+      "to_system_id": 30002537,
+      "state": "fight",
+      "ship_kills_60m": 0,
+      "ship_kills_120m": 0,
+      "pod_kills_60m": 0,
+      "pod_kills_120m": 0,
+      "structure_kills_60m": 1,
+      "first_kill": "2026-11-14T11:40:00Z",
+      "last_kill": "2026-11-14T11:45:00Z",
+      "groups": 0,
+      "attackers": [],
+      "no_alliance_kills": 0,
+      "dictor_hic": false,
+      "smartbomb": false,
+      "max_attackers": 0
+     }
+    ],
+    "systems": [],
+    "camp_window_s": 3600
+   },
+   "request": {},
+   "expected": "Otela > Jita gate in Otela (-1.0 null-sec): 1 structure kill in the last 20 min. A fight, not a camp.\nOtela > Perimeter gate in Otela (-1.0 null-sec): 1 structure kill in the last 20 min. A fight, not a camp.\nOtela > Amamake gate in Otela (-1.0 null-sec): 1 structure kill in the last 20 min. A fight, not a camp.\nOtela > Ala gate in Otela (-1.0 null-sec): 1 structure kill in the last 20 min. A fight, not a camp.\nOtela > Rancer gate in Otela (-1.0 null-sec): 1 structure kill in the last 20 min. A fight, not a camp.\nOtela > Sivala gate in Otela (-1.0 null-sec): 1 structure kill in the last 20 min. A fight, not a camp.\nOtela > Tama gate in Otela (-1.0 null-sec): 1 structure kill in the last 20 min. A fight, not a camp.\nAla > Jita gate in Ala (-1.0 null-sec): 1 structure kill in the last 20 min. A fight, not a camp.\nAla > Perimeter gate in Ala (-1.0 null-sec): 1 structure kill in the last 20 min. A fight, not a camp.\n2 more gates in the asked states not listed (limit 9).\n\nKills up to 11:58 UTC (5 min ago); snapshot 12:00 UTC.\nzKillboard published kills a median of 3 min after they happened (last 24 hours).\nOnly kills that reached zKillboard count; a camp that kills nothing is invisible."
+  },
+  {
+   "name": "system_names scope with 16 gates: no default cap",
+   "kind": "answer",
+   "now": "2026-11-14T12:03:00Z",
+   "snapshot": {
+    "format": "intel-gates-now",
+    "version": 1,
+    "generated_at": "2026-11-14T12:00:00Z",
+    "window_s": 7200,
+    "radius_m": 150000,
+    "credit": "zKillboard; killmails are Fenris Creations game data (ESI)",
+    "feed": {
+     "newest_killmail_time": "2026-11-14T11:58:00Z",
+     "delay_p50_s": 180,
+     "delay_p90_s": 540,
+     "delay_samples": 400
+    },
+    "gates": [
+     {
+      "system_id": 30000157,
+      "to_system_id": 30000142,
+      "state": "fight",
+      "ship_kills_60m": 0,
+      "ship_kills_120m": 0,
+      "pod_kills_60m": 0,
+      "pod_kills_120m": 0,
+      "structure_kills_60m": 1,
+      "first_kill": "2026-11-14T11:40:00Z",
+      "last_kill": "2026-11-14T11:45:00Z",
+      "groups": 0,
+      "attackers": [],
+      "no_alliance_kills": 0,
+      "dictor_hic": false,
+      "smartbomb": false,
+      "max_attackers": 0
+     },
+     {
+      "system_id": 30000157,
+      "to_system_id": 30000144,
+      "state": "fight",
+      "ship_kills_60m": 0,
+      "ship_kills_120m": 0,
+      "pod_kills_60m": 0,
+      "pod_kills_120m": 0,
+      "structure_kills_60m": 1,
+      "first_kill": "2026-11-14T11:40:00Z",
+      "last_kill": "2026-11-14T11:45:00Z",
+      "groups": 0,
+      "attackers": [],
+      "no_alliance_kills": 0,
+      "dictor_hic": false,
+      "smartbomb": false,
+      "max_attackers": 0
+     },
+     {
+      "system_id": 30000157,
+      "to_system_id": 30002813,
+      "state": "fight",
+      "ship_kills_60m": 0,
+      "ship_kills_120m": 0,
+      "pod_kills_60m": 0,
+      "pod_kills_120m": 0,
+      "structure_kills_60m": 1,
+      "first_kill": "2026-11-14T11:40:00Z",
+      "last_kill": "2026-11-14T11:45:00Z",
+      "groups": 0,
+      "attackers": [],
+      "no_alliance_kills": 0,
+      "dictor_hic": false,
+      "smartbomb": false,
+      "max_attackers": 0
+     },
+     {
+      "system_id": 30000157,
+      "to_system_id": 30002765,
+      "state": "fight",
+      "ship_kills_60m": 0,
+      "ship_kills_120m": 0,
+      "pod_kills_60m": 0,
+      "pod_kills_120m": 0,
+      "structure_kills_60m": 1,
+      "first_kill": "2026-11-14T11:40:00Z",
+      "last_kill": "2026-11-14T11:45:00Z",
+      "groups": 0,
+      "attackers": [],
+      "no_alliance_kills": 0,
+      "dictor_hic": false,
+      "smartbomb": false,
+      "max_attackers": 0
+     },
+     {
+      "system_id": 30000157,
+      "to_system_id": 30002718,
+      "state": "fight",
+      "ship_kills_60m": 0,
+      "ship_kills_120m": 0,
+      "pod_kills_60m": 0,
+      "pod_kills_120m": 0,
+      "structure_kills_60m": 1,
+      "first_kill": "2026-11-14T11:40:00Z",
+      "last_kill": "2026-11-14T11:45:00Z",
+      "groups": 0,
+      "attackers": [],
+      "no_alliance_kills": 0,
+      "dictor_hic": false,
+      "smartbomb": false,
+      "max_attackers": 0
+     },
+     {
+      "system_id": 30000157,
+      "to_system_id": 30000138,
+      "state": "fight",
+      "ship_kills_60m": 0,
+      "ship_kills_120m": 0,
+      "pod_kills_60m": 0,
+      "pod_kills_120m": 0,
+      "structure_kills_60m": 1,
+      "first_kill": "2026-11-14T11:40:00Z",
+      "last_kill": "2026-11-14T11:45:00Z",
+      "groups": 0,
+      "attackers": [],
+      "no_alliance_kills": 0,
+      "dictor_hic": false,
+      "smartbomb": false,
+      "max_attackers": 0
+     },
+     {
+      "system_id": 30000157,
+      "to_system_id": 30000140,
+      "state": "fight",
+      "ship_kills_60m": 0,
+      "ship_kills_120m": 0,
+      "pod_kills_60m": 0,
+      "pod_kills_120m": 0,
+      "structure_kills_60m": 1,
+      "first_kill": "2026-11-14T11:40:00Z",
+      "last_kill": "2026-11-14T11:45:00Z",
+      "groups": 0,
+      "attackers": [],
+      "no_alliance_kills": 0,
+      "dictor_hic": false,
+      "smartbomb": false,
+      "max_attackers": 0
+     },
+     {
+      "system_id": 30000157,
+      "to_system_id": 30000143,
+      "state": "fight",
+      "ship_kills_60m": 0,
+      "ship_kills_120m": 0,
+      "pod_kills_60m": 0,
+      "pod_kills_120m": 0,
+      "structure_kills_60m": 1,
+      "first_kill": "2026-11-14T11:40:00Z",
+      "last_kill": "2026-11-14T11:45:00Z",
+      "groups": 0,
+      "attackers": [],
+      "no_alliance_kills": 0,
+      "dictor_hic": false,
+      "smartbomb": false,
+      "max_attackers": 0
+     },
+     {
+      "system_id": 30000157,
+      "to_system_id": 30000145,
+      "state": "fight",
+      "ship_kills_60m": 0,
+      "ship_kills_120m": 0,
+      "pod_kills_60m": 0,
+      "pod_kills_120m": 0,
+      "structure_kills_60m": 1,
+      "first_kill": "2026-11-14T11:40:00Z",
+      "last_kill": "2026-11-14T11:45:00Z",
+      "groups": 0,
+      "attackers": [],
+      "no_alliance_kills": 0,
+      "dictor_hic": false,
+      "smartbomb": false,
+      "max_attackers": 0
+     },
+     {
+      "system_id": 30000157,
+      "to_system_id": 30000206,
+      "state": "fight",
+      "ship_kills_60m": 0,
+      "ship_kills_120m": 0,
+      "pod_kills_60m": 0,
+      "pod_kills_120m": 0,
+      "structure_kills_60m": 1,
+      "first_kill": "2026-11-14T11:40:00Z",
+      "last_kill": "2026-11-14T11:45:00Z",
+      "groups": 0,
+      "attackers": [],
+      "no_alliance_kills": 0,
+      "dictor_hic": false,
+      "smartbomb": false,
+      "max_attackers": 0
+     },
+     {
+      "system_id": 30000157,
+      "to_system_id": 30001363,
+      "state": "fight",
+      "ship_kills_60m": 0,
+      "ship_kills_120m": 0,
+      "pod_kills_60m": 0,
+      "pod_kills_120m": 0,
+      "structure_kills_60m": 1,
+      "first_kill": "2026-11-14T11:40:00Z",
+      "last_kill": "2026-11-14T11:45:00Z",
+      "groups": 0,
+      "attackers": [],
+      "no_alliance_kills": 0,
+      "dictor_hic": false,
+      "smartbomb": false,
+      "max_attackers": 0
+     },
+     {
+      "system_id": 30000157,
+      "to_system_id": 30001372,
+      "state": "fight",
+      "ship_kills_60m": 0,
+      "ship_kills_120m": 0,
+      "pod_kills_60m": 0,
+      "pod_kills_120m": 0,
+      "structure_kills_60m": 1,
+      "first_kill": "2026-11-14T11:40:00Z",
+      "last_kill": "2026-11-14T11:45:00Z",
+      "groups": 0,
+      "attackers": [],
+      "no_alliance_kills": 0,
+      "dictor_hic": false,
+      "smartbomb": false,
+      "max_attackers": 0
+     },
+     {
+      "system_id": 30000157,
+      "to_system_id": 30001445,
+      "state": "fight",
+      "ship_kills_60m": 0,
+      "ship_kills_120m": 0,
+      "pod_kills_60m": 0,
+      "pod_kills_120m": 0,
+      "structure_kills_60m": 1,
+      "first_kill": "2026-11-14T11:40:00Z",
+      "last_kill": "2026-11-14T11:45:00Z",
+      "groups": 0,
+      "attackers": [],
+      "no_alliance_kills": 0,
+      "dictor_hic": false,
+      "smartbomb": false,
+      "max_attackers": 0
+     },
+     {
+      "system_id": 30000157,
+      "to_system_id": 30002780,
+      "state": "fight",
+      "ship_kills_60m": 0,
+      "ship_kills_120m": 0,
+      "pod_kills_60m": 0,
+      "pod_kills_120m": 0,
+      "structure_kills_60m": 1,
+      "first_kill": "2026-11-14T11:40:00Z",
+      "last_kill": "2026-11-14T11:45:00Z",
+      "groups": 0,
+      "attackers": [],
+      "no_alliance_kills": 0,
+      "dictor_hic": false,
+      "smartbomb": false,
+      "max_attackers": 0
+     },
+     {
+      "system_id": 30000157,
+      "to_system_id": 30005005,
+      "state": "fight",
+      "ship_kills_60m": 0,
+      "ship_kills_120m": 0,
+      "pod_kills_60m": 0,
+      "pod_kills_120m": 0,
+      "structure_kills_60m": 1,
+      "first_kill": "2026-11-14T11:40:00Z",
+      "last_kill": "2026-11-14T11:45:00Z",
+      "groups": 0,
+      "attackers": [],
+      "no_alliance_kills": 0,
+      "dictor_hic": false,
+      "smartbomb": false,
+      "max_attackers": 0
+     },
+     {
+      "system_id": 30000157,
+      "to_system_id": 30005029,
+      "state": "fight",
+      "ship_kills_60m": 0,
+      "ship_kills_120m": 0,
+      "pod_kills_60m": 0,
+      "pod_kills_120m": 0,
+      "structure_kills_60m": 1,
+      "first_kill": "2026-11-14T11:40:00Z",
+      "last_kill": "2026-11-14T11:45:00Z",
+      "groups": 0,
+      "attackers": [],
+      "no_alliance_kills": 0,
+      "dictor_hic": false,
+      "smartbomb": false,
+      "max_attackers": 0
+     }
+    ],
+    "systems": [],
+    "camp_window_s": 3600
+   },
+   "request": {
+    "system_names": [
+     "Otela"
+    ]
+   },
+   "expected": "Otela > Ikuchi gate in Otela (-1.0 null-sec): 1 structure kill in the last 20 min. A fight, not a camp.\nOtela > Maurasi gate in Otela (-1.0 null-sec): 1 structure kill in the last 20 min. A fight, not a camp.\nOtela > Jita gate in Otela (-1.0 null-sec): 1 structure kill in the last 20 min. A fight, not a camp.\nOtela > Niyabainen gate in Otela (-1.0 null-sec): 1 structure kill in the last 20 min. A fight, not a camp.\nOtela > Perimeter gate in Otela (-1.0 null-sec): 1 structure kill in the last 20 min. A fight, not a camp.\nOtela > New Caldari gate in Otela (-1.0 null-sec): 1 structure kill in the last 20 min. A fight, not a camp.\nOtela > Wirashoda gate in Otela (-1.0 null-sec): 1 structure kill in the last 20 min. A fight, not a camp.\nOtela > Sobaseki gate in Otela (-1.0 null-sec): 1 structure kill in the last 20 min. A fight, not a camp.\nOtela > Kino gate in Otela (-1.0 null-sec): 1 structure kill in the last 20 min. A fight, not a camp.\nOtela > Nalvula gate in Otela (-1.0 null-sec): 1 structure kill in the last 20 min. A fight, not a camp.\nOtela > Rancer gate in Otela (-1.0 null-sec): 1 structure kill in the last 20 min. A fight, not a camp.\nOtela > Sivala gate in Otela (-1.0 null-sec): 1 structure kill in the last 20 min. A fight, not a camp.\nOtela > Muvolailen gate in Otela (-1.0 null-sec): 1 structure kill in the last 20 min. A fight, not a camp.\nOtela > Tama gate in Otela (-1.0 null-sec): 1 structure kill in the last 20 min. A fight, not a camp.\nOtela > Ignebaener gate in Otela (-1.0 null-sec): 1 structure kill in the last 20 min. A fight, not a camp.\nOtela > Vale gate in Otela (-1.0 null-sec): 1 structure kill in the last 20 min. A fight, not a camp.\n\nKills up to 11:58 UTC (5 min ago); snapshot 12:00 UTC.\nzKillboard published kills a median of 3 min after they happened (last 24 hours).\nOnly kills that reached zKillboard count; a camp that kills nothing is invisible."
+  },
+  {
+   "name": "trimmed: 3 more gates with kills only not listed",
+   "kind": "answer",
+   "now": "2026-11-14T12:03:00Z",
+   "snapshot": {
+    "format": "intel-gates-now",
+    "version": 1,
+    "generated_at": "2026-11-14T12:00:00Z",
+    "window_s": 7200,
+    "radius_m": 150000,
+    "credit": "zKillboard; killmails are Fenris Creations game data (ESI)",
+    "feed": {
+     "newest_killmail_time": "2026-11-14T11:58:00Z",
+     "delay_p50_s": 180,
+     "delay_p90_s": 540,
+     "delay_samples": 400
+    },
+    "gates": [
+     {
+      "system_id": 30000142,
+      "to_system_id": 30000144,
+      "state": "gank",
+      "ship_kills_60m": 4,
+      "ship_kills_120m": 4,
+      "pod_kills_60m": 0,
+      "pod_kills_120m": 0,
+      "structure_kills_60m": 0,
+      "first_kill": "2026-11-14T11:40:00Z",
+      "last_kill": "2026-11-14T11:58:00Z",
+      "groups": 1,
+      "attackers": [
+       {
+        "alliance_id": 2004,
+        "name": "",
+        "kills": 4
+       }
+      ],
+      "no_alliance_kills": 0,
+      "dictor_hic": false,
+      "smartbomb": false,
+      "max_attackers": 4
+     }
+    ],
+    "systems": [],
+    "trimmed": true,
+    "trimmed_gates": 3,
+    "trimmed_systems": 0
+   },
+   "request": {
+    "system_names": [
+     "Jita"
+    ]
+   },
+   "expected": "Jita > Perimeter gate in Jita (0.9 high-sec): 4 ship kills in the last 20 min, by an alliance not yet named (4). Gank pattern (high-sec).\n3 more gates with kills only, anywhere in New Eden, not listed: the collector trimmed the snapshot to keep it small.\n\nKills up to 11:58 UTC (5 min ago); snapshot 12:00 UTC.\nzKillboard published kills a median of 3 min after they happened (last 24 hours).\nOnly kills that reached zKillboard count; a camp that kills nothing is invisible."
+  },
+  {
+   "name": "trimmed without counts: may be missing",
+   "kind": "answer",
+   "now": "2026-11-14T12:03:00Z",
+   "snapshot": {
+    "format": "intel-gates-now",
+    "version": 1,
+    "generated_at": "2026-11-14T12:00:00Z",
+    "window_s": 7200,
+    "radius_m": 150000,
+    "credit": "zKillboard; killmails are Fenris Creations game data (ESI)",
+    "feed": {
+     "newest_killmail_time": "2026-11-14T11:58:00Z",
+     "delay_p50_s": 180,
+     "delay_p90_s": 540,
+     "delay_samples": 400
+    },
+    "gates": [
+     {
+      "system_id": 30000142,
+      "to_system_id": 30000144,
+      "state": "gank",
+      "ship_kills_60m": 4,
+      "ship_kills_120m": 4,
+      "pod_kills_60m": 0,
+      "pod_kills_120m": 0,
+      "structure_kills_60m": 0,
+      "first_kill": "2026-11-14T11:40:00Z",
+      "last_kill": "2026-11-14T11:58:00Z",
+      "groups": 1,
+      "attackers": [
+       {
+        "alliance_id": 2004,
+        "name": "",
+        "kills": 4
+       }
+      ],
+      "no_alliance_kills": 0,
+      "dictor_hic": false,
+      "smartbomb": false,
+      "max_attackers": 4
+     }
+    ],
+    "systems": [],
+    "trimmed": true
+   },
+   "request": {
+    "system_names": [
+     "Jita"
+    ]
+   },
+   "expected": "Jita > Perimeter gate in Jita (0.9 high-sec): 4 ship kills in the last 20 min, by an alliance not yet named (4). Gank pattern (high-sec).\nMore gates with kills only, anywhere in New Eden, may be missing: the collector trimmed the snapshot to keep it small.\n\nKills up to 11:58 UTC (5 min ago); snapshot 12:00 UTC.\nzKillboard published kills a median of 3 min after they happened (last 24 hours).\nOnly kills that reached zKillboard count; a camp that kills nothing is invisible."
+  },
+  {
+   "name": "trimmed, only systems dropped: no line",
+   "kind": "answer",
+   "now": "2026-11-14T12:03:00Z",
+   "snapshot": {
+    "format": "intel-gates-now",
+    "version": 1,
+    "generated_at": "2026-11-14T12:00:00Z",
+    "window_s": 7200,
+    "radius_m": 150000,
+    "credit": "zKillboard; killmails are Fenris Creations game data (ESI)",
+    "feed": {
+     "newest_killmail_time": "2026-11-14T11:58:00Z",
+     "delay_p50_s": 180,
+     "delay_p90_s": 540,
+     "delay_samples": 400
+    },
+    "gates": [
+     {
+      "system_id": 30000142,
+      "to_system_id": 30000144,
+      "state": "gank",
+      "ship_kills_60m": 4,
+      "ship_kills_120m": 4,
+      "pod_kills_60m": 0,
+      "pod_kills_120m": 0,
+      "structure_kills_60m": 0,
+      "first_kill": "2026-11-14T11:40:00Z",
+      "last_kill": "2026-11-14T11:58:00Z",
+      "groups": 1,
+      "attackers": [
+       {
+        "alliance_id": 2004,
+        "name": "",
+        "kills": 4
+       }
+      ],
+      "no_alliance_kills": 0,
+      "dictor_hic": false,
+      "smartbomb": false,
+      "max_attackers": 4
+     }
+    ],
+    "systems": [],
+    "trimmed": true,
+    "trimmed_gates": 0,
+    "trimmed_systems": 5
+   },
+   "request": {
+    "system_names": [
+     "Jita"
+    ]
+   },
+   "expected": "Jita > Perimeter gate in Jita (0.9 high-sec): 4 ship kills in the last 20 min, by an alliance not yet named (4). Gank pattern (high-sec).\n\nKills up to 11:58 UTC (5 min ago); snapshot 12:00 UTC.\nzKillboard published kills a median of 3 min after they happened (last 24 hours).\nOnly kills that reached zKillboard count; a camp that kills nothing is invisible."
+  },
+  {
+   "name": "trimmed, empty scope: the trim line follows the empty sentence",
+   "kind": "answer",
+   "now": "2026-11-14T12:03:00Z",
+   "snapshot": {
+    "format": "intel-gates-now",
+    "version": 1,
+    "generated_at": "2026-11-14T12:00:00Z",
+    "window_s": 7200,
+    "radius_m": 150000,
+    "credit": "zKillboard; killmails are Fenris Creations game data (ESI)",
+    "feed": {
+     "newest_killmail_time": "2026-11-14T11:58:00Z",
+     "delay_p50_s": 180,
+     "delay_p90_s": 540,
+     "delay_samples": 400
+    },
+    "gates": [
+     {
+      "system_id": 30000142,
+      "to_system_id": 30000144,
+      "state": "gank",
+      "ship_kills_60m": 4,
+      "ship_kills_120m": 4,
+      "pod_kills_60m": 0,
+      "pod_kills_120m": 0,
+      "structure_kills_60m": 0,
+      "first_kill": "2026-11-14T11:40:00Z",
+      "last_kill": "2026-11-14T11:58:00Z",
+      "groups": 1,
+      "attackers": [
+       {
+        "alliance_id": 2004,
+        "name": "",
+        "kills": 4
+       }
+      ],
+      "no_alliance_kills": 0,
+      "dictor_hic": false,
+      "smartbomb": false,
+      "max_attackers": 4
+     }
+    ],
+    "systems": [],
+    "trimmed": true,
+    "trimmed_gates": 3,
+    "trimmed_systems": 0
+   },
+   "request": {
+    "system_names": [
+     "Tama"
+    ]
+   },
+   "expected": "No kills seen on gates of Tama in the last 2 hours. That is not proof of safety: only kills that reached zKillboard count.\n3 more gates with kills only, anywhere in New Eden, not listed: the collector trimmed the snapshot to keep it small.\nKills up to 11:58 UTC (5 min ago); snapshot 12:00 UTC."
+  },
+  {
+   "name": "trimmed and out of date: no trim line",
+   "kind": "answer",
+   "now": "2026-11-14T14:01:00Z",
+   "snapshot": {
+    "format": "intel-gates-now",
+    "version": 1,
+    "generated_at": "2026-11-14T12:00:00Z",
+    "window_s": 7200,
+    "radius_m": 150000,
+    "credit": "zKillboard; killmails are Fenris Creations game data (ESI)",
+    "feed": {
+     "newest_killmail_time": "2026-11-14T11:58:00Z",
+     "delay_p50_s": 180,
+     "delay_p90_s": 540,
+     "delay_samples": 400
+    },
+    "gates": [
+     {
+      "system_id": 30000142,
+      "to_system_id": 30000144,
+      "state": "gank",
+      "ship_kills_60m": 4,
+      "ship_kills_120m": 4,
+      "pod_kills_60m": 0,
+      "pod_kills_120m": 0,
+      "structure_kills_60m": 0,
+      "first_kill": "2026-11-14T11:40:00Z",
+      "last_kill": "2026-11-14T11:58:00Z",
+      "groups": 1,
+      "attackers": [
+       {
+        "alliance_id": 2004,
+        "name": "",
+        "kills": 4
+       }
+      ],
+      "no_alliance_kills": 0,
+      "dictor_hic": false,
+      "smartbomb": false,
+      "max_attackers": 4
+     }
+    ],
+    "systems": [],
+    "trimmed": true,
+    "trimmed_gates": 3,
+    "trimmed_systems": 0
+   },
+   "request": {
+    "system_names": [
+     "Jita"
+    ]
+   },
+   "expected": "Gate camp data is out of date (last update 2 h ago).\nKills up to 2026-11-14 11:58 UTC; snapshot 2026-11-14 12:00 UTC."
+  },
+  {
+   "name": "camp_window_s 1800: the fight facts name 30 min",
+   "kind": "answer",
+   "now": "2026-11-14T12:03:00Z",
+   "snapshot": {
+    "format": "intel-gates-now",
+    "version": 1,
+    "generated_at": "2026-11-14T12:00:00Z",
+    "window_s": 7200,
+    "radius_m": 150000,
+    "credit": "zKillboard; killmails are Fenris Creations game data (ESI)",
+    "feed": {
+     "newest_killmail_time": "2026-11-14T11:58:00Z",
+     "delay_p50_s": 180,
+     "delay_p90_s": 540,
+     "delay_samples": 400
+    },
+    "gates": [
+     {
+      "system_id": 30002813,
+      "to_system_id": 30002765,
+      "state": "likely_camp",
+      "ship_kills_60m": 4,
+      "ship_kills_120m": 6,
+      "pod_kills_60m": 2,
+      "pod_kills_120m": 3,
+      "structure_kills_60m": 2,
+      "first_kill": "2026-11-14T11:35:00Z",
+      "last_kill": "2026-11-14T11:55:00Z",
+      "groups": 2,
+      "attackers": [
+       {
+        "alliance_id": 2001,
+        "name": "Example Alliance 1",
+        "kills": 2
+       },
+       {
+        "alliance_id": 2002,
+        "name": "Example Alliance 2",
+        "kills": 1
+       },
+       {
+        "alliance_id": 2003,
+        "name": "Example Alliance 3",
+        "kills": 1
+       }
+      ],
+      "no_alliance_kills": 0,
+      "dictor_hic": true,
+      "smartbomb": false,
+      "max_attackers": 8
+     },
+     {
+      "system_id": 30002765,
+      "to_system_id": 30002813,
+      "state": "fight",
+      "ship_kills_60m": 6,
+      "ship_kills_120m": 7,
+      "pod_kills_60m": 1,
+      "pod_kills_120m": 1,
+      "structure_kills_60m": 1,
+      "first_kill": "2026-11-14T11:50:00Z",
+      "last_kill": "2026-11-14T11:58:00Z",
+      "groups": 1,
+      "attackers": [
+       {
+        "alliance_id": 2001,
+        "name": "Example Alliance 1",
+        "kills": 4
+       }
+      ],
+      "no_alliance_kills": 2,
+      "dictor_hic": false,
+      "smartbomb": false,
+      "max_attackers": 45
+     }
+    ],
+    "systems": [],
+    "camp_window_s": 1800
+   },
+   "request": {
+    "system_names": [
+     "Tama",
+     "Sivala"
+    ]
+   },
+   "expected": "Sivala > Tama gate in Sivala (0.6 high-sec): 6 ship kills, 1 pod and 1 structure kill in the last 30 min, by Example Alliance 1 (4) and attackers in no alliance (2). A fight, not a camp.\nTama > Sivala gate in Tama (0.3 low-sec): 4 ship kills and 2 pods in the last 25 min, by Example Alliance 1 (2), Example Alliance 2 (1), Example Alliance 3 (1). Interdictor or HIC seen. Likely camp. Also a fight pattern in the last 30 min: 2 structure kills.\n\nKills up to 11:58 UTC (5 min ago); snapshot 12:00 UTC.\nzKillboard published kills a median of 3 min after they happened (last 24 hours).\nOnly kills that reached zKillboard count; a camp that kills nothing is invisible."
   }
  ]
 }
