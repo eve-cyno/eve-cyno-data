@@ -5,6 +5,7 @@ import (
 	"compress/gzip"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -175,8 +176,9 @@ func TestDatasets_NotModifiedWeak(t *testing.T) {
 	}
 }
 
-// A query string would make every request a new edge cache key on a route with no limit:
-// it is refused before the name is looked up and before any file is touched.
+// At a cache that keys on the full URL, a query string would make every request a new cache
+// key on a route with no limit: the origin refuses it before the name is looked up and
+// before any file is touched.
 func TestDatasets_QueryStringRefused(t *testing.T) {
 	dir := t.TempDir()
 	// Both files would log if the handler looked at them: an oversize file and a symlink.
@@ -535,4 +537,110 @@ func TestDatasets_ReloadOnChange(t *testing.T) {
 	require.NoError(t, os.Remove(filepath.Join(dir, gatesNowName)))
 	clk.add(2 * time.Second)
 	requireError(t, do(api, http.MethodGet, "/v1/datasets/"+gatesNowName, ""), http.StatusNotFound, "not_found")
+}
+
+// HEAD over a real server: the GET headers with no body, Content-Length kept.
+func TestDatasets_HeadOverServer(t *testing.T) {
+	dir := t.TempDir()
+	body := []byte(`{"format":"intel-gates-now","version":1,"gates":[]}`)
+	writeDataset(t, dir, gatesNowName, body)
+	srv := httptest.NewServer(datasetAPI(t, dir, newStepClock().now))
+	defer srv.Close()
+
+	resp, err := srv.Client().Head(srv.URL + "/v1/datasets/" + gatesNowName)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	got, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+	require.Empty(t, got)
+	require.Equal(t, int64(len(body)), resp.ContentLength)
+	require.Equal(t, fmt.Sprint(len(body)), resp.Header.Get("Content-Length"))
+	require.Equal(t, datasetETag(body), resp.Header.Get("ETag"))
+	require.Equal(t, "public, max-age=60", resp.Header.Get("Cache-Control"))
+}
+
+// Any method but GET and HEAD answers the JSON 405, never cached, and touches no file.
+func TestDatasets_PostIsMethodNotAllowed(t *testing.T) {
+	dir := t.TempDir()
+	writeDataset(t, dir, gatesNowName, []byte(`{"format":"intel-gates-now","version":1}`))
+	api := datasetAPI(t, dir, newStepClock().now)
+	for _, method := range []string{http.MethodPost, http.MethodPut, http.MethodDelete} {
+		rec := do(api, method, "/v1/datasets/"+gatesNowName, `{}`)
+		requireError(t, rec, http.StatusMethodNotAllowed, "method_not_allowed")
+		require.Contains(t, rec.Header().Get("Content-Type"), "application/json", method)
+		require.Empty(t, rec.Header().Get("ETag"), method)
+	}
+}
+
+// A Range request gets the whole file: the route answers no partial content.
+func TestDatasets_RangeGetsTheWholeFile(t *testing.T) {
+	dir := t.TempDir()
+	body := []byte(`{"format":"intel-gates-now","version":1,"gates":[]}`)
+	writeDataset(t, dir, gatesNowName, body)
+	api := datasetAPI(t, dir, newStepClock().now)
+	for _, rg := range []string{"bytes=0-3", "bytes=-5", "bytes=10-"} {
+		rec := do(api, http.MethodGet, "/v1/datasets/"+gatesNowName, "", "Range", rg)
+		require.Equal(t, http.StatusOK, rec.Code, rg)
+		require.Equal(t, body, rec.Body.Bytes(), rg)
+		require.Empty(t, rec.Header().Get("Content-Range"), rg)
+		require.Equal(t, fmt.Sprint(len(body)), rec.Header().Get("Content-Length"), rg)
+	}
+}
+
+// With keys on, a request that carries a valid key spends exactly one unit of that key's
+// daily quota, as the README says; an anonymous one spends none.
+func TestDatasets_KeyedRequestSpendsOneUnit(t *testing.T) {
+	const key = "ecd_test_key_one"
+	dir := t.TempDir()
+	writeDataset(t, dir, gatesNowName, []byte(`{"format":"intel-gates-now","version":1}`))
+	q := &checkingQuota{left: map[string]int{"k1": 5}}
+	api := newAPI(t, dataapi.Config{DatasetDir: dir, Auth: keyedFixture(t, key), Quota: q, Now: newStepClock().now})
+
+	require.Equal(t, http.StatusOK, do(api, http.MethodGet, "/v1/datasets/"+gatesNowName, "").Code)
+	spends, _ := q.counts()
+	require.Zero(t, spends, "an anonymous request spends no key quota")
+
+	require.Equal(t, http.StatusOK, do(api, http.MethodGet, "/v1/datasets/"+gatesNowName, "", "X-API-Key", key).Code)
+	spends, _ = q.counts()
+	require.Equal(t, 1, spends)
+	q.mu.Lock()
+	left := q.left["k1"]
+	q.mu.Unlock()
+	require.Equal(t, 4, left)
+}
+
+// The document describes the answers the route gives: the 200 and the 304 with their caching
+// headers, and the query-string refusal as one that may happen (a cache in front may answer
+// from its copy first).
+func TestDatasets_OpenAPIDocumentsCaching(t *testing.T) {
+	api := newAPI(t, dataapi.Config{Docs: true, DatasetDir: t.TempDir()})
+	rec := do(api, http.MethodGet, "/v1/openapi.json", "")
+	require.Equal(t, http.StatusOK, rec.Code)
+	var doc struct {
+		Tags  []struct{ Name, Description string } `json:"tags"`
+		Paths map[string]map[string]struct {
+			Description string `json:"description"`
+			Responses   map[string]struct {
+				Headers map[string]any `json:"headers"`
+				Content map[string]any `json:"content"`
+			} `json:"responses"`
+		} `json:"paths"`
+	}
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &doc))
+	op := doc.Paths["/datasets/{file}"]["get"]
+	for _, status := range []string{"200", "304"} {
+		resp, ok := op.Responses[status]
+		require.True(t, ok, status)
+		for _, h := range []string{"ETag", "Cache-Control", "Vary", "X-Request-ID"} {
+			require.Contains(t, resp.Headers, h, status)
+		}
+	}
+	require.Empty(t, op.Responses["304"].Content, "a 304 has no body")
+	require.Contains(t, op.Description, "a request with a query string may be refused with `400` (send none)")
+	for _, tag := range doc.Tags {
+		if tag.Name == "datasets" {
+			require.Contains(t, tag.Description, "the anonymous daily cap")
+		}
+	}
 }

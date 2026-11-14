@@ -29,24 +29,37 @@ const DatasetMaxBytes = 4 << 20
 // alike.
 const datasetCheckEvery = time.Second
 
-// datasetPolicy is the allowlist of the dataset route: the file names it serves and the
-// Cache-Control of each, which follows the cadence at which the intel collector rewrites it.
-// No other name is ever opened.
-func datasetPolicy(name string) (string, bool) {
-	switch name {
-	case "intel-gates-now.json":
-		return cacheDatasetGatesNow, true
-	case "intel-systems-hour.json":
-		return cacheDatasetSystemsHour, true
-	case "intel-gates-profile.json":
-		return cacheDatasetGatesProfile, true
-	}
-	return "", false
+// datasetTable is the allowlist of the dataset route, in the order the documents list it:
+// the file names it serves and the Cache-Control of each, which follows the cadence at which
+// the intel collector rewrites it. No other name is ever opened.
+var datasetTable = []struct{ name, policy string }{
+	{"intel-gates-now.json", cacheDatasetGatesNow},
+	{"intel-systems-hour.json", cacheDatasetSystemsHour},
+	{"intel-gates-profile.json", cacheDatasetGatesProfile},
 }
 
-// datasetNames are the names datasetPolicy allows, in the order the documents list them.
+// datasetHeaders documents the caching headers of a served dataset (the 200 and the 304).
+func datasetHeaders() map[string]schema {
+	str := schema{"type": "string"}
+	policies := make([]string, len(datasetTable))
+	for i, e := range datasetTable {
+		policies[i] = "`" + e.policy + "` for `" + e.name + "`"
+	}
+	return map[string]schema{
+		"ETag": {"description": "A strong tag of the served version: the first 32 hex digits of the SHA-256 of the bytes as " +
+			"published, quoted. The gzip answer carries the same tag.", "schema": str},
+		"Cache-Control": {"description": strings.Join(policies, ", ") + ".", "schema": str},
+		"Vary":          {"description": "`Accept-Encoding`: the body is gzip-compressed when the request accepts gzip.", "schema": str},
+	}
+}
+
+// datasetNames are the names of datasetTable, in its order.
 func datasetNames() []string {
-	return []string{"intel-gates-now.json", "intel-systems-hour.json", "intel-gates-profile.json"}
+	names := make([]string, len(datasetTable))
+	for i, d := range datasetTable {
+		names[i] = d.name
+	}
+	return names
 }
 
 // datasetState is what the last look at a dataset file found.
@@ -97,9 +110,8 @@ func newDatasets(dir string, now func() time.Time, log *slog.Logger) *datasets {
 		return d
 	}
 	d.files = map[string]*datasetFile{}
-	for _, name := range datasetNames() {
-		policy, _ := datasetPolicy(name)
-		d.files[name] = &datasetFile{name: name, path: filepath.Join(dir, name), policy: policy}
+	for _, e := range datasetTable {
+		d.files[e.name] = &datasetFile{name: e.name, path: filepath.Join(dir, e.name), policy: e.policy}
 	}
 	return d
 }
@@ -108,8 +120,8 @@ func newDatasets(dir string, now func() time.Time, log *slog.Logger) *datasets {
 // as the collector wrote it. Nothing is decoded, so a file in a newer format is still served
 // and the reader applies the format rule. The route is outside the per-address limits, the
 // anonymous daily cap and the in-flight gate, so it touches no file for a request it refuses:
-// a query string (which would make every request a new edge cache key) is refused first, then
-// a name outside the allowlist. Every error is no-store.
+// a query string (which, at a cache that keys on the full URL, would make every request a new
+// cache key) is refused first, then a name outside the allowlist. Every error is no-store.
 func (a *API) dataset(w http.ResponseWriter, r *http.Request) {
 	if r.URL.RawQuery != "" || r.URL.ForceQuery {
 		datasetError(w, r, http.StatusBadRequest, "invalid_request", "this route takes no query string")
@@ -124,7 +136,7 @@ func (a *API) dataset(w http.ResponseWriter, r *http.Request) {
 		datasetError(w, r, http.StatusNotFound, "not_found", "no such dataset")
 		return
 	}
-	state, ver := f.current(a.datasets.now(), a.datasets.log)
+	state, ver := f.current(a.datasets.now, a.datasets.log)
 	switch state {
 	case datasetServed:
 	case datasetMissing:
@@ -161,11 +173,14 @@ func datasetError(w http.ResponseWriter, r *http.Request, status int, code, msg 
 	writeError(w, r, status, code, msg)
 }
 
-// current returns the file's state at now. It looks at the file again only when the last look
-// is datasetCheckEvery old or more (or in the future of now).
-func (f *datasetFile) current(now time.Time, log *slog.Logger) (datasetState, *datasetVersion) {
+// current returns the file's state now. It looks at the file again only when the last look
+// is datasetCheckEvery old or more (or in the future of now, after the clock was set back).
+// The clock is read under the lock: a reading taken before the wait could be older than the
+// last look another request made meanwhile, and would look again and move the look back.
+func (f *datasetFile) current(clock func() time.Time, log *slog.Logger) (datasetState, *datasetVersion) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
+	now := clock()
 	if !f.checked.IsZero() {
 		if age := now.Sub(f.checked); age >= 0 && age < datasetCheckEvery {
 			return f.state, f.ver
@@ -260,7 +275,7 @@ func loadDataset(path string) (datasetState, os.FileInfo, *datasetVersion, error
 		return datasetTooLarge, fi, nil, nil
 	}
 	// Bounded even when the file grows after the stat.
-	body, err := io.ReadAll(io.LimitReader(file, DatasetMaxBytes+1))
+	body, err := readSized(io.LimitReader(file, DatasetMaxBytes+1), fi.Size())
 	if err != nil {
 		return datasetFailed, nil, nil, err
 	}
@@ -272,6 +287,27 @@ func loadDataset(path string) (datasetState, os.FileInfo, *datasetVersion, error
 		return datasetFailed, nil, nil, err
 	}
 	return datasetServed, fi, ver, nil
+}
+
+// readSized reads r to its end into a buffer sized for the expected size plus one byte, so
+// a file of the stat size is read without reallocation and the bytes kept hold no slack
+// (io.ReadAll would grow a 4 MiB file to about twice that capacity). A longer stream still
+// reads whole; the caller bounds r.
+func readSized(r io.Reader, size int64) ([]byte, error) {
+	buf := make([]byte, 0, size+1)
+	for {
+		if len(buf) == cap(buf) {
+			buf = append(buf, 0)[:len(buf)]
+		}
+		n, err := r.Read(buf[len(buf):cap(buf)])
+		buf = buf[:len(buf)+n]
+		if errors.Is(err, io.EOF) {
+			return buf, nil
+		}
+		if err != nil {
+			return nil, err
+		}
+	}
 }
 
 // newDatasetVersion builds the served copies of body: the bytes, their gzip and the ETag (the

@@ -392,9 +392,9 @@ in memory with a gzip copy and looked at again at most once a second, present or
 `Cache-Control` (`public, max-age=60` for `intel-gates-now.json`, `300` for `intel-systems-hour.json`, `3600` for
 `intel-gates-profile.json`) and a strong `ETag` (the first 32 hex digits of the SHA-256); `If-None-Match`, weak or strong,
 answers `304`. Like the portal assets, the route has no per-client limit, is not counted by the anonymous daily cap and takes no
-in-flight slot (a request with an API key still counts one unit of that key's daily cap). Because nothing limits it, it refuses
-any query string (`400`, before a file is touched): a cache in front keys on the full URL, so `?r=<random>` would reach the
-origin every time. Errors are `no-store`.
+in-flight slot (a request with an API key still counts one unit of that key's daily cap). Because nothing limits it, a request with a
+query string may be refused with `400` (send none): the origin refuses one before it touches a file, because a cache that keys
+on the full URL would pass `?r=<random>` to the origin every time. Errors are `no-store`.
 
 ## Development
 

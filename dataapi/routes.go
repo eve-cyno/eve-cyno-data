@@ -151,6 +151,9 @@ type opDoc struct {
 	query      []queryParam
 	body       *bodyDoc
 	ok         okDoc
+	// notModified, when set, documents a 304 answer to a matching If-None-Match: no body,
+	// the 200's headers.
+	notModified string
 	// errors are the non-2xx statuses the operation can answer (405 and the request-ID
 	// header are common to every route and stated once).
 	errors []int
@@ -177,12 +180,14 @@ type bodyDoc struct {
 }
 
 // okDoc documents the 200 response: a Go type (reflected), or a raw schema with a media
-// type for non-JSON bodies.
+// type for non-JSON bodies. Headers are the response headers it documents besides
+// X-Request-ID, each an OpenAPI header object.
 type okDoc struct {
 	description string
 	typ         reflect.Type
 	media       string
 	raw         schema
+	headers     map[string]schema
 }
 
 func always(Surface) bool { return true }
@@ -409,13 +414,18 @@ func routeTable() []route {
 					"The answer carries a strong `ETag` (the first 32 hex digits of the body's SHA-256); `If-None-Match` with that tag, weak or " +
 					"strong, answers `304` with no body. `Accept-Encoding: gzip` gets the same bytes gzip-compressed, with the same `ETag`. " +
 					"The route has no rate limit and is never counted against the anonymous daily request cap; " +
-					"it takes no query string (`400`), so poll at the file's `max-age` and revalidate with `If-None-Match`. " +
+					"a request with a query string may be refused with `400` (send none), so poll at the file's `max-age` and revalidate " +
+					"with `If-None-Match`. " +
 					"`404` means the file is not published yet, or this service serves no datasets. Errors are never cached.",
 				pathParams: []queryParam{
 					{name: "file", description: "The dataset file name.", schema: schema{"enum": stringsToAny(datasetNames())}},
 				},
-				ok:     okDoc{description: "The dataset file as published.", media: "application/json", raw: schema{"type": "object"}},
-				errors: []int{http.StatusBadRequest, http.StatusNotFound, http.StatusInternalServerError},
+				ok: okDoc{
+					description: "The dataset file as published.", media: "application/json", raw: schema{"type": "object"},
+					headers: datasetHeaders(),
+				},
+				notModified: "The `If-None-Match` names the served version: no body.",
+				errors:      []int{http.StatusBadRequest, http.StatusNotFound, http.StatusInternalServerError},
 			},
 		},
 		{

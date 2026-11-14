@@ -180,7 +180,7 @@ var tagDescriptions = []oaTag{
 	{"items", "SDE item search."},
 	{"tools", "The deterministic tool layer behind the EVE-Cyno assistant, one operation per tool."},
 	{"mcp", "The same tools over the Model Context Protocol."},
-	{"datasets", "Files the intel collector publishes, served as they are, outside the rate limits and the daily cap."},
+	{"datasets", "Files the intel collector publishes, served as they are, outside the rate limits and the anonymous daily cap."},
 	{"meta", "Service health and the descriptions of this API."},
 }
 
@@ -482,9 +482,18 @@ func (b *schemaBuilder) responses(ok propList, errs []int) propList {
 func okResponse(description string, content schema) schema {
 	return schema{
 		"description": description,
-		"headers":     schema{"X-Request-ID": schema{"$ref": "#/components/headers/RequestID"}},
+		"headers":     responseHeaders(nil),
 		"content":     content,
 	}
+}
+
+// responseHeaders is the headers object of a response: X-Request-ID and the given ones.
+func responseHeaders(extra map[string]schema) schema {
+	out := schema{"X-Request-ID": schema{"$ref": "#/components/headers/RequestID"}}
+	for name, h := range extra {
+		out[name] = h
+	}
+	return out
 }
 
 // operation documents one plain route.
@@ -533,7 +542,12 @@ func (b *schemaBuilder) operation(s Surface, rt route, rate Rate) *oaOperation {
 	} else {
 		sch = d.ok.raw
 	}
-	ok := propList{{name: "200", schema: okResponse(d.ok.description, schema{media: schema{"schema": sch}})}}
+	okResp := okResponse(d.ok.description, schema{media: schema{"schema": sch}})
+	okResp["headers"] = responseHeaders(d.ok.headers)
+	ok := propList{{name: "200", schema: okResp}}
+	if d.notModified != "" {
+		ok = append(ok, prop{name: "304", schema: schema{"description": d.notModified, "headers": responseHeaders(d.ok.headers)}})
+	}
 	errs := d.errors
 	if (d.id == "mcp" || d.id == searchFitsID) && s.Auth {
 		op.Security = optionalSecurity()
