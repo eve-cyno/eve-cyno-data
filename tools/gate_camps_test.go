@@ -540,12 +540,11 @@ func TestGateCamps_WindowFollowsFirstKill(t *testing.T) {
 	// the 120-minute window, as the first kill does
 	d := gcDeps(t, gcOneGate(intelsnap.GatesNowGate{
 		SystemID: gcPerimeter, ToSystemID: gcJita, State: "kills",
-		PodKills60m: 1, ShipKills120m: 2, FirstKill: gcAt(10, 20), LastKill: gcAt(11, 50),
+		PodKills60m: 1, PodKills120m: 2, ShipKills120m: 2, FirstKill: gcAt(10, 20), LastKill: gcAt(11, 50),
 		Attackers: []intelsnap.GatesNowAttacker{},
 	}))
 	text, _ := gcCall(t, d, map[string]any{"min_state": "kills"})
-	require.Contains(t, text, "2 ship kills in the last 100 min.")
-	require.NotContains(t, text, "pod")
+	require.Contains(t, text, "2 ship kills and 2 pods in the last 100 min.")
 }
 
 func TestGateCamps_BelowThresholdAnswer(t *testing.T) {

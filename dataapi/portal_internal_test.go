@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"eve-cyno.dev/go/data/catalog"
+	"eve-cyno.dev/go/data/tools"
 )
 
 // Every tool a public surface offers has a recorded example, and every fixture is a tool.
@@ -51,14 +52,20 @@ func TestEveryOfferedToolHasAnExample(t *testing.T) {
 				Text string          `json:"text"`
 				Data json.RawMessage `json:"data"`
 			} `json:"result"`
-			Attribution []struct{ Name, URL, License string } `json:"attribution"`
+			Attribution []tools.Source `json:"attribution"`
 		}
 		require.NoError(t, json.Unmarshal(fx.Response, &env), "%s: the response is a recorded envelope", tl.Name)
 		require.Equal(t, tl.Name, env.Tool)
 		require.NotEmpty(t, env.Version, tl.Name)
 		require.NotEmpty(t, env.Result.Text, tl.Name)
 		require.NotEmpty(t, env.Attribution, tl.Name)
-		require.Equal(t, len(tl.Attribution) > 0, len(env.Attribution) > 0)
+		wantAttr := tl.Attribution
+		if tl.Name == "get_fits" || tl.Name == "list_fits" {
+			// the fit examples are synthetic on purpose (TestExamples_NoRealCommunityFits keeps real
+			// community sources out), so they name a placeholder source, not the corpus sources
+			wantAttr = []tools.Source{{Name: "Example fit source", URL: "https://eve-cyno.dev/docs/", License: "Example data for the documentation"}}
+		}
+		require.Equal(t, wantAttr, env.Attribution, "%s: the example carries a stale attribution", tl.Name)
 		if tl.Data != nil {
 			require.NotEqual(t, "null", string(env.Result.Data), "%s: a typed tool's recorded example carries its data", tl.Name)
 		}
