@@ -46,7 +46,11 @@ type MissingSkill struct {
 }
 
 // CanUseResult is the answer of CanUse for one type. Missing lists every unmet
-// requirement of the transitive closure at the given levels, in SkillReq.All order.
+// requirement of the type's own skill list (SkillReq.Direct) at the given levels, in that
+// order. A missing prerequisite of a skill the character has trained is no violation: once a
+// skill is trained the game does not check that skill's own prerequisites again (owner ruling
+// 2026-11-14; CCP, "The great ship skill changes of summer 2013"). SkillReq.All stays the
+// training list.
 type CanUseResult struct {
 	TypeID  int
 	OK      bool
@@ -152,7 +156,7 @@ func canUseAt(ctx context.Context, s RequiredSDE, level func(skillTypeID int) in
 	if len(reqs) == 0 {
 		return res
 	}
-	for _, q := range reqs[0].All {
+	for _, q := range reqs[0].Direct {
 		has := level(q.SkillTypeID)
 		if has < q.Level {
 			res.Missing = append(res.Missing, MissingSkill{TypeID: q.SkillTypeID, Needs: q.Level, Has: has})
@@ -163,7 +167,7 @@ func canUseAt(ctx context.Context, s RequiredSDE, level func(skillTypeID int) in
 }
 
 // CodeSkill: the pilot lacks a skill the hull, module, charge, drone or subsystem
-// needs (directly or through a prerequisite). Hard. Violation.Skill is the missing
+// itself requires (not the prerequisites of a skill the pilot has trained). Hard. Violation.Skill is the missing
 // skill {typeId, needs, has}, ItemTypeID and Names the item.
 const CodeSkill Code = "skill"
 

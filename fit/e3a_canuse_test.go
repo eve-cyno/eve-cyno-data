@@ -180,7 +180,8 @@ func TestE3a_CanUseClaims(t *testing.T) {
 	}
 	t.Run("pairs", func(t *testing.T) {
 		m := missing("all0", "Rifter")
-		require.Equal(t, 1, m["Spaceship Command"])
+		_, hasSC := m["Spaceship Command"]
+		require.False(t, hasSC, "a prerequisite of the hull's own skill is not checked (owner ruling 2026-11-14)")
 		require.Equal(t, 1, m["Minmatar Frigate"])
 		require.False(t, flies("all0", "Rifter"))
 		for _, p := range []string{"allI", "allIII", "alpha"} {

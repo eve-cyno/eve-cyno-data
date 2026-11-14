@@ -83,7 +83,20 @@ func TestCanUse_AllZeroListsMissing(t *testing.T) {
 	// An empty non-nil profile: every skill missing is 0, never V.
 	res := CanUse(context.Background(), s, SkillProfile{}, 2410)
 	require.False(t, res.OK)
-	require.Equal(t, []MissingSkill{{3319, 4, 0}, {20211, 1, 0}, {3324, 5, 0}, {3321, 3, 0}}, res.Missing)
+	// Only the item's own two required skills; their prerequisites (3324, 3321) are not listed.
+	require.Equal(t, []MissingSkill{{3319, 4, 0}, {20211, 1, 0}}, res.Missing)
+}
+
+// Once a skill is trained the game does not check that skill's own prerequisites again (owner
+// ruling 2026-11-14): a pilot who has the item's own required skills at their levels can use
+// it, whatever the prerequisites of those skills hold. SkillReq.All stays the training list.
+func TestCanUse_PrerequisitesOfATrainedSkillAreNotChecked(t *testing.T) {
+	s := openReqSDE(t)
+	own := SkillProfile{3319: 4, 20211: 1} // the two skills 2410 itself requires, nothing else
+	require.True(t, CanUse(context.Background(), s, own, 2410).OK)
+	r := RequiredSkills(context.Background(), s, []int{2410})[0]
+	require.Greater(t, len(r.All), len(r.Direct), "the training list still holds the prerequisites")
+	require.Equal(t, []MissingSkill{{3319, 4, 3}}, CanUse(context.Background(), s, SkillProfile{3319: 3, 20211: 1}, 2410).Missing, "an own skill below its level still fails")
 }
 
 func TestCanUse_HighestLevelWins(t *testing.T) {
