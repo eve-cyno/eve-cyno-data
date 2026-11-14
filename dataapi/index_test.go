@@ -43,10 +43,10 @@ func TestIndex_HTML(t *testing.T) {
 			require.NotContains(t, body, link, tl.Name)
 		}
 	}
-	for _, tier := range []string{"public", "keyed"} {
-		require.Contains(t, body, `<div class="tier-group" data-tier="`+tier+`">`)
-	}
-	require.NotContains(t, body, `data-tier="byo-key"`)
+	// the two access tiers of the home page's tools section (the atlas lists the tools)
+	require.Contains(t, body, `<div class="tier"><div class="tier-h"><span>public</span>`)
+	require.Contains(t, body, `<div class="tier keyed"><div class="tier-h"><span>keyed</span>`)
+	require.NotContains(t, body, "byo-key")
 }
 
 func TestIndex_ReflectsConfiguredLimits(t *testing.T) {
