@@ -87,6 +87,44 @@ func TestMemoryDataset_UnpublishedIs503(t *testing.T) {
 	}
 }
 
+func TestMemoryDataset_DueRetryAfter(t *testing.T) {
+	// The table is published and due (now is at its nextBuild); the builder's attempt time is the
+	// planned end of the next table. Past the end, Retry-After is the overrun so far, so clients
+	// back off as the build drags on.
+	cases := []struct {
+		name string
+		set  func(m *dataapi.MemoryDataset, now time.Time)
+		want string // "" = header absent
+	}{
+		{"no attempt set: absent", func(*dataapi.MemoryDataset, time.Time) {}, ""},
+		{"end 0.4 s ago: 1", func(m *dataapi.MemoryDataset, now time.Time) { m.SetNextAttempt(now.Add(-400 * time.Millisecond)) }, "1"},
+		{"end 7 s ago: 7", func(m *dataapi.MemoryDataset, now time.Time) { m.SetNextAttempt(now.Add(-7 * time.Second)) }, "7"},
+		{"end 6.2 s ago: 7 (rounds up)", func(m *dataapi.MemoryDataset, now time.Time) {
+			m.SetNextAttempt(now.Add(-6200 * time.Millisecond))
+		}, "7"},
+		{"end 2000 s ago: capped at 900", func(m *dataapi.MemoryDataset, now time.Time) { m.SetNextAttempt(now.Add(-2000 * time.Second)) }, "900"},
+		{"end a century ago: capped at 900", func(m *dataapi.MemoryDataset, now time.Time) { m.SetNextAttempt(now.AddDate(-100, 0, 0)) }, "900"},
+		{"end exactly now: 1", func(m *dataapi.MemoryDataset, now time.Time) { m.SetNextAttempt(now) }, "1"},
+		{"end under a second ahead: 1", func(m *dataapi.MemoryDataset, now time.Time) { m.SetNextAttempt(now.Add(10 * time.Millisecond)) }, "1"},
+		{"end 90 s ahead: 90", func(m *dataapi.MemoryDataset, now time.Time) { m.SetNextAttempt(now.Add(90 * time.Second)) }, "90"},
+		{"end more than 900 s ahead: capped at 900", func(m *dataapi.MemoryDataset, now time.Time) { m.SetNextAttempt(now.Add(2000 * time.Second)) }, "900"},
+		{"end past the Duration range ahead: capped at 900", func(m *dataapi.MemoryDataset, now time.Time) { m.SetNextAttempt(now.AddDate(300, 0, 0)) }, "900"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			clk := newStepClock()
+			mem := dataapi.NewMemoryDataset(dataapi.MarketHubsMaxBytes)
+			require.NoError(t, mem.Publish([]byte(`{"a":1}`), clk.now()))
+			tc.set(mem, clk.now())
+			api := hubsAPI(t, mem, clk)
+			rec := do(api, http.MethodGet, "/v1/datasets/"+hubsName, "")
+			require.Equal(t, http.StatusOK, rec.Code)
+			require.Equal(t, "public, max-age=0", rec.Header().Get("Cache-Control"))
+			require.Equal(t, tc.want, rec.Header().Get("Retry-After"))
+		})
+	}
+}
+
 func TestMemoryDataset_WorksWithoutDatasetDir(t *testing.T) {
 	clk := newStepClock()
 	mem := dataapi.NewMemoryDataset(dataapi.MarketHubsMaxBytes)

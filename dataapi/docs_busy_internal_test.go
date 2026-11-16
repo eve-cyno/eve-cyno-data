@@ -64,7 +64,7 @@ func TestDocs_BusyIsDocumentedWhereRetryAfterIs(t *testing.T) {
 
 	// Each surface that documents Retry-After also documents the busy answer.
 	pages := map[string][]string{
-		"/docs/rest": {"<code>busy</code>", "Retry-After: 1", "<code>Retry-After</code></td><td>On <code>429</code> and <code>503</code>: seconds to wait (1 on busy)",
+		"/docs/rest": {"<code>busy</code>", "Retry-After: 1", "<code>Retry-After</code></td><td>On <code>429</code> and <code>503</code>: seconds to wait (1 on busy). Also on the <code>200</code> or <code>304</code> of <code>market-hubs.json</code> once its <code>nextBuildAt</code> has passed",
 			"before authentication errors", "never charged"},
 		"/docs/access":     {"503 busy", "before authentication", "never charged against any limit or daily cap"},
 		"/docs/mcp":        {"HTTP 503 with Retry-After: 1", "before any authentication error", "never charged"},

@@ -148,7 +148,14 @@ func (r *HubRefresher) Run(ctx context.Context) {
 				r.log.Warn("hub prices: build overran the cycle; ticks skipped", "skipped", skipped)
 			}
 		}
-		r.ds.SetNextAttempt(next)
+		// Nothing published: a client comes back when the retry starts (the 503 Retry-After).
+		// Published: it comes back when the next table is out, the planned end of the next
+		// build, not its start, or it would get a second Retry-After.
+		if scheduled {
+			r.ds.SetNextAttempt(next.Add(r.lastBuild))
+		} else {
+			r.ds.SetNextAttempt(next)
+		}
 		if err := r.sleep(ctx, next.Sub(r.now())); err != nil {
 			return
 		}
@@ -228,19 +235,22 @@ func (r *HubRefresher) buildOnce(ctx context.Context, tick time.Time) {
 		return
 	}
 	if err := r.ds.Publish(res.JSON, nextBuildAt); err != nil {
+		// A refused publish leaves lastBuild and published as they were: no table went out, so the
+		// duration says nothing about a build that publishes.
 		r.log.Warn("hub prices: publish refused", "error", err, "bytes", len(res.JSON))
 		return
 	}
 	// The table is out only after the publish (gzip, SHA-256), so the next planned end counts it.
 	r.lastBuild = r.now().Sub(started)
 	r.published = true
+	buildMS := took.Milliseconds() // the build alone; lastBuild (and duration_ms) also count the publish
 	rows, pages := 0, 0
 	for _, s := range res.Status {
 		rows += s.Rows
 		pages += s.Pages
 	}
 	r.log.Info("hub prices: published", append([]any{"rows", rows, "pages", pages, "bytes", len(res.JSON),
-		"duration_ms", took.Milliseconds(), "built_at", builtAt, "next_build_at", nextBuildAt}, statusAttrs(res.Status)...)...)
+		"build_ms", buildMS, "duration_ms", r.lastBuild.Milliseconds(), "built_at", builtAt, "next_build_at", nextBuildAt}, statusAttrs(res.Status)...)...)
 }
 
 // statusAttrs renders the per-hub status as one log attribute per hub.
