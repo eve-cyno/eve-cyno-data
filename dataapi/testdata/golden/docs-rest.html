@@ -238,7 +238,7 @@ console.log((<span class="tk-kw">await</span> r.json()).result.text);</code></pr
         <tr><td><code>Authorization: Bearer &lt;key&gt;</code> or <code>X-API-Key</code></td><td>The keyed tool, free-text fit search and the higher limits. Keys are free: see <a href="/docs/access#access-keys">API keys</a>.</td></tr>
         <tr><td><code>X-Janice-Key</code></td><td>Optional: your own Janice key; <code>appraise_items</code> then answers with a Janice appraisal instead of the ESI estimate. Used for that request only, never logged or stored.</td></tr>
         <tr><td><code>X-Request-ID</code></td><td>On every response: your value when it is a token of 1-64 characters from <code>[A-Za-z0-9._-]</code>, otherwise a generated one.</td></tr>
-        <tr><td><code>Retry-After</code></td><td>On <code>429</code> and <code>503</code>: seconds to wait (1 on busy). Also on the <code>200</code> or <code>304</code> of <code>market-hubs.json</code> once its <code>nextBuildAt</code> has passed: seconds until the next table is expected.</td></tr>
+        <tr><td><code>Retry-After</code></td><td>On <code>429</code> and <code>503</code>: seconds to wait (1 on busy).</td></tr>
       </tbody>
     </table></div>
 

@@ -2768,7 +2768,7 @@ paths:
       tags:
         - datasets
       summary: Download a published dataset
-      description: 'Serves one published dataset, byte for byte. The intel collector publishes `intel-gates-now.json` (killmails on stargates over the last two hours, rewritten every minute; `Cache-Control: public, max-age=60`), `intel-systems-hour.json` (the latest ESI hour of jumps and kills per system; `max-age=300`) and `intel-gates-profile.json` (the 28-day profile of kills per gate and UTC hour, rebuilt daily; `max-age=3600`); `market-hubs.json` is the hub price table: for the five trade hubs (Jita, Amarr, Dodixie, Rens, Hek), the best sell and buy price and the volumes at the hub station for each tracked type, rebuilt every 15 minutes from ESI (Fenris Creations game data); its `Cache-Control` is `public, max-age=` the seconds until the next build, at most 900, and `max-age=0` once that time has passed, when the answer (`200` or `304`) also carries `Retry-After`, the whole seconds to the builder''s planned end of the next table (at least 1; once that end has passed, the seconds it is overdue, so a client backs off as the build drags on; at most 900), so come back then; it answers `503` (`Retry-After`: the seconds until the builder''s next attempt, 300 when unknown) before the first build. Each file names its own `format` and major `version`; a reader accepts the majors it knows and ignores fields it does not know. The killmail-based files credit zKillboard; all of it is Fenris Creations game data (ESI), and each intel file carries its `credit` line; `market-hubs.json` names its `source`. The answer carries a strong `ETag` (the first 32 hex digits of the body''s SHA-256); `If-None-Match` with that tag, weak or strong, answers `304` with no body. `Accept-Encoding: gzip` gets the same bytes gzip-compressed, with the same `ETag`. The route has no rate limit and is never counted against the anonymous daily request cap; a request with a query string may be refused with `400` (send none), so poll at the file''s `max-age` and revalidate with `If-None-Match`. `404` means the file is not published yet, or this service serves no datasets. Errors are never cached.'
+      description: 'Serves one published dataset, byte for byte. The intel collector publishes `intel-gates-now.json` (killmails on stargates over the last two hours, rewritten every minute; `Cache-Control: public, max-age=60`), `intel-systems-hour.json` (the latest ESI hour of jumps and kills per system; `max-age=300`) and `intel-gates-profile.json` (the 28-day profile of kills per gate and UTC hour, rebuilt daily; `max-age=3600`); `market-hubs.json` is the hub price table: for the five trade hubs (Jita, Amarr, Dodixie, Rens, Hek), the best sell and buy price and the volumes at the hub station for each tracked type, rebuilt every 15 minutes from ESI (Fenris Creations game data); its `Cache-Control` is `public, max-age=` the seconds until the next build, at most 900, and `max-age=0` once that time has passed, when the answer (`200` or `304`) carries no `Retry-After` (the Cloudflare edge drops it): a client that holds the table waits max(1, min(900, ceil(Date - nextBuildAt))) seconds, where Date is the answer''s `Date` header and `nextBuildAt` comes from the table it holds, and asks again; it answers `503` (`Retry-After`: the seconds until the builder''s next attempt, 300 when unknown) before the first build. Each file names its own `format` and major `version`; a reader accepts the majors it knows and ignores fields it does not know. The killmail-based files credit zKillboard; all of it is Fenris Creations game data (ESI), and each intel file carries its `credit` line; `market-hubs.json` names its `source`. The answer carries a strong `ETag` (the first 32 hex digits of the body''s SHA-256); `If-None-Match` with that tag, weak or strong, answers `304` with no body. `Accept-Encoding: gzip` gets the same bytes gzip-compressed, with the same `ETag`. The route has no rate limit and is never counted against the anonymous daily request cap; a request with a query string may be refused with `400` (send none), so poll at the file''s `max-age` and revalidate with `If-None-Match`. `404` means the file is not published yet, or this service serves no datasets. Errors are never cached.'
       operationId: getDataset
       parameters:
         - $ref: '#/components/parameters/RequestID'
@@ -2799,10 +2799,6 @@ paths:
               description: 'A strong tag of the served version: the first 32 hex digits of the SHA-256 of the bytes as published, quoted. The gzip answer carries the same tag.'
               schema:
                 type: string
-            Retry-After:
-              description: 'Only for `market-hubs.json`, once its table is past its `nextBuildAt` and the next one is not published yet: the whole seconds (at least 1, at most 900) to the builder''s planned end, or, once that end has passed, the seconds it is overdue; ask again then.'
-              schema:
-                type: string
             Vary:
               description: '`Accept-Encoding`: the body is gzip-compressed when the request accepts gzip.'
               schema:
@@ -2818,10 +2814,6 @@ paths:
                 type: string
             ETag:
               description: 'A strong tag of the served version: the first 32 hex digits of the SHA-256 of the bytes as published, quoted. The gzip answer carries the same tag.'
-              schema:
-                type: string
-            Retry-After:
-              description: 'Only for `market-hubs.json`, once its table is past its `nextBuildAt` and the next one is not published yet: the whole seconds (at least 1, at most 900) to the builder''s planned end, or, once that end has passed, the seconds it is overdue; ask again then.'
               schema:
                 type: string
             Vary:

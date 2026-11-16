@@ -388,30 +388,6 @@ func TestHubRefresher_NextAttemptIsSetAtBuildStart(t *testing.T) {
 	require.Equal(t, h.calls[2].at.Add(40*time.Second), h.calls[2].attempt)
 }
 
-func TestHubRefresher_AttemptWhileSleepingIsPlannedEndOncePublished(t *testing.T) {
-	h, r, ctx := newHubHarness(t, 10*time.Minute)
-	h.script = []func(hubCall) (hubprices.Result, time.Duration){
-		func(c hubCall) (hubprices.Result, time.Duration) { return complete(c, 40*time.Second) },
-		func(c hubCall) (hubprices.Result, time.Duration) { return incomplete(c, 30*time.Second) },
-	}
-	var attempts []time.Time
-	var wakes []time.Time
-	h.onSleep = func(n int) {
-		attempts = append(attempts, h.mem.NextAttempt())
-		wakes = append(wakes, h.clk.now().Add(h.sleeps[n-1]))
-		if n == 2 {
-			h.cancel()
-		}
-	}
-	r.Run(ctx)
-	require.Len(t, attempts, 2)
-	// The next build starts at the wake-up and takes the measured 40 s: a client that comes back
-	// at the attempt time finds the table, not a second Retry-After.
-	require.Equal(t, wakes[0].Add(40*time.Second), attempts[0])
-	// An incomplete build keeps lastBuild, so the end is still start plus 40 s.
-	require.Equal(t, wakes[1].Add(40*time.Second), attempts[1])
-}
-
 func TestHubRefresher_LaterIncompleteKeepsPublishedTable(t *testing.T) {
 	h, r, ctx := newHubHarness(t, 10*time.Minute)
 	var kept string

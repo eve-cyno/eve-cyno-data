@@ -10,10 +10,10 @@ import (
 
 // Bounds of the Cache-Control max-age of an in-memory dataset, in seconds. The answer's max-age
 // is the whole seconds until the published next build, at most 900 s, and 0 once that time is
-// reached or past, so the edge revalidates and the origin answers 304 from memory; from then
-// until the next publish the answer (200 or 304) also carries Retry-After: the whole seconds
-// to the builder's planned end, or the time the end is overdue once it has passed. Before the
-// first publish, Retry-After is the time to the builder's next attempt, or
+// reached or past, so the edge revalidates and the origin answers 304 from memory. A due answer
+// carries no Retry-After: the Cloudflare edge drops it and a stored 200 would replay a stale
+// one; the client computes its wait from the Date header and the nextBuildAt it holds. Before
+// the first publish, Retry-After is the time to the builder's next attempt, or
 // memoryRetryAfterFallback when none is known: ESI region orders expire 300 s after they were
 // last modified.
 const (
@@ -36,15 +36,14 @@ type memoryState struct {
 type MemoryDataset struct {
 	max   int
 	state atomic.Pointer[memoryState]
-	// attempt is the time of the builder's next try before the first publish and the planned
-	// end of the next table after it (nil: not set); the route sends it as Retry-After.
+	// attempt is the time of the builder's next try (nil: not set); the 503 before the first
+	// publish sends it as Retry-After.
 	attempt atomic.Pointer[time.Time]
 }
 
-// SetNextAttempt records when a client should come back: before the first publish the start of
-// the builder's next try, after it the planned end of the next table (the next start plus the
-// measured build). The builder calls it before each wait; the route reads it with NextAttempt
-// for Retry-After. Safe for concurrent use.
+// SetNextAttempt records when a client should come back before the first publish: the start of
+// the builder's next try. The builder calls it before each wait; the route reads it with
+// NextAttempt for the 503 Retry-After. Safe for concurrent use.
 func (m *MemoryDataset) SetNextAttempt(at time.Time) { m.attempt.Store(&at) }
 
 // NextAttempt returns the time set by SetNextAttempt, or the zero time when none was set.
@@ -65,28 +64,6 @@ func (m *MemoryDataset) retryAfter(now time.Time) int {
 	// The ceil of a positive duration is at least 1; max is a guard for an attempt past the
 	// Duration range (~292 years), where Sub saturates and the ceil overflows to a negative.
 	return max(1, int((at.Sub(now)+time.Second-1)/time.Second))
-}
-
-// dueRetryAfter is the Retry-After in whole seconds for an answer once the published table
-// is due, at least 1 and at most memoryMaxAgeMax. Before the builder's planned end it is the
-// time to that end rounded up. Once the end has passed (the build overran) it is the overrun so
-// far, so the clients back off as the build drags on instead of all asking again at one fixed
-// moment. It reports false when the builder set no time.
-func (m *MemoryDataset) dueRetryAfter(now time.Time) (int, bool) {
-	at := m.NextAttempt()
-	if at.IsZero() {
-		return 0, false
-	}
-	d := at.Sub(now)
-	if at.Before(now) {
-		d = now.Sub(at)
-	}
-	// Compare before the ceil: Sub saturates far out, and the ceil of a saturated value would
-	// overflow.
-	if d >= memoryMaxAgeMax*time.Second {
-		return memoryMaxAgeMax, true
-	}
-	return max(1, int((d+time.Second-1)/time.Second)), true
 }
 
 // NewMemoryDataset returns an empty dataset that refuses a body longer than maxBytes.
@@ -142,12 +119,5 @@ func (a *API) serveMemory(w http.ResponseWriter, r *http.Request, spec datasetSp
 		datasetError(w, r, http.StatusServiceUnavailable, "unavailable", "this dataset has not been built yet; retry shortly")
 		return
 	}
-	now := a.datasets.now()
-	// Due and the next table not out yet: the builder's planned end says when to come back.
-	if !now.Before(st.nextBuild) {
-		if secs, ok := m.dueRetryAfter(now); ok {
-			w.Header().Set("Retry-After", strconv.Itoa(secs))
-		}
-	}
-	writeVersion(w, r, st.cacheControl(now), st.ver)
+	writeVersion(w, r, st.cacheControl(a.datasets.now()), st.ver)
 }

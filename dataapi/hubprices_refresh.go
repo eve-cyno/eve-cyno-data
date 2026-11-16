@@ -148,14 +148,8 @@ func (r *HubRefresher) Run(ctx context.Context) {
 				r.log.Warn("hub prices: build overran the cycle; ticks skipped", "skipped", skipped)
 			}
 		}
-		// Nothing published: a client comes back when the retry starts (the 503 Retry-After).
-		// Published: it comes back when the next table is out, the planned end of the next
-		// build, not its start, or it would get a second Retry-After.
-		if scheduled {
-			r.ds.SetNextAttempt(next.Add(r.lastBuild))
-		} else {
-			r.ds.SetNextAttempt(next)
-		}
+		// A client of the 503 before the first publish comes back when the next try starts.
+		r.ds.SetNextAttempt(next)
 		if err := r.sleep(ctx, next.Sub(r.now())); err != nil {
 			return
 		}

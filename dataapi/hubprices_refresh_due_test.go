@@ -56,13 +56,13 @@ func TestHubRefresher_PollAtNextBuildAtGetsTheNewTable(t *testing.T) {
 	require.Equal(t, 2, polled)
 }
 
-// A request at or after the table's nextBuildAt, before the next table is out, names the
-// builder's planned end in Retry-After (200 and 304 alike); max-age is 0. A request before
-// nextBuildAt carries none. After the publish the new table is served.
-func TestHubRefresher_DueRequestGetsRetryAfterToThePlannedEnd(t *testing.T) {
+// A request at or after the table's nextBuildAt, before the next table is out, gets max-age=0
+// and no Retry-After (200 and 304 alike); the client waits by its own rule from Date. A request
+// before nextBuildAt gets a positive max-age. After the publish the new table is served.
+func TestHubRefresher_DueRequestHasMaxAgeZeroAndNoRetryAfter(t *testing.T) {
 	h, r, ctx := newHubHarness(t, 10*time.Minute)
 	step := func(c hubCall) (hubprices.Result, time.Duration) { return complete(c, 30*time.Second) }
-	// Build 3 starts 20 s late, so its planned end is 20 s past table 2's nextBuildAt.
+	// Build 3 starts 20 s late, so it ends 20 s past table 2's nextBuildAt.
 	h.late = func(n int) time.Duration {
 		if n == 2 {
 			return 20 * time.Second
@@ -79,8 +79,8 @@ func TestHubRefresher_DueRequestGetsRetryAfterToThePlannedEnd(t *testing.T) {
 		func(c hubCall) (hubprices.Result, time.Duration) {
 			before := get()
 			require.Equal(t, http.StatusOK, before.Code)
-			require.Empty(t, before.Header().Get("Retry-After"), "not due yet: no Retry-After")
-			require.Equal(t, c.at.Add(30*time.Second), c.attempt, "the planned end is the start plus the last build")
+			require.NotEqual(t, "public, max-age=0", before.Header().Get("Cache-Control"), "not due yet")
+			require.Empty(t, before.Header().Get("Retry-After"))
 			h.clk.add(next2.Sub(h.clk.now())) // at nextBuildAt: due, nothing new published
 			for _, hdr := range [][]string{nil, {"If-None-Match", etag2}} {
 				rec := get(hdr...)
@@ -90,11 +90,9 @@ func TestHubRefresher_DueRequestGetsRetryAfterToThePlannedEnd(t *testing.T) {
 				}
 				require.Equal(t, want, rec.Code)
 				require.Equal(t, "public, max-age=0", rec.Header().Get("Cache-Control"))
-				require.Equal(t, "20", rec.Header().Get("Retry-After"), "whole seconds to the planned end")
+				require.Empty(t, rec.Header().Values("Retry-After"))
 			}
-			h.clk.add(19*time.Second + 500*time.Millisecond) // half a second before the end
-			require.Equal(t, "1", get("If-None-Match", etag2).Header().Get("Retry-After"), "rounded up")
-			return complete(c, c.at.Add(30*time.Second).Sub(h.clk.now())) // ends at the planned end
+			return complete(c, c.at.Add(30*time.Second).Sub(h.clk.now()))
 		},
 	}
 	h.onSleep = func(n int) {
