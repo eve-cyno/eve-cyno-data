@@ -1,5 +1,5 @@
 {
- "doc": "Wording cases for the get_gate_camps answer and for the desktop Intel plugin, which must print the same sentences. Both repositories pin this file by sha256 and copy it byte for byte; change it in the data repository first. Inputs use the field names of the intel-gates-now snapshot (format 1: generated_at, feed, gates[]); times are RFC 3339 UTC. kind row: one gate sentence from the gate object, the two system names and the true security (the sentence shows the display security and band word). kind security: display security (one decimal) and band for a true security. kind answer: the whole text for a snapshot, the clock now and the tool request (system_names, region_name, states, min_state, limit). Systems are real SDE ids; alliances are made up. In answer cases the snapshot age is now minus generated_at: over 10 minutes the answer starts with the old sentence, over 2 hours it is the out-of-date sentence and a dated footer line 1 only; a negative age is current. Gate states in these cases are inputs the tool does not recompute, but each one is what the collector's camp rule gives for the gate's own numbers: n is ship_kills_60m and span runs from first_kill to last_kill; outside null-sec a gate is likely (gank in high-sec, likely_camp otherwise) at n >= 3 and span >= 30 min, or n >= 4 and span >= 15 min; in null-sec (security 0.0 or less) at n >= 6 and span >= 45 min; otherwise a structure kill in the camp window makes it a fight, otherwise any kill in the window makes it kills. A state this reader does not know is in no set. A snapshot without camp_window_s reads as 3600 s; the row cases read the default and the answer cases that carry the field use it for the minutes of the fight facts. Feed behind: generated_at minus newest_killmail_time is past delay_p90_s, or past window_s when delay_p90_s is null. Out of date: age past window_s. The New Eden default of 9 rows is the budget the Go test computes. The window phrase of the below-threshold and empty answers reads window_s: whole hours when it is a multiple of 3600 (2 hours), else whole minutes (30 min); a row that holds only older kills is clamped at window_s in whole minutes (the row cases read 7200, so 120).",
+ "doc": "Wording cases for the get_gate_camps answer and for the desktop Intel plugin, which must print the same sentences. Both repositories pin this file by sha256 and copy it byte for byte; change it in the data repository first. Inputs use the field names of the intel-gates-now snapshot (format 1: generated_at, feed, gates[]); times are RFC 3339 UTC. kind row: one gate sentence from the gate object, the two system names and the true security (the sentence shows the display security and band word). kind security: display security (one decimal) and band for a true security. kind answer: the whole text for a snapshot, the clock now and the tool request (system_names, region_name, states, min_state, limit). Systems are real SDE ids; alliances are made up. In answer cases the snapshot age is now minus generated_at: over 10 minutes the answer starts with the old sentence, past window_s it is the out-of-date sentence and a dated footer line 1 only; a negative age is current. Gate states in these cases are inputs the tool does not recompute, but each one is what the collector's camp rule gives for the gate's own numbers: n is ship_kills_60m and span runs from first_kill to last_kill; outside null-sec a gate is likely (gank in high-sec, likely_camp otherwise) at n >= 3 and span >= 30 min, or n >= 4 and span >= 15 min; in null-sec (security 0.0 or less) at n >= 6 and span >= 45 min; otherwise a structure kill in the camp window makes it a fight, otherwise any kill in the window makes it kills. A state this reader does not know is in no set. A snapshot without camp_window_s reads as 3600 s; the row cases read the default and the answer cases that carry the field use it for the minutes of the fight facts. Feed behind: generated_at minus newest_killmail_time is past delay_p90_s, or past window_s when delay_p90_s is null. Out of date: age past window_s; its sentence reads the age in hours from 3600 s up and in minutes below (last update 40 min ago). The New Eden default of 9 rows is the budget the Go test computes. The window phrase of the below-threshold and empty answers reads window_s: whole hours when it is a multiple of 3600 (2 hours), else whole minutes (30 min); a row that holds only older kills is clamped at window_s in whole minutes (the row cases read 7200, so 120).",
  "cases": [
   {
    "name": "likely_camp, three alliances, pods plural, interdictor",
@@ -4122,8 +4122,8 @@
       "pod_kills_60m": 0,
       "pod_kills_120m": 1,
       "structure_kills_60m": 0,
-      "first_kill": "2026-11-14T10:30:00Z",
-      "last_kill": "2026-11-14T10:31:00Z",
+      "first_kill": "2026-11-14T11:40:00Z",
+      "last_kill": "2026-11-14T11:41:00Z",
       "groups": 0,
       "attackers": [],
       "no_alliance_kills": 0,
@@ -4167,6 +4167,33 @@
     ]
    },
    "expected": "No kills seen on gates of Jita in the last 30 min. That is not proof of safety: only kills that reached zKillboard count.\nKills up to 11:58 UTC (5 min ago); snapshot 12:00 UTC."
+  },
+  {
+   "name": "window_s 1800: out of date under an hour reads the age in minutes",
+   "kind": "answer",
+   "now": "2026-11-14T12:40:00Z",
+   "snapshot": {
+    "format": "intel-gates-now",
+    "version": 1,
+    "generated_at": "2026-11-14T12:00:00Z",
+    "window_s": 1800,
+    "radius_m": 150000,
+    "credit": "zKillboard; killmails are Fenris Creations game data (ESI)",
+    "feed": {
+     "newest_killmail_time": "2026-11-14T11:58:00Z",
+     "delay_p50_s": 180,
+     "delay_p90_s": 540,
+     "delay_samples": 400
+    },
+    "gates": [],
+    "systems": []
+   },
+   "request": {
+    "system_names": [
+     "jita"
+    ]
+   },
+   "expected": "Gate camp data is out of date (last update 40 min ago).\nKills up to 2026-11-14 11:58 UTC; snapshot 2026-11-14 12:00 UTC."
   },
   {
    "name": "window_s 5400: a row of older kills is clamped at 90 min",

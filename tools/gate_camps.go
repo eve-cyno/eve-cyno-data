@@ -41,9 +41,11 @@ const (
 	// region_name and no limit lists every gate.
 	gateCampsNewEdenDefaultLimit = 9
 	// gateCampsOldAfter is the snapshot age above which the answer says camps may have changed.
-	// It waits for the edge-age log of the intel collector (plan Safety amendment section 6, "Old"):
-	// the rule there is the measured p99.9 of the edge age plus the host floor and the plugin
-	// tick, rounded up to a whole minute, and the value is not decided yet.
+	// The 24 h edge-age log of 2026-11-14 could not set it: 486 rows over 8.1 h (14:18-22:22 UTC),
+	// polled every 60 s, in phase with the 60 s writer tick, so ages sit in two clusters (4-21 s,
+	// 59-81 s). The 121 s gap in generated_at during the 18:02 UTC deploy fell between polls, and
+	// n < 1000 cannot give a p99.9. A re-measure needs a poll interval that does not divide 60 s,
+	// over 24 h. Until then 10 min, the value since v0.10.1.
 	gateCampsOldAfter = 10 * time.Minute
 )
 
@@ -335,7 +337,7 @@ func getGateCamps(ctx context.Context, deps *Deps, args map[string]any) (string,
 		res.NotListed = 0
 	}
 	text := gateCampsText(res, gateCampsLayout{
-		Scope: scope, Now: now, CampMin: snap.CampWindowSeconds() / 60, WindowS: snap.WindowS, Below: below, Limit: limit,
+		Scope: scope, Now: now, CampMin: max(1, snap.CampWindowSeconds()/60), WindowS: snap.WindowS, Below: below, Limit: limit,
 	})
 	return text, res, nil
 }
@@ -363,7 +365,7 @@ func copyInt(p *int) *int {
 type gateCampsLayout struct {
 	Scope   string    // the asked scope, as named in the sentences
 	Now     time.Time // the clock of the answer
-	CampMin int       // the camp window in whole minutes (camp_window_s / 60)
+	CampMin int       // the camp window in whole minutes (camp_window_s / 60, at least 1)
 	WindowS int       // the file's window_s: the horizon of the sentences that name it
 	Below   int       // gates of the scope that had kills, in states that were not asked
 	Limit   int       // the limit in force; 0 when none
@@ -372,7 +374,7 @@ type gateCampsLayout struct {
 // gateCampsText is the text of an answer for a filled-in typed result.
 func gateCampsText(res *GateCamps, l gateCampsLayout) string {
 	if res.Freshness == gateCampsOutOfDate {
-		return fmt.Sprintf("Gate camp data is out of date (last update %d h ago).\n%s", res.SnapshotAgeS/3600, gateCampsDatedFooter(res, res.GeneratedAt))
+		return fmt.Sprintf("Gate camp data is out of date (last update %s ago).\n%s", outOfDateAge(res.SnapshotAgeS), gateCampsDatedFooter(res, res.GeneratedAt))
 	}
 	var b strings.Builder
 	if res.Freshness == gateCampsOld {
@@ -382,7 +384,7 @@ func gateCampsText(res *GateCamps, l gateCampsLayout) string {
 	switch {
 	case len(res.Rows) > 0:
 		for _, r := range res.Rows {
-			b.WriteString(gateCampRowText(r, res.GeneratedAt, l.CampMin, l.WindowS/60))
+			b.WriteString(gateCampRowText(r, res.GeneratedAt, l.CampMin, max(1, l.WindowS/60)))
 			b.WriteByte('\n')
 		}
 		if res.NotListed > 0 {
@@ -418,7 +420,16 @@ func windowPhrase(windowS int) string {
 	if windowS%3600 == 0 {
 		return countNoun(max(1, windowS/3600), "hour")
 	}
-	return fmt.Sprintf("%d min", windowS/60)
+	return fmt.Sprintf("%d min", max(1, windowS/60))
+}
+
+// outOfDateAge is the snapshot age of the out-of-date sentence: whole minutes under an hour (a file
+// with a window under an hour goes out of date within it), whole hours from 3600 s up.
+func outOfDateAge(ageS int) string {
+	if ageS < 3600 {
+		return fmt.Sprintf("%d min", max(1, ageS/60))
+	}
+	return fmt.Sprintf("%d h", ageS/3600)
 }
 
 // gateCampsTrimLine says what the collector left out of a trimmed snapshot; empty when it trimmed
@@ -436,7 +447,7 @@ func gateCampsTrimLine(res *GateCamps) string {
 }
 
 // gateCampsDatedFooter is footer line 1 alone, with the date before each time, for a snapshot
-// more than 2 hours old.
+// older than window_s.
 func gateCampsDatedFooter(res *GateCamps, generated time.Time) string {
 	const layout = "2006-01-02 15:04"
 	snapshot := generated.UTC().Format(layout)

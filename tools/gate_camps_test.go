@@ -271,9 +271,9 @@ func TestGateCamps_NoAllianceWording(t *testing.T) {
 // here is a change of both repositories.
 const (
 	gcWordingFile    = "testdata/gate-camps-wording-cases.json"
-	gcWordingSHA256  = "1588a368a83ffa64cee5cb1c99170032d9838d46f81bba92a249c4353903779d"
+	gcWordingSHA256  = "c3cfc99c5f2bb5b35e344efe0143f17f0e321aa615cd269fd63ed148a8575d90"
 	gcWordingRows    = 22
-	gcWordingAnswers = 53
+	gcWordingAnswers = 54
 )
 
 type gcWordingCase struct {
@@ -1302,9 +1302,35 @@ func TestGateCamps_SchemaNamesTheNewEdenDefault(t *testing.T) {
 
 // Numbers come from the file: the window phrase reads window_s, whole hours only when it is one.
 func TestGateCamps_WindowPhrase(t *testing.T) {
-	for s, want := range map[int]string{7200: "2 hours", 3600: "1 hour", 1800: "30 min", 5400: "90 min", 600: "10 min", 60: "1 min"} {
+	for s, want := range map[int]string{7200: "2 hours", 3600: "1 hour", 1800: "30 min", 5400: "90 min", 600: "10 min", 60: "1 min", 30: "1 min", 90: "1 min"} {
 		require.Equal(t, want, windowPhrase(s), "window_s %d", s)
 	}
+}
+
+// A window under a minute never reads as "0 min": the camp window and the row clamp floor at 1.
+func TestGateCamps_SubMinuteWindowsFloorAtOneMinute(t *testing.T) {
+	snap := gcFixture()
+	snap.CampWindowS = 30
+	snap.Gates = []intelsnap.GatesNowGate{{
+		SystemID: gcSivala, ToSystemID: gcTama, State: "fight", ShipKills60m: 2, StructureKills60m: 1,
+		FirstKill: gcAt(11, 50), LastKill: gcAt(11, 58),
+	}}
+	d := gcDeps(t, snap)
+	text, _ := gcCall(t, d, map[string]any{"system_names": []any{"Sivala", "Tama"}})
+	require.Contains(t, text, "in the last 1 min")
+	require.NotContains(t, text, "0 min")
+
+	snap = gcFixture()
+	snap.Gates = []intelsnap.GatesNowGate{{
+		SystemID: gcSivala, ToSystemID: gcTama, State: "kills", ShipKills120m: 1,
+		FirstKill: gcAt(10, 0), LastKill: gcAt(10, 1),
+	}}
+	snap.WindowS = 30
+	d = gcDeps(t, snap)
+	gcClock(t, gcGenerated.Add(20*time.Second)) // inside the 30 s window: current, not out of date
+	text, _ = gcCall(t, d, map[string]any{"system_names": []any{"Sivala", "Tama"}, "min_state": "kills"})
+	require.Contains(t, text, "in the last 1 min")
+	require.NotContains(t, text, "0 min")
 }
 
 func TestGateCamps_WindowFromFile(t *testing.T) {

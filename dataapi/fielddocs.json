@@ -715,7 +715,7 @@
   "tools.WeaponGroup.DefaultAmmo": "DefaultAmmo is true when no charge was written on the EFT line and the engine's default was loaded.",
   "tools.WeaponGroup.Label": "Label is the weapon with its charge, e.g. \"Rocket Launcher II [Scourge Rocket]\".",
   "tools.gateCampsLayout.Below": "gates of the scope that had kills, in states that were not asked",
-  "tools.gateCampsLayout.CampMin": "the camp window in whole minutes (camp_window_s / 60)",
+  "tools.gateCampsLayout.CampMin": "the camp window in whole minutes (camp_window_s / 60, at least 1)",
   "tools.gateCampsLayout.Limit": "the limit in force; 0 when none",
   "tools.gateCampsLayout.Now": "the clock of the answer",
   "tools.gateCampsLayout.Scope": "the asked scope, as named in the sentences",
