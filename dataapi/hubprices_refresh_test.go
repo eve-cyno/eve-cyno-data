@@ -38,11 +38,22 @@ type hubHarness struct {
 	late    func(n int) time.Duration // how late the n-th wake-up is (nil: on time)
 	wall    time.Duration             // a step of the wall clock: every read after it is set moves by it
 	busy    atomic.Int32
+	// pubCost is the time the publish (gzip, sha) takes: the clock moves by it on the second
+	// read after Build returns (the first is the build's end, the second follows the publish).
+	pubCost time.Duration
+	armed   bool
+	reads   int
 }
 
 // now is the harness clock: the step clock with its wall time moved by h.wall; the monotonic
 // reading (when the clock has one) does not move.
 func (h *hubHarness) now() time.Time {
+	if h.armed {
+		if h.reads++; h.reads == 2 {
+			h.armed = false
+			h.clk.add(h.pubCost)
+		}
+	}
 	t := h.clk.now()
 	if h.wall != 0 {
 		t = wallStepped(t, h.wall)
@@ -84,6 +95,7 @@ func (h *hubHarness) Build(ctx context.Context, prev *hubprices.Table, builtAt, 
 	}
 	res, took := h.script[len(h.calls)-1](c)
 	h.clk.add(took)
+	h.armed, h.reads = h.pubCost > 0, 0
 	return res, nil
 }
 

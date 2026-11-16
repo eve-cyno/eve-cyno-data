@@ -43,8 +43,9 @@ type HubRefresherConfig struct {
 //
 // The body's nextBuildAt is the expected publish time of the next table, because the desktop
 // asks again at that time: the next build starts at the first grid tick after this build's
-// expected end (its start plus the measured duration of the last complete build) and takes
-// that duration again. The same second-truncated time goes to MemoryDataset.Publish.
+// expected end (its start plus the measured duration of the last complete build, publish
+// included) and takes that duration again. The time is rounded up to a whole second and the
+// same value goes to MemoryDataset.Publish.
 //
 // Once a table is published the builds keep to a fixed grid (first build + n * Every): a late
 // wake-up does not move the next ticks, and a wake-up later than a whole cycle builds at the
@@ -179,6 +180,16 @@ func (r *HubRefresher) nextTick(tick, end time.Time) (next time.Time, skipped in
 	return next, skipped
 }
 
+// ceilSecond rounds t up to a whole second: the stamp is never before the time it predicts,
+// so a client that asks at it finds the table already published.
+func ceilSecond(t time.Time) time.Time {
+	f := t.Truncate(time.Second)
+	if f.Before(t) {
+		f = f.Add(time.Second)
+	}
+	return f
+}
+
 // buildOnce runs and, when complete, publishes one build.
 func (r *HubRefresher) buildOnce(ctx context.Context, tick time.Time) {
 	started := r.now()
@@ -187,7 +198,7 @@ func (r *HubRefresher) buildOnce(ctx context.Context, tick time.Time) {
 	// build). Stamps are the wall time read now plus the grid point's monotonic offset from now.
 	next, _ := r.nextTick(tick, started.Add(r.lastBuild))
 	builtAt := started.Add(tick.Sub(started))
-	nextBuildAt := started.Add(next.Add(r.lastBuild).Sub(started)).UTC().Truncate(time.Second)
+	nextBuildAt := ceilSecond(started.Add(next.Add(r.lastBuild).Sub(started)).UTC())
 	// The planned end of this build, for the route's Retry-After while nothing is published:
 	// the start plus the last complete build's duration, else the fallback.
 	planned := hubRetryFallback
@@ -216,11 +227,12 @@ func (r *HubRefresher) buildOnce(ctx context.Context, tick time.Time) {
 			append([]any{"problem", res.Problem, "published_before", r.published, "duration_ms", took.Milliseconds()}, statusAttrs(res.Status)...)...)
 		return
 	}
-	r.lastBuild = took
 	if err := r.ds.Publish(res.JSON, nextBuildAt); err != nil {
 		r.log.Warn("hub prices: publish refused", "error", err, "bytes", len(res.JSON))
 		return
 	}
+	// The table is out only after the publish (gzip, SHA-256), so the next planned end counts it.
+	r.lastBuild = r.now().Sub(started)
 	r.published = true
 	rows, pages := 0, 0
 	for _, s := range res.Status {

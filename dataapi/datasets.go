@@ -75,7 +75,9 @@ func datasetHeaders() map[string]schema {
 		"ETag": {"description": "A strong tag of the served version: the first 32 hex digits of the SHA-256 of the bytes as " +
 			"published, quoted. The gzip answer carries the same tag.", "schema": str},
 		"Cache-Control": {"description": strings.Join(policies, ", ") + ".", "schema": str},
-		"Vary":          {"description": "`Accept-Encoding`: the body is gzip-compressed when the request accepts gzip.", "schema": str},
+		"Retry-After": {"description": "Only for `market-hubs.json`, once its table is past its `nextBuildAt` and the next one is not published yet: " +
+			"the whole seconds (at least 1) to the builder's planned end; ask again then.", "schema": str},
+		"Vary": {"description": "`Accept-Encoding`: the body is gzip-compressed when the request accepts gzip.", "schema": str},
 	}
 }
 

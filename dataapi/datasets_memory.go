@@ -10,7 +10,9 @@ import (
 
 // Bounds of the Cache-Control max-age of an in-memory dataset, in seconds. The answer's max-age
 // is the whole seconds until the published next build, at most 900 s, and 0 once that time is
-// reached or past, so the edge revalidates and the origin answers 304 from memory. Before the
+// reached or past, so the edge revalidates and the origin answers 304 from memory; from then
+// until the next publish the answer (200 or 304) also carries Retry-After, the whole seconds
+// to the builder's planned end. Before the
 // first publish, Retry-After is the time to the builder's next attempt, or
 // memoryRetryAfterFallback when none is known: ESI region orders expire 300 s after they were
 // last modified.
@@ -62,6 +64,21 @@ func (m *MemoryDataset) retryAfter(now time.Time) int {
 	// The ceil of a positive duration is at least 1; max is a guard for an attempt past the
 	// Duration range (~292 years), where Sub saturates and the ceil overflows to a negative.
 	return max(1, int((at.Sub(now)+time.Second-1)/time.Second))
+}
+
+// dueRetryAfter is the Retry-After in whole seconds for an answer once the published table
+// is due: the time to the builder's planned end rounded up, at least 1 (also when the end has
+// passed: the build overran), at most memoryMaxAgeMax. It reports false when the builder set
+// no time.
+func (m *MemoryDataset) dueRetryAfter(now time.Time) (int, bool) {
+	at := m.NextAttempt()
+	if at.IsZero() {
+		return 0, false
+	}
+	if !at.After(now) {
+		return 1, true
+	}
+	return min(memoryMaxAgeMax, max(1, int((at.Sub(now)+time.Second-1)/time.Second))), true
 }
 
 // NewMemoryDataset returns an empty dataset that refuses a body longer than maxBytes.
@@ -117,5 +134,12 @@ func (a *API) serveMemory(w http.ResponseWriter, r *http.Request, spec datasetSp
 		datasetError(w, r, http.StatusServiceUnavailable, "unavailable", "this dataset has not been built yet; retry shortly")
 		return
 	}
-	writeVersion(w, r, st.cacheControl(a.datasets.now()), st.ver)
+	now := a.datasets.now()
+	// Due and the next table not out yet: the builder's planned end says when to come back.
+	if !now.Before(st.nextBuild) {
+		if secs, ok := m.dueRetryAfter(now); ok {
+			w.Header().Set("Retry-After", strconv.Itoa(secs))
+		}
+	}
+	writeVersion(w, r, st.cacheControl(now), st.ver)
 }
