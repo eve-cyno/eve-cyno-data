@@ -343,3 +343,22 @@ func TestStatusRecorder_KeepsFlushing(t *testing.T) {
 	require.True(t, rec.Flushed)
 	require.Equal(t, http.StatusOK, sr.statusCode())
 }
+
+// The getDataset description tells a client how to time its polls: from nextBuildAt and the
+// answer's Date, never from max-age (the Cloudflare edge replays a stored answer's max-age
+// without subtracting its Age).
+func TestOpenAPI_GetDatasetSaysToPollFromNextBuildAtNotMaxAge(t *testing.T) {
+	doc := specDoc(t, PublicSurface())
+	var desc string
+	for _, p := range doc["paths"].(map[string]any) {
+		for _, op := range p.(map[string]any) {
+			if m, ok := op.(map[string]any); ok && m["operationId"] == "getDataset" {
+				desc, _ = m["description"].(string)
+			}
+		}
+	}
+	require.NotEmpty(t, desc, "getDataset is documented")
+	require.Contains(t, desc, "never from `max-age`")
+	require.Contains(t, desc, "replays a stored answer's `max-age` without subtracting its `Age`")
+	require.Contains(t, desc, "drops `Retry-After` on a `200` or a `304`")
+}
