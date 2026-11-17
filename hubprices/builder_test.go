@@ -582,3 +582,26 @@ func TestEmptyFirstReadIsAccepted(t *testing.T) {
 	require.True(t, statusOf(res, "amarr").Updated)
 	require.True(t, res.Complete)
 }
+
+// Restamp changes only the table's nextBuildAt: the output validates, equals Encode of the
+// restamped table, leaves builtAt and every hub as they were, and does not touch the table
+// it was given (the refresher keeps that one as the previous table).
+func TestRestampChangesOnlyNextBuildAt(t *testing.T) {
+	f := newFake(t)
+	f.serveAll()
+	res := build(t, f, nil)
+	at := nextAt.Add(32*time.Second + 400*time.Millisecond)
+	out, err := (&Builder{}).Restamp(res.Table, at)
+	require.NoError(t, err)
+	require.NoError(t, ValidateJSON(out))
+	want := *res.Table
+	want.NextBuildAt = at.Truncate(time.Second)
+	enc, err := want.Encode()
+	require.NoError(t, err)
+	require.Equal(t, string(enc), string(out))
+	require.Equal(t, nextAt, res.Table.NextBuildAt, "the given table is not changed")
+	// Only the nextBuildAt line differs from the first build's bytes.
+	old := strings.Replace(string(res.JSON), nextAt.Format(time.RFC3339), at.Truncate(time.Second).Format(time.RFC3339), 1)
+	require.Equal(t, old, string(out))
+	require.Equal(t, string(fixture(t, "golden_table.json")), string(res.JSON), "the golden table is unchanged")
+}

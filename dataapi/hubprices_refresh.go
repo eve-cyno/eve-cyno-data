@@ -20,6 +20,8 @@ const (
 // HubBuilder builds one market-hubs table; *hubprices.Builder is the production one.
 type HubBuilder interface {
 	Build(ctx context.Context, prev *hubprices.Table, builtAt, nextBuildAt time.Time) (hubprices.Result, error)
+	// Restamp returns the table encoded again with the given nextBuildAt; the table is not changed.
+	Restamp(t *hubprices.Table, nextBuildAt time.Time) ([]byte, error)
 }
 
 // HubDataset is what the refresher needs of the dataset the route serves; *MemoryDataset is the
@@ -53,8 +55,10 @@ type HubRefresherConfig struct {
 // The body's nextBuildAt is the expected publish time of the next table, because the desktop
 // asks again at that time: the next build starts at the first grid tick after this build's
 // expected end (its start plus the measured duration of the last complete build, publish
-// included) and takes that duration again. The time is rounded up to a whole second and the
-// same value goes to MemoryDataset.Publish.
+// included) and takes that duration again. The first table after a start has no measured
+// duration yet: it is built with the next tick as a provisional stamp, and once built it is
+// stamped again from its own duration (build plus one Prepare). The time is rounded up to a
+// whole second and the same value goes to PublishPrepared.
 //
 // Once a table is published the builds keep to a fixed grid (first build + n * Every): a late
 // wake-up does not move the next ticks, and a wake-up later than a whole cycle builds at the
@@ -204,8 +208,8 @@ func ceilSecond(t time.Time) time.Time {
 func (r *HubRefresher) buildOnce(ctx context.Context, tick time.Time) {
 	started := r.now()
 	// The next table is published when the next build ends: it starts at the first tick after
-	// this build's expected end and takes as long (the next tick alone before any complete
-	// build). Stamps are the wall time read now plus the grid point's monotonic offset from now.
+	// this build's expected end and takes as long. Before any complete build the stamp is the
+	// next tick (provisional): the first complete build is stamped again from its own duration. Stamps are the wall time read now plus the grid point's monotonic offset from now.
 	next, _ := r.nextTick(tick, started.Add(r.lastBuild))
 	builtAt := started.Add(tick.Sub(started))
 	nextBuildAt := ceilSecond(started.Add(next.Add(r.lastBuild).Sub(started)).UTC())
@@ -244,9 +248,39 @@ func (r *HubRefresher) buildOnce(ctx context.Context, tick time.Time) {
 		r.log.Warn("hub prices: publish refused", "error", err, "bytes", len(res.JSON))
 		return
 	}
+	first := r.lastBuild == 0
+	var own time.Duration
+	if first {
+		// The first table after a start: no build was measured yet, so this build measures itself.
+		// The publish's work (Prepare: gzip and SHA-256) has run on the provisional body, so own
+		// counts what lastBuild counts. The body is then stamped again with the time the next
+		// build is expected to end, and that body is prepared and published.
+		own = r.now().Sub(started)
+		if ctx.Err() != nil {
+			r.log.Info("hub prices: build canceled; result not published")
+			return
+		}
+		next, _ := r.nextTick(tick, started.Add(own))
+		at := ceilSecond(started.Add(next.Add(own).Sub(started)).UTC())
+		if out, err := r.b.Restamp(res.Table, at); err != nil {
+			r.log.Warn("hub prices: first table not restamped; it names the next tick", "error", err)
+		} else if p2, err := r.ds.Prepare(out); err != nil {
+			r.log.Warn("hub prices: first table not restamped; it names the next tick", "error", err)
+		} else {
+			p, res.JSON, nextBuildAt = p2, out, at
+		}
+		if ctx.Err() != nil { // a shutdown during the extra work publishes nothing
+			r.log.Info("hub prices: build canceled; result not published")
+			return
+		}
+	}
 	r.ds.PublishPrepared(p, nextBuildAt)
 	// The table is out only after the publish (gzip, SHA-256), so the next planned end counts it.
-	r.lastBuild = r.now().Sub(started)
+	if first {
+		r.lastBuild = own // the steady-state quantity, not the extra encode, validate and second Prepare
+	} else {
+		r.lastBuild = r.now().Sub(started)
+	}
 	r.published = true
 	buildMS := took.Milliseconds() // the build alone; lastBuild (and duration_ms) also count the publish
 	rows, pages := 0, 0

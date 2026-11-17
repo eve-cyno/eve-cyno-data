@@ -220,6 +220,22 @@ func (b *Builder) Build(ctx context.Context, prev *Table, builtAt, nextBuildAt t
 	return res, ctx.Err()
 }
 
+// Restamp returns t encoded with nextBuildAt (UTC, to the second) in place of the stamp it
+// carries; builtAt and every hub stay. The output is validated like Build's (the same encode
+// once rule). t itself is not changed.
+func (b *Builder) Restamp(t *Table, nextBuildAt time.Time) ([]byte, error) {
+	c := *t
+	c.NextBuildAt = nextBuildAt.UTC().Truncate(time.Second)
+	out, err := c.Encode()
+	if err != nil {
+		return nil, err
+	}
+	if err := ValidateJSON(out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func previous(prev *Table, key string) (HubTable, bool) {
 	if prev != nil {
 		for _, h := range prev.Hubs {

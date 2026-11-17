@@ -1,6 +1,7 @@
 package dataapi_test
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -42,6 +43,24 @@ type hubHarness struct {
 	// the dataset's Prepare (see costly), where that work runs in production.
 	pubCost  time.Duration
 	prepares int // Prepare calls so far
+	// restampCost is the time one Restamp (encode, validate) takes; restampErr makes it fail.
+	restampCost time.Duration
+	restampErr  error
+	onPrepare   func(n int) // runs inside Prepare, before the cost, n: 1-based count
+	logs        bytes.Buffer
+}
+
+// Restamp re-renders the fake body of the build in progress with the given nextBuildAt.
+func (h *hubHarness) Restamp(t *hubprices.Table, nextBuildAt time.Time) ([]byte, error) {
+	h.clk.add(h.restampCost)
+	if h.restampErr != nil {
+		return nil, h.restampErr
+	}
+	c := h.calls[len(h.calls)-1]
+	c.nextBuildAt = nextBuildAt
+	c.builtAt = t.BuiltAt
+	res, _ := complete(c, 0)
+	return res.JSON, nil
 }
 
 // costly is the dataset the refresher gets: the real MemoryDataset, whose Prepare also moves
@@ -53,6 +72,9 @@ type costly struct {
 
 func (c costly) Prepare(body []byte) (*dataapi.PreparedVersion, error) {
 	c.h.prepares++
+	if c.h.onPrepare != nil {
+		c.h.onPrepare(c.h.prepares)
+	}
 	c.h.clk.add(c.h.pubCost)
 	return c.MemoryDataset.Prepare(body)
 }
@@ -111,7 +133,7 @@ func newHubHarness(t *testing.T, every time.Duration) (*hubHarness, *dataapi.Hub
 	h.cancel = cancel
 	t.Cleanup(cancel)
 	r, err := dataapi.NewHubRefresher(dataapi.HubRefresherConfig{
-		Builder: h, Dataset: costly{h.mem, h}, Every: every, Now: h.now, Logger: slog.New(slog.DiscardHandler),
+		Builder: h, Dataset: costly{h.mem, h}, Every: every, Now: h.now, Logger: slog.New(slog.NewTextHandler(&h.logs, nil)),
 		Sleep: func(ctx context.Context, d time.Duration) error {
 			h.sleeps = append(h.sleeps, d)
 			if h.onSleep != nil {
@@ -185,7 +207,8 @@ func TestHubRefresher_CadenceAndTimes(t *testing.T) {
 		require.Equal(t, c.at, c.builtAt)
 	}
 	// nextBuildAt is the expected publish time of the next table: next tick + the last measured
-	// build duration (the next tick alone before any build), no margin.
+	// build duration, no margin. Build is given the provisional bare tick for the first build; the
+	// table itself is restamped from that build's own duration (see FirstTableNamesItsOwnBuildDuration).
 	require.Equal(t, t0.Add(10*time.Minute), h.calls[0].nextBuildAt)
 	require.Equal(t, h.calls[1].builtAt.Add(10*time.Minute+30*time.Second), h.calls[1].nextBuildAt)
 	require.Equal(t, h.calls[2].builtAt.Add(10*time.Minute+40*time.Second), h.calls[2].nextBuildAt)
@@ -237,7 +260,7 @@ func TestHubRefresher_FirstIncompleteIsRetriedAtExpires(t *testing.T) {
 			code, body, cc := h.get()
 			require.Equal(t, http.StatusOK, code)
 			require.Contains(t, body, h.calls[2].builtAt.UTC().Format(time.RFC3339))
-			require.Equal(t, "public, max-age=570", cc) // body nextBuildAt (tick+10m: no complete build measured yet) minus the 30 s build
+			require.Equal(t, "public, max-age=600", cc) // body nextBuildAt (tick + 10m + its own 30 s, restamped) minus the 30 s build
 			h.cancel()
 		}
 	}
