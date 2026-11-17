@@ -479,7 +479,7 @@ func TestAnonDailyCap_RangeRefusalStatesItsOwnCap(t *testing.T) {
 	_, rec := countedUntilRefused(t, api, fromIP("153.61.208.9")...)
 	require.Equal(t, strconv.Itoa(90*60), rec.Header().Get("Retry-After"))
 	require.Contains(t, rec.Body.String(),
-		"without an API key the API allows 5 requests a day per client; a free key raises this: https://data.example/docs/access#access-keys")
+		"without an API key the API allows 5 requests a day per address for calls from Anthropic's ranges (3 a day per client elsewhere); a free key raises this: https://data.example/docs/access#access-keys")
 	_, rec = countedUntilRefused(t, api, fromIP("192.0.2.9")...)
 	require.Contains(t, rec.Body.String(), "without an API key the API allows 3 requests a day per client; a free key raises this")
 }
@@ -515,7 +515,7 @@ func TestAnonDailyCap_RangeIPv6SlashSixtyFourIsOneClient(t *testing.T) {
 	}
 	rec := counted(api, fromIP("2001:db8:1:2:ffff::7")...)
 	requireError(t, rec, http.StatusTooManyRequests, "daily_quota_exceeded")
-	require.Contains(t, rec.Body.String(), "allows 4 requests a day per client")
+	require.Contains(t, rec.Body.String(), "allows 4 requests a day per address for calls from Anthropic's ranges")
 	n, _ := countedUntilRefused(t, api, fromIP("2001:db8:1:3::1")...)
 	require.Equal(t, 4, n)
 	n, _ = countedUntilRefused(t, api, fromIP("192.0.2.9")...)
@@ -602,14 +602,14 @@ func TestMCPInstructions_RangeCallerSeesItsDailyNumber(t *testing.T) {
 		Deps: dataapi.NewDeps(deps, nil), Auth: keyedFixture(t, trialKey), AnonDailyCap: dataapi.DefaultAnonDailyCap,
 		AnthropicRanges: mustRanges(t, anthropicOutbound),
 		MCP: mcpserver.HTTPHandler(deps, mcpserver.HTTPOptions{
-			DisableLocalhostProtection: true, AnonDailyCapFor: dataapi.AnonDailyCapFor, Keyed: dataapi.KeyedTier,
+			DisableLocalhostProtection: true, AnonDailyCapFor: dataapi.AnonDailyCapsFor, Keyed: dataapi.KeyedTier,
 			KeyHint: "https://data.example/docs/access#access-keys",
 		}),
 	})
 	init := `{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"t","version":"0"}}}`
 	rec := postMCP(t, api, init, fromIP("160.79.104.9")...)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	require.Contains(t, rec.Body.String(), "Without an API key this server is for trying it out: 2000 requests a day per client and lower per-minute limits;")
+	require.Contains(t, rec.Body.String(), "Without an API key this server is for trying it out: 2,000 requests a day per address for calls from Anthropic's ranges (200 a day per client elsewhere) and lower per-minute limits;")
 
 	rec = postMCP(t, api, init, fromIP("192.0.2.9")...)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())

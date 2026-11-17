@@ -98,19 +98,26 @@ func TestHTTPHandler_KeylessCallersAreToldItIsATrial(t *testing.T) {
 }
 
 // AnonDailyCapFor, when set, gives each keyless caller its own daily number in the instructions
-// and takes precedence over AnonDailyCap; a caller it gives 0 is told no number.
+// and takes precedence over AnonDailyCap; a caller it gives 0 is told no number. A caller inside
+// the ranges is told the unit (per address), where the number holds (calls from Anthropic's
+// ranges) and, when there is one, the number of everyone else; the number is never bare.
 func TestHTTPHandler_AnonDailyCapForStatesTheCallersOwnNumber(t *testing.T) {
 	o := HTTPOptions{
 		DisableLocalhostProtection: true,
 		KeyHint:                    "hint",
 		AnonDailyCap:               200,
-		AnonDailyCapFor: func(r *http.Request) int {
+		AnonDailyCapFor: func(r *http.Request) (int, int, bool) {
 			n, _ := strconv.Atoi(r.Header.Get("X-Test-Cap"))
-			return n
+			e, _ := strconv.Atoi(r.Header.Get("X-Test-Elsewhere"))
+			return n, e, r.Header.Get("X-Test-Range") != ""
 		},
 	}
 	h := httpHandler(&tools.Deps{}, o, nil)
-	require.Contains(t, initInstructions(t, h, "X-Test-Cap", "2000"), "trying it out: 2000 requests a day per client and lower per-minute limits;")
+	require.Contains(t, initInstructions(t, h, "X-Test-Cap", "2000", "X-Test-Range", "1", "X-Test-Elsewhere", "200"),
+		"trying it out: 2,000 requests a day per address for calls from Anthropic's ranges (200 a day per client elsewhere) and lower per-minute limits;")
+	require.Contains(t, initInstructions(t, h, "X-Test-Cap", "2000", "X-Test-Range", "1"),
+		"trying it out: 2,000 requests a day per address for calls from Anthropic's ranges and lower per-minute limits;")
+	require.NotContains(t, initInstructions(t, h, "X-Test-Cap", "2000", "X-Test-Range", "1"), "2000 requests")
 	require.Contains(t, initInstructions(t, h, "X-Test-Cap", "200"), "trying it out: 200 requests a day per client and lower per-minute limits;")
 	require.Contains(t, initInstructions(t, h, "X-Test-Cap", "0"), "trying it out: lower per-minute limits;")
 }
@@ -119,11 +126,11 @@ func jsonUnmarshal(s string, v any) error { return json.Unmarshal([]byte(s), v) 
 
 func TestKeylessText_SingularAndPluralSubjects(t *testing.T) {
 	const head = " Without an API key this server is for trying it out: 200 requests a day per client and lower per-minute limits; "
-	one := keylessText([]string{"analyze_battle"}, 200, "hint")
+	one := keylessText([]string{"analyze_battle"}, 200, 0, false, "hint")
 	require.Equal(t, instructions+head+"analyze_battle and free-text fit search need a key. A free key: hint", one)
-	two := keylessText([]string{"a", "b"}, 200, "hint")
+	two := keylessText([]string{"a", "b"}, 200, 0, false, "hint")
 	require.Equal(t, instructions+head+"a, b and free-text fit search need a key. A free key: hint", two)
-	none := keylessText(nil, 200, "hint")
+	none := keylessText(nil, 200, 0, false, "hint")
 	require.Equal(t, instructions+head+"free-text fit search needs a key. A free key: hint", none)
-	require.Contains(t, keylessText([]string{"x"}, 0, "hint"), "trying it out: lower per-minute limits; x and")
+	require.Contains(t, keylessText([]string{"x"}, 0, 0, false, "hint"), "trying it out: lower per-minute limits; x and")
 }

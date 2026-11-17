@@ -33,6 +33,9 @@ type meta struct {
 	// range tier's inside the ranges, else Config.AnonDailyCap; 0 when the API has no
 	// anonymous daily cap (anonCapOf).
 	anonCap int
+	// anonElse is Config.AnonDailyCap: what a keyless caller outside the ranges has, which a range
+	// caller's texts state beside its own number (0: none).
+	anonElse int
 	// rangeRefused is set to the label of the limit whose refusal of a range caller was answered
 	// in the protocol on the MCP route (writeConnectorRefusal, UpstreamHook), so the access line
 	// can tell that 200 from a served request; nil outside ServeHTTP.
@@ -129,7 +132,7 @@ func (a *API) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if !a.rangeTier {
 		rng = ""
 	}
-	ctx := context.WithValue(r.Context(), metaKey{}, meta{id: id, log: log, toolLogged: &toolLogged, rng: rng, anonCap: a.anonCapOf(rng), rangeRefused: &rangeRefused, keyURL: accessKeysURL(a.surface.PublicURL)})
+	ctx := context.WithValue(r.Context(), metaKey{}, meta{id: id, log: log, toolLogged: &toolLogged, rng: rng, anonCap: a.anonCapOf(rng), anonElse: a.anonCap, rangeRefused: &rangeRefused, keyURL: accessKeysURL(a.surface.PublicURL)})
 	if a.auth != nil {
 		// The credential is read here, once: the limiter keys on the result and the tool and
 		// MCP handlers enforce the tiers with it. Nothing about the key is logged.
@@ -293,13 +296,25 @@ func (a *API) anonCapOf(rng string) int {
 // key on this API: the larger of Limits.Range.DailyCap and Config.AnonDailyCap for an address
 // inside Config.AnthropicRanges on an API with the range tier, Config.AnonDailyCap otherwise, and 0 when the API counts no keyless
 // requests (or outside a request it serves). It answers for the client address whatever key
-// the request carries. Give it to mcpserver.HTTPOptions.AnonDailyCapFor, so the keyless
-// instructions state the number this API enforces.
+// the request carries. The keyless instructions state the number this API enforces through
+// AnonDailyCapsFor.
 func AnonDailyCapFor(r *http.Request) int {
 	if m, ok := r.Context().Value(metaKey{}).(meta); ok {
 		return m.anonCap
 	}
 	return 0
+}
+
+// AnonDailyCapsFor is AnonDailyCapFor with what the instructions need to word it: elsewhere is
+// the daily number of a keyless caller outside the ranges (Config.AnonDailyCap), inRanges is
+// true when the caller of r is held to the range tier (no valid key, an address in
+// Config.AnthropicRanges, on an API with the range tier), where the number counts per address.
+// Give it to mcpserver.HTTPOptions.AnonDailyCapFor.
+func AnonDailyCapsFor(r *http.Request) (daily, elsewhere int, inRanges bool) {
+	if m, ok := r.Context().Value(metaKey{}).(meta); ok {
+		return m.anonCap, m.anonElse, m.rng != ""
+	}
+	return 0, 0, false
 }
 
 // countsAnon reports whether the anonymous daily cap counts the request: a caller without a

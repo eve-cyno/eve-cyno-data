@@ -507,3 +507,19 @@ func TestRangeTier_ActivityBaselineToolsShareTheMCPBucket(t *testing.T) {
 	requireCeilingToolResult(t, call(addrs[5], 0), `7`, "the 301st baseline call of the ranges")
 	requireCeilingRefusal(t, mcpFrom(t, api, addrs[5]), "a tools/list shares the ceiling")
 }
+
+// The REST 429 of the keyless daily cap names the unit and the scope of the number a range
+// caller has: per address, for calls from Anthropic's ranges, never a bare "2,000 per client";
+// a caller outside the ranges keeps "per client". Both texts hold for the caller who reads them
+// (injected caps: 5 inside the ranges, 3 elsewhere).
+func TestRESTDailyRefusal_RangeCallerReadsPerAddressForRanges(t *testing.T) {
+	c := &clock{t: time.Date(2026, 11, 12, 12, 0, 0, 0, time.UTC)}
+	api := rangeCapAPI(t, 3, 5, anthropicOutbound, c)
+	_, rec := countedUntilRefused(t, api, fromIP("160.79.104.9")...)
+	msg := rec.Body.String()
+	require.Contains(t, msg, "5 requests a day per address for calls from Anthropic's ranges (3 a day per client elsewhere)")
+	require.NotContains(t, msg, "per client;", "a range caller is never told its number is per client")
+	_, rec = countedUntilRefused(t, api, fromIP("192.0.2.9")...)
+	require.Contains(t, rec.Body.String(), "allows 3 requests a day per client; a free key raises this")
+	require.NotContains(t, rec.Body.String(), "Anthropic")
+}

@@ -840,7 +840,7 @@ func TestNewHandler_KeylessMCPInstructionsStateTheCallersDailyNumber(t *testing.
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 		return rec.Body.String()
 	}
-	require.Contains(t, instructions("160.79.104.9"), "trying it out: 2000 requests a day per client")
+	require.Contains(t, instructions("160.79.104.9"), "trying it out: 2,000 requests a day per address for calls from Anthropic's ranges")
 	require.Contains(t, instructions("192.0.2.9"), "trying it out: 200 requests a day per client")
 }
 

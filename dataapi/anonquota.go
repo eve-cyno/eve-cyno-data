@@ -102,6 +102,15 @@ func (q *anonQuota) clients() int {
 // Retry-After in whole seconds and the way out: a free key.
 func writeAnonQuotaRefusal(w http.ResponseWriter, r *http.Request, retry time.Duration, cap int, publicURL string) {
 	msg := fmt.Sprintf("without an API key the API allows %d requests a day per client; a free key raises this", cap)
+	if rangeCaller(r) {
+		// The number counts per address and holds for calls from Anthropic's ranges; say so, and
+		// what everyone else has, so the text is true for the caller who reads it.
+		msg = fmt.Sprintf("without an API key the API allows %s requests a day per address for calls from Anthropic's ranges", thousands(cap))
+		if m, ok := r.Context().Value(metaKey{}).(meta); ok && m.anonElse > 0 {
+			msg += fmt.Sprintf(" (%d a day per client elsewhere)", m.anonElse)
+		}
+		msg += "; a free key raises this"
+	}
 	if u := accessKeysURL(publicURL); u != "" {
 		msg += ": " + u
 	}

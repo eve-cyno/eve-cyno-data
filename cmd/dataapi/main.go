@@ -590,7 +590,7 @@ func newHandler(d *bootstrap.Deps, ex exposure, log *slog.Logger) (http.Handler,
 		if auth != nil {
 			// The keyless instructions state the caller's own daily number: the range tier's
 			// inside the Anthropic ranges, the anonymous cap elsewhere (the API decides).
-			opts.AnonDailyCapFor = dataapi.AnonDailyCapFor
+			opts.AnonDailyCapFor = dataapi.AnonDailyCapsFor
 		}
 		if ex.store != nil {
 			store := ex.store

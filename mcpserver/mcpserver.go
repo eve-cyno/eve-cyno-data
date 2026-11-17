@@ -43,6 +43,7 @@ import (
 	"log/slog"
 	"net/http"
 	"runtime/debug"
+	"strconv"
 	"strings"
 	"time"
 
@@ -407,7 +408,12 @@ type HTTPOptions struct {
 	// request gets (dataapi.AnonDailyCapFor: a caller inside dataapi's connector ranges has
 	// its own number), and the keyless instructions state that number instead of
 	// AnonDailyCap; 0: no daily number. Nil: AnonDailyCap for everyone.
-	AnonDailyCapFor func(*http.Request) int
+	//
+	// inRanges is true for a caller inside Anthropic's connector ranges: its number counts per
+	// address and holds for calls from those ranges, and the instructions say so; elsewhere is
+	// then the number everyone else has (0: none to state). For other callers daily counts per
+	// client and inRanges and elsewhere are false and 0.
+	AnonDailyCapFor func(r *http.Request) (daily, elsewhere int, inRanges bool)
 	// Timeout bounds one tool execution; zero means DefaultTimeout.
 	Timeout time.Duration
 	// Logger receives the transport's and the tools' diagnostics. Nil discards.
@@ -443,11 +449,11 @@ func httpHandler(deps *tools.Deps, o HTTPOptions, exec executor) http.Handler {
 			}
 			cfg := serverConfig{timeout: o.Timeout, log: o.Logger, janiceFromHeader: true, keyed: keyed, userAgent: r.UserAgent()}
 			if !keyed && o.KeyHint != "" {
-				daily := o.AnonDailyCap
+				daily, elsewhere, inRanges := o.AnonDailyCap, 0, false
 				if o.AnonDailyCapFor != nil {
-					daily = o.AnonDailyCapFor(r)
+					daily, elsewhere, inRanges = o.AnonDailyCapFor(r)
 				}
-				cfg.instructions = keylessInstructions(daily, o.KeyHint)
+				cfg.instructions = keylessInstructions(daily, elsewhere, inRanges, o.KeyHint)
 			}
 			if o.Upstream != nil {
 				cfg.allow = func(tool string) (bool, time.Duration, string) { return o.Upstream(r, tool) }
@@ -470,22 +476,40 @@ func httpHandler(deps *tools.Deps, o HTTPOptions, exec executor) http.Handler {
 // keylessInstructions is the base instructions plus what a caller without an API key needs
 // to know: the service is for trying it out, which tools and search it does not get, and
 // hint (how to get a key).
-func keylessInstructions(daily int, hint string) string {
+func keylessInstructions(daily, elsewhere int, inRanges bool, hint string) string {
 	keyed := catalog.ToolsIn(catalog.TierKeyed)
 	names := make([]string, len(keyed))
 	for i, t := range keyed {
 		names[i] = t.Name
 	}
-	return keylessText(names, daily, hint)
+	return keylessText(names, daily, elsewhere, inRanges, hint)
+}
+
+// thousands prints n (> 0) with comma separators: 2000 is "2,000".
+func thousands(n int) string {
+	s := strconv.Itoa(n)
+	for i := len(s) - 3; i > 0; i -= 3 {
+		s = s[:i] + "," + s[i:]
+	}
+	return s
 }
 
 // keylessText formats the keyless-caller sentence for the given keyed tool names; daily is
-// the requests per day a client without a key gets (0: the sentence does not state one).
+// the requests per day a client without a key gets (0: the sentence does not state one);
+// inRanges says daily is a per-address number for calls from Anthropic's ranges and elsewhere
+// the number of everyone else (see HTTPOptions.AnonDailyCapFor).
 // Free-text fit search needs a key too, so the subject is always plural.
-func keylessText(names []string, daily int, hint string) string {
+func keylessText(names []string, daily, elsewhere int, inRanges bool, hint string) string {
 	var limits string
 	if daily > 0 {
-		limits = fmt.Sprintf("%d requests a day per client and lower per-minute limits", daily)
+		switch {
+		case !inRanges:
+			limits = fmt.Sprintf("%d requests a day per client and lower per-minute limits", daily)
+		case elsewhere > 0:
+			limits = fmt.Sprintf("%s requests a day per address for calls from Anthropic's ranges (%d a day per client elsewhere) and lower per-minute limits", thousands(daily), elsewhere)
+		default:
+			limits = fmt.Sprintf("%s requests a day per address for calls from Anthropic's ranges and lower per-minute limits", thousands(daily))
+		}
 	} else {
 		limits = "lower per-minute limits"
 	}
