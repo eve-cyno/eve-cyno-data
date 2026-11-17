@@ -38,22 +38,28 @@ type hubHarness struct {
 	late    func(n int) time.Duration // how late the n-th wake-up is (nil: on time)
 	wall    time.Duration             // a step of the wall clock: every read after it is set moves by it
 	busy    atomic.Int32
-	// pubCost is the time the publish (gzip, sha) takes: the clock moves by it on the second
-	// read after Build returns (the first is the build's end, the second follows the publish).
-	pubCost time.Duration
-	armed   bool
-	reads   int
+	// pubCost is the time the publish's work (gzip, sha) takes: the clock moves by it inside
+	// the dataset's Prepare (see costly), where that work runs in production.
+	pubCost  time.Duration
+	prepares int // Prepare calls so far
+}
+
+// costly is the dataset the refresher gets: the real MemoryDataset, whose Prepare also moves
+// the fake clock by pubCost and counts the call.
+type costly struct {
+	*dataapi.MemoryDataset
+	h *hubHarness
+}
+
+func (c costly) Prepare(body []byte) (*dataapi.PreparedVersion, error) {
+	c.h.prepares++
+	c.h.clk.add(c.h.pubCost)
+	return c.MemoryDataset.Prepare(body)
 }
 
 // now is the harness clock: the step clock with its wall time moved by h.wall; the monotonic
 // reading (when the clock has one) does not move.
 func (h *hubHarness) now() time.Time {
-	if h.armed {
-		if h.reads++; h.reads == 2 {
-			h.armed = false
-			h.clk.add(h.pubCost)
-		}
-	}
 	t := h.clk.now()
 	if h.wall != 0 {
 		t = wallStepped(t, h.wall)
@@ -95,7 +101,6 @@ func (h *hubHarness) Build(ctx context.Context, prev *hubprices.Table, builtAt, 
 	}
 	res, took := h.script[len(h.calls)-1](c)
 	h.clk.add(took)
-	h.armed, h.reads = h.pubCost > 0, 0
 	return res, nil
 }
 
@@ -106,7 +111,7 @@ func newHubHarness(t *testing.T, every time.Duration) (*hubHarness, *dataapi.Hub
 	h.cancel = cancel
 	t.Cleanup(cancel)
 	r, err := dataapi.NewHubRefresher(dataapi.HubRefresherConfig{
-		Builder: h, Dataset: h.mem, Every: every, Now: h.now, Logger: slog.New(slog.DiscardHandler),
+		Builder: h, Dataset: costly{h.mem, h}, Every: every, Now: h.now, Logger: slog.New(slog.DiscardHandler),
 		Sleep: func(ctx context.Context, d time.Duration) error {
 			h.sleeps = append(h.sleeps, d)
 			if h.onSleep != nil {

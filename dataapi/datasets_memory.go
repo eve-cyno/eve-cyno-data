@@ -71,20 +71,37 @@ func NewMemoryDataset(maxBytes int) *MemoryDataset {
 	return &MemoryDataset{max: maxBytes}
 }
 
-// Publish makes body the served version. nextBuildAt is when the builder expects to publish
-// again; it sets the max-age of the answers (see memoryMaxAgeMax). The gzip and the ETag are
-// computed once, here. A body over the cap is refused with an error and the previous version
-// stays. Publish keeps no reference to a slice it refuses; after a successful call the caller
-// must not modify body.
-func (m *MemoryDataset) Publish(body []byte, nextBuildAt time.Time) error {
+// PreparedVersion is a body made ready to serve (its gzip and ETag computed) and not yet served.
+type PreparedVersion struct{ ver *datasetVersion }
+
+// Prepare does the work of a publish that takes time (the size cap, the gzip and the SHA-256)
+// and serves nothing. A body over the cap is refused with an error. Prepare keeps no reference
+// to a slice it refuses; after a successful call the caller must not modify body.
+func (m *MemoryDataset) Prepare(body []byte) (*PreparedVersion, error) {
 	if len(body) > m.max {
-		return fmt.Errorf("dataset body is %d bytes, over the %d byte cap", len(body), m.max)
+		return nil, fmt.Errorf("dataset body is %d bytes, over the %d byte cap", len(body), m.max)
 	}
 	ver, err := newDatasetVersion(body)
 	if err != nil {
+		return nil, err
+	}
+	return &PreparedVersion{ver: ver}, nil
+}
+
+// PublishPrepared makes v the served version (one atomic swap). nextBuildAt is when the builder
+// expects to publish again; it sets the max-age of the answers (see memoryMaxAgeMax).
+func (m *MemoryDataset) PublishPrepared(v *PreparedVersion, nextBuildAt time.Time) {
+	m.state.Store(&memoryState{ver: v.ver, nextBuild: nextBuildAt})
+}
+
+// Publish makes body the served version: Prepare, then PublishPrepared. A body over the cap
+// is refused with an error and the previous version stays.
+func (m *MemoryDataset) Publish(body []byte, nextBuildAt time.Time) error {
+	v, err := m.Prepare(body)
+	if err != nil {
 		return err
 	}
-	m.state.Store(&memoryState{ver: ver, nextBuild: nextBuildAt})
+	m.PublishPrepared(v, nextBuildAt)
 	return nil
 }
 

@@ -22,11 +22,20 @@ type HubBuilder interface {
 	Build(ctx context.Context, prev *hubprices.Table, builtAt, nextBuildAt time.Time) (hubprices.Result, error)
 }
 
+// HubDataset is what the refresher needs of the dataset the route serves; *MemoryDataset is the
+// production one. Prepare is the publish's slow part (gzip, SHA-256) and PublishPrepared its
+// swap, so the refresher can count the slow part in the build's duration.
+type HubDataset interface {
+	SetNextAttempt(time.Time)
+	Prepare(body []byte) (*PreparedVersion, error)
+	PublishPrepared(v *PreparedVersion, nextBuildAt time.Time)
+}
+
 // HubRefresherConfig configures NewHubRefresher.
 type HubRefresherConfig struct {
 	Builder HubBuilder
-	Dataset *MemoryDataset // the dataset the route serves (Config.MarketHubs)
-	Every   time.Duration  // the cycle; must be positive (the caller enforces the minimum)
+	Dataset HubDataset    // the dataset the route serves (Config.MarketHubs, a *MemoryDataset)
+	Every   time.Duration // the cycle; must be positive (the caller enforces the minimum)
 	Now     func() time.Time
 	// Sleep waits d or until ctx ends (returning ctx.Err()); nil means a real timer.
 	Sleep  func(ctx context.Context, d time.Duration) error
@@ -60,7 +69,7 @@ type HubRefresherConfig struct {
 // publish during exit, and the process is going away.
 type HubRefresher struct {
 	b     HubBuilder
-	ds    *MemoryDataset
+	ds    HubDataset
 	every time.Duration
 	now   func() time.Time
 	sleep func(ctx context.Context, d time.Duration) error
@@ -228,12 +237,14 @@ func (r *HubRefresher) buildOnce(ctx context.Context, tick time.Time) {
 			append([]any{"problem", res.Problem, "published_before", r.published, "duration_ms", took.Milliseconds()}, statusAttrs(res.Status)...)...)
 		return
 	}
-	if err := r.ds.Publish(res.JSON, nextBuildAt); err != nil {
+	p, err := r.ds.Prepare(res.JSON)
+	if err != nil {
 		// A refused publish leaves lastBuild and published as they were: no table went out, so the
 		// duration says nothing about a build that publishes.
 		r.log.Warn("hub prices: publish refused", "error", err, "bytes", len(res.JSON))
 		return
 	}
+	r.ds.PublishPrepared(p, nextBuildAt)
 	// The table is out only after the publish (gzip, SHA-256), so the next planned end counts it.
 	r.lastBuild = r.now().Sub(started)
 	r.published = true
