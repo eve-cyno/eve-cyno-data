@@ -405,7 +405,7 @@ type HTTPOptions struct {
 	// instructions do not state a daily number. AnonDailyCapFor, when set, takes its place.
 	AnonDailyCap int
 	// AnonDailyCapFor, when set, returns the requests per UTC day the keyless caller of the
-	// request gets (dataapi.AnonDailyCapFor: a caller inside dataapi's connector ranges has
+	// request gets (dataapi.AnonDailyCapsFor: a caller inside dataapi's connector ranges has
 	// its own number), and the keyless instructions state that number instead of
 	// AnonDailyCap; 0: no daily number. Nil: AnonDailyCap for everyone.
 	//
@@ -506,7 +506,7 @@ func keylessText(names []string, daily, elsewhere int, inRanges bool, hint strin
 		case !inRanges:
 			limits = fmt.Sprintf("%d requests a day per client and lower per-minute limits", daily)
 		case elsewhere > 0:
-			limits = fmt.Sprintf("%s requests a day per address for calls from Anthropic's ranges (%d a day per client elsewhere) and lower per-minute limits", thousands(daily), elsewhere)
+			limits = fmt.Sprintf("%s requests a day per address for calls from Anthropic's ranges (%s a day per client elsewhere) and lower per-minute limits", thousands(daily), thousands(elsewhere))
 		default:
 			limits = fmt.Sprintf("%s requests a day per address for calls from Anthropic's ranges and lower per-minute limits", thousands(daily))
 		}

@@ -107,7 +107,7 @@ func writeAnonQuotaRefusal(w http.ResponseWriter, r *http.Request, retry time.Du
 		// what everyone else has, so the text is true for the caller who reads it.
 		msg = fmt.Sprintf("without an API key the API allows %s requests a day per address for calls from Anthropic's ranges", thousands(cap))
 		if m, ok := r.Context().Value(metaKey{}).(meta); ok && m.anonElse > 0 {
-			msg += fmt.Sprintf(" (%d a day per client elsewhere)", m.anonElse)
+			msg += fmt.Sprintf(" (%s a day per client elsewhere)", thousands(m.anonElse))
 		}
 		msg += "; a free key raises this"
 	}

@@ -515,7 +515,8 @@ func TestAnonDailyCap_RangeIPv6SlashSixtyFourIsOneClient(t *testing.T) {
 	}
 	rec := counted(api, fromIP("2001:db8:1:2:ffff::7")...)
 	requireError(t, rec, http.StatusTooManyRequests, "daily_quota_exceeded")
-	require.Contains(t, rec.Body.String(), "allows 4 requests a day per address for calls from Anthropic's ranges")
+	// Only the scope is pinned: the real ranges are IPv4, and "per address" is a /64 here.
+	require.Contains(t, rec.Body.String(), "for calls from Anthropic's ranges")
 	n, _ := countedUntilRefused(t, api, fromIP("2001:db8:1:3::1")...)
 	require.Equal(t, 4, n)
 	n, _ = countedUntilRefused(t, api, fromIP("192.0.2.9")...)

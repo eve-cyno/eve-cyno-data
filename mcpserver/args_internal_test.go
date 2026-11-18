@@ -118,6 +118,8 @@ func TestHTTPHandler_AnonDailyCapForStatesTheCallersOwnNumber(t *testing.T) {
 	require.Contains(t, initInstructions(t, h, "X-Test-Cap", "2000", "X-Test-Range", "1"),
 		"trying it out: 2,000 requests a day per address for calls from Anthropic's ranges and lower per-minute limits;")
 	require.NotContains(t, initInstructions(t, h, "X-Test-Cap", "2000", "X-Test-Range", "1"), "2000 requests")
+	require.Contains(t, initInstructions(t, h, "X-Test-Cap", "5000", "X-Test-Range", "1", "X-Test-Elsewhere", "1500"),
+		"5,000 requests a day per address for calls from Anthropic's ranges (1,500 a day per client elsewhere) and")
 	require.Contains(t, initInstructions(t, h, "X-Test-Cap", "200"), "trying it out: 200 requests a day per client and lower per-minute limits;")
 	require.Contains(t, initInstructions(t, h, "X-Test-Cap", "0"), "trying it out: lower per-minute limits;")
 }

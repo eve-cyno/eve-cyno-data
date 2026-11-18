@@ -81,6 +81,7 @@ type HubRefresher struct {
 
 	prev      *hubprices.Table // last built table
 	published bool
+	measured  bool          // a complete build was measured in this process (lastBuild is its duration)
 	lastBuild time.Duration // measured duration of the last complete build (0 before any)
 	lastRes   []hubprices.HubStatus
 }
@@ -209,7 +210,8 @@ func (r *HubRefresher) buildOnce(ctx context.Context, tick time.Time) {
 	started := r.now()
 	// The next table is published when the next build ends: it starts at the first tick after
 	// this build's expected end and takes as long. Before any complete build the stamp is the
-	// next tick (provisional): the first complete build is stamped again from its own duration. Stamps are the wall time read now plus the grid point's monotonic offset from now.
+	// next tick (provisional): the first complete build is stamped again from its own duration.
+	// Stamps are the wall time read now plus the grid point's monotonic offset from now.
 	next, _ := r.nextTick(tick, started.Add(r.lastBuild))
 	builtAt := started.Add(tick.Sub(started))
 	nextBuildAt := ceilSecond(started.Add(next.Add(r.lastBuild).Sub(started)).UTC())
@@ -248,7 +250,7 @@ func (r *HubRefresher) buildOnce(ctx context.Context, tick time.Time) {
 		r.log.Warn("hub prices: publish refused", "error", err, "bytes", len(res.JSON))
 		return
 	}
-	first := r.lastBuild == 0
+	first := !r.measured
 	var own time.Duration
 	if first {
 		// The first table after a start: no build was measured yet, so this build measures itself.
@@ -260,6 +262,9 @@ func (r *HubRefresher) buildOnce(ctx context.Context, tick time.Time) {
 			r.log.Info("hub prices: build canceled; result not published")
 			return
 		}
+		// Residual (as in steady state): the prediction is one build's duration; a slower next
+		// build lands after nextBuildAt and the client's Date rule covers it. A build as long as
+		// a cycle is not reachable (about 14 s in production against a cycle of at least 5 min).
 		next, _ := r.nextTick(tick, started.Add(own))
 		at := ceilSecond(started.Add(next.Add(own).Sub(started)).UTC())
 		if out, err := r.b.Restamp(res.Table, at); err != nil {
@@ -282,6 +287,7 @@ func (r *HubRefresher) buildOnce(ctx context.Context, tick time.Time) {
 		r.lastBuild = r.now().Sub(started)
 	}
 	r.published = true
+	r.measured = true
 	buildMS := took.Milliseconds() // the build alone; lastBuild (and duration_ms) also count the publish
 	rows, pages := 0, 0
 	for _, s := range res.Status {
