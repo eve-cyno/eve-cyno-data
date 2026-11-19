@@ -77,6 +77,10 @@ type PortalKey struct {
 	UsedToday int
 }
 
+// PortalSessionTTL is the absolute lifetime of a data portal session from its sign-in; it never slides. The session
+// cookie lives as long (Max-Age), and the store expires the row at the same time.
+const PortalSessionTTL = 4 * time.Hour
+
 // PortalLimits are the owner limits of the key store.
 type PortalLimits struct {
 	// MaxActive is the number of active keys an account may hold.
@@ -85,6 +89,8 @@ type PortalLimits struct {
 	MaxCreatesPerDay int
 	// DailyCap is the daily request cap of a new key (0: none).
 	DailyCap int
+	// KeyNameMax is the longest key name, in characters.
+	KeyNameMax int
 }
 
 // The refusals of an AccountStore.

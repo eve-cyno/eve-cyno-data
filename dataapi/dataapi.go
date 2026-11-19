@@ -74,6 +74,7 @@ import (
 	"strings"
 	"time"
 
+	"eve-cyno.dev/go/data/dataapi/evesso"
 	"eve-cyno.dev/go/data/fit"
 	"eve-cyno.dev/go/data/rag"
 	"eve-cyno.dev/go/data/sde"
@@ -426,6 +427,18 @@ type Config struct {
 	// publishes into it and to the API. It works with or without DatasetDir. Nil means the
 	// builder is off: the name answers 404, like an unpublished file.
 	MarketHubs *MemoryDataset
+
+	// Accounts is the key store as the data portal's sign-in sees it (keys.PortalAccounts). With EVESSO set, the
+	// portal serves GET /account (the sign-in page, then the account page: its keys, create, revoke, sign out, delete
+	// the account) and the EVE SSO routes /auth/eve/login and /auth/eve/callback (see portal_account.go). They count
+	// against no daily cap, are not in the OpenAPI document or the llms files, and are never cached. Without either
+	// field the routes do not exist (404).
+	Accounts AccountStore
+
+	// EVESSO is the EVE SSO application of the portal sign-in: client id and secret (from the environment, never
+	// logged), the callback URL ({origin}/auth/eve/callback; https, or http on a loopback host). The zero value turns
+	// the sign-in off; an invalid value, or one without Accounts, is an error of New.
+	EVESSO evesso.Config
 }
 
 // API is the data API. It implements http.Handler.
@@ -481,6 +494,8 @@ type API struct {
 	corpusProbe *corpusProbe
 	// datasets serves Config.DatasetDir and Config.MarketHubs.
 	datasets *datasets
+	// account is the data portal's EVE sign-in (nil: off, see Config.Accounts).
+	account *accountSite
 }
 
 // New builds the API and its routes. It fails on an invalid Prefix, an unknown mode, or a
@@ -577,6 +592,17 @@ func New(cfg Config) (*API, error) {
 		a.anonCap = anonCap
 		// Read only for a request whose range matched, which needs the range tier.
 		a.rangeCap = limits.Range.DailyCap
+	}
+	if !cfg.EVESSO.IsZero() {
+		if cfg.Accounts == nil {
+			return nil, errors.New("dataapi: EVESSO needs Accounts, the store the portal signs in to")
+		}
+		site, err := newAccountSite(cfg.Accounts, cfg.EVESSO, a.surface, cfg.Now)
+		if err != nil {
+			return nil, fmt.Errorf("dataapi: portal sign-in: %w", err)
+		}
+		a.account = site
+		a.surface.SignIn = true
 	}
 
 	for _, rt := range routeTable() {

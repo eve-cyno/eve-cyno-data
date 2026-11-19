@@ -129,6 +129,16 @@
 //	                          setup sets :8093 so the internal network reaches it); served only
 //	                          when both the key store and the admin token are set. The token must
 //	                          be at least 32 characters, else startup fails
+//	DATAAPI_EVE_SSO_CLIENT_ID      the EVE SSO application (Authentication Only, no scopes) of the data
+//	DATAAPI_EVE_SSO_CLIENT_SECRET  portal sign-in at /account: with both set and DATAAPI_KEYS_DB open,
+//	                          visitors sign in with an EVE character and make, list and revoke their
+//	                          keys and can delete their account. One without the other, or a
+//	                          malformed value, is a startup error; with no key store or no callback
+//	                          URL the sign-in stays off with a startup warning. Unset: no sign-in,
+//	                          /account is 404. The secret is never logged
+//	DATAAPI_EVE_SSO_REDIRECT_URL   the callback registered with the application (default
+//	                          <DATAAPI_PUBLIC_URL>/auth/eve/callback; https, or http on a loopback
+//	                          host for a local run; the path must be /auth/eve/callback)
 //	EVE_CORE_*, QDRANT_*, DEEPINFRA_EMBED_*   the deterministic layer (config)
 //
 // The SDE build id that /v1/health reports is read from the file "<EVE_CORE_SDE_PATH>.build"
@@ -165,6 +175,7 @@ import (
 	"eve-cyno.dev/go/data/bootstrap"
 	coreconfig "eve-cyno.dev/go/data/config"
 	"eve-cyno.dev/go/data/dataapi"
+	"eve-cyno.dev/go/data/dataapi/evesso"
 	"eve-cyno.dev/go/data/dataapi/keys"
 	"eve-cyno.dev/go/data/hubprices"
 	"eve-cyno.dev/go/data/mcpserver"
@@ -495,6 +506,8 @@ type exposure struct {
 	// hubPrices is the in-memory source of market-hubs.json, filled by the hub price refresher
 	// (nil: the builder is off and the name answers 404).
 	hubPrices *dataapi.MemoryDataset
+	// sso is the data portal's EVE SSO application (zero: no portal sign-in); set only with store.
+	sso evesso.Config
 }
 
 // publicURL resolves DATAAPI_PUBLIC_URL: unset is fine, a value that is not an https origin
@@ -572,6 +585,10 @@ func newHandler(d *bootstrap.Deps, ex exposure, log *slog.Logger) (http.Handler,
 		cfg.Usage = ex.store
 		// The documents promise a daily cap only when something enforces it.
 		cfg.KeyDailyCap = ex.dailyCap
+		if !ex.sso.IsZero() {
+			cfg.Accounts = keys.PortalAccounts(ex.store)
+			cfg.EVESSO = ex.sso
+		}
 	}
 	if ex.toolAPI {
 		cfg.ToolAPI = dataapi.ToolAPIPublic
@@ -707,6 +724,12 @@ func run(log *slog.Logger) error {
 		return err
 	}
 	ex.hubPrices = hubPricesSource(hubEvery)
+	sso, ssoNote, err := portalSignIn(os.Getenv, pub, store != nil)
+	if err != nil {
+		return err
+	}
+	ex.sso = sso
+	logPortalSignIn(log, sso, ssoNote)
 	if ex.datasetDir != "" {
 		log.Info("intel datasets served outside the limits", "env", "EVE_CORE_INTEL_DATASET_DIR", "dir", ex.datasetDir)
 	}

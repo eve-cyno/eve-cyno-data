@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"net/netip"
 	"reflect"
+	"time"
 
 	"eve-cyno.dev/go/data/fit"
 	"eve-cyno.dev/go/data/rag"
@@ -48,6 +49,9 @@ type Surface struct {
 	// documents state the connector budgets (Limits.Range) only where this is set on a service
 	// that accepts keys, so they never describe a tier the server does not apply.
 	Ranges []netip.Prefix
+	// SignIn is true when the data portal's EVE sign-in and account page are served (Config.Accounts and
+	// Config.EVESSO). PublicSurface leaves it off: the generated files never describe those routes.
+	SignIn bool
 	// PublicURL, when set (validated, no trailing slash), makes the OpenAPI servers entry
 	// and the llms.txt links absolute. PublicSurface leaves it empty so the committed
 	// generated files stay host-independent.
@@ -195,8 +199,15 @@ func always(Surface) bool { return true }
 func toolAPIOn(s Surface) bool { return s.ToolAPI != ToolAPIOff }
 func mcpOn(s Surface) bool     { return s.MCP }
 func docsOn(s Surface) bool    { return s.Docs }
+func signInOn(s Surface) bool  { return s.SignIn }
 
 func unlimited(Surface) Rate { return Rate{} }
+
+// perMinute is a fixed budget of n requests a minute per caller, the same with or without a key: the data portal's
+// account routes (a key buys nothing there).
+func perMinute(n int) func(Surface) Rate {
+	return func(Surface) Rate { return Rate{Max: n, KeyedMax: n, Window: time.Minute} }
+}
 
 // stringsToAny converts a string list to the []any of a schema enum.
 func stringsToAny(ss []string) []any {
@@ -551,6 +562,36 @@ func routeTable() []route {
 			rate: func(s Surface) Rate { return s.Limits.Docs }, trialFree: true,
 			handle: (*API).serveLLMsFull,
 			cache:  cacheDocs,
+		},
+		// The data portal's EVE sign-in and account page (portal_account.go): outside the anonymous daily cap and the
+		// in-flight gate, never cached, not in the OpenAPI document.
+		{
+			method: http.MethodGet, path: "/account", root: true, when: signInOn, rate: perMinute(60), trialFree: true,
+			handle: (*API).accountPage, cache: cacheNone,
+		},
+		{
+			method: http.MethodGet, path: "/auth/eve/login", root: true, when: signInOn, rate: perMinute(20), trialFree: true,
+			handle: (*API).accountLogin, cache: cacheNone,
+		},
+		{
+			method: http.MethodGet, path: "/auth/eve/callback", root: true, when: signInOn, rate: perMinute(20), trialFree: true,
+			handle: (*API).accountCallback, cache: cacheNone,
+		},
+		{
+			method: http.MethodPost, path: "/account/keys", root: true, when: signInOn, rate: perMinute(30), trialFree: true,
+			handle: (*API).accountCreateKey, cache: cacheNone,
+		},
+		{
+			method: http.MethodPost, path: "/account/keys/{id}/revoke", root: true, when: signInOn, rate: perMinute(30), trialFree: true,
+			handle: (*API).accountRevokeKey, cache: cacheNone,
+		},
+		{
+			method: http.MethodPost, path: "/account/delete", root: true, when: signInOn, rate: perMinute(30), trialFree: true,
+			handle: (*API).accountDelete, cache: cacheNone,
+		},
+		{
+			method: http.MethodPost, path: "/auth/logout", root: true, when: signInOn, rate: perMinute(30), trialFree: true,
+			handle: (*API).accountLogout, cache: cacheNone,
 		},
 	}
 }

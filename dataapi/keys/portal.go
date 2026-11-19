@@ -164,5 +164,5 @@ func (p portalAccounts) DeleteAccount(ctx context.Context, characterID, ownerHas
 }
 
 func (p portalAccounts) Limits() dataapi.PortalLimits {
-	return dataapi.PortalLimits{MaxActive: p.s.opt.MaxPerOwner, MaxCreatesPerDay: MaxCreatesPerDay, DailyCap: p.s.opt.DailyCap}
+	return dataapi.PortalLimits{MaxActive: p.s.opt.MaxPerOwner, MaxCreatesPerDay: MaxCreatesPerDay, DailyCap: p.s.opt.DailyCap, KeyNameMax: maxNameRunes}
 }

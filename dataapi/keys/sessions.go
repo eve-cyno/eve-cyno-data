@@ -11,10 +11,13 @@ import (
 	"fmt"
 	"regexp"
 	"time"
+
+	"eve-cyno.dev/go/data/dataapi"
 )
 
-// PortalSessionTTL is the absolute lifetime of a data portal session; it never slides.
-const PortalSessionTTL = 4 * time.Hour
+// PortalSessionTTL is the absolute lifetime of a data portal session; it never slides (dataapi.PortalSessionTTL, the
+// Max-Age of the session cookie).
+const PortalSessionTTL = dataapi.PortalSessionTTL
 
 // sessionTokenRE is the shape of a session, CSRF or form token: 32 random bytes, base64url.
 var sessionTokenRE = regexp.MustCompile(`^[A-Za-z0-9_-]{43}$`)

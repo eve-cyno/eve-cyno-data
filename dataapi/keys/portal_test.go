@@ -345,7 +345,7 @@ func TestPortal_LinkedDiscordAccountShowsAllKeys(t *testing.T) {
 func TestPortal_LimitsApply(t *testing.T) {
 	c := &portalClock{t: time.Date(2026, 11, 19, 10, 0, 0, 0, time.UTC)}
 	_, p, _ := openPortal(t, keys.Options{DailyCap: 10000, Now: c.now})
-	require.Equal(t, dataapi.PortalLimits{MaxActive: 3, MaxCreatesPerDay: 10, DailyCap: 10000}, p.Limits())
+	require.Equal(t, dataapi.PortalLimits{MaxActive: 3, MaxCreatesPerDay: 10, DailyCap: 10000, KeyNameMax: 40}, p.Limits())
 	_, sess := signIn(t, p, charA, hashOne)
 	var made []dataapi.PortalKey
 	for i := range 3 {
