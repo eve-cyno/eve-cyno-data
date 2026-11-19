@@ -69,6 +69,8 @@ var accountNotices = map[string]string{
 	"revoked":   "Key revoked. It stops working at once.",
 	"deleted":   "Account deleted: its keys, sign-ins and sessions are gone.",
 	"cancelled": "Sign-in cancelled.",
+	"form-used": "No key was made: that form had already been sent " +
+		"(a page sent twice, or one left open in another tab).",
 }
 
 func noticeOf(code string) *accountMsg { return &accountMsg{Code: code, Text: accountNotices[code]} }
@@ -447,6 +449,7 @@ func (a *API) accountCreateKey(w http.ResponseWriter, r *http.Request) {
 	}
 	if !spent {
 		logFrom(r.Context()).Info("portal_form_refused", "reason", "form_token")
+		setPortalCookie(w, noticeCookie, "form-used", noticeMaxAge)
 		http.Redirect(w, r, "/account", http.StatusSeeOther)
 		return
 	}

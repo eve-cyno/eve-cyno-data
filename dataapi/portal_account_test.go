@@ -638,8 +638,14 @@ func TestAccount_ResubmittedCreateMakesNoSecondKey(t *testing.T) {
 	again := b.do(http.MethodPost, "/account/keys", with(v, "name", "laptop"))
 	require.Equal(t, http.StatusSeeOther, again.Code, "the spent form token is refused")
 	require.Equal(t, "/account", again.Header().Get("Location"))
+	requireHostCookie(t, setCookie(again, "__Host-ecd_notice"), 60)
 	require.NotRegexp(t, secretRE, again.Body.String())
 	require.Equal(t, 1, f.rows(t, `SELECT COUNT(*) FROM api_keys`))
+	// the page it lands on says why no key was made (a resubmit, or a form left open in another tab)
+	body, _ := acctPage(t, b)
+	require.Contains(t, body, `data-notice="form-used"`)
+	body, _ = acctPage(t, b)
+	require.NotContains(t, body, "data-notice=", "the notice shows once")
 
 	// the page the create answered with carries the next token
 	next := url.Values{"csrf": {v.Get("csrf")}, "form": {formRE.FindStringSubmatch(first.Body.String())[1]}}
