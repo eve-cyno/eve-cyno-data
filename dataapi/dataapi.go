@@ -196,7 +196,8 @@ func DefaultLimits() Limits {
 		// of the route limit.
 		UpstreamTool: Rate{Max: 5, KeyedMax: 10, Window: time.Minute},
 		// Keyless connector calls from Anthropic's ranges: many users behind few addresses, so
-		// a larger per-address budget, bounded for all of them together by a shared ceiling.
+		// the same per-address MCP budget as other keyless callers, but bounded for all of them together
+		// by a shared MCP ceiling of 300, with its own upstream budget (15 per address, 30 shared) and a per-address daily count.
 		Range: RangeLimits{
 			MCP:             Rate{Max: 60, Window: time.Minute},
 			MCPCeiling:      Rate{Max: 300, Window: time.Minute},

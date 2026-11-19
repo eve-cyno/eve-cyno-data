@@ -356,7 +356,7 @@ func TestDocs_StateTrialAndKeyedNumbersAndTheKeyOnlySearch(t *testing.T) {
 	full := string(files["llms-full.txt"])
 	require.Contains(t, full, "Rate limit: 60 requests per minute per client IP without an API key, 120 per minute per API key with one.")
 	require.Contains(t, full, "Rate limit: 30 requests per minute per client IP without an API key, 240 per minute per API key with one.")
-	require.Contains(t, full, "2000 requests per UTC day per client")
+	require.Contains(t, full, "2,000 requests per UTC day per client")
 	require.Contains(t, full, "Free-text search (`q`) needs an API key")
 	require.Contains(t, string(files["api/openapi.yaml"]), "Free-text search (`q`) needs an API key")
 
@@ -490,7 +490,7 @@ func TestAnonDailyCap_RefusalWithEqualCapsStatesItOnce(t *testing.T) {
 	c := &clock{t: time.Date(2026, 11, 12, 22, 30, 0, 0, time.UTC)}
 	api := rangeCapAPI(t, 4, 4, anthropicOutbound, c)
 	_, rec := countedUntilRefused(t, api, fromIP("153.61.208.9")...)
-	require.Contains(t, rec.Body.String(), "without an API key the API allows 4 requests a day per client; a free key raises this")
+	require.Contains(t, rec.Body.String(), "without an API key the API allows 4 requests a day per address for calls from Anthropic's ranges; a free key raises this")
 	require.NotContains(t, rec.Body.String(), "elsewhere")
 }
 
@@ -620,11 +620,11 @@ func TestMCPInstructions_RangeCallerSeesItsDailyNumber(t *testing.T) {
 	init := `{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"t","version":"0"}}}`
 	rec := postMCP(t, api, init, fromIP("160.79.104.9")...)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	require.Contains(t, rec.Body.String(), "Without an API key this server is for trying it out: 2000 requests a day per client and lower per-minute limits;")
+	require.Contains(t, rec.Body.String(), "Without an API key this server is for trying it out: 2,000 requests a day per address for calls from Anthropic's ranges and lower per-minute limits;")
 
 	rec = postMCP(t, api, init, fromIP("192.0.2.9")...)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	require.Contains(t, rec.Body.String(), "Without an API key this server is for trying it out: 2000 requests a day per client and lower per-minute limits;")
+	require.Contains(t, rec.Body.String(), "Without an API key this server is for trying it out: 2,000 requests a day per client and lower per-minute limits;")
 
 	rec = postMCP(t, api, init, append(fromIP("160.79.104.9"), "X-API-Key", trialKey)...)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())

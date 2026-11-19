@@ -130,7 +130,7 @@ func jsonUnmarshal(s string, v any) error { return json.Unmarshal([]byte(s), v) 
 // "(2,000 a day per client elsewhere)" next to 2,000.
 func TestKeylessText_EqualRangeAndElsewhereCapsAreStatedOnce(t *testing.T) {
 	got := keylessText(nil, 2000, 2000, true, "hint")
-	require.Contains(t, got, "trying it out: 2000 requests a day per client and lower per-minute limits;")
+	require.Contains(t, got, "trying it out: 2,000 requests a day per address for calls from Anthropic's ranges and lower per-minute limits;")
 	require.NotContains(t, got, "elsewhere")
 }
 

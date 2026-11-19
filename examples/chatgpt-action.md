@@ -24,5 +24,5 @@ A custom GPT Action calls your API from OpenAI's servers, so it needs a **public
    guess. When an answer lists sources, name them." The responses carry an `attribution` array; Fenris Creations' licence and the
    community-fit sources require it to be shown.
 
-Limits to keep in mind: the tool endpoint is rate limited to 10 requests per minute per caller without a key and 60 with a key, and an Action is easier
+Limits to keep in mind: the tool endpoint is rate limited to 60 requests per minute per caller without a key and 120 with a key, and an Action is easier
 for the model to use with fewer operations; delete the ones you do not need in the schema editor.

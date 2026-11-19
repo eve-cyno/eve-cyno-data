@@ -652,7 +652,7 @@ func keyConventions(s Surface) string {
 	}
 	var b strings.Builder
 	if s.AnonDailyCap > 0 {
-		fmt.Fprintf(&b, "- Without an API key the API is for trying it out: %d requests per UTC day per client (counted per client IP; the documentation routes are not counted) and the lower per-minute limits stated on the operations. Over the day's budget a client gets `429` `daily_quota_exceeded` with `Retry-After` set to the seconds until 00:00 UTC. A free API key is for real use.\n", s.AnonDailyCap)
+		fmt.Fprintf(&b, "- Without an API key the API is for trying it out: %s requests per UTC day per client (counted per client IP; the documentation routes are not counted) and the lower per-minute limits stated on the operations. Over the day's budget a client gets `429` `daily_quota_exceeded` with `Retry-After` set to the seconds until 00:00 UTC. A free API key is for real use.\n", thousands(s.AnonDailyCap))
 	}
 	if s.rangeTierDocs() && s.MCP {
 		r := s.Limits.Range

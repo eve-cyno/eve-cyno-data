@@ -503,9 +503,9 @@ func keylessText(names []string, daily, elsewhere int, inRanges bool, hint strin
 	var limits string
 	if daily > 0 {
 		switch {
-		case !inRanges || elsewhere == daily:
-			limits = fmt.Sprintf("%d requests a day per client and lower per-minute limits", daily)
-		case elsewhere > 0:
+		case !inRanges:
+			limits = fmt.Sprintf("%s requests a day per client and lower per-minute limits", thousands(daily))
+		case elsewhere > 0 && elsewhere != daily:
 			limits = fmt.Sprintf("%s requests a day per address for calls from Anthropic's ranges (%s a day per client elsewhere) and lower per-minute limits", thousands(daily), thousands(elsewhere))
 		default:
 			limits = fmt.Sprintf("%s requests a day per address for calls from Anthropic's ranges and lower per-minute limits", thousands(daily))

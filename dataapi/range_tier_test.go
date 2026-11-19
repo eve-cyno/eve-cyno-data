@@ -243,8 +243,8 @@ func spendOK(t *testing.T, api http.Handler, ip string, n int) {
 	}
 }
 
-// A keyless caller inside the ranges gets 60 MCP requests a minute (not the 20 of other
-// keyless callers); the 61st is refused by its own address limit, not by the ceiling.
+// A keyless caller inside the ranges gets 60 MCP requests a minute, the same as other
+// keyless callers; the 61st is refused by its own address limit, not by the ceiling.
 func TestRangeTier_PerAddressSixtyPerMinute(t *testing.T) {
 	clk := newTestClock()
 	api := rangeTierAPI(t, anthropicOutbound, nil, dataapi.DefaultAnonDailyCap, clk)
@@ -460,7 +460,7 @@ func TestRangeTier_EmptyRangesIsUnchanged(t *testing.T) {
 	spendOK(t, api, "160.79.104.9", 60)
 	requireAddressRefusal(t, mcpFrom(t, api, "160.79.104.9"), "the 61st request")
 	for _, ip := range rangeAddrs(20) {
-		spendOK(t, api, ip, 60) // 400 in all: no ceiling
+		spendOK(t, api, ip, 60) // 1200 in all: no ceiling
 	}
 }
 
