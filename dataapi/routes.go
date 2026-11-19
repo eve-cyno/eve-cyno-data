@@ -203,6 +203,9 @@ func mcpOn(s Surface) bool     { return s.MCP }
 func docsOn(s Surface) bool    { return s.Docs }
 func signInOn(s Surface) bool  { return s.SignIn }
 
+// assetsOn: the documentation pages and the account pages both link the portal assets.
+func assetsOn(s Surface) bool { return s.Docs || s.SignIn }
+
 func unlimited(Surface) Rate { return Rate{} }
 
 // perMinute is a fixed budget of n requests a minute per caller, the same with or without a key: the data portal's
@@ -538,7 +541,7 @@ func routeTable() []route {
 		},
 		{
 			// Versioned static files of the portal: immutable, so no per-caller limit.
-			method: http.MethodGet, path: "/assets/{version}/{file}", root: true, when: docsOn, rate: unlimited, trialFree: true,
+			method: http.MethodGet, path: "/assets/{version}/{file}", root: true, when: assetsOn, rate: unlimited, trialFree: true,
 			handle: (*API).asset,
 		},
 		{

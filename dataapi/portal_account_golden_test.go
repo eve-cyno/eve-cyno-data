@@ -111,3 +111,18 @@ func TestPortal_SSOButtonIsServedWithoutMetadata(t *testing.T) {
 		require.NotContains(t, string(body), bad)
 	}
 }
+
+// The account pages load the portal assets (styles, scripts, the EVE button), so the assets are served whenever the
+// sign-in is, with the documentation off too.
+func TestPortal_AccountAssetsServedWithoutDocs(t *testing.T) {
+	f := newAcctFix(t) // Docs off
+	body, _ := acctPage(t, f.browser())
+	refs := regexp.MustCompile(`(?:src|href)="(/assets/[0-9a-f]{12}/[^"]+)"`).FindAllStringSubmatch(body, -1)
+	require.NotEmpty(t, refs)
+	for _, m := range refs {
+		rec := do(f.api, http.MethodGet, m[1], "")
+		require.Equal(t, http.StatusOK, rec.Code, m[1])
+		require.NotEmpty(t, rec.Body.Bytes(), m[1])
+	}
+	require.Equal(t, http.StatusNotFound, do(f.api, http.MethodGet, "/docs/", "").Code, "the docs stay off")
+}

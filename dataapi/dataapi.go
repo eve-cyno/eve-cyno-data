@@ -497,6 +497,10 @@ type API struct {
 	datasets *datasets
 	// account is the data portal's EVE sign-in (nil: off, see Config.Accounts).
 	account *accountSite
+	// assets and assetVersion are the portal's static files (/assets/{version}/{file}), loaded when the
+	// documentation or the sign-in is on: both kinds of page link them.
+	assets       map[string]portalAsset
+	assetVersion string
 }
 
 // New builds the API and its routes. It fails on an invalid Prefix, an unknown mode, or a
@@ -594,11 +598,18 @@ func New(cfg Config) (*API, error) {
 		// Read only for a request whose range matched, which needs the range tier.
 		a.rangeCap = limits.Range.DailyCap
 	}
+	if cfg.Docs || !cfg.EVESSO.IsZero() {
+		assets, ver, err := loadPortalAssets()
+		if err != nil {
+			return nil, fmt.Errorf("dataapi: portal assets: %w", err)
+		}
+		a.assets, a.assetVersion = assets, ver
+	}
 	if !cfg.EVESSO.IsZero() {
 		if cfg.Accounts == nil {
 			return nil, errors.New("dataapi: EVESSO needs Accounts, the store the portal signs in to")
 		}
-		site, err := newAccountSite(cfg.Accounts, cfg.EVESSO, a.surface, cfg.Now)
+		site, err := newAccountSite(cfg.Accounts, cfg.EVESSO, a.surface, a.assetVersion, cfg.Now)
 		if err != nil {
 			return nil, fmt.Errorf("dataapi: portal sign-in: %w", err)
 		}
@@ -618,7 +629,7 @@ func New(cfg Config) (*API, error) {
 		}
 		a.docs = docs
 		a.pages = renderPages(a.surface)
-		portal, err := buildPortal(portalInput{Surface: a.surface, HaveSDE: a.sde() != nil})
+		portal, err := buildPortal(portalInput{Surface: a.surface, HaveSDE: a.sde() != nil}, a.assetVersion)
 		if err != nil {
 			return nil, fmt.Errorf("dataapi: render the portal: %w", err)
 		}

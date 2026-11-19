@@ -55,10 +55,6 @@ type portalSite struct {
 	pages map[string][]byte
 	// search is the JSON search index (also inlined in every page).
 	search []byte
-	// assets maps a file name of portal/static to its body and type.
-	assets map[string]portalAsset
-	// assetVersion names the asset URL prefix: it changes when any asset does.
-	assetVersion string
 }
 
 type portalAsset struct {
@@ -813,13 +809,9 @@ func searchIndex(order []catalog.Tool, keys bool) ([]byte, error) {
 	return b, nil
 }
 
-// buildPortal renders every page and loads the assets.
-func buildPortal(in portalInput) (*portalSite, error) {
-	assets, ver, err := loadPortalAssets()
-	if err != nil {
-		return nil, err
-	}
-	site := &portalSite{pages: map[string][]byte{}, assets: assets, assetVersion: ver}
+// buildPortal renders every page; their asset links carry assetVersion (API.assets).
+func buildPortal(in portalInput, assetVersion string) (*portalSite, error) {
+	site := &portalSite{pages: map[string][]byte{}}
 
 	root, err := template.New("portal").Funcs(template.FuncMap{"plural": plural}).ParseFS(portalTemplates,
 		"portal/templates/base.gohtml", "portal/templates/docs.gohtml", "portal/templates/examples.gohtml", "portal/templates/portal.gohtml")
@@ -843,7 +835,7 @@ func buildPortal(in portalInput) (*portalSite, error) {
 		return buf.Bytes(), nil
 	}
 
-	d := newPageData(in, ver)
+	d := newPageData(in, assetVersion)
 	order := slices.Concat(catalog.ToolsIn(catalog.TierPublic), catalog.ToolsIn(catalog.TierKeyed))
 	if site.search, err = searchIndex(order, d.Auth); err != nil {
 		return nil, err
@@ -977,7 +969,7 @@ func (a *API) docsSearch(w http.ResponseWriter, _ *http.Request) {
 // serves the current file, immutable for the current one, briefly cacheable for a stale one
 // (an HTML page cached across a deploy still finds its styles).
 func (a *API) asset(w http.ResponseWriter, r *http.Request) {
-	as, ok := a.portal.assets[r.PathValue("file")]
+	as, ok := a.assets[r.PathValue("file")]
 	if !ok {
 		writeError(w, r, http.StatusNotFound, "not_found", "no such asset")
 		return
@@ -985,7 +977,7 @@ func (a *API) asset(w http.ResponseWriter, r *http.Request) {
 	h := w.Header()
 	h.Set("Content-Type", as.contentType)
 	h.Set("X-Content-Type-Options", "nosniff")
-	if r.PathValue("version") == a.portal.assetVersion {
+	if r.PathValue("version") == a.assetVersion {
 		h.Set("Cache-Control", "public, max-age=31536000, immutable")
 	} else {
 		h.Set("Cache-Control", "public, max-age=300")

@@ -45,7 +45,8 @@ type accountSite struct {
 	now    func() time.Time
 }
 
-func newAccountSite(store AccountStore, cfg evesso.Config, s Surface, now func() time.Time) (*accountSite, error) {
+// newAccountSite builds the sign-in; assetVersion is the version of the portal assets the pages link (API.assets).
+func newAccountSite(store AccountStore, cfg evesso.Config, s Surface, assetVersion string, now func() time.Time) (*accountSite, error) {
 	c, err := evesso.New(cfg)
 	if err != nil {
 		return nil, err
@@ -54,10 +55,6 @@ func newAccountSite(store AccountStore, cfg evesso.Config, s Surface, now func()
 		"portal/templates/base.gohtml", "portal/templates/account.gohtml")
 	if err != nil {
 		return nil, fmt.Errorf("parse account templates: %w", err)
-	}
-	_, ver, err := loadPortalAssets()
-	if err != nil {
-		return nil, err
 	}
 	if now == nil {
 		now = time.Now
@@ -68,7 +65,7 @@ func newAccountSite(store AccountStore, cfg evesso.Config, s Surface, now func()
 		callbacks: callbacks, budget: newExchangeBudget(exchangesPerMinute, time.Minute, now),
 		store: store, sso: c, states: newUsedStates(now, usedStatesMax), exchanges: make(chan struct{}, exchangeSlots),
 		cop: http.NewCrossOriginProtection(), tmpl: t,
-		url: s.PublicURL, prefix: s.prefix(), selfServe: s.SelfServe, assets: "/assets/" + ver, now: now,
+		url: s.PublicURL, prefix: s.prefix(), selfServe: s.SelfServe, assets: "/assets/" + assetVersion, now: now,
 	}, nil
 }
 
