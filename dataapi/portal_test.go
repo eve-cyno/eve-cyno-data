@@ -460,7 +460,7 @@ func TestPortal_KeysCopyFollowsConfig(t *testing.T) {
 	}
 	def := get(publicConfig(), "/docs/access")
 	require.Contains(t, def, `The per-minute route limits in the "With a key" column above, and a daily cap of 10,000 requests per key (UTC day, resets at 00:00 UTC).`)
-	require.Contains(t, def, "daily trial limit of 200 requests per client", "the trial cap is stated")
+	require.Contains(t, def, "daily trial limit of 2,000 requests per client", "the trial cap is stated")
 	cfg := publicConfig()
 	cfg.KeyedLimitFactor, cfg.KeyDailyCap = 3, 1234567
 	access := get(cfg, "/docs/access")
@@ -689,19 +689,19 @@ func TestPortal_TrialAccessCopyOnAKeyedService(t *testing.T) {
 	api := portalAPI(t)
 	home := do(api, http.MethodGet, "/", "").Body.String()
 	for _, want := range []string{
-		`Try it without a key or an account (trial limits, <span data-slot="limit_anon_day">200</span> requests a day)`,
+		`Try it without a key or an account (trial limits, <span data-slot="limit_anon_day">2,000</span> requests a day)`,
 		`requests/min per caller (<span data-slot="limit_mcp_key">120</span> with a key)`,
 		`ESI, EvE-Scout and zKillboard, <span data-slot="limit_upstream">5</span> calls/min shared (<span data-slot="limit_upstream_key">10</span> with a key)`,
 		`community fits and <span data-slot="tools_upstream">10</span> live tools (ESI, EvE-Scout and zKillboard)`,
 		`<thead><tr><th>Limit</th><th>No key</th><th>Free key</th></tr></thead>`,
-		`<tr><td>MCP<small>POST /v1/mcp</small></td><td><span data-slot="limit_mcp">20</span>/min</td><td><span data-slot="limit_mcp_key">120</span>/min</td></tr>`,
-		`<tr><td>REST tool calls<small>POST /v1/tool/{name}</small></td><td><span data-slot="limit_rest">10</span>/min</td><td><span data-slot="limit_rest_key">60</span>/min</td></tr>`,
+		`<tr><td>MCP<small>POST /v1/mcp</small></td><td><span data-slot="limit_mcp">60</span>/min</td><td><span data-slot="limit_mcp_key">120</span>/min</td></tr>`,
+		`<tr><td>REST tool calls<small>POST /v1/tool/{name}</small></td><td><span data-slot="limit_rest">60</span>/min</td><td><span data-slot="limit_rest_key">120</span>/min</td></tr>`,
 		`<tr><td>Live tools<small>REST &#43; MCP</small></td><td><span data-slot="limit_upstream">5</span>/min</td><td><span data-slot="limit_upstream_key">10</span>/min</td></tr>`,
 		`<tr><td>Fit search<small>GET /v1/fits/search</small></td><td><span data-slot="limit_fits">30</span>/min</td><td><span data-slot="limit_fits_key">240</span>/min</td></tr>`,
 		`<tr><td>Item search<small>GET /v1/items/search</small></td><td><span data-slot="limit_items">120</span>/min</td><td><span data-slot="limit_items_key">240</span>/min</td></tr>`,
-		`<tr><td>Requests per day<small>UTC day; docs pages do not count</small></td><td><span data-slot="limit_anon_day">200</span></td><td><span data-slot="limit_key_day">10,000</span></td></tr>`,
+		`<tr><td>Requests per day<small>UTC day; docs pages do not count</small></td><td><span data-slot="limit_anon_day">2,000</span></td><td><span data-slot="limit_key_day">10,000</span></td></tr>`,
 		"Over the daily cap: <code>429 daily_quota_exceeded</code>",
-		`<span data-slot="limit_anon_day">200</span>`,
+		`<span data-slot="limit_anon_day">2,000</span>`,
 		`<span data-slot="limit_key_day">10,000</span>`,
 		"including the daily trial count",
 		"Free-text fit search (<code>q</code> on <code>/v1/fits/search</code>) needs a key too",
@@ -718,14 +718,14 @@ func TestPortal_TrialAccessCopyOnAKeyedService(t *testing.T) {
 
 	access := do(api, http.MethodGet, "/docs/access", "").Body.String()
 	require.Contains(t, access, `<th scope="col" class="num">Without a key (trial)</th><th scope="col" class="num">With a key</th>`)
-	for _, pair := range [][2]string{{"20", "120"}, {"10", "60"}, {"30", "240"}, {"5", "10"}} {
+	for _, pair := range [][2]string{{"60", "120"}, {"60", "120"}, {"30", "240"}, {"5", "10"}} {
 		require.Contains(t, access, `<td class="num">`+pair[0]+` per minute</td><td class="num">`+pair[1]+` per minute</td>`)
 	}
-	require.Contains(t, access, `<td>Per day</td><td class="num">200 requests per client (UTC day; docs pages do not count)</td><td class="num">10,000 per key</td>`)
+	require.Contains(t, access, `<td>Per day</td><td class="num">2,000 requests per client (UTC day; docs pages do not count)</td><td class="num">10,000 per key</td>`)
 	require.Contains(t, access, "The keyed tool <code>analyze_battle</code>, free-text fit search")
 
 	rest := do(api, http.MethodGet, "/docs/rest", "").Body.String()
-	require.Contains(t, rest, `<td class="num">10 / 60</td>`)
+	require.Contains(t, rest, `<td class="num">60 / 120</td>`)
 	require.Contains(t, rest, `<td class="num">30 / 240</td>`)
 
 	terms := do(api, http.MethodGet, "/docs/terms", "").Body.String()

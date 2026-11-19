@@ -332,14 +332,14 @@ func TestRangeMCP_NoPublicURLNoKeyHint(t *testing.T) {
 // outside the ranges and a caller with a key keep the HTTP 429 with the REST body.
 func TestRangeMCP_OtherCallersAndRoutesKeepTheHTTP429(t *testing.T) {
 	api, _, _ := fullAddress(t, dataapi.DefaultAnonDailyCap, rangeTierURL)
-	spendOK(t, api, "192.0.2.10", 20)
+	spendOK(t, api, "192.0.2.10", 60)
 	requireAddressRefusal(t, postMCP(t, api, rpc("1", "tools/call", jumpsCall), fromIP("192.0.2.10")...), "outside the ranges")
 	key := []string{"X-API-Key", keyAlpha}
 	for i := range 120 {
 		require.Equal(t, http.StatusOK, mcpFrom(t, api, "160.79.104.200", key...).Code, "keyed request %d", i+1)
 	}
 	requireAddressRefusal(t, postMCP(t, api, rpc("1", "tools/call", jumpsCall), append(fromIP("160.79.104.200"), key...)...), "a key in the ranges")
-	for i := range 10 {
+	for i := range 60 {
 		rec := do(api, http.MethodPost, "/v1/tool/get_jumps_between", `{}`, fromIP("160.79.104.201")...)
 		require.NotEqual(t, http.StatusTooManyRequests, rec.Code, "REST call %d: %s", i+1, rec.Body.String())
 	}

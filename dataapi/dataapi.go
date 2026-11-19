@@ -188,8 +188,8 @@ func DefaultLimits() Limits {
 		FitStats:    Rate{Max: 60, Window: time.Minute},                // EFT parse + Gofa resolver
 		FitSuggest:  Rate{Max: 60, Window: time.Minute},                // RAG scroll + SDE pool
 		ItemsSearch: Rate{Max: 120, Window: time.Minute},               // one indexed SDE query
-		Tool:        Rate{Max: 10, KeyedMax: 60, Window: time.Minute},  // raw tools, internet-facing only
-		MCP:         Rate{Max: 20, KeyedMax: 120, Window: time.Minute}, // handshake (3 requests) + tool calls
+		Tool:        Rate{Max: 60, KeyedMax: 120, Window: time.Minute}, // raw tools, internet-facing only
+		MCP:         Rate{Max: 60, KeyedMax: 120, Window: time.Minute}, // handshake (3 requests) + tool calls
 		Docs:        Rate{Max: 60, Window: time.Minute},                // static bytes, but anonymous
 		// Live upstream reads (ESI, EvE-Scout or zKillboard) share one per-caller budget across all live tools,
 		// and ESI's error budget is shared by the whole project, so each caller gets a fraction

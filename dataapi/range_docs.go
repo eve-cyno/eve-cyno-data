@@ -20,7 +20,11 @@ func rangeViewOf(s Surface) rangeView {
 		"they count live-tool calls made over MCP and over REST together. ",
 		p, anthropicIPsURL, r.MCP.Max, r.MCPCeiling.Max, r.Upstream.Max, r.UpstreamCeiling.Max)
 	if s.ToolAPI == ToolAPIPublic {
-		limits += fmt.Sprintf("The route limits above do not change for REST: REST tool calls (POST %s/tool/{name}) from those addresses stay at %d per minute per address, not the %d of the connector route, and a REST call to a live tool also counts against the live numbers above, including the shared one. ", p, s.Limits.Tool.Max, r.MCP.Max)
+		same := fmt.Sprintf("not the %d of the connector route", r.MCP.Max)
+		if s.Limits.Tool.Max == r.MCP.Max {
+			same = "the same as the connector route"
+		}
+		limits += fmt.Sprintf("The route limits above do not change for REST: REST tool calls (POST %s/tool/{name}) from those addresses stay at %d per minute per address, %s, and a REST call to a live tool also counts against the live numbers above, including the shared one. ", p, s.Limits.Tool.Max, same)
 	}
 	if c := thousands(s.rangeDailyCap()); c != "" && s.AnonDailyCap > 0 {
 		limits += fmt.Sprintf("Keyless connector calls from those addresses have %s requests a day per address (UTC day, all counted routes, no daily ceiling shared by the whole range); other keyless callers keep the daily limit stated above. ", c)

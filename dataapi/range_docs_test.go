@@ -54,8 +54,8 @@ func TestDocs_RangeRefusalAndRESTWording(t *testing.T) {
 	for _, p := range []string{"/docs/access", "/docs/mcp"} {
 		body := page(t, on, p)
 		require.Contains(t, body, "REST tool calls", p)
-		require.Contains(t, body, "10 per minute per address", p)
-		require.Contains(t, body, "not the 60 of the connector route", p)
+		require.Contains(t, body, "60 per minute per address, the same as the connector route,", p)
+		require.NotContains(t, body, "not the 60 of the connector route", p)
 		require.Contains(t, body, "count live-tool calls made over MCP and over REST together", p)
 		require.Contains(t, body, "including the shared one", p)
 		require.NotContains(t, body, "MCP calls only", p)
@@ -99,7 +99,7 @@ func TestDocs_RangeParagraphsAreCopyOnly(t *testing.T) {
 		require.Contains(t, body, "Refusals of these callers on the connector route /v1/mcp come as JSON-RPC", p)
 		require.Contains(t, body, "a tools/call gets a tool result with isError true", p)
 		for _, markup := range []string{
-			`<a href="https://platform.claude.com/docs/en/api/ip-addresses"`, "<b>60 requests", "<b>300", "<b>15 calls", "<b>30 per minute",
+			`<a href="https://platform.claude.com/docs/en/api/ip-addresses"`, "<b>60 requests per minute</b> per address", "<b>300", "<b>15 calls", "<b>30 per minute",
 			"<code>/v1/mcp</code> from Anthropic", "<code>tools/call</code>", "<code>isError</code>", "<code>-32000</code>", "<code>Retry-After</code> accompanies",
 		} {
 			require.NotContains(t, body, markup, p)

@@ -181,7 +181,7 @@
     <dl class="facts">
       <dt>Call</dt><dd><code>POST /v1/tool/get_fits</code> · MCP tool <code>get_fits</code></dd>
       <dt>Access</dt><dd><b>public.</b> No key needed.</dd>
-      <dt>Rate limit</dt><dd>10/min over REST (60 with a key), 20/min over MCP (120 with a key)</dd>
+      <dt>Rate limit</dt><dd>60/min over REST (120 with a key), 60/min over MCP (120 with a key)</dd>
       <dt>Typed result</dt><dd><code>CommunityFits</code> in <code>result.data</code> (MCP: <code>structuredContent</code>)</dd>
       <dt>Sources</dt><dd>EVE Workbench, Abysstracker, gustavmannfred (abyss fits), caldarijoans (abyss fits), zKillboard</dd>
     </dl>
@@ -314,7 +314,7 @@ console.log((<span class="tk-kw">await</span> r.json()).result.text);</code></pr
       <tbody>
         <tr><td class="num">200</td><td>A call can still end text-only: an unknown id or an input that does not parse leaves <code>result.data</code> <code>null</code>, and <code>result.text</code> says why.</td></tr>
         <tr><td class="num">413</td><td><code>payload_too_large</code>: the body is over 64 KiB.</td></tr>
-        <tr><td class="num">429</td><td><code>rate_limited</code>: over 10 calls per minute without a key (60 with one). Wait for <code>Retry-After</code>.</td></tr>
+        <tr><td class="num">429</td><td><code>rate_limited</code>: over 60 calls per minute without a key (120 with one). Wait for <code>Retry-After</code>.</td></tr>
       </tbody>
     </table></div>
     <p>Every other code is on <a href="/docs/rest#rest-errors">REST &amp; OpenAPI · Errors</a>.</p>

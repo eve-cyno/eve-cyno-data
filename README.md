@@ -25,7 +25,7 @@ Everything is one tool registry (`catalog`) published three ways, so the descrip
 | MCP | stdio: `cmd/mcp`; streamable HTTP: `POST /v1/mcp` of `cmd/dataapi` | stateless, JSON responses |
 | `llms.txt` | [`llms.txt`](llms.txt), [`llms-full.txt`](llms-full.txt); served at `/llms.txt`, `/llms-full.txt` | the same information in prose |
 
-A hosted instance runs at `https://data.eve-cyno.dev` (anyone can try the public tools without a key, on trial limits: a few requests a minute and 200 a day per client; a free API
+A hosted instance runs at `https://data.eve-cyno.dev` (anyone can try the public tools without a key, on trial limits: 60 tool calls and 60 MCP requests a minute and 2,000 requests a day per client; a free API
 key is for real use, with higher limits, the keyed tool and free-text fit search; `appraise_items` needs no key (an estimate from ESI average prices) and takes your own `X-Janice-Key` for a Janice appraisal). Its portal at
 [`https://data.eve-cyno.dev/`](https://data.eve-cyno.dev/) (JSON index with `Accept: application/json`) links the developer docs under
 [`/docs/`](https://data.eve-cyno.dev/docs/): getting started, the Claude Code plugin, MCP, REST, one page per tool (32 public,
@@ -205,8 +205,8 @@ The numbers:
 
 | Route | Without a key | With a key |
 |---|---|---|
-| `POST /v1/mcp` (an MCP session is a few requests plus one per tool call) | 20 | 120 |
-| `POST /v1/tool/{name}` | 10 | 60 |
+| `POST /v1/mcp` (an MCP session is a few requests plus one per tool call) | 60 | 120 |
+| `POST /v1/tool/{name}` | 60 | 120 |
 | `GET /v1/fits/search` | 30 | 240 |
 | the live upstream tools (`get_market_price`, `get_market_history`, `get_type_info`, `get_sovereignty`, `get_system_activity`, `get_thera_connections`, `get_recent_kills`, `get_lp_offers`, `plan_jump_route` only with `avoid_incursions` or `live_info`, and `get_production_chain` only with `system`), one shared budget, REST and MCP together, on top of the rows above | 5 (`DATAAPI_UPSTREAM_TOOL_LIMIT`) | 10 |
 | `GET /v1/items/search` | 120 | `DATAAPI_KEYED_LIMIT_FACTOR` times (default 2): 240 |
@@ -223,7 +223,7 @@ The keyed number of a route is `Rate.KeyedMax` in `dataapi.Limits` (`dataapi.Def
 one gets `DATAAPI_KEYED_LIMIT_FACTOR` times its limit. Daily caps, all in UTC days and answering `429 daily_quota_exceeded` with
 `Retry-After` set to the seconds until 00:00 UTC:
 
-- a client without a key: 200 requests a day (`DATAAPI_ANON_DAILY_CAP`, `0` = none), counted in memory per client IP (IPv6 per /64), never persisted
+- a client without a key: 2,000 requests a day (`DATAAPI_ANON_DAILY_CAP`, `0` = none), counted in memory per client IP (IPv6 per /64), never persisted
   or logged. The documentation pages, the portal assets, the published datasets and `/health` are not counted, so browsing the docs
   never spends the trial.
   The table is bounded (100,000 clients a day; beyond that new clients are served uncounted and a warning is logged once a day);

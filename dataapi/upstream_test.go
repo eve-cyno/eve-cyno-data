@@ -663,7 +663,7 @@ func TestRangeUpstream_NonLiveCallsAreNotCharged(t *testing.T) {
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 		require.NotContains(t, rec.Body.String(), "rate_limited")
 	}
-	// The address still has all 15 (5 REST: the tool route allows 10 a minute), and the
+	// The address still has all 15 (5 REST: the tool route allows 60 a minute), and the
 	// ranges all 30.
 	for i := range 15 {
 		var rec *httptest.ResponseRecorder

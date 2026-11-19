@@ -219,8 +219,8 @@ console.log((<span class="tk-kw">await</span> r.json()).result.text);</code></pr
     <div class="tbl"><table>
       <thead><tr><th scope="col">Route</th><th scope="col">What it does</th><th scope="col" class="num">Limit / min (trial / with a key)</th></tr></thead>
       <tbody>
-        <tr><td><code>POST /v1/tool/{name}</code></td><td>Run one tool; the body is its arguments.</td><td class="num">10 / 60</td></tr>
-        <tr><td><code>POST /v1/mcp</code></td><td>Streamable-HTTP MCP server.</td><td class="num">20 / 120</td></tr>
+        <tr><td><code>POST /v1/tool/{name}</code></td><td>Run one tool; the body is its arguments.</td><td class="num">60 / 120</td></tr>
+        <tr><td><code>POST /v1/mcp</code></td><td>Streamable-HTTP MCP server.</td><td class="num">60 / 120</td></tr>
         <tr><td><code>GET /v1/fits/search</code></td><td>Search community fits.</td><td class="num">30 / 240</td></tr>
         <tr><td><code>POST /v1/fits/detail</code></td><td>Describe a fit: slots, CPU / powergrid / calibration, ship class.</td><td class="num">60 / 120</td></tr>
         <tr><td><code>POST /v1/fit/stats</code></td><td>Compute fit statistics with the Gofa engine.</td><td class="num">60 / 120</td></tr>
@@ -255,7 +255,7 @@ console.log((<span class="tk-kw">await</span> r.json()).result.text);</code></pr
         <tr><td class="num">401</td><td><code>api_key_required</code>, <code>invalid_api_key</code></td></tr>
         <tr><td class="num">403</td><td><code>tool_disabled</code>, <code>key_not_permitted</code></td></tr>
         <tr><td class="num">413</td><td><code>payload_too_large</code>: 256 KiB on the fit routes, 64 KiB on the tool and MCP endpoints</td></tr>
-        <tr><td class="num">429</td><td><code>rate_limited</code>, with <code>Retry-After</code>; or <code>daily_quota_exceeded</code> over the daily cap (200 a day without a key, 10,000 per key), where <code>Retry-After</code> is the seconds until 00:00 UTC</td></tr>
+        <tr><td class="num">429</td><td><code>rate_limited</code>, with <code>Retry-After</code>; or <code>daily_quota_exceeded</code> over the daily cap (2,000 a day without a key, 10,000 per key), where <code>Retry-After</code> is the seconds until 00:00 UTC</td></tr>
         <tr><td class="num">503</td><td><code>upstream_busy</code>, with <code>Retry-After</code>; or <code>busy</code>, with Retry-After: 1: the route is at its concurrency cap. It is answered before authentication errors (503 before 401 for an invalid or revoked key) and is never charged against any limit or daily cap</td></tr>
       </tbody>
     </table></div>

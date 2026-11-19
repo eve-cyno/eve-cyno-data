@@ -168,13 +168,13 @@ func TestToolAPI_LoopbackRunsEveryTierWithoutKeys(t *testing.T) {
 
 // Public: 30 requests/min per client IP by default; a different client keeps its
 // own budget.
-func TestToolAPI_PublicRateLimitedPerClientIP60PerMinuteWithoutKeys(t *testing.T) {
-	// No Auth: nobody can get a key, so everyone gets the keyed budget (60/min, not the 10 of a trial).
+func TestToolAPI_PublicRateLimitedPerClientIP120PerMinuteWithoutKeys(t *testing.T) {
+	// No Auth: nobody can get a key, so everyone gets the keyed budget (120/min, not the 60 of a trial).
 	a := newAPI(t, dataapi.Config{Deps: emptyToolDeps(), ToolAPI: dataapi.ToolAPIPublic})
 	const addr = "198.51.100.12:2222"
-	for i := 0; i < 60; i++ {
+	for i := 0; i < 120; i++ {
 		rec := doFrom(a, addr, "POST", "/v1/tool/no_such_tool", `{}`)
-		require.Equal(t, http.StatusNotFound, rec.Code, "request %d is within the 60/min budget", i+1)
+		require.Equal(t, http.StatusNotFound, rec.Code, "request %d is within the 120/min budget", i+1)
 	}
 	requireError(t, doFrom(a, addr, "POST", "/v1/tool/no_such_tool", `{}`), http.StatusTooManyRequests, "rate_limited")
 	require.Equal(t, http.StatusNotFound, doFrom(a, "198.51.100.13:2222", "POST", "/v1/tool/no_such_tool", `{}`).Code)
@@ -191,7 +191,7 @@ func TestToolAPI_LoopbackIsNotRateLimited(t *testing.T) {
 // IPv4-mapped address shares the IPv4 bucket.
 func TestRateLimit_IPv6SharesOneBucketPerSlash64(t *testing.T) {
 	a := newAPI(t, dataapi.Config{Deps: emptyToolDeps(), ToolAPI: dataapi.ToolAPIPublic})
-	for i := 0; i < 60; i++ {
+	for i := 0; i < 120; i++ {
 		addr := "[2001:db8:1:2::" + strconv.Itoa(i+1) + "]:2222"
 		require.Equal(t, http.StatusNotFound, doFrom(a, addr, "POST", "/v1/tool/no_such_tool", `{}`).Code, "request %d", i+1)
 	}
@@ -201,7 +201,7 @@ func TestRateLimit_IPv6SharesOneBucketPerSlash64(t *testing.T) {
 
 func TestRateLimit_IPv4MappedSharesTheIPv4Bucket(t *testing.T) {
 	a := newAPI(t, dataapi.Config{Deps: emptyToolDeps(), ToolAPI: dataapi.ToolAPIPublic})
-	for i := 0; i < 60; i++ {
+	for i := 0; i < 120; i++ {
 		require.Equal(t, http.StatusNotFound, doFrom(a, "198.51.100.12:2222", "POST", "/v1/tool/no_such_tool", `{}`,
 			"CF-Connecting-IP", "198.51.100.12").Code)
 	}

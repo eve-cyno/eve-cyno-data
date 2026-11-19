@@ -188,7 +188,7 @@
     <p>The tools in each tier are listed in the <a href="/docs/tools">Tools reference</a>.</p>
 
     <h2 id="access-limits">Rate limits<a class="h-anchor" href="#access-limits" aria-label="Link to this section">#</a></h2>
-    <p>Per caller (per API key when one is sent, otherwise per client IP), sliding window. Without a key the API is for trying it out, so the limits are lower; a free API key raises them for daily use: see <a href="#access-keys">API keys</a>. A refused request is a <code>429</code> with <code>Retry-After</code>. An IPv6 client is counted per /64 network, not per address, for these limits and for the daily cap. A route at its concurrency cap answers 503 busy with Retry-After: 1 before authentication errors, so an invalid or revoked key gets 503 before 401; a 503 busy is never charged against any limit or daily cap. Without a key there is also a daily trial limit of 200 requests per client (UTC day; docs pages do not count): over it, <code>429 daily_quota_exceeded</code> with <code>Retry-After</code> set to the seconds until 00:00 UTC.</p>
+    <p>Per caller (per API key when one is sent, otherwise per client IP), sliding window. Without a key the API is for trying it out, so the limits are lower; a free API key raises them for daily use: see <a href="#access-keys">API keys</a>. A refused request is a <code>429</code> with <code>Retry-After</code>. An IPv6 client is counted per /64 network, not per address, for these limits and for the daily cap. A route at its concurrency cap answers 503 busy with Retry-After: 1 before authentication errors, so an invalid or revoked key gets 503 before 401; a 503 busy is never charged against any limit or daily cap. Without a key there is also a daily trial limit of 2,000 requests per client (UTC day; docs pages do not count): over it, <code>429 daily_quota_exceeded</code> with <code>Retry-After</code> set to the seconds until 00:00 UTC.</p>
     <div class="tbl"><table>
       <thead><tr><th scope="col">Route</th><th scope="col" class="num">Without a key (trial)</th><th scope="col" class="num">With a key</th></tr></thead>
       <tbody>
@@ -197,11 +197,11 @@
         <tr><td><code>POST /v1/fit/stats</code></td><td class="num">60 per minute</td><td class="num">120 per minute</td></tr>
         <tr><td><code>POST /v1/fit/suggest</code></td><td class="num">60 per minute</td><td class="num">120 per minute</td></tr>
         <tr><td><code>GET /v1/items/search</code></td><td class="num">120 per minute</td><td class="num">240 per minute</td></tr>
-        <tr><td><code>POST /v1/tool/{name}</code></td><td class="num">10 per minute</td><td class="num">60 per minute</td></tr>
-        <tr><td><code>POST /v1/mcp</code></td><td class="num">20 per minute</td><td class="num">120 per minute</td></tr>
+        <tr><td><code>POST /v1/tool/{name}</code></td><td class="num">60 per minute</td><td class="num">120 per minute</td></tr>
+        <tr><td><code>POST /v1/mcp</code></td><td class="num">60 per minute</td><td class="num">120 per minute</td></tr>
         <tr><td><code>index, docs, terms, llms*.txt, openapi.*</code></td><td class="num">60 per minute</td><td class="num">120 per minute</td></tr>
         <tr><td>Live tools, REST and MCP together</td><td class="num">5 per minute</td><td class="num">10 per minute</td></tr>
-        <tr><td>Per day</td><td class="num">200 requests per client (UTC day; docs pages do not count)</td><td class="num">10,000 per key</td></tr>
+        <tr><td>Per day</td><td class="num">2,000 requests per client (UTC day; docs pages do not count)</td><td class="num">10,000 per key</td></tr>
       </tbody>
     </table></div>
 
@@ -236,7 +236,7 @@
       <div class="code-head"><span class="code-label">Request header</span><button class="code-copy" type="button" data-copy aria-label="Copy"><svg class="ico" aria-hidden="true"><use href="#i-copy"/></svg><span data-copy-label>Copy</span></button></div>
 <pre><code>Authorization: Bearer ecd_...</code></pre>
     </div>
-    <aside class="callout" data-kind="warning"><svg class="ico" aria-hidden="true"><use href="#i-warn"/></svg><div><p class="callout-title">Over the daily cap</p><p>When a key has used its 10,000 requests for the UTC day (or, without a key, a client its 200 trial requests), the API answers <code>429 daily_quota_exceeded</code> with a <code>Retry-After</code> header: the number of seconds until 00:00 UTC, when the cap resets. The per-minute limits still answer <code>rate_limited</code>. Keep the secret private: anyone who has it can spend your quota.</p></div></aside>
+    <aside class="callout" data-kind="warning"><svg class="ico" aria-hidden="true"><use href="#i-warn"/></svg><div><p class="callout-title">Over the daily cap</p><p>When a key has used its 10,000 requests for the UTC day (or, without a key, a client its 2,000 trial requests), the API answers <code>429 daily_quota_exceeded</code> with a <code>Retry-After</code> header: the number of seconds until 00:00 UTC, when the cap resets. The per-minute limits still answer <code>rate_limited</code>. Keep the secret private: anyone who has it can spend your quota.</p></div></aside>
     <p>Questions about keys, or a key that does not work: the <a href="https://discord.gg/XZzkH38dt9">EVE-Cyno Discord</a>.</p>
 
 

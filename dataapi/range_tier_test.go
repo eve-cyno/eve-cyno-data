@@ -434,14 +434,14 @@ func TestRangeTier_KeyedCallerInRangeKeepsItsKeyBuckets(t *testing.T) {
 	requireCeilingRefusal(t, mcpFrom(t, api, rangeAddrs(6)[5]), "the 301st keyless request")
 }
 
-// Callers outside the ranges keep today's 20 a minute, are never refused by the ceiling, and
+// Callers outside the ranges keep today's 60 a minute, are never refused by the ceiling, and
 // never take a place in it.
 func TestRangeTier_OutsideTheRangeIsUnchanged(t *testing.T) {
 	api := rangeTierAPI(t, anthropicOutbound, nil, dataapi.DefaultAnonDailyCap, nil)
 	outside := []string{"192.0.2.10", "192.0.2.11", "192.0.2.12", "2001:db8::1", "2001:db8:0:1::1"}
 	for _, ip := range outside {
-		spendOK(t, api, ip, 20)
-		requireAddressRefusal(t, mcpFrom(t, api, ip), "the 21st request of "+ip)
+		spendOK(t, api, ip, 60)
+		requireAddressRefusal(t, mcpFrom(t, api, ip), "the 61st request of "+ip)
 	}
 	// The outside requests took nothing of the ceiling.
 	for _, ip := range rangeAddrs(5) {
@@ -449,18 +449,18 @@ func TestRangeTier_OutsideTheRangeIsUnchanged(t *testing.T) {
 	}
 	requireCeilingRefusal(t, mcpFrom(t, api, rangeAddrs(6)[5]), "the ceiling is full")
 	// A full ceiling refuses nobody outside the ranges.
-	spendOK(t, api, "192.0.2.50", 20)
+	spendOK(t, api, "192.0.2.50", 60)
 	requireAddressRefusal(t, mcpFrom(t, api, "192.0.2.50"), "its own limit, not the ceiling")
 }
 
 // Without ranges there is no tier: an address of the Anthropic ranges is an ordinary keyless
-// caller with 20 a minute.
+// caller with 60 a minute.
 func TestRangeTier_EmptyRangesIsUnchanged(t *testing.T) {
 	api := rangeTierAPI(t, "", nil, dataapi.DefaultAnonDailyCap, nil)
-	spendOK(t, api, "160.79.104.9", 20)
-	requireAddressRefusal(t, mcpFrom(t, api, "160.79.104.9"), "the 21st request")
+	spendOK(t, api, "160.79.104.9", 60)
+	requireAddressRefusal(t, mcpFrom(t, api, "160.79.104.9"), "the 61st request")
 	for _, ip := range rangeAddrs(20) {
-		spendOK(t, api, ip, 20) // 400 in all: no ceiling
+		spendOK(t, api, ip, 60) // 400 in all: no ceiling
 	}
 }
 

@@ -126,6 +126,14 @@ func TestHTTPHandler_AnonDailyCapForStatesTheCallersOwnNumber(t *testing.T) {
 
 func jsonUnmarshal(s string, v any) error { return json.Unmarshal([]byte(s), v) }
 
+// A range caller whose number equals everyone else's reads the plain per-client sentence, not
+// "(2,000 a day per client elsewhere)" next to 2,000.
+func TestKeylessText_EqualRangeAndElsewhereCapsAreStatedOnce(t *testing.T) {
+	got := keylessText(nil, 2000, 2000, true, "hint")
+	require.Contains(t, got, "trying it out: 2000 requests a day per client and lower per-minute limits;")
+	require.NotContains(t, got, "elsewhere")
+}
+
 func TestKeylessText_SingularAndPluralSubjects(t *testing.T) {
 	const head = " Without an API key this server is for trying it out: 200 requests a day per client and lower per-minute limits; "
 	one := keylessText([]string{"analyze_battle"}, 200, 0, false, "hint")

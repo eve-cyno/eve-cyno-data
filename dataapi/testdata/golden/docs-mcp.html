@@ -181,7 +181,7 @@
       <dt>Endpoint</dt><dd><code>https://data.example.test/v1/mcp</code></dd>
       <dt>Transport</dt><dd>Streamable HTTP, stateless, JSON responses. One JSON-RPC 2.0 message per POST; <code>GET</code> and <code>DELETE</code> answer 405.</dd>
       <dt>Auth</dt><dd>None to try the public tools (trial limits). Optional: <code>X-Janice-Key</code> for a Janice appraisal with <code>appraise_items</code>. A free API key for daily use and the keyed tool, sent as <code>Authorization: Bearer ecd_...</code> or <code>X-API-Key: ecd_...</code>. With Claude Code: add <code>--header "X-API-Key: ecd_…"</code> to the <code>claude mcp add</code> command.</dd>
-      <dt>Rate limit</dt><dd><b>20 requests per minute</b> and 200 a day per client without a key; 120 per minute and 10,000 a day with one</dd>
+      <dt>Rate limit</dt><dd><b>60 requests per minute</b> and 2,000 a day per client without a key; 120 per minute and 10,000 a day with one</dd>
     </dl>
 
     <h2 id="mcp-connect">Connect<a class="h-anchor" href="#mcp-connect" aria-label="Link to this section">#</a></h2>
@@ -294,7 +294,7 @@ https://data.example.test/v1/mcp
     </div>
 
     <h2 id="mcp-limits">Limits<a class="h-anchor" href="#mcp-limits" aria-label="Link to this section">#</a></h2>
-    <p>20 requests per minute and 200 a day per client without a key, or 120 per minute and 10,000 a day with an API key. A session is a handful of requests (the handshake is three) plus one per tool call. The live tools have one limit of their own, 5 calls per minute per caller without a key and 10 with one, shared with REST. Request bodies are capped at 64 KiB.</p>
+    <p>60 requests per minute and 2,000 a day per client without a key, or 120 per minute and 10,000 a day with an API key. A session is a handful of requests (the handshake is three) plus one per tool call. The live tools have one limit of their own, 5 calls per minute per caller without a key and 10 with one, shared with REST. Request bodies are capped at 64 KiB.</p>
 
     <nav class="pager" aria-label="Previous and next page">
       <a href="/docs/claude-code"><span class="pg-k"><svg class="ico" aria-hidden="true"><use href="#i-back"/></svg>Previous</span><span class="pg-t">Claude Code plugin</span></a>

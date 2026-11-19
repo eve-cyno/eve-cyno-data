@@ -39,8 +39,8 @@ func allowedBeforeRefusal(n int, call func() *httptest.ResponseRecorder) (allowe
 
 func TestDefaultLimits_CarryTheTrialAndKeyedNumbers(t *testing.T) {
 	l := dataapi.DefaultLimits()
-	require.Equal(t, dataapi.Rate{Max: 20, KeyedMax: 120, Window: time.Minute}, l.MCP)
-	require.Equal(t, dataapi.Rate{Max: 10, KeyedMax: 60, Window: time.Minute}, l.Tool)
+	require.Equal(t, dataapi.Rate{Max: 60, KeyedMax: 120, Window: time.Minute}, l.MCP)
+	require.Equal(t, dataapi.Rate{Max: 60, KeyedMax: 120, Window: time.Minute}, l.Tool)
 	require.Equal(t, dataapi.Rate{Max: 30, KeyedMax: 240, Window: time.Minute}, l.FitsSearch)
 	require.Equal(t, dataapi.Rate{Max: 5, KeyedMax: 10, Window: time.Minute}, l.UpstreamTool)
 	// every other route keeps today's numbers and the factor
@@ -54,7 +54,7 @@ func TestDefaultLimits_CarryTheTrialAndKeyedNumbers(t *testing.T) {
 func TestLimitsWithoutKeys_ServeEveryoneTheKeyedNumbers(t *testing.T) {
 	l := dataapi.DefaultLimits().WithoutKeys()
 	require.Equal(t, dataapi.Rate{Max: 120, Window: time.Minute}, l.MCP)
-	require.Equal(t, dataapi.Rate{Max: 60, Window: time.Minute}, l.Tool)
+	require.Equal(t, dataapi.Rate{Max: 120, Window: time.Minute}, l.Tool)
 	require.Equal(t, dataapi.Rate{Max: 240, Window: time.Minute}, l.FitsSearch)
 	require.Equal(t, dataapi.Rate{Max: 10, Window: time.Minute}, l.UpstreamTool)
 	require.Equal(t, dataapi.Rate{Max: 60, Window: time.Minute}, l.FitsDetail, "a route without a keyed figure is unchanged")
@@ -80,10 +80,10 @@ func TestTrialLimits_KeylessAndKeyedPerMinute(t *testing.T) {
 		call           func(api *dataapi.API, hdr ...string) *httptest.ResponseRecorder
 		wantStatusPass int
 	}{
-		{"mcp", 20, 120, func(api *dataapi.API, hdr ...string) *httptest.ResponseRecorder {
+		{"mcp", 60, 120, func(api *dataapi.API, hdr ...string) *httptest.ResponseRecorder {
 			return do(api, http.MethodPost, "/v1/mcp", `{"jsonrpc":"2.0","id":1,"method":"ping"}`, hdr...)
 		}, http.StatusOK},
-		{"tool", 10, 60, func(api *dataapi.API, hdr ...string) *httptest.ResponseRecorder {
+		{"tool", 60, 120, func(api *dataapi.API, hdr ...string) *httptest.ResponseRecorder {
 			return do(api, http.MethodPost, "/v1/tool/get_jumps_between", `{"from_system":"Jita","to_system":"Amarr"}`, hdr...)
 		}, http.StatusOK},
 		{"fits search", 30, 240, func(api *dataapi.API, hdr ...string) *httptest.ResponseRecorder {
@@ -147,8 +147,8 @@ func TestServiceWithoutKeys_ServesEveryoneTheFullNumbers(t *testing.T) {
 	tool := func() *httptest.ResponseRecorder {
 		return do(api, http.MethodPost, "/v1/tool/get_jumps_between", `{"from_system":"Jita","to_system":"Amarr"}`, fromIP("203.0.113.10")...)
 	}
-	allowed, _ = allowedBeforeRefusal(100, tool)
-	require.Equal(t, 60, allowed)
+	allowed, _ = allowedBeforeRefusal(200, tool)
+	require.Equal(t, 120, allowed)
 
 	search := func() *httptest.ResponseRecorder {
 		return do(api, http.MethodGet, "/v1/fits/search?q=armor+tank", "", fromIP("203.0.113.11")...)
@@ -354,9 +354,9 @@ func TestDocs_StateTrialAndKeyedNumbersAndTheKeyOnlySearch(t *testing.T) {
 	files, err := dataapi.GeneratedFiles()
 	require.NoError(t, err)
 	full := string(files["llms-full.txt"])
-	require.Contains(t, full, "Rate limit: 20 requests per minute per client IP without an API key, 120 per minute per API key with one.")
+	require.Contains(t, full, "Rate limit: 60 requests per minute per client IP without an API key, 120 per minute per API key with one.")
 	require.Contains(t, full, "Rate limit: 30 requests per minute per client IP without an API key, 240 per minute per API key with one.")
-	require.Contains(t, full, "200 requests per UTC day per client")
+	require.Contains(t, full, "2000 requests per UTC day per client")
 	require.Contains(t, full, "Free-text search (`q`) needs an API key")
 	require.Contains(t, string(files["api/openapi.yaml"]), "Free-text search (`q`) needs an API key")
 
@@ -373,12 +373,12 @@ func TestDocs_StateTrialAndKeyedNumbersAndTheKeyOnlySearch(t *testing.T) {
 func TestPortal_AccessPageStatesTheTrialAndTheKeyedLimits(t *testing.T) {
 	api := newAPI(t, publicConfig())
 	access := do(api, http.MethodGet, "/docs/access", "").Body.String()
-	require.Contains(t, access, "daily trial limit of 200 requests per client")
-	require.Contains(t, access, "20 per minute</td><td class=\"num\">120 per minute")
+	require.Contains(t, access, "daily trial limit of 2,000 requests per client")
+	require.Contains(t, access, "60 per minute</td><td class=\"num\">120 per minute")
 	require.Contains(t, access, "5 calls per minute per caller without a key and 10 with one")
 
 	idx := do(api, http.MethodGet, "/", "", "Accept", "application/json").Body.String()
-	require.Regexp(t, `"max": 20,\s+"max_with_key": 120`, idx)
+	require.Regexp(t, `"max": 60,\s+"max_with_key": 120`, idx)
 }
 
 // Two addresses of one IPv6 /64 are one client for the daily cap; another /64 and an IPv4 are not.
@@ -443,8 +443,8 @@ func TestAnonDailyCap_RangeAddressGetsTwoThousand(t *testing.T) {
 	})
 	require.Equal(t, "2000", dailyCapOf(t, api, fromIP("160.79.104.9")...))
 	require.Equal(t, "2000", dailyCapOf(t, api, fromIP("153.61.223.250")...))
-	require.Equal(t, "200", dailyCapOf(t, api, fromIP("192.0.2.9")...), "outside the ranges: the ordinary cap")
-	require.Equal(t, "200", dailyCapOf(t, api, fromIP("2001:db8::9")...))
+	require.Equal(t, "2000", dailyCapOf(t, api, fromIP("192.0.2.9")...), "outside the ranges: the ordinary cap")
+	require.Equal(t, "2000", dailyCapOf(t, api, fromIP("2001:db8::9")...))
 
 	api = rangeCapAPI(t, 3, 5, anthropicOutbound, c)
 	n, _ := countedUntilRefused(t, api, fromIP("160.79.104.9")...)
@@ -482,6 +482,16 @@ func TestAnonDailyCap_RangeRefusalStatesItsOwnCap(t *testing.T) {
 		"without an API key the API allows 5 requests a day per address for calls from Anthropic's ranges (3 a day per client elsewhere); a free key raises this: https://data.example/docs/access#access-keys")
 	_, rec = countedUntilRefused(t, api, fromIP("192.0.2.9")...)
 	require.Contains(t, rec.Body.String(), "without an API key the API allows 3 requests a day per client; a free key raises this")
+}
+
+// With the same number inside and outside the ranges the refusal says it once, not "(N a day per
+// client elsewhere)" next to N.
+func TestAnonDailyCap_RefusalWithEqualCapsStatesItOnce(t *testing.T) {
+	c := &clock{t: time.Date(2026, 11, 12, 22, 30, 0, 0, time.UTC)}
+	api := rangeCapAPI(t, 4, 4, anthropicOutbound, c)
+	_, rec := countedUntilRefused(t, api, fromIP("153.61.208.9")...)
+	require.Contains(t, rec.Body.String(), "without an API key the API allows 4 requests a day per client; a free key raises this")
+	require.NotContains(t, rec.Body.String(), "elsewhere")
 }
 
 // Each range address has its own count; a caller with a key is never counted, inside the ranges
@@ -610,13 +620,26 @@ func TestMCPInstructions_RangeCallerSeesItsDailyNumber(t *testing.T) {
 	init := `{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"t","version":"0"}}}`
 	rec := postMCP(t, api, init, fromIP("160.79.104.9")...)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	require.Contains(t, rec.Body.String(), "Without an API key this server is for trying it out: 2,000 requests a day per address for calls from Anthropic's ranges (200 a day per client elsewhere) and lower per-minute limits;")
+	require.Contains(t, rec.Body.String(), "Without an API key this server is for trying it out: 2000 requests a day per client and lower per-minute limits;")
 
 	rec = postMCP(t, api, init, fromIP("192.0.2.9")...)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	require.Contains(t, rec.Body.String(), "Without an API key this server is for trying it out: 200 requests a day per client and lower per-minute limits;")
+	require.Contains(t, rec.Body.String(), "Without an API key this server is for trying it out: 2000 requests a day per client and lower per-minute limits;")
 
 	rec = postMCP(t, api, init, append(fromIP("160.79.104.9"), "X-API-Key", trialKey)...)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	require.NotContains(t, rec.Body.String(), "trying it out")
+}
+
+// The keyless numbers are an owner decision (2026-11-19): a fit question takes 2-6 tool calls,
+// so keyless gets 60 tool and MCP calls a minute and 2,000 requests a day, and a key doubles
+// the minute figures. A silent change of any of them fails here.
+func TestKeylessDefaults_AreTheDecidedNumbers(t *testing.T) {
+	l := dataapi.DefaultLimits()
+	require.Equal(t, 60, l.Tool.Max)
+	require.Equal(t, 120, l.Tool.KeyedMax)
+	require.Equal(t, 60, l.MCP.Max)
+	require.Equal(t, 120, l.MCP.KeyedMax)
+	require.Equal(t, 2000, dataapi.DefaultAnonDailyCap)
+	require.Equal(t, 2000, l.Range.DailyCap, "a range caller's cap is the larger of both: equal now")
 }

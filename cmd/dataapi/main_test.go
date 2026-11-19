@@ -485,7 +485,7 @@ func TestNewHandler_LogSaltKeysTheCallerToken(t *testing.T) {
 func TestAnonDailyCap(t *testing.T) {
 	c, err := anonDailyCap(env(nil))
 	require.NoError(t, err)
-	require.Equal(t, 200, c, "default: 200 requests a day per client without a key")
+	require.Equal(t, 2000, c, "default: 2000 requests a day per client without a key")
 	c, err = anonDailyCap(env(map[string]string{"DATAAPI_ANON_DAILY_CAP": "0"}))
 	require.NoError(t, err)
 	require.Equal(t, 0, c, "0 turns the cap off")
@@ -809,7 +809,7 @@ func TestNewHandler_RangeCallersGetTheLiveRangeBudget(t *testing.T) {
 		h.ServeHTTP(rec, req)
 		return rec
 	}
-	// The tool route allows 10 a minute per address: more than the plain live budget.
+	// The tool route allows 60 a minute per address: more than the plain live budget.
 	for i := range 10 {
 		require.Equal(t, http.StatusOK, live("160.79.104.9").Code, "range call %d", i+1)
 	}

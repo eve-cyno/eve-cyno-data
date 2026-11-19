@@ -11,7 +11,7 @@ import (
 
 // DefaultAnonDailyCap is the number of requests per UTC day a client without an API key gets
 // on the public service (used by PublicSurface and cmd/dataapi).
-const DefaultAnonDailyCap = 200
+const DefaultAnonDailyCap = 2000
 
 // maxAnonClients bounds the memory of the anonymous daily counter: at most this many
 // distinct clients are counted per UTC day. Past it new clients are served uncounted (the
@@ -102,11 +102,12 @@ func (q *anonQuota) clients() int {
 // Retry-After in whole seconds and the way out: a free key.
 func writeAnonQuotaRefusal(w http.ResponseWriter, r *http.Request, retry time.Duration, cap int, publicURL string) {
 	msg := fmt.Sprintf("without an API key the API allows %d requests a day per client; a free key raises this", cap)
-	if rangeCaller(r) {
+	m, hasMeta := r.Context().Value(metaKey{}).(meta)
+	if rangeCaller(r) && !(hasMeta && m.anonElse == cap) {
 		// The number counts per address and holds for calls from Anthropic's ranges; say so, and
-		// what everyone else has, so the text is true for the caller who reads it.
+		// what everyone else has (said once when both are the same number), so the text is true for the caller who reads it.
 		msg = fmt.Sprintf("without an API key the API allows %s requests a day per address for calls from Anthropic's ranges", thousands(cap))
-		if m, ok := r.Context().Value(metaKey{}).(meta); ok && m.anonElse > 0 {
+		if hasMeta && m.anonElse > 0 {
 			msg += fmt.Sprintf(" (%s a day per client elsewhere)", thousands(m.anonElse))
 		}
 		msg += "; a free key raises this"
