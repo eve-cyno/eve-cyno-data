@@ -1,4 +1,4 @@
-/* source: claude-design-artifact version 1795120048-ad94 project/eve-cyno/project/data-docs.css sha256 21b7c63845eb6b622fd829e65d932813fa020c1750d0662f54f56ef3ed817e95 */
+/* source: claude-design-artifact version 1795120449-de66 project/eve-cyno/project/data-docs.css sha256 71368364066346630e1b274482b17233c8046e203fac3c611a5f7a22f52cfef5 */
 /* ==========================================================================
    EVE-CYNO DATA · data-docs.css  (restyle round, 2026-11-19)
    Docs layer. Loads after site-base.css and brand/wordmark-motion.css, and replaces
@@ -181,6 +181,9 @@ kbd { font-family: var(--f-mono); }
 .tbl td:first-child { color: var(--c-fg); }
 .tbl td code { font-size: .8125rem; color: var(--mode-text); overflow-wrap: break-word; }
 .tbl .num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; color: var(--c-fg); }
+/* Rate-limit style tables (3 columns): route tokens never break mid-token, the number cells wrap so all columns fit the content column at 1440 */
+.tbl td:first-child code { overflow-wrap: normal; }
+.tbl td.num { white-space: normal; min-width: 8.5em; }
 
 /* ============ TOOL ROWS (docs index) ============ */
 .tool-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(var(--cols, 1), minmax(0, 1fr)); gap: 1px; background: var(--c-line); border: 1px solid var(--c-line); border-radius: var(--radius); overflow: hidden; }
