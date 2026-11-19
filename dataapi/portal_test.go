@@ -329,7 +329,7 @@ func TestPortal_RendersTheCatalogAndLimits(t *testing.T) {
 	require.Contains(t, attribution, "https://www.fuzzwork.co.uk/dump/")
 	terms := do(api, http.MethodGet, "/docs/terms", "").Body.String()
 	require.Contains(t, terms, `/terms`)
-	require.Contains(t, terms, "2026-11-12", "the date comes from terms.md")
+	require.Contains(t, terms, "2026-11-20", "the date comes from terms.md")
 }
 
 // The live copy follows the kind of live data a tool reads: every call live ESI, every call
@@ -592,11 +592,19 @@ func TestPortal_LimiterCoversPagesNotAssets(t *testing.T) {
 	}
 }
 
-// The terms say what an API key stores and that an account is needed only for a key.
+// The terms say what an API key and an account-page session store, that an account is needed only for a key, made
+// on the account page or in Discord, that only the account page sets cookies, and how an account is deleted.
 func TestTerms_DescribeKeyData(t *testing.T) {
 	md := do(portalAPI(t), http.MethodGet, "/terms.md", "").Body.String()
-	require.Contains(t, md, "Last updated: 2026-11-12")
-	require.Contains(t, md, "The data API sets no cookies and runs no analytics. An account is needed only to create an API key")
+	require.Contains(t, md, "Last updated: 2026-11-20")
+	require.Contains(t, md, "The data API runs no analytics and sets cookies only on its account page, data.eve-cyno.dev/account")
+	require.Contains(t, md, "An account is needed only to create an API key: sign in with EVE Online on data.eve-cyno.dev/account, or run /apikey in our Discord server.")
+	require.Contains(t, md, "with the EVE character id, its owner hash and the character name, a hash of the session cookie (never the cookie itself)")
+	require.Contains(t, md, "You can delete your account with Delete the account on data.eve-cyno.dev/account")
+	require.Contains(t, md, "an account with a Discord login is deleted only in Settings on ai.eve-cyno.dev")
+	require.Contains(t, md, "On ai.eve-cyno.dev, anonymous visitors are not signed in and get no cookie.")
+	require.NotContains(t, md, "sets no cookies")
+	require.NotContains(t, md, "or Discord on ai.eve-cyno.dev")
 	require.Contains(t, md, "a hash of the key (never the key)")
 	require.NotContains(t, md, "no accounts")
 	require.NotContains(t, md, "(or your API key id) is held in memory")
