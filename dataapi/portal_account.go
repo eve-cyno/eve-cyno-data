@@ -36,7 +36,9 @@ type accountSite struct {
 	// url, prefix and selfServe feed the page footer (footer-home in base.gohtml).
 	url, prefix string
 	selfServe   bool
-	now         func() time.Time
+	// assets is the versioned asset prefix of the pages (/assets/<version>), the one the docs and home pages use.
+	assets string
+	now    func() time.Time
 }
 
 func newAccountSite(store AccountStore, cfg evesso.Config, s Surface, now func() time.Time) (*accountSite, error) {
@@ -49,13 +51,17 @@ func newAccountSite(store AccountStore, cfg evesso.Config, s Surface, now func()
 	if err != nil {
 		return nil, fmt.Errorf("parse account templates: %w", err)
 	}
+	_, ver, err := loadPortalAssets()
+	if err != nil {
+		return nil, err
+	}
 	if now == nil {
 		now = time.Now
 	}
 	return &accountSite{
 		store: store, sso: c, states: newUsedStates(now, usedStatesMax), exchanges: make(chan struct{}, exchangeSlots),
 		cop: http.NewCrossOriginProtection(), tmpl: t,
-		url: s.PublicURL, prefix: s.prefix(), selfServe: s.SelfServe, now: now,
+		url: s.PublicURL, prefix: s.prefix(), selfServe: s.SelfServe, assets: "/assets/" + ver, now: now,
 	}, nil
 }
 
@@ -128,6 +134,8 @@ type accountView struct {
 	// URL, Prefix and SelfServe are read by footer-home (base.gohtml).
 	URL, Prefix string
 	SelfServe   bool
+	// Title, Description and Assets feed head-home and the asset links (render sets them).
+	Title, Description, Assets string
 
 	SignedIn bool
 	Name     string
@@ -151,10 +159,20 @@ func writeAccountHeaders(w http.ResponseWriter) {
 	h.Set("X-Content-Type-Options", "nosniff")
 	h.Set("Referrer-Policy", "no-referrer")
 	h.Set("Cache-Control", cacheNone)
+	// The account pages stay out of search indexes (a header: the shared head partial has no robots meta).
+	h.Set("X-Robots-Tag", "noindex")
 }
 
 func (s *accountSite) render(w http.ResponseWriter, r *http.Request, status int, v accountView) {
-	v.URL, v.Prefix, v.SelfServe = s.url, s.prefix, s.selfServe
+	v.URL, v.Prefix, v.SelfServe, v.Assets = s.url, s.prefix, s.selfServe, s.assets
+	v.Title = "EVE-CYNO DATA · Sign in"
+	if v.SignedIn {
+		v.Title = "EVE-CYNO DATA · Your account"
+	}
+	v.Description = "Sign in with EVE Online to make and manage your free EVE-CYNO DATA API keys."
+	if v.Limits == (PortalLimits{}) {
+		v.Limits = s.store.Limits()
+	}
 	var buf bytes.Buffer
 	if err := s.tmpl.ExecuteTemplate(&buf, "account", v); err != nil {
 		logFrom(r.Context()).Error("portal_render_failed", "err", err)

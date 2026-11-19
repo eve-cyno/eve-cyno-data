@@ -1,4 +1,4 @@
-/* source: claude-design-artifact version 1794618529-a236 project/eve-cyno/project/data-home.css sha256 097e5bdec13332b6e4f0f6083185807a2999544b7da9cf4f180d8d6b300a9ba2 */
+/* source: claude-design-artifact version 1795128723-c997 project/eve-cyno/project/data-home.css sha256 afa1c13f6fbb7e2a1a0b225831fcd1d4ab0275ea188eaf922b8c860ec29e164f */
 /* ---- data page (round 2: every live section is back) ---- */
 :root { --c-shadow: rgba(0,0,0,.55); --cat-game: var(--c-ice); --cat-community: var(--c-green); --cat-tool: var(--c-red); --cat-oss: var(--c-blue-text); }
 body { --mode: var(--c-green); --mode-text: var(--c-green); }
@@ -182,3 +182,33 @@ body { --mode: var(--c-green); --mode-text: var(--c-green); }
   .door + .door { padding-left: 0; border-left: 0; border-top: 1px solid var(--c-line-soft); }
 }
 
+
+/* ---- account pages (R4.13, 2026-11-19): sign-in, key list, secret shown once, notices and errors. Reuses .slab .btn .chip .limits .cmd .note .tlink. ---- */
+.sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.acct-hero { padding-block: clamp(32px, 5vw, 64px) clamp(16px, 2vw, 24px); }
+.acct-body { padding-block: clamp(16px, 2vw, 24px) clamp(48px, 7vw, 96px); }
+.acct-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
+.acct-grid > * { min-width: 0; }
+.acct-list { margin: 0; padding-left: 1.1em; display: flex; flex-direction: column; gap: 6px; color: var(--c-fg-muted); font-size: var(--t-small); }
+.acct-banner { margin: 0 0 16px; padding: 12px 16px; border: 1px solid color-mix(in srgb, var(--c-ice) 45%, var(--c-line)); border-left-width: 3px; background: var(--c-void-2); color: var(--c-fg); font-size: var(--t-small); line-height: 1.5; }
+.acct-banner.bad { border-color: color-mix(in srgb, var(--c-bad) 55%, var(--c-line)); color: var(--c-bad-text); }
+.acct-sso { display: inline-block; align-self: flex-start; line-height: 0; border-radius: var(--radius); }
+.acct-sso img { display: block; width: 270px; max-width: 100%; height: auto; }
+.acct-sso:hover { box-shadow: 0 0 16px var(--mode-glow); }
+.acct-note { font-size: var(--t-small); color: var(--c-fg-muted); max-width: 38em; }
+.acct-empty { padding: 18px; border: 1px dashed var(--c-line-ctl); color: var(--c-fg-muted); font-size: var(--t-small); }
+.acct-keys td:nth-child(2) code { font-size: .8125rem; color: var(--c-fg-muted); }
+.acct-keys form { margin: 0; }
+.acct-create { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; }
+.fld { display: flex; flex-direction: column; gap: 6px; flex: 1 1 260px; min-width: 0; }
+.fld input[type="text"] { width: 100%; min-height: 44px; padding: 10px 12px; background: var(--c-void); border: 1px solid var(--c-line-ctl); border-radius: var(--radius); color: var(--c-fg); font-family: var(--f-mono); font-size: .875rem; }
+.fld input::placeholder { color: var(--c-fg-dim); }
+.btn.danger { border-color: color-mix(in srgb, var(--c-bad) 60%, var(--c-line-ctl)); color: var(--c-bad-text); }
+.btn.danger:hover { border-color: var(--c-bad); color: var(--c-bad-text); box-shadow: 0 0 18px color-mix(in srgb, var(--c-bad) 30%, transparent); }
+.acct-secret { border: 1px solid var(--c-warn); background: linear-gradient(120deg, color-mix(in srgb, var(--c-warn) 9%, transparent), transparent 60%), var(--c-void-2); padding: clamp(18px, 2.4vw, 28px); display: flex; flex-direction: column; gap: 14px; }
+.acct-secret .cmd code { white-space: nowrap; }
+.acct-danger { border-top: 1px solid var(--c-line); padding-top: 24px; display: flex; flex-direction: column; gap: 14px; max-width: 38em; }
+.acct-danger form { display: flex; flex-direction: column; gap: 14px; align-items: flex-start; }
+.acct-check { display: flex; gap: 10px; align-items: flex-start; font-size: var(--t-small); color: var(--c-fg-muted); }
+.acct-check input { width: 18px; height: 18px; margin-top: 2px; accent-color: var(--c-bad); flex: none; }
+@media (max-width: 860px) { .acct-grid { grid-template-columns: 1fr; } }

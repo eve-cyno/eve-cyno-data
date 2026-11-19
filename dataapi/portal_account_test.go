@@ -29,7 +29,7 @@ import (
 )
 
 // The data portal's EVE sign-in, end to end: the real key store and the fake EVE SSO (ssotest), a browser played by
-// a cookie map. The pages are Phase 3 placeholders; the tests read their data-* hooks, never their wording.
+// a cookie map. The tests read the pages' data-* hooks, never their wording.
 
 const (
 	acctClientID = "0123456789abcdef0123456789abcdef"
@@ -963,7 +963,11 @@ func TestAccount_CSPAllowsSelfForms(t *testing.T) {
 	f.signIn(t, b)
 	in := b.do(http.MethodGet, "/account", nil)
 	require.Equal(t, out.Header().Get("Content-Security-Policy"), in.Header().Get("Content-Security-Policy"))
-	require.NotContains(t, in.Body.String(), "<script", "the placeholder pages run no script")
+	for _, tag := range scriptTagRE.FindAllString(in.Body.String(), -1) {
+		require.Contains(t, tag, ` src="/assets/`, "no inline script runs")
+	}
+	require.NotRegexp(t, handlerRE, in.Body.String(), "no inline event handler")
+	require.Equal(t, "noindex", in.Header().Get("X-Robots-Tag"))
 }
 
 func TestAccount_PagesCarryTheFCDisclaimer(t *testing.T) {

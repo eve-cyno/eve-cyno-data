@@ -1,66 +1,98 @@
 {{/*
-PLACEHOLDER (R4.13 Phase 3): unstyled, functional markup only, not a design. The Phase 4 port replaces this file
-with the design from Claude Design. Keep the form actions, the field names (csrf, form, name, confirm) and the data-*
-hooks: the tests read them, never the wording.
+The account page (data-account design, ported from the data-account board of the design system). One main for both
+states; the Go conditionals pick what each board shows. The hooks the tests read stay: main[data-account-state],
+data-notice, data-error, data-blocked, data-discord-linked, data-secret-box, data-secret, data-no-keys,
+data-delete-form, data-delete-reauth, data-delete-discord, and the form actions and field names (csrf, form, name,
+confirm).
 */}}
-{{define "account"}}<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="robots" content="noindex">
-<title>{{if .SignedIn}}Your account{{else}}Sign in{{end}} · EVE-CYNO DATA</title>
-</head>
+{{define "account"}}{{template "head-home" .}}
 <body>
-<!-- Placeholder page: unstyled until the design port. -->
-<main data-account-state="{{if .SignedIn}}signed-in{{else}}signed-out{{end}}">
-<p><a href="/">EVE-CYNO DATA</a></p>
-{{with .Notice}}<p role="status" data-notice="{{.Code}}">{{.Text}}</p>{{end}}
-{{with .Error}}<p role="alert" data-error="{{.Code}}">{{.Text}}</p>{{end}}
-{{if .SignedIn}}
-<h1>Your account</h1>
-<p>Signed in as {{.Name}} (EVE Online).</p>
-{{if .Blocked}}<p data-blocked>This account is blocked: its keys do not work and no new key can be made. Ask on Discord.</p>{{end}}
-{{if .DiscordLinked}}<p data-discord-linked>This account also signs in with Discord: <code>/apikey</code> in Discord manages the same keys.</p>{{end}}
-{{if .Secret}}<section data-secret-box>
-<h2>New key {{.SecretName}}</h2>
-<p>Copy the key now: it is shown only this once.</p>
-<p><code data-secret>{{.Secret}}</code> (id <code>{{.SecretID}}</code>)</p>
+<a class="skip" href="#main">Skip to content</a>
+<header class="nav"><div class="wrap nav-in">
+  <a class="brand" href="/" style="--cy-accent:#5fd0a8">
+{{template "wordmark-data" "cy-play"}}
+<script src="{{.Assets}}/wordmark-once.js"></script></a>
+</div></header>
+<div class="sitebar"><div class="wrap sitebar-in">
+  <nav class="site-links" aria-label="data.eve-cyno.dev">
+    <a href="/docs/">Docs</a>
+    <a href="/docs/claude-code">Claude Code</a>
+    <a href="/docs/tools">Tools</a>
+    <a href="/account" aria-current="page">Your keys</a>
+  </nav>
+  <a class="btn sm" href="https://discord.gg/XZzkH38dt9" style="margin-left:auto">Discord</a>
+</div></div>
+
+<main class="page" id="main" data-account-state="{{if .SignedIn}}signed-in{{else}}signed-out{{end}}">
+<div class="acct-main"><section class="acct-hero"><div class="wrap stack">
+  <p class="eyebrow"><span class="dia"></span>Free API keys</p>
+{{if .SignedIn}}  <h1 class="display">Your account</h1>
+  <div class="row"><p class="lead">Signed in as <strong>{{.Name}}</strong> (EVE Online).</p>
+  <form method="post" action="/auth/logout"><input type="hidden" name="csrf" value="{{.CSRF}}"><button class="btn sm" type="submit">Sign out</button></form></div>
+  {{if .DiscordLinked}}<p class="acct-note" data-discord-linked>This account also signs in with Discord: <code>/apikey</code> in the EVE-Cyno Discord manages the same keys.</p>{{end}}
+{{else}}  <h1 class="display">Sign in to make your keys.</h1>
+  <p class="lead">Sign in with your EVE Online character, then make, see and revoke your free keys here. The sign-in asks for no scopes: it only reads which character signed in.</p>
+{{end}}</div></section>
+<div class="wrap">{{with .Notice}}<p class="acct-banner" role="status" data-notice="{{.Code}}">{{.Text}}</p>{{end}}{{with .Error}}<p class="acct-banner bad" role="alert" data-error="{{.Code}}">{{.Text}}</p>{{end}}{{if .Blocked}}<p class="acct-banner bad" role="alert" data-blocked>This account is blocked: its keys do not work and no new key can be made. Ask on Discord.</p>{{end}}</div>
+{{if .SignedIn}}<section class="acct-body"><div class="wrap stack l">
+  {{if .Secret}}<section class="acct-secret" data-secret-box>
+  <h2 class="h2">New key{{if .SecretName}}: {{.SecretName}}{{end}}</h2>
+  <p class="muted"><b>Copy the key now.</b> It is shown only this once and cannot be shown again.</p>
+  <div class="cmd"><code id="acct-secret" data-secret>{{.Secret}}</code><button type="button" data-copy="acct-secret">Copy</button></div>
+  <p class="cap">Key id <code>{{.SecretID}}</code>. Send it as <code>Authorization: Bearer ecd_...</code> or <code>X-API-Key: ecd_...</code>.</p>
 </section>{{end}}
-<h2>Keys</h2>
-<p>Up to {{.Limits.MaxActive}} active keys and {{.Limits.MaxCreatesPerDay}} new keys a day{{if .Limits.DailyCap}}; each key makes up to {{thousands .Limits.DailyCap}} requests a UTC day{{end}}.</p>
-{{if .Keys}}<table>
-<thead><tr><th>Name</th><th>Id</th><th>Created</th><th>Last used</th><th>Used today</th><th></th></tr></thead>
-<tbody>
-{{range .Keys}}<tr><td>{{.Name}}</td><td><code>{{.ID}}</code></td><td>{{.Created}}</td><td>{{if .LastUsed}}{{.LastUsed}}{{else}}never{{end}}</td><td>{{.UsedToday}}{{if .DailyCap}} of {{thousands .DailyCap}}{{end}}</td>
-<td><form method="post" action="/account/keys/{{.ID}}/revoke"><input type="hidden" name="csrf" value="{{$.CSRF}}"><button type="submit">Revoke</button></form></td></tr>
-{{end}}</tbody>
-</table>{{else}}<p data-no-keys>No active keys.</p>{{end}}
-<form method="post" action="/account/keys">
-<input type="hidden" name="csrf" value="{{.CSRF}}">
-<input type="hidden" name="form" value="{{.Form}}">
-<label>Key name (optional) <input type="text" name="name"{{if .Limits.KeyNameMax}} maxlength="{{.Limits.KeyNameMax}}"{{end}} autocomplete="off"></label>
-<button type="submit">Create a key</button>
-</form>
-<h2>Sign out</h2>
-<form method="post" action="/auth/logout"><input type="hidden" name="csrf" value="{{.CSRF}}"><button type="submit">Sign out</button></form>
-<h2>Delete the account</h2>
-{{if .CanDelete}}<form method="post" action="/account/delete" data-delete-form>
-<input type="hidden" name="csrf" value="{{.CSRF}}">
-<p>This deletes the account, its keys and its sign-ins at once. It cannot be undone.</p>
-<label><input type="checkbox" name="confirm" value="yes" required> I understand</label>
-<button type="submit">Delete the account</button>
-</form>
-{{else if .DeleteReauth}}<p data-delete-reauth>Deleting the account needs a sign-in from the last 10 minutes: <a href="/auth/eve/login">sign in again</a>, then delete it.</p>
-{{else if .DiscordLinked}}<p data-delete-discord>This account also signs in with Discord: delete it in the AI chat's Settings, signed in with Discord.</p>
-{{end}}
-{{else}}
-<h1>Sign in</h1>
-<p>Sign in with your EVE Online character to make and manage your API keys. The sign-in asks for no scopes: it reads only which character signed in.</p>
-<p><a href="/auth/eve/login">Sign in with EVE Online</a></p>
-{{end}}
+  <div class="stack">
+    <h2 class="h2">Keys</h2>
+    <p class="muted">Up to {{.Limits.MaxActive}} active keys and {{.Limits.MaxCreatesPerDay}} new keys a day.{{if .Limits.DailyCap}} Each key makes up to {{thousands .Limits.DailyCap}} requests a UTC day.{{end}}</p>
+    {{if .Keys}}<div class="tablebox"><table class="limits acct-keys">
+  <thead><tr><th>Name</th><th>Id</th><th>Created</th><th>Last used</th><th>Used today</th><th><span class="sr-only">Revoke</span></th></tr></thead>
+  <tbody>
+{{range .Keys}}    <tr><td>{{.Name}}</td><td><code>{{.ID}}</code></td><td>{{.Created}}</td><td>{{if .LastUsed}}{{.LastUsed}}{{else}}never{{end}}</td><td>{{.UsedToday}}{{if .DailyCap}} of {{thousands .DailyCap}}{{end}}</td>
+    <td><form method="post" action="/account/keys/{{.ID}}/revoke"><input type="hidden" name="csrf" value="{{$.CSRF}}"><button class="btn sm danger" type="submit">Revoke</button></form></td></tr>
+{{end}}  </tbody>
+</table></div>{{else}}<p class="acct-empty" data-no-keys>No active keys yet. Name a key below, or leave the name empty, and create it.</p>{{end}}
+  </div>
+  <div class="slab stack">
+    <h2 class="h2">Make a key</h2>
+    <form class="acct-create" method="post" action="/account/keys">
+    <input type="hidden" name="csrf" value="{{.CSRF}}"><input type="hidden" name="form" value="{{.Form}}">
+    <label class="fld"><span class="label">Key name (optional)</span><input type="text" name="name"{{if .Limits.KeyNameMax}} maxlength="{{.Limits.KeyNameMax}}"{{end}} autocomplete="off" placeholder="Fit script"></label>
+    <button class="btn primary" type="submit">Create a key</button>
+  </form>
+  </div>
+  {{if .CanDelete}}<div class="acct-danger"><h3 class="h2">Delete the account</h3>
+  <form method="post" action="/account/delete" data-delete-form>
+    <input type="hidden" name="csrf" value="{{.CSRF}}">
+    <p class="muted">This deletes the account, its keys and its sign-ins at once. It cannot be undone.</p>
+    <label class="acct-check"><input type="checkbox" name="confirm" value="yes" required> <span>I understand that my keys stop working and cannot come back.</span></label>
+    <button class="btn danger" type="submit">Delete the account</button>
+  </form></div>
+  {{else if .DeleteReauth}}<div class="acct-danger"><h3 class="h2">Delete the account</h3><p class="muted" data-delete-reauth>Deleting needs a sign-in from the last 10 minutes. <a class="tlink" href="/auth/eve/login">Sign in again</a>, then delete it.</p></div>
+  {{else if .DiscordLinked}}<div class="acct-danger"><h3 class="h2">Delete the account</h3><p class="muted" data-delete-discord>This account also signs in with Discord, so it is deleted from Settings in the AI chat, signed in with Discord.</p></div>
+  {{end}}
+</div></section>
+{{else}}<section class="acct-body"><div class="wrap acct-grid">
+  <div class="slab stack">
+    <h2 class="h2">Sign in</h2>
+    <p class="muted">One character is one account. Keys you made earlier on ai.eve-cyno.dev with the same character are already here.</p>
+    <a class="acct-sso" href="/auth/eve/login"><img src="{{.Assets}}/eve-sso-login-white-large.png" width="270" height="45" alt="Log in with EVE Online"></a>
+    <p class="note">EVE Online logs you in on its own page and sends you back. We keep a session cookie for 4 hours, and nothing else about the visit.</p>
+  </div>
+  <div class="slab stack">
+    <h2 class="h2">What a key gives you</h2>
+    <ul class="acct-list">
+      {{if .Limits.DailyCap}}<li>{{thousands .Limits.DailyCap}} requests a day for each key.</li>
+      {{end}}<li>Up to {{.Limits.MaxActive}} active keys, and {{.Limits.MaxCreatesPerDay}} new keys a day.</li>
+      <li>Higher per-minute limits than no key.</li>
+    </ul>
+    <p class="note">No key at all works too, at lower limits. Signed in with Discord instead? Use <code>/apikey</code> in the EVE-Cyno Discord to manage the same keys.</p>
+    <a class="tlink" href="/docs/access#access-keys">How to use a key</a>
+  </div>
+</div></section>
+{{end}}</div>
 </main>
 {{template "footer-home" .}}
+<script src="{{.Assets}}/home.js" defer></script>
 </body>
 </html>
 {{end}}

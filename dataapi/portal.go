@@ -921,6 +921,8 @@ func loadPortalAssets() (map[string]portalAsset, string, error) {
 			ct = "text/javascript; charset=utf-8"
 		case ".svg":
 			ct = "image/svg+xml"
+		case ".png":
+			ct = "image/png"
 		default:
 			return nil, "", fmt.Errorf("portal asset %s: unknown type", e.Name())
 		}
