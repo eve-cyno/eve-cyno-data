@@ -2,6 +2,7 @@ package dataapi
 
 import (
 	"net/http"
+	"net/netip"
 	"sync"
 	"time"
 )
@@ -34,6 +35,13 @@ const (
 	// taken is refused (busy) at once. Any client can send a callback that gets as far as the exchange, so the
 	// slots, not the per-address limit, bound the requests made with the service's credentials.
 	exchangeSlots = 16
+	// callbackPerNetwork is how many callbacks one network may send a minute: an IPv6 /48 (all its /64s together)
+	// or an IPv4 address (signInNetwork). It comes on top of the route's per-/64 limit, which a client holding a /48
+	// (65,536 /64s) would not feel.
+	callbackPerNetwork = 10
+	// exchangesPerMinute is the process-wide budget of code exchanges, a token bucket refilled continuously
+	// (exchangeBudget): whoever sends the callbacks, no more token requests than this reach EVE SSO in a minute.
+	exchangesPerMinute = 120
 )
 
 // sessionMaxAge is the session cookie's Max-Age: the session's whole life (PortalSessionTTL), in seconds.
@@ -109,4 +117,49 @@ func (u *usedStates) dropOldest() {
 	if end, ok := u.seen[e.state]; ok && end.Equal(e.end) {
 		delete(u.seen, e.state)
 	}
+}
+
+// signInNetwork is the network a callback counts against (callbackPerNetwork): the /48 of an IPv6 address, an IPv4
+// address as it is, ClientIP when nothing parses.
+func signInNetwork(r *http.Request) string {
+	addr, ok := clientAddr(r)
+	switch {
+	case !ok:
+		return ClientIP(r)
+	case addr.Is4():
+		return addr.String()
+	}
+	return netip.PrefixFrom(addr, 48).Masked().String()
+}
+
+// exchangeBudget is a token bucket: it starts full, holds at most max tokens and gets max back per period,
+// continuously. It is safe for concurrent use.
+type exchangeBudget struct {
+	mu     sync.Mutex
+	max    float64
+	perSec float64
+	tokens float64
+	last   time.Time
+	now    func() time.Time
+}
+
+func newExchangeBudget(max int, period time.Duration, now func() time.Time) *exchangeBudget {
+	return &exchangeBudget{max: float64(max), perSec: float64(max) / period.Seconds(), tokens: float64(max), now: now}
+}
+
+// take spends one token and reports whether there was one. A clock that goes back refills nothing.
+func (b *exchangeBudget) take() bool {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	now := b.now()
+	if now.After(b.last) { // the first call too: a full bucket stays at max
+
+		b.tokens = min(b.max, b.tokens+now.Sub(b.last).Seconds()*b.perSec)
+		b.last = now
+	}
+	if b.tokens < 1 {
+		return false
+	}
+	b.tokens--
+	return true
 }

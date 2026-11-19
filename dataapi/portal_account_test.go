@@ -506,12 +506,12 @@ func TestAccount_PanickingExchangeFreesItsSlot(t *testing.T) {
 }
 
 // A forged callback needs no login: the client sets both flow cookies itself, with a matching state and any code.
-// From many /64s of one /48 the per-address limit does not stop it; the exchange slots bound what reaches EVE SSO
-// with the service's credentials, and a real sign-in goes through once the flood stops.
+// From many networks (here one /48 each, of one /32) no per-network limit stops it; the exchange slots bound the
+// token requests in flight with the service's credentials, and a real sign-in goes through once the flood stops.
 func TestAccount_ForgedCallbackFloodIsBounded(t *testing.T) {
 	f := newAcctFix(t)
 	f.sso.BlockToken()
-	forged := func(i int) *httptest.ResponseRecorder { return f.forged(t, fmt.Sprintf("2001:db8:0:%x::1", i)) }
+	forged := func(i int) *httptest.ResponseRecorder { return f.forged(t, fmt.Sprintf("2001:db8:%x::1", i)) }
 	const slots = 16
 	held := make([]int, slots)
 	var wg sync.WaitGroup
@@ -535,6 +535,56 @@ func TestAccount_ForgedCallbackFloodIsBounded(t *testing.T) {
 	require.Equal(t, 1, f.sso.TokenCalls(), "the real sign-in got its token")
 	require.Equal(t, slots+1, f.sso.TokenRequests())
 	require.Equal(t, 1, f.rows(t, `SELECT COUNT(*) FROM portal_sessions`))
+}
+
+// The callback has a budget per network on top of the route's per-/64 one: one IPv6 /48 (all its /64s together) or
+// one IPv4 address gets 10 callbacks a minute; a refused callback makes no token request.
+func TestAccount_CallbackLimitPerNetwork(t *testing.T) {
+	f := newAcctFix(t)
+	for i := range 10 {
+		// a /56 of its own each, all in one /48
+		require.Equal(t, http.StatusBadGateway, f.forged(t, fmt.Sprintf("2001:db8:5:%x00::1", i)).Code, "callback %d", i)
+	}
+	rec := f.forged(t, "2001:db8:5:ff::1")
+	require.Equal(t, http.StatusTooManyRequests, rec.Code)
+	require.Contains(t, rec.Body.String(), `data-error="busy"`)
+	require.NotEmpty(t, rec.Header().Get("Retry-After"))
+	require.Equal(t, 10, f.sso.TokenRequests(), "the refused callback made no token request")
+
+	require.Equal(t, http.StatusBadGateway, f.forged(t, "2001:db8:6::1").Code, "another /48 has a budget of its own")
+	for i := range 10 {
+		require.Equal(t, http.StatusBadGateway, f.forged(t, "198.51.100.7").Code, "IPv4 callback %d", i)
+	}
+	require.Equal(t, http.StatusTooManyRequests, f.forged(t, "198.51.100.7").Code)
+	require.Equal(t, http.StatusBadGateway, f.forged(t, "198.51.100.8").Code, "each IPv4 address has its own")
+
+	f.clock.add(time.Minute)
+	b := f.browser()
+	b.ip = "2001:db8:5:1::9"
+	f.signIn(t, b)
+}
+
+// Every code exchange spends one token of a process-wide budget (120 a minute, refilled continuously), whatever
+// network the callbacks come from; with none left a callback is refused with busy before any token request, and a
+// real sign-in goes through as soon as a token is back.
+func TestAccount_ExchangeBudgetBoundsAFlood(t *testing.T) {
+	f := newAcctFix(t)
+	for i := range 130 {
+		rec := f.forged(t, fmt.Sprintf("2001:db8:%x::1", 0x100+i))
+		if i < 120 {
+			require.Equal(t, http.StatusBadGateway, rec.Code, "forged callback %d", i)
+			continue
+		}
+		require.Equal(t, http.StatusServiceUnavailable, rec.Code, "forged callback %d", i)
+		require.Contains(t, rec.Body.String(), `data-error="busy"`)
+	}
+	require.Equal(t, 120, f.sso.TokenRequests(), "the flood reaches the token endpoint no more than the budget")
+
+	f.clock.add(500 * time.Millisecond) // one token back
+	f.signIn(t, f.browser())
+	require.Equal(t, 1, f.sso.TokenCalls())
+	require.Equal(t, 121, f.sso.TokenRequests())
+	require.Equal(t, http.StatusServiceUnavailable, f.forged(t, "2001:db8:ffff::1").Code, "and it was the only one")
 }
 
 func TestAccount_SignInAgainEndsTheOldSession(t *testing.T) {

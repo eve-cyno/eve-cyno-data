@@ -31,8 +31,12 @@ type accountSite struct {
 	states *usedStates
 	// exchanges holds one token per code exchange in flight (exchangeSlots).
 	exchanges chan struct{}
-	cop       *http.CrossOriginProtection
-	tmpl      *template.Template
+	// callbacks limits the callbacks of each network (callbackPerNetwork, signInNetwork).
+	callbacks *WindowLimiter
+	// budget bounds the code exchanges a minute, process-wide (exchangesPerMinute).
+	budget *exchangeBudget
+	cop    *http.CrossOriginProtection
+	tmpl   *template.Template
 	// url, prefix and selfServe feed the page footer (footer-home in base.gohtml).
 	url, prefix string
 	selfServe   bool
@@ -58,7 +62,10 @@ func newAccountSite(store AccountStore, cfg evesso.Config, s Surface, now func()
 	if now == nil {
 		now = time.Now
 	}
+	callbacks := NewWindowLimiter(callbackPerNetwork, time.Minute)
+	callbacks.now = now
 	return &accountSite{
+		callbacks: callbacks, budget: newExchangeBudget(exchangesPerMinute, time.Minute, now),
 		store: store, sso: c, states: newUsedStates(now, usedStatesMax), exchanges: make(chan struct{}, exchangeSlots),
 		cop: http.NewCrossOriginProtection(), tmpl: t,
 		url: s.PublicURL, prefix: s.prefix(), selfServe: s.SelfServe, assets: "/assets/" + ver, now: now,
@@ -279,10 +286,11 @@ func (a *API) accountLogin(w http.ResponseWriter, r *http.Request) {
 }
 
 // accountCallback handles GET /auth/eve/callback. The flow cookies are spent first, before any byte is written; then
-// the state is compared (constant time) with its cookie and checked against the spent states, an exchange slot is
-// taken (none free: busy), the code is exchanged with the PKCE verifier, the token verified, and a new session
-// replaces the browser's old one. The log lines carry a reason only: never the code, the state, a token or who
-// signed in.
+// the callback counts against its network's budget (callbackPerNetwork; over it: 429 busy), the state is compared
+// (constant time) with its cookie and checked against the spent states, a token of the exchange budget and an
+// exchange slot are taken (none left: 503 busy), the code is exchanged with the PKCE verifier, the token verified,
+// and a new session replaces the browser's old one. The log lines carry a reason only: never the code, the state, a
+// token or who signed in.
 func (a *API) accountCallback(w http.ResponseWriter, r *http.Request) {
 	s := a.account
 	ctx := r.Context()
@@ -295,6 +303,11 @@ func (a *API) accountCallback(w http.ResponseWriter, r *http.Request) {
 	refuse := func(reason string, status int, code string) {
 		log.Info("portal_sign_in_refused", "reason", reason)
 		s.refuse(w, r, old, status, code)
+	}
+	if ok, retry := s.callbacks.Allow(signInNetwork(r)); !ok {
+		w.Header().Set("Retry-After", retryAfterSeconds(retry))
+		refuse("network_limit", http.StatusTooManyRequests, "busy")
+		return
 	}
 
 	q := r.URL.Query()
@@ -321,6 +334,10 @@ func (a *API) accountCallback(w http.ResponseWriter, r *http.Request) {
 	}
 	if !s.states.use(state) {
 		refuse("state_reused", http.StatusBadRequest, "sign-in-failed")
+		return
+	}
+	if !s.budget.take() {
+		refuse("exchange_budget", http.StatusServiceUnavailable, "busy")
 		return
 	}
 	select {

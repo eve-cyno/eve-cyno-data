@@ -369,10 +369,15 @@ func (a *API) writeRangeCeilingRefusal(w http.ResponseWriter, r *http.Request, r
 // writeRateLimited answers 429 rate_limited with Retry-After in whole seconds (at least 1),
 // rounded up. The route limiter and a busy route's check write the same answer.
 func writeRateLimited(w http.ResponseWriter, r *http.Request, retry time.Duration) {
+	w.Header().Set("Retry-After", retryAfterSeconds(retry))
+	writeError(w, r, http.StatusTooManyRequests, "rate_limited", "too many requests, slow down")
+}
+
+// retryAfterSeconds is a Retry-After value: the wait in whole seconds, rounded up, at least 1.
+func retryAfterSeconds(retry time.Duration) string {
 	secs := int((retry + time.Second - 1) / time.Second)
 	if secs < 1 {
 		secs = 1
 	}
-	w.Header().Set("Retry-After", strconv.Itoa(secs))
-	writeError(w, r, http.StatusTooManyRequests, "rate_limited", "too many requests, slow down")
+	return strconv.Itoa(secs)
 }
