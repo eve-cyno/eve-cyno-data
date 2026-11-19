@@ -119,7 +119,19 @@ CREATE TABLE IF NOT EXISTS identities (
   CHECK ((provider = 'eve') = (owner_hash IS NOT NULL))
 );
 CREATE INDEX IF NOT EXISTS identities_account ON identities(account);
-CREATE UNIQUE INDEX IF NOT EXISTS identities_one_discord ON identities(account) WHERE provider = 'discord';`
+CREATE UNIQUE INDEX IF NOT EXISTS identities_one_discord ON identities(account) WHERE provider = 'discord';
+CREATE TABLE IF NOT EXISTS portal_sessions (
+  token_hash   TEXT PRIMARY KEY,
+  character_id TEXT NOT NULL,
+  owner_hash   TEXT NOT NULL,
+  name         TEXT NOT NULL,
+  csrf         TEXT NOT NULL,
+  form_token   TEXT NOT NULL,
+  created_at   TEXT NOT NULL,
+  expires_at   TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS portal_sessions_character ON portal_sessions(character_id);
+CREATE INDEX IF NOT EXISTS portal_sessions_expires ON portal_sessions(expires_at);`
 
 // Options configures Open.
 type Options struct {

@@ -16,7 +16,8 @@ type DeletedAccount struct {
 //   - the account row;
 //   - its identities (ids, owner hashes, link dates);
 //   - every key row of its owner set (the account and the legacy owner ids of its identities), active or revoked,
-//     with their usage and endpoint usage rows.
+//     with their usage and endpoint usage rows;
+//   - the data portal sessions of its EVE characters.
 //
 // The keys stop authenticating at once, and their in-memory counters are dropped. An EVE identity must carry the
 // stored owner hash, else ErrIdentityChanged: a session from before the character changed hands cannot delete the
@@ -24,6 +25,12 @@ type DeletedAccount struct {
 // nothing changed, when the account or a legacy owner id of one of its identities is blocked. Nothing about a
 // deleted account is kept; an identity that signs in again starts a new, empty account. The log line carries no id.
 func (s *Store) DeleteAccountOf(ctx context.Context, current Identity) (DeletedAccount, error) {
+	return s.deleteAccountOf(ctx, current, false)
+}
+
+// deleteAccountOf is DeleteAccountOf; with refuseDiscord set, an account that has a Discord login is refused
+// (errDiscordLinked) with nothing changed, checked under the same lock as the deletion.
+func (s *Store) deleteAccountOf(ctx context.Context, current Identity, refuseDiscord bool) (DeletedAccount, error) {
 	if err := current.signedIn(); err != nil {
 		return DeletedAccount{}, err
 	}
@@ -40,6 +47,15 @@ func (s *Store) DeleteAccountOf(ctx context.Context, current Identity) (DeletedA
 	}
 	if current.Provider == ProviderEVE && row.ownerHash != current.OwnerHash {
 		return DeletedAccount{}, ErrIdentityChanged
+	}
+	if refuseDiscord {
+		d, err := s.discordOf(ctx, row.account)
+		if err != nil {
+			return DeletedAccount{}, err
+		}
+		if d != "" {
+			return DeletedAccount{}, errDiscordLinked
+		}
 	}
 	return s.deleteAccountLocked(ctx, row.account, false)
 }
@@ -128,6 +144,20 @@ func (s *Store) deleteAccountLocked(ctx context.Context, acct string, operator b
 	gone, err := scanIDHashes(rows)
 	if err != nil {
 		return DeletedAccount{}, fmt.Errorf("keys: delete account: %w", err)
+	}
+	// Portal sessions name an EVE character, not the account: map the account to its characters while the
+	// identities still say which they are, and end their sessions in the same transaction.
+	var chars []string
+	for _, li := range out.Identities {
+		if li.Provider == ProviderEVE {
+			chars = append(chars, li.Subject)
+		}
+	}
+	if len(chars) > 0 {
+		if _, err := tx.ExecContext(ctx,
+			`DELETE FROM portal_sessions WHERE character_id IN (`+placeholders(len(chars))+`)`, anyArgs(chars)...); err != nil {
+			return DeletedAccount{}, fmt.Errorf("keys: delete account: end sessions: %w", err)
+		}
 	}
 	if _, err := tx.ExecContext(ctx, `DELETE FROM identities WHERE account = ?`, acct); err != nil {
 		return DeletedAccount{}, fmt.Errorf("keys: delete account: %w", err)

@@ -321,6 +321,9 @@ func (s *Store) flushLoop(ctx context.Context) {
 			if err := s.flush(); err != nil {
 				s.log.Error("api_key_usage_flush_failed", "err", err)
 			}
+			if err := s.pruneSessions(ctx); err != nil && ctx.Err() == nil {
+				s.log.Error("portal_session_prune_failed", "err", err)
+			}
 		}
 	}
 }
