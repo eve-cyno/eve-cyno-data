@@ -329,8 +329,13 @@ func (a *API) accountCallback(w http.ResponseWriter, r *http.Request) {
 		refuse("busy", http.StatusServiceUnavailable, "busy")
 		return
 	}
-	ch, err := s.sso.Exchange(ctx, code, verifier)
-	<-s.exchanges
+	var ch evesso.Character
+	var err error
+	func() {
+		// Deferred, so a panic in the exchange (recovered by ServeHTTP) still gives the slot back.
+		defer func() { <-s.exchanges }()
+		ch, err = s.sso.Exchange(ctx, code, verifier)
+	}()
 	if err != nil {
 		var te *evesso.TokenError
 		var xe *evesso.ExchangeError

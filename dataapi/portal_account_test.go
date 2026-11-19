@@ -455,21 +455,63 @@ func TestAccount_CallbackRefusesABadTokenOrAFailedExchange(t *testing.T) {
 	require.Contains(t, rec.Body.String(), `data-error="sign-in-upstream"`)
 }
 
+// forged sends a forged callback from ip: no login, both flow cookies set by the client itself, a matching state and
+// a made-up code.
+func (f *acctFix) forged(t *testing.T, ip string) *httptest.ResponseRecorder {
+	t.Helper()
+	b := f.browser()
+	b.ip = ip
+	state, err := evesso.NewState()
+	require.NoError(t, err)
+	b.jar["__Host-ecd_sso_state"] = &http.Cookie{Name: "__Host-ecd_sso_state", Value: state}
+	b.jar["__Host-ecd_sso_pkce"] = &http.Cookie{Name: "__Host-ecd_sso_pkce", Value: evesso.NewVerifier()}
+	return b.do(http.MethodGet, "/auth/eve/callback?state="+state+"&code=forged", nil)
+}
+
+// panicTransport panics on the first n token requests and sends every other request on.
+type panicTransport struct {
+	mu sync.Mutex
+	n  int
+}
+
+func (p *panicTransport) RoundTrip(r *http.Request) (*http.Response, error) {
+	if r.URL.Path == ssotest.TokenPath {
+		p.mu.Lock()
+		hit := p.n > 0
+		if hit {
+			p.n--
+		}
+		p.mu.Unlock()
+		if hit {
+			panic("token transport")
+		}
+	}
+	return http.DefaultTransport.RoundTrip(r)
+}
+
+// A panic inside the code exchange (recovered by the API's handler) gives its exchange slot back: more panics than
+// slots never leave the sign-in busy for good.
+func TestAccount_PanickingExchangeFreesItsSlot(t *testing.T) {
+	transport := &panicTransport{n: 20}
+	f := newAcctFix(t, func(c *dataapi.Config) {
+		c.EVESSO.HTTPClient = &http.Client{Transport: transport, Timeout: 10 * time.Second}
+	})
+	for i := range 20 {
+		rec := f.forged(t, fmt.Sprintf("2001:db8:%x::1", i))
+		require.Equal(t, http.StatusInternalServerError, rec.Code, "forged callback %d", i)
+	}
+	require.Zero(t, transport.n, "every forged callback reached the exchange")
+	f.signIn(t, f.browser())
+	require.Equal(t, 1, f.sso.TokenCalls())
+}
+
 // A forged callback needs no login: the client sets both flow cookies itself, with a matching state and any code.
 // From many /64s of one /48 the per-address limit does not stop it; the exchange slots bound what reaches EVE SSO
 // with the service's credentials, and a real sign-in goes through once the flood stops.
 func TestAccount_ForgedCallbackFloodIsBounded(t *testing.T) {
 	f := newAcctFix(t)
 	f.sso.BlockToken()
-	forged := func(i int) *httptest.ResponseRecorder {
-		b := f.browser()
-		b.ip = fmt.Sprintf("2001:db8:0:%x::1", i)
-		state, err := evesso.NewState()
-		require.NoError(t, err)
-		b.jar["__Host-ecd_sso_state"] = &http.Cookie{Name: "__Host-ecd_sso_state", Value: state}
-		b.jar["__Host-ecd_sso_pkce"] = &http.Cookie{Name: "__Host-ecd_sso_pkce", Value: evesso.NewVerifier()}
-		return b.do(http.MethodGet, "/auth/eve/callback?state="+state+"&code=forged", nil)
-	}
+	forged := func(i int) *httptest.ResponseRecorder { return f.forged(t, fmt.Sprintf("2001:db8:0:%x::1", i)) }
 	const slots = 16
 	held := make([]int, slots)
 	var wg sync.WaitGroup
