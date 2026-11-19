@@ -84,6 +84,7 @@ var accountNotices = map[string]string{
 	"cancelled": "Sign-in cancelled.",
 	"form-used": "No key was made: that form had already been sent " +
 		"(a page sent twice, or one left open in another tab).",
+	"session-ended": "Your session ended. Sign in again to go on.",
 }
 
 func noticeOf(code string) *accountMsg { return &accountMsg{Code: code, Text: accountNotices[code]} }
@@ -195,9 +196,11 @@ func (s *accountSite) render(w http.ResponseWriter, r *http.Request, status int,
 }
 
 // show renders the page for the session of tok as it is now (signed out when there is none; a stale cookie is
-// expired), with status and what mut adds.
+// expired and, when the page has no notice or error of its own, the session-ended notice says why), with status
+// and what mut adds.
 func (s *accountSite) show(w http.ResponseWriter, r *http.Request, tok string, status int, mut func(*accountView)) {
 	var v accountView
+	stale := false
 	if tok != "" {
 		sess, ok, err := s.store.Session(r.Context(), tok)
 		if err != nil {
@@ -211,10 +214,14 @@ func (s *accountSite) show(w http.ResponseWriter, r *http.Request, tok string, s
 			}
 		} else {
 			expirePortalCookie(w, sessionCookie)
+			stale = true
 		}
 	}
 	if mut != nil {
 		mut(&v)
+	}
+	if stale && v.Notice == nil && v.Error == nil {
+		v.Notice = noticeOf("session-ended")
 	}
 	s.render(w, r, status, v)
 }
@@ -418,6 +425,9 @@ func (a *API) accountForm(w http.ResponseWriter, r *http.Request, signedOut stri
 	if !ok {
 		if tok != "" {
 			expirePortalCookie(w, sessionCookie)
+			if signedOut == "/account" {
+				setPortalCookie(w, noticeCookie, "session-ended", noticeMaxAge)
+			}
 		}
 		http.Redirect(w, r, signedOut, http.StatusSeeOther)
 		return "", PortalSession{}, false

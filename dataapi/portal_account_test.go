@@ -673,6 +673,43 @@ func TestAccount_ExpiredSessionIsSignedOut(t *testing.T) {
 	require.Equal(t, http.StatusOK, acct.Code)
 	require.True(t, signedOut(acct.Body.String()))
 	require.Contains(t, acct.Body.String(), `href="/auth/eve/login"`)
+	require.Contains(t, acct.Body.String(), `data-notice="session-ended"`, "the form's redirect says why")
+}
+
+// A page loaded with a session cookie that names no live session expires the cookie and says the session ended,
+// once; a page that carries a notice or an error of its own shows that one instead.
+func TestAccount_StaleSessionCookieSaysTheSessionEnded(t *testing.T) {
+	f := newAcctFix(t)
+	stale := func() *browser {
+		b := f.browser()
+		f.signIn(t, b)
+		f.clock.add(keys.PortalSessionTTL)
+		return b
+	}
+	b := stale()
+	rec := b.do(http.MethodGet, "/account", nil)
+	require.Equal(t, http.StatusOK, rec.Code)
+	requireExpired(t, rec, "__Host-ecd_session")
+	require.True(t, signedOut(rec.Body.String()))
+	require.Contains(t, rec.Body.String(), `data-notice="session-ended"`)
+	body, _ := acctPage(t, b)
+	require.NotContains(t, body, "data-notice=", "the cookie is gone, and the notice with it")
+
+	b = stale()
+	rec = b.do(http.MethodGet, "/auth/eve/callback?error=access_denied", nil)
+	require.Contains(t, rec.Body.String(), `data-notice="cancelled"`)
+	require.NotContains(t, rec.Body.String(), "session-ended")
+
+	b = stale()
+	rec = b.do(http.MethodGet, "/auth/eve/callback?state=x&code=y", nil)
+	require.Contains(t, rec.Body.String(), `data-error="sign-in-failed"`)
+	require.NotContains(t, rec.Body.String(), "data-notice=")
+
+	b = stale()
+	_, v := acctPage(t, f.browser())
+	rec = b.do(http.MethodPost, "/auth/logout", v)
+	require.Equal(t, "/", rec.Header().Get("Location"))
+	require.Nil(t, setCookie(rec, "__Host-ecd_notice"), "a sign-out that finds no session goes home with no notice")
 }
 
 func TestAccount_LogoutEndsSession(t *testing.T) {
@@ -886,7 +923,7 @@ func TestAccount_DeleteRules(t *testing.T) {
 		require.Contains(t, body, `data-notice="deleted"`)
 		body, _ = acctPage(t, other)
 		require.True(t, signedOut(body), "every session of the character ends")
-		require.NotContains(t, body, `data-notice=`)
+		require.Contains(t, body, `data-notice="session-ended"`, "and its page says so")
 	})
 }
 
