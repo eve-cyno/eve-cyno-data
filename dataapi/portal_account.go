@@ -75,42 +75,43 @@ func newAccountSite(store AccountStore, cfg evesso.Config, s Surface, now func()
 // accountMsg is a notice or an error of the page: a stable code (the data-notice or data-error hook) and its text.
 type accountMsg struct{ Code, Text string }
 
-// accountNotices are the one-shot notices a redirect to /account can carry (noticeCookie).
+// accountNotices are the one-shot notices a redirect to /account can carry (noticeCookie). The texts, like errorOf's,
+// are the design's (data-account.html in the design system: one board per state).
 var accountNotices = map[string]string{
-	"rehomed": "This character changed hands since it last signed in here, so it starts a new, empty account. " +
-		"The keys made before the transfer stay with the previous owner.",
-	"revoked":   "Key revoked. It stops working at once.",
-	"deleted":   "Account deleted: its keys, sign-ins and sessions are gone.",
-	"cancelled": "Sign-in cancelled.",
-	"form-used": "No key was made: that form had already been sent " +
-		"(a page sent twice, or one left open in another tab).",
+	"rehomed": "This character changed hands, so it signed in to a new, empty account. " +
+		"Keys made before the transfer stay with the previous owner.",
+	"revoked":       "Key revoked. It stopped working at once.",
+	"deleted":       "Your account is deleted. Its keys no longer work.",
+	"cancelled":     "Sign-in cancelled. Nothing was changed. You can sign in again when you are ready.",
+	"form-used":     "That form was already sent, so no second key was made. Your keys are listed below.",
 	"session-ended": "Your session ended. Sign in again to go on.",
 }
 
 func noticeOf(code string) *accountMsg { return &accountMsg{Code: code, Text: accountNotices[code]} }
 
-// errorOf is the error code with its text; the limits fill in the numbers.
+// errorOf is the error code with its text; the limits fill in the numbers. The design has no board for bad-form
+// and the three delete refusals: those texts are the repo's.
 func errorOf(code string, l PortalLimits) *accountMsg {
 	var text string
 	switch code {
 	case "csrf":
-		text = "This form has expired. Reload the page and try again."
+		text = "The page expired. Reload it and try again."
 	case "cross-origin":
-		text = "This form was sent from another site and was refused."
+		text = "That request came from another site, so it was refused."
 	case "too-large":
-		text = "The form was too large."
+		text = "That request was too large."
 	case "bad-form":
 		text = "The form could not be read."
 	case "too-many-keys":
-		text = fmt.Sprintf("This account holds %d active keys, the most allowed: revoke one first.", l.MaxActive)
+		text = fmt.Sprintf("You already have %d active keys. Revoke one first.", l.MaxActive)
 	case "create-limit":
-		text = fmt.Sprintf("%d keys were created today, the most allowed: try again after 00:00 UTC.", l.MaxCreatesPerDay)
+		text = fmt.Sprintf("You made %d keys today. Try again after 00:00 UTC.", l.MaxCreatesPerDay)
 	case "blocked":
-		text = "This account is blocked. Ask on Discord."
+		text = "This account is blocked: its keys do not work and no new key can be made. Ask on Discord."
 	case "key-name":
-		text = fmt.Sprintf("A key name has at most %d characters and no control characters.", l.KeyNameMax)
+		text = "That key name is not allowed. Use a shorter name without control characters."
 	case "key-not-found":
-		text = "This account has no such active key."
+		text = "That key is not on this account, or it is already revoked."
 	case "delete-discord":
 		text = "This account also signs in with Discord: delete it in the AI chat's Settings, signed in with Discord."
 	case "delete-reauth":
@@ -118,15 +119,15 @@ func errorOf(code string, l PortalLimits) *accountMsg {
 	case "delete-confirm":
 		text = "Tick the box to confirm the deletion."
 	case "sign-in-failed":
-		text = "The sign-in failed. Start again from the sign-in link."
+		text = "The sign-in did not complete. Start again with the button below."
 	case "sign-in-token":
-		text = "EVE Online's answer did not check out. Try again."
+		text = "EVE Online could not confirm the sign-in. Try again."
 	case "sign-in-upstream":
-		text = "EVE Online's login did not answer. Try again in a minute."
+		text = "EVE Online's login service did not answer. Try again in a minute."
 	case "busy":
-		text = "Too many sign-ins at once. Try again in a few minutes."
+		text = "Sign-in is busy right now. Try again in a minute."
 	default:
-		code, text = "internal", "Something went wrong on our side. Try again."
+		code, text = "internal", "Something went wrong on our side. Nothing was changed. Try again."
 	}
 	return &accountMsg{Code: code, Text: text}
 }
