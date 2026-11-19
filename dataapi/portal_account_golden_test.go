@@ -1,6 +1,10 @@
 package dataapi_test
 
 import (
+	"encoding/binary"
+	"errors"
+	"fmt"
+	"hash/crc32"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -99,17 +103,70 @@ func TestPortal_AccountPagesHonourTheCSP(t *testing.T) {
 	require.Contains(t, secret.Body.String(), "data-secret-box")
 }
 
-// The self-hosted EVE sign-in button is served as a PNG from the assets and carries no signing block: no C2PA, JUMBF
-// or XMP chunk (the design file arrives with one; the portal copy is stripped).
+// The self-hosted EVE sign-in button is served as a PNG from the assets and carries no signing block or other
+// metadata (the design file arrives with a C2PA caBX chunk; the portal copy is stripped). The chunks are walked, not
+// the bytes searched: compressed image data may hold any byte string, and an unknown chunk type must fail too.
 func TestPortal_SSOButtonIsServedWithoutMetadata(t *testing.T) {
 	rec := do(portalAPI(t), http.MethodGet, "/assets/000000000000/eve-sso-login-white-large.png", "")
 	require.Equal(t, http.StatusOK, rec.Code)
 	require.Equal(t, "image/png", rec.Header().Get("Content-Type"))
-	body := rec.Body.Bytes()
-	require.Equal(t, "\x89PNG\r\n\x1a\n", string(body[:8]))
-	for _, bad := range []string{"c2pa", "jumb", "caBX", "xmp", "XMP", "Anthropic", "iTXt", "tEXt", "zTXt", "eXIf"} {
-		require.NotContains(t, string(body), bad)
+	types, err := pngChunkTypes(rec.Body.Bytes())
+	require.NoError(t, err)
+	require.Equal(t, []string{"IHDR", "PLTE", "tRNS", "IDAT", "IEND"}, types, "image chunks only")
+
+	// the walk itself: an inserted chunk is seen, a bad checksum or trailing bytes are an error
+	png := rec.Body.Bytes()
+	iend := len(png) - 12
+	doctored := append(append(append([]byte{}, png[:iend]...), pngChunk("caBX", []byte("jumb c2pa"))...), png[iend:]...)
+	types, err = pngChunkTypes(doctored)
+	require.NoError(t, err)
+	require.Equal(t, []string{"IHDR", "PLTE", "tRNS", "IDAT", "caBX", "IEND"}, types)
+	bad := append([]byte{}, png...)
+	bad[len(bad)-1] ^= 0xff
+	_, err = pngChunkTypes(bad)
+	require.Error(t, err, "a checksum that does not match")
+	_, err = pngChunkTypes(append(append([]byte{}, png...), pngChunk("tEXt", []byte("after"))...))
+	require.Error(t, err, "a chunk after IEND")
+}
+
+// pngChunkTypes walks a PNG's chunks (length, type, data, CRC-32 of type and data) and returns their types in order;
+// a bad signature or checksum, a chunk past the end, a first chunk that is not IHDR or bytes after IEND are errors.
+func pngChunkTypes(b []byte) ([]string, error) {
+	const sig = "\x89PNG\r\n\x1a\n"
+	if len(b) < len(sig) || string(b[:len(sig)]) != sig {
+		return nil, errors.New("not a PNG")
 	}
+	var types []string
+	for i := len(sig); i < len(b); {
+		if len(b)-i < 12 {
+			return nil, fmt.Errorf("truncated chunk at %d", i)
+		}
+		n := int(binary.BigEndian.Uint32(b[i:]))
+		if n > len(b)-i-12 {
+			return nil, fmt.Errorf("chunk at %d runs past the end", i)
+		}
+		typ, body := b[i+4:i+8], b[i+4:i+8+n]
+		if crc32.ChecksumIEEE(body) != binary.BigEndian.Uint32(b[i+8+n:]) {
+			return nil, fmt.Errorf("chunk %q at %d: bad checksum", typ, i)
+		}
+		types = append(types, string(typ))
+		i += 12 + n
+		if string(typ) == "IEND" && i != len(b) {
+			return nil, errors.New("bytes after IEND")
+		}
+	}
+	if len(types) == 0 || types[0] != "IHDR" {
+		return nil, errors.New("the first chunk is not IHDR")
+	}
+	return types, nil
+}
+
+// pngChunk builds one chunk with its checksum.
+func pngChunk(typ string, data []byte) []byte {
+	out := binary.BigEndian.AppendUint32(nil, uint32(len(data)))
+	out = append(out, typ...)
+	out = append(out, data...)
+	return binary.BigEndian.AppendUint32(out, crc32.ChecksumIEEE(out[4:]))
 }
 
 // The account pages load the portal assets (styles, scripts, the EVE button), so the assets are served whenever the
