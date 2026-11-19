@@ -4,6 +4,10 @@ states; the Go conditionals pick what each board shows. The hooks the tests read
 data-notice, data-error, data-blocked, data-discord-linked, data-secret-box, data-secret, data-no-keys,
 data-delete-form, data-delete-reauth, data-delete-discord, and the form actions and field names (csrf, form, name,
 confirm).
+Kept apart from the design on purpose: the page sends the header X-Robots-Tag: noindex (writeAccountHeaders) instead
+of the design's <meta name="robots" content="noindex">, since the shared head-home partial has no robots meta; and
+the signed-out page is titled "EVE-CYNO DATA · Sign in" (render), where every design board says "Your account".
+The banner texts are the design's, in Go (accountNotices, errorOf).
 */}}
 {{define "account"}}{{template "head-home" .}}
 <body>
