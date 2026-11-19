@@ -824,7 +824,15 @@ func TestAccount_CreateRefusals(t *testing.T) {
 	f.signIn(t, b)
 	blocked := create("blocked")
 	require.Equal(t, http.StatusForbidden, blocked.Code)
-	require.Contains(t, blocked.Body.String(), `data-error="blocked"`)
+	// the blocked account's own banner says it, once: no second banner for the refusal
+	require.Equal(t, 1, strings.Count(blocked.Body.String(), "data-blocked"))
+	require.Equal(t, 1, strings.Count(blocked.Body.String(), `class="acct-banner`))
+	require.NotContains(t, blocked.Body.String(), "data-error=")
+	_, v = acctPage(t, b)
+	stale := b.do(http.MethodPost, "/account/keys", with(v, "csrf", strings.Repeat("x", 43)))
+	require.Equal(t, http.StatusForbidden, stale.Code)
+	require.Contains(t, stale.Body.String(), `data-error="csrf"`, "another refusal keeps its banner on a blocked page")
+	require.Contains(t, stale.Body.String(), "data-blocked")
 }
 
 func TestAccount_RevokeOnlyOwnKeys(t *testing.T) {

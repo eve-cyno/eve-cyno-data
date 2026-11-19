@@ -259,8 +259,15 @@ func (s *accountSite) fail(w http.ResponseWriter, r *http.Request, err error) {
 	s.render(w, r, http.StatusInternalServerError, accountView{Error: errorOf("internal", PortalLimits{})})
 }
 
+// refuse shows the page with the error code. A blocked account's page already carries its own banner (data-blocked),
+// so a blocked refusal adds none.
 func (s *accountSite) refuse(w http.ResponseWriter, r *http.Request, tok string, status int, code string) {
-	s.show(w, r, tok, status, func(v *accountView) { v.Error = errorOf(code, s.store.Limits()) })
+	s.show(w, r, tok, status, func(v *accountView) {
+		if code == "blocked" && v.Blocked {
+			return
+		}
+		v.Error = errorOf(code, s.store.Limits())
+	})
 }
 
 // accountPage handles GET /account: the sign-in page when signed out, else the account page.
