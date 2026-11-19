@@ -9,10 +9,10 @@
 <link rel="icon" href="{{.Assets}}/favicon-small.svg" type="image/svg+xml" sizes="16x16">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="{{.Assets}}/tokens.css">
-<link rel="stylesheet" href="{{.Assets}}/portal.css">
-{{if .IsDocs}}<link rel="stylesheet" href="{{.Assets}}/docs.css">
-{{end}}</head>{{end}}
+<link rel="stylesheet" href="{{.Assets}}/site-base.css">
+<link rel="stylesheet" href="{{.Assets}}/wordmark-motion.css">
+<link rel="stylesheet" href="{{.Assets}}/docs.css">
+</head>{{end}}
 
 {{define "sprite-docs"}}<!-- ICON SPRITE (shared partial; same block in data-portal.html plus doc-only icons). -->
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
@@ -42,8 +42,9 @@
 <header class="topbar">
   <div class="topbar-in">
     <button class="icon-btn topbar-menu" type="button" data-drawer-open aria-label="Open documentation menu" aria-expanded="false"><svg class="ico" aria-hidden="true"><use href="#i-menu"/></svg></button>
-    <!-- LOCKUP: one self-contained element (brand/lockup-data.svg). To change the brand, swap the <img> src; nothing else depends on it. -->
-    <a class="lockup" href="/" aria-label="EVE-CYNO DATA home"><img class="lockup-img" src="{{.Assets}}/lockup-data.svg" alt="EVE-Cyno Data" width="172" height="32"></a>
+    <!-- WORDMARK: the CYNO data wordmark of the home (inline svg, wordmark-motion.css). The ignition plays once per visit (wordmark-once.js). The footer and the drawer head use the same svg without cy-play. -->
+    <a class="lockup" href="/" aria-label="EVE-CYNO DATA home">{{template "wordmark-data" "cy-play"}}
+<script src="{{.Assets}}/wordmark-once.js"></script></a>
     <nav class="topnav" aria-label="Main">
       <a href="/docs/" aria-current="page">Docs</a>
       <a href="/docs/tools">Tools</a>
@@ -72,7 +73,7 @@
   <div class="wrap">
     <div class="f-grid">
       <div>
-        <a class="lockup" href="/" aria-label="EVE-CYNO DATA home"><img class="lockup-img" src="{{.Assets}}/lockup-data.svg" alt="EVE-Cyno Data" width="172" height="32"></a>
+        <a class="lockup" href="/" aria-label="EVE-CYNO DATA home">{{template "wordmark-data" ""}}</a>
         <p>Deterministic EVE Online data for tools and AI agents. Hobby-run by Bythlak. Not an official EVE Online or Fenris Creations service.</p>
       </div>
       <div><h4>Docs</h4><ul><li><a href="/docs/">Getting started</a></li><li><a href="/docs/claude-code">Claude Code plugin</a></li><li><a href="/docs/mcp">MCP</a></li><li><a href="/docs/rest">REST &amp; OpenAPI</a></li><li><a href="/docs/tools">Tools reference</a></li></ul></div>

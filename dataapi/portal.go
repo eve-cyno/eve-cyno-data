@@ -216,7 +216,6 @@ type toolPage struct {
 // pageData is the one value every template renders.
 type pageData struct {
 	Title, Description string
-	IsDocs             bool
 	Nav                string
 	Assets             string
 	URL                string       // PublicURL: prefix of links ("" keeps them relative)
@@ -872,7 +871,6 @@ func buildPortal(in portalInput) (*portalSite, error) {
 
 	// the docs pages
 	docs := d
-	docs.IsDocs = true
 	for _, p := range docsPages() {
 		pd := docs
 		pd.Nav, pd.Title, pd.Description = p.slug, p.title+" · EVE-CYNO DATA docs", p.description

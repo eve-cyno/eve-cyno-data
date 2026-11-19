@@ -154,7 +154,7 @@ func TestPortal_AssetsAreVersionedAndVerbatim(t *testing.T) {
 	homeURLs := assetRE.FindAllStringSubmatch(homePage, -1)
 	docsURLs := assetRE.FindAllStringSubmatch(docsPage, -1)
 	require.GreaterOrEqual(t, len(homeURLs), 7, "favicons, site-base.css, wordmark-motion.css, home.css, wordmark-once.js, three.min.js, home.js")
-	require.GreaterOrEqual(t, len(docsURLs), 5, "tokens.css, portal.css, docs.css, favicon, lockup, site.js")
+	require.GreaterOrEqual(t, len(docsURLs), 5, "site-base.css, wordmark-motion.css, docs.css, favicon, wordmark-once.js, site.js")
 	seen := map[string]bool{}
 	for _, m := range append(slices.Clone(homeURLs), docsURLs...) {
 		u := m[1]
@@ -169,8 +169,14 @@ func TestPortal_AssetsAreVersionedAndVerbatim(t *testing.T) {
 		require.NotEmpty(t, rec.Body.Bytes(), u)
 	}
 	ver := versionOf(t, homeURLs)
-	for _, f := range []string{"site-base.css", "wordmark-motion.css", "home.css", "wordmark-once.js", "three.min.js", "home.js", "portal.css", "docs.css", "site.js"} {
+	for _, f := range []string{"site-base.css", "wordmark-motion.css", "home.css", "wordmark-once.js", "three.min.js", "home.js", "docs.css", "site.js"} {
 		require.True(t, seen["/assets/"+ver+"/"+f], f)
+	}
+	// no page links portal.css and tokens.css any more, but they stay served and versioned
+	for _, f := range []string{"portal.css", "tokens.css"} {
+		rec := do(api, http.MethodGet, "/assets/"+ver+"/"+f, "")
+		require.Equal(t, http.StatusOK, rec.Code, f)
+		require.Equal(t, "public, max-age=31536000, immutable", rec.Header().Get("Cache-Control"), f)
 	}
 
 	// a stale version still finds the file, but is only briefly cacheable
@@ -195,7 +201,8 @@ func TestPortal_AssetsAreVersionedAndVerbatim(t *testing.T) {
 	}
 }
 
-// The home page loads the files of the new design only; the docs pages load the old ones only.
+// The home page and the docs pages load their own design files; the docs pages share site-base.css
+// and wordmark-motion.css with the home, and neither loads tokens.css or portal.css.
 func TestPortal_HomeLoadsOnlyItsAssets(t *testing.T) {
 	api := portalAPI(t)
 	home := do(api, http.MethodGet, "/", "").Body.String()
@@ -206,10 +213,10 @@ func TestPortal_HomeLoadsOnlyItsAssets(t *testing.T) {
 		require.NotContains(t, home, "/"+f+`"`, "home must not load "+f)
 	}
 	docs := do(api, http.MethodGet, "/docs/", "").Body.String()
-	for _, f := range []string{"tokens.css", "portal.css", "docs.css", "site.js"} {
+	for _, f := range []string{"site-base.css", "wordmark-motion.css", "docs.css", "wordmark-once.js", "site.js"} {
 		require.Regexp(t, `(?:href|src)="/assets/[0-9a-f]{12}/`+regexp.QuoteMeta(f)+`"`, docs, f)
 	}
-	for _, f := range []string{"site-base.css", "wordmark-motion.css", "home.css", "three.min.js", "wordmark-once.js", "home.js"} {
+	for _, f := range []string{"tokens.css", "portal.css", "home.css", "three.min.js", "home.js"} {
 		require.NotContains(t, docs, "/"+f+`"`, "docs must not load "+f)
 	}
 }
@@ -794,11 +801,17 @@ func TestPortal_MCPPageCoversEveryClientAndTheSkill(t *testing.T) {
 }
 
 // TestPortal_LockupAndFaviconsFollowTheCynoWordmark guards the 2026-11-12 CYNO wordmark sync: the data
-// lockup image is 172x32 with the alt "EVE-Cyno Data" on every page, and the head links the 16 px favicon.
+// wordmark is the inline CYNO svg with the label "EVE-Cyno Data" on every page (the docs top bar plays the
+// ignition once, the drawer head and the footer do not), and the head links the 16 px favicon.
 func TestPortal_LockupAndFaviconsFollowTheCynoWordmark(t *testing.T) {
 	api := portalAPI(t)
 	docs := do(api, http.MethodGet, "/docs/", "").Body.String()
-	require.Contains(t, docs, `alt="EVE-Cyno Data" width="172" height="32"`, "the docs pages keep the lockup image")
+	require.Equal(t, 1, strings.Count(docs, `<svg class="cy-wm cy-play" viewBox="0 0 344 64" width="129" height="24" role="img" aria-label="EVE-Cyno Data" focusable="false">`), "only the top bar plays the ignition")
+	require.Equal(t, 3, strings.Count(docs, `<svg class="cy-wm`), "top bar, drawer head and footer carry the inline wordmark")
+	require.Contains(t, docs, `<script src="/assets/`)
+	require.Contains(t, docs, `/wordmark-once.js"></script></a>`, "the script follows the top bar wordmark")
+	require.NotContains(t, docs, "lockup-data.svg", "the docs pages draw no lockup image")
+	require.NotContains(t, docs, `class="lockup-img"`)
 	require.NotContains(t, docs, `alt="EVE-CYNO DATA"`)
 	page := do(api, http.MethodGet, "/", "").Body.String()
 	require.Contains(t, page, `<svg class="cy-wm cy-play" viewBox="0 0 344 64" width="129" height="24" role="img" aria-label="EVE-Cyno Data" focusable="false">`, "the home page header carries the inline CYNO wordmark")
