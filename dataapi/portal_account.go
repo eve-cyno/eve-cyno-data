@@ -29,8 +29,10 @@ type accountSite struct {
 	store  AccountStore
 	sso    *evesso.Client
 	states *usedStates
-	cop    *http.CrossOriginProtection
-	tmpl   *template.Template
+	// exchanges holds one token per code exchange in flight (exchangeSlots).
+	exchanges chan struct{}
+	cop       *http.CrossOriginProtection
+	tmpl      *template.Template
 	// url, prefix and selfServe feed the page footer (footer-home in base.gohtml).
 	url, prefix string
 	selfServe   bool
@@ -51,7 +53,8 @@ func newAccountSite(store AccountStore, cfg evesso.Config, s Surface, now func()
 		now = time.Now
 	}
 	return &accountSite{
-		store: store, sso: c, states: newUsedStates(now), cop: http.NewCrossOriginProtection(), tmpl: t,
+		store: store, sso: c, states: newUsedStates(now, usedStatesMax), exchanges: make(chan struct{}, exchangeSlots),
+		cop: http.NewCrossOriginProtection(), tmpl: t,
 		url: s.PublicURL, prefix: s.prefix(), selfServe: s.SelfServe, now: now,
 	}, nil
 }
@@ -256,9 +259,10 @@ func (a *API) accountLogin(w http.ResponseWriter, r *http.Request) {
 }
 
 // accountCallback handles GET /auth/eve/callback. The flow cookies are spent first, before any byte is written; then
-// the state is compared (constant time) with its cookie and checked against the spent states, the code is exchanged
-// with the PKCE verifier, the token verified, and a new session replaces the browser's old one. The log lines carry a
-// reason only: never the code, the state, a token or who signed in.
+// the state is compared (constant time) with its cookie and checked against the spent states, an exchange slot is
+// taken (none free: busy), the code is exchanged with the PKCE verifier, the token verified, and a new session
+// replaces the browser's old one. The log lines carry a reason only: never the code, the state, a token or who
+// signed in.
 func (a *API) accountCallback(w http.ResponseWriter, r *http.Request) {
 	s := a.account
 	ctx := r.Context()
@@ -295,16 +299,18 @@ func (a *API) accountCallback(w http.ResponseWriter, r *http.Request) {
 		refuse("code", http.StatusBadRequest, "sign-in-failed")
 		return
 	}
-	switch fresh, full := s.states.use(state); {
-	case full:
-		refuse("busy", http.StatusServiceUnavailable, "busy")
-		return
-	case !fresh:
+	if !s.states.use(state) {
 		refuse("state_reused", http.StatusBadRequest, "sign-in-failed")
 		return
 	}
-
+	select {
+	case s.exchanges <- struct{}{}:
+	default:
+		refuse("busy", http.StatusServiceUnavailable, "busy")
+		return
+	}
 	ch, err := s.sso.Exchange(ctx, code, verifier)
+	<-s.exchanges
 	if err != nil {
 		var te *evesso.TokenError
 		var xe *evesso.ExchangeError

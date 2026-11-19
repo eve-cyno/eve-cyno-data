@@ -7,6 +7,7 @@ import (
 	"database/sql"
 	"encoding/base64"
 	"encoding/hex"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -452,6 +453,46 @@ func TestAccount_CallbackRefusesABadTokenOrAFailedExchange(t *testing.T) {
 	rec = b.do(http.MethodGet, "/auth/eve/callback?"+back.Encode(), nil)
 	refusedCallback(t, f, rec, http.StatusBadGateway, 1, 0)
 	require.Contains(t, rec.Body.String(), `data-error="sign-in-upstream"`)
+}
+
+// A forged callback needs no login: the client sets both flow cookies itself, with a matching state and any code.
+// From many /64s of one /48 the per-address limit does not stop it; the exchange slots bound what reaches EVE SSO
+// with the service's credentials, and a real sign-in goes through once the flood stops.
+func TestAccount_ForgedCallbackFloodIsBounded(t *testing.T) {
+	f := newAcctFix(t)
+	f.sso.BlockToken()
+	forged := func(i int) *httptest.ResponseRecorder {
+		b := f.browser()
+		b.ip = fmt.Sprintf("2001:db8:0:%x::1", i)
+		state, err := evesso.NewState()
+		require.NoError(t, err)
+		b.jar["__Host-ecd_sso_state"] = &http.Cookie{Name: "__Host-ecd_sso_state", Value: state}
+		b.jar["__Host-ecd_sso_pkce"] = &http.Cookie{Name: "__Host-ecd_sso_pkce", Value: evesso.NewVerifier()}
+		return b.do(http.MethodGet, "/auth/eve/callback?state="+state+"&code=forged", nil)
+	}
+	const slots = 16
+	held := make([]int, slots)
+	var wg sync.WaitGroup
+	for i := range slots {
+		wg.Go(func() { held[i] = forged(i).Code })
+	}
+	require.Eventually(t, func() bool { return f.sso.TokenInFlight() == slots }, 10*time.Second, 5*time.Millisecond)
+	for i := slots; i < 3*slots; i++ {
+		rec := forged(i)
+		require.Equal(t, http.StatusServiceUnavailable, rec.Code, "forged callback %d", i)
+		require.Contains(t, rec.Body.String(), `data-error="busy"`)
+	}
+	require.Equal(t, slots, f.sso.TokenRequests(), "no more than the exchange slots reach the token endpoint")
+
+	f.sso.UnblockToken()
+	wg.Wait()
+	for i, code := range held {
+		require.Equal(t, http.StatusBadGateway, code, "held callback %d", i)
+	}
+	f.signIn(t, f.browser())
+	require.Equal(t, 1, f.sso.TokenCalls(), "the real sign-in got its token")
+	require.Equal(t, slots+1, f.sso.TokenRequests())
+	require.Equal(t, 1, f.rows(t, `SELECT COUNT(*) FROM portal_sessions`))
 }
 
 func TestAccount_SignInAgainEndsTheOldSession(t *testing.T) {

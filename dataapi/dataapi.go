@@ -300,10 +300,10 @@ type Config struct {
 	KeyedLimitFactor int
 
 	// MaxInFlight caps the requests each route runs at once (see routeGate); the documentation
-	// routes, the portal assets, /health, the 405 fallbacks, the 404 catch-all and every
-	// non-POST request to MCP are exempt. The gate runs before every budget, so a request over
-	// the cap is answered 503 busy with Retry-After: 1 and charges nothing. Zero or below means
-	// no cap.
+	// routes, the portal assets, the data portal's account routes (the code exchange has a
+	// bound of its own), /health, the 405 fallbacks, the 404 catch-all and every non-POST
+	// request to MCP are exempt. The gate runs before every budget, so a request over the cap
+	// is answered 503 busy with Retry-After: 1 and charges nothing. Zero or below means no cap.
 	MaxInFlight int
 
 	// MaxInFlightUpstream gives the four routes that can wait on a third party (MCP, the tool
@@ -316,8 +316,9 @@ type Config struct {
 	// AnonDailyCap is the number of requests a client without an API key may make per UTC
 	// day (counted per rate-limit key, see KeyResolver, in memory only); over it the API
 	// answers 429 daily_quota_exceeded until 00:00 UTC. The documentation routes, the
-	// portal assets and /health are not counted. 0 means no cap, and the cap, like the
-	// trial limits and the key-only fit search, applies only when Auth is set: a service
+	// portal assets, the data portal's account routes and /health are not counted. 0 means
+	// no cap, and the cap, like the trial limits and the key-only fit search, applies only
+	// when Auth is set: a service
 	// that issues no keys has nothing to point the client at. A keyless address inside
 	// AnthropicRanges gets the larger of Limits.Range.DailyCap and AnonDailyCap (AnonDailyCapFor), and its refusal of
 	// one JSON-RPC message on {prefix}/mcp is answered in the protocol (see the package doc).

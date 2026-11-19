@@ -103,12 +103,14 @@
 //	                          dataapi.DefaultLimits) that the factor does not change
 //	DATAAPI_ANON_DAILY_CAP    requests per UTC day a client without an API key may make (integer
 //	                          0-10000000, default 200; 0 = no cap). In memory, per client IP;
-//	                          the documentation pages and /health are not counted. Applies only
-//	                          where keys exist (a key file or DATAAPI_KEYS_DB)
+//	                          the documentation pages, the data portal's account pages and
+//	                          /health are not counted. Applies only where keys exist (a key
+//	                          file or DATAAPI_KEYS_DB)
 //	DATAAPI_MAX_INFLIGHT      requests each route runs at the same time (integer 0-10000, default
-//	                          0 = no cap); the documentation pages, the portal assets, /health and
-//	                          GET/DELETE on /v1/mcp are not capped. Over it the route answers 503
-//	                          busy with Retry-After: 1 at once instead of queueing; the check runs
+//	                          0 = no cap); the documentation pages, the portal assets, the data
+//	                          portal's account pages, /health and GET/DELETE on /v1/mcp are not
+//	                          capped. Over it the route answers 503 busy with Retry-After: 1 at
+//	                          once instead of queueing; the check runs
 //	                          before every limit, the daily cap and a key's quota, so a busy
 //	                          answer charges nothing. A full route first runs three checks that
 //	                          record nothing: the per-IP route limiter, the anonymous daily

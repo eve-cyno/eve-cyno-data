@@ -28,8 +28,12 @@ const (
 	deleteWithin = 10 * time.Minute
 	// accountFormMax bounds the body of an account form POST, in bytes.
 	accountFormMax = 8 << 10
-	// usedStatesMax bounds the spent states kept; with the set full of live ones a callback is refused (busy).
+	// usedStatesMax bounds the spent states kept (usedStates).
 	usedStatesMax = 100_000
+	// exchangeSlots bounds the code exchanges with EVE SSO in flight across all callers: a callback finding them all
+	// taken is refused (busy) at once. Any client can send a callback that gets as far as the exchange, so the
+	// slots, not the per-address limit, bound the requests made with the service's credentials.
+	exchangeSlots = 16
 )
 
 // sessionMaxAge is the session cookie's Max-Age: the session's whole life (PortalSessionTTL), in seconds.
@@ -55,40 +59,54 @@ func cookieValue(r *http.Request, name string) string {
 }
 
 // usedStates remembers the sign-in states a callback accepted, for as long as their flow cookies live, so a replayed
-// callback (the same query with copied flow cookies) is refused before any code exchange. It is in memory: a restart
-// forgets it, which EVE SSO's single-use codes cover.
+// callback (the same query with copied flow cookies) is refused before any code exchange. It is in memory and bounded
+// (max states): full, it forgets the oldest state, so a flood of forged callbacks (a client may set both flow cookies
+// itself) never locks out a real sign-in. A restart or an eviction forgets a state, which EVE SSO's single-use codes
+// cover.
 type usedStates struct {
 	mu   sync.Mutex
 	seen map[string]time.Time // state -> when its memory ends
-	// sweep is when expired entries are next dropped.
-	sweep time.Time
+	// order holds the states in the order they were spent, oldest first; an entry whose end no longer matches seen
+	// is a state spent again later.
+	order []spentState
+	max   int
 	now   func() time.Time
 }
 
-func newUsedStates(now func() time.Time) *usedStates {
-	return &usedStates{seen: map[string]time.Time{}, now: now}
+type spentState struct {
+	state string
+	end   time.Time
 }
 
-// use records state and reports whether it is fresh (not spent within flowMaxAge). full is set, with fresh false,
-// when the set holds usedStatesMax live states: the callback is then refused rather than the bound broken.
-func (u *usedStates) use(state string) (fresh, full bool) {
+func newUsedStates(now func() time.Time, max int) *usedStates {
+	return &usedStates{seen: map[string]time.Time{}, max: max, now: now}
+}
+
+// use records state and reports whether it is fresh (not spent within flowMaxAge).
+func (u *usedStates) use(state string) bool {
 	u.mu.Lock()
 	defer u.mu.Unlock()
 	now := u.now()
-	if !now.Before(u.sweep) || len(u.seen) >= usedStatesMax {
-		for s, end := range u.seen {
-			if !now.Before(end) {
-				delete(u.seen, s)
-			}
-		}
-		u.sweep = now.Add(time.Minute)
+	for len(u.order) > 0 && !now.Before(u.order[0].end) {
+		u.dropOldest()
 	}
 	if end, ok := u.seen[state]; ok && now.Before(end) {
-		return false, false
+		return false
 	}
-	if len(u.seen) >= usedStatesMax {
-		return false, true
+	for len(u.order) >= u.max {
+		u.dropOldest()
 	}
-	u.seen[state] = now.Add(flowMaxAge * time.Second)
-	return true, false
+	end := now.Add(flowMaxAge * time.Second)
+	u.seen[state] = end
+	u.order = append(u.order, spentState{state, end})
+	return true
+}
+
+func (u *usedStates) dropOldest() {
+	e := u.order[0]
+	u.order[0] = spentState{}
+	u.order = u.order[1:]
+	if end, ok := u.seen[e.state]; ok && end.Equal(e.end) {
+		delete(u.seen, e.state)
+	}
 }

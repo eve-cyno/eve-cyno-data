@@ -136,9 +136,10 @@ type route struct {
 	// ceiling of keyless callers inside Config.AnthropicRanges (see rangeLimiter).
 	rangeRate func(Surface) (perAddr, ceiling Rate)
 	handle    func(*API, http.ResponseWriter, *http.Request)
-	// trialFree marks the routes the anonymous daily cap does not count: browsing the
-	// documentation (and the portal assets) never spends the trial, and a health probe must
-	// not be locked out.
+	// trialFree marks the routes the anonymous daily cap does not count and the in-flight gate
+	// (MaxInFlight) does not cap: browsing the documentation (and the portal assets) never
+	// spends the trial, a health probe must not be locked out, and the data portal's account
+	// routes have bounds of their own (the code exchange has exchangeSlots).
 	trialFree bool
 	// cache is the Cache-Control policy of a 200 answer ("" leaves the header unset);
 	// every other status is no-store.

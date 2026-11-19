@@ -64,6 +64,8 @@ type Server struct {
 	block  chan struct{}
 	codes  map[string]*grant
 	tokens int
+	// requests counts every token request, inFlight those being answered.
+	requests, inFlight int
 	// lastAuthorize is the query of the last authorize request.
 	lastAuthorize url.Values
 	now           func() time.Time
@@ -125,13 +127,39 @@ func (s *Server) EditClaims(f func(map[string]any)) {
 	s.claims = f
 }
 
-// BlockToken makes the token endpoint hang until the test ends (for timeout tests).
+// BlockToken makes the token endpoint hang until UnblockToken or the end of the test (for timeout and
+// concurrency tests).
 func (s *Server) BlockToken() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.block == nil {
 		s.block = make(chan struct{})
 	}
+}
+
+// UnblockToken releases the token requests BlockToken holds; they get an empty answer, and later requests are
+// answered again.
+func (s *Server) UnblockToken() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.block != nil {
+		close(s.block)
+		s.block = nil
+	}
+}
+
+// TokenRequests is the number of requests the token endpoint received, answered or not.
+func (s *Server) TokenRequests() int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.requests
+}
+
+// TokenInFlight is the number of token requests being answered (or held by BlockToken) now.
+func (s *Server) TokenInFlight() int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.inFlight
 }
 
 // TokenCalls is the number of token requests the fake answered with a token.
@@ -205,8 +233,15 @@ func (s *Server) authorize(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) token(w http.ResponseWriter, r *http.Request) {
 	s.mu.Lock()
+	s.requests++
+	s.inFlight++
 	block := s.block
 	s.mu.Unlock()
+	defer func() {
+		s.mu.Lock()
+		s.inFlight--
+		s.mu.Unlock()
+	}()
 	if block != nil {
 		select {
 		case <-block:
