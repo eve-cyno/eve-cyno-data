@@ -1,4 +1,4 @@
-/* source: claude-design-artifact version 1795118846-3c26 project/eve-cyno/project/data-docs.css sha256 faed62bc66c7eb5bb18d24c69b69c2eb50c03dc7fe8779333e6357252ee78906 */
+/* source: claude-design-artifact version 1795120048-ad94 project/eve-cyno/project/data-docs.css sha256 21b7c63845eb6b622fd829e65d932813fa020c1750d0662f54f56ef3ed817e95 */
 /* ==========================================================================
    EVE-CYNO DATA · data-docs.css  (restyle round, 2026-11-19)
    Docs layer. Loads after site-base.css and brand/wordmark-motion.css, and replaces
@@ -231,7 +231,7 @@ kbd { font-family: var(--f-mono); }
 .nav-status i { width: 6px; height: 6px; border-radius: 50%; background: var(--c-ok); box-shadow: 0 0 8px rgba(110, 216, 120, .55); }
 .nav-status:hover { color: var(--c-fg); }
 .nav-cap { margin: 24px 0 6px 10px; font-family: var(--f-mono); font-size: var(--t-label); letter-spacing: var(--track-label); text-transform: uppercase; color: var(--c-fg-dim); }
-.nav-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 1px; }
+.nav-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 1px; }
 .nav-link { display: flex; align-items: center; gap: 8px; min-height: 34px; padding: 6px 10px; font-size: .9375rem; color: var(--c-fg-muted); border-radius: var(--radius); transition: color var(--dur-1), background var(--dur-1); }
 .nav-link:hover { color: var(--c-fg); background: rgba(255, 255, 255, .04); }
 .nav-link[aria-current="page"] { color: var(--c-fg); background: color-mix(in srgb, var(--mode) 11%, transparent); box-shadow: inset 2px 0 0 var(--mode); }
