@@ -348,7 +348,7 @@ func TestAccessLog_IPv6SlashSixtyFourIsOneCallerToken(t *testing.T) {
 // The full log of a run with IPv4, IPv6, IPv4-mapped, peer-only, keyed and wrongly keyed
 // callers holds no address, no /64 prefix, no caller key, no API key and not the secret.
 func TestAccessLog_CallerTokenNeverCarriesTheAddressOrTheSecret(t *testing.T) {
-	const secret = "never-logged-secret-7f3a9c"
+	const secret = "never-logged-secret-value"
 	c := &clock{t: time.Date(2026, 11, 12, 12, 0, 0, 0, time.UTC)}
 	a, buf := tokenAPI(t, secret, c.now, testKeys(t))
 	for _, hdr := range [][]string{

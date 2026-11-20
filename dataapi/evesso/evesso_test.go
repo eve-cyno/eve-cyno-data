@@ -161,7 +161,7 @@ func TestEVESSO_Verify(t *testing.T) {
 	}{
 		{name: "good", token: edit(func(map[string]any) {}), want: evesso.Character{ID: "90000001", Name: "Ada Lovelace", OwnerHash: "b3duZXItb25l"}},
 		{name: "issuer without scheme", token: edit(func(m map[string]any) { m["iss"] = "login.eveonline.com" }), want: evesso.Character{ID: "90000001", Name: "Ada Lovelace", OwnerHash: "b3duZXItb25l"}},
-		{name: "name trimmed and cleaned", token: edit(func(m map[string]any) { m["name"] = "  Ada‮ Love\x07lace " }), want: evesso.Character{ID: "90000001", Name: "Ada Lovelace", OwnerHash: "b3duZXItb25l"}},
+		{name: "name trimmed and cleaned", token: edit(func(m map[string]any) { m["name"] = "  Ada\u202e Love\x07lace " }), want: evesso.Character{ID: "90000001", Name: "Ada Lovelace", OwnerHash: "b3duZXItb25l"}},
 		{name: "wrong issuer", token: edit(func(m map[string]any) { m["iss"] = "https://login.evil.example" }), reason: "issuer"},
 		{name: "issuer over http", token: edit(func(m map[string]any) { m["iss"] = "http://login.eveonline.com" }), reason: "issuer"},
 		{name: "no issuer", token: edit(func(m map[string]any) { delete(m, "iss") }), reason: "issuer"},
@@ -185,7 +185,7 @@ func TestEVESSO_Verify(t *testing.T) {
 		{name: "no owner", token: edit(func(m map[string]any) { delete(m, "owner") }), reason: "owner"},
 		{name: "malformed owner", token: edit(func(m map[string]any) { m["owner"] = "has spaces and ;" }), reason: "owner"},
 		{name: "no name", token: edit(func(m map[string]any) { delete(m, "name") }), reason: "name"},
-		{name: "blank name", token: edit(func(m map[string]any) { m["name"] = " ​ " }), reason: "name"},
+		{name: "blank name", token: edit(func(m map[string]any) { m["name"] = " \u200b " }), reason: "name"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

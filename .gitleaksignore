@@ -1,0 +1,2 @@
+# Test fixture, not a secret: the HMAC key of the access-log token test (history finding).
+2412880ad19f149070255f9161fd41e9610ed5fe:dataapi/upstream_test.go:generic-api-key:334
