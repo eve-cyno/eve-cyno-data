@@ -129,8 +129,10 @@ Public tools need nothing. The keyed tier takes API keys from two sources, which
 - **A self-serve key store**, a SQLite file named by `DATAAPI_KEYS_DB` (created if missing). Keys look like `ecd_` plus 64 hex
   characters, are shown once when created and stored as a hash. One account (all its linked sign-in identities together) may hold
   3 active keys and may create at most 10 keys per UTC day; revoked key records are deleted after 30 days. Each key gets a
-  daily request cap (`DATAAPI_KEY_DAILY_CAP`) and its requests are counted per endpoint for 30 days. The store is
-  managed through the admin API below; the documents describe self-serve issuance only when the store is on.
+  daily request cap (`DATAAPI_KEY_DAILY_CAP`) and its requests are counted per endpoint for 30 days. People manage their
+  own keys on the account page ([Portal sign-in](#portal-sign-in-key-store-only)); the Discord bot's `/apikey` and the
+  operator use the admin API below. The documents describe self-serve issuance only when the store is on, and they name
+  the account page only while the sign-in is on (otherwise they point to `/apikey` in Discord).
 
 An `ecd_` key the store does not hold is refused as invalid; any other key is checked against the file.
 
@@ -143,6 +145,16 @@ DATAAPI_API_KEYS_FILE=keys.txt DATAAPI_EXPOSE_TOOL_API=true DATAAPI_EXPOSE_MCP=t
 A client sends the key as `Authorization: Bearer <key>` or `X-API-Key: <key>`. With neither a key file nor a key store there
 are no keys: keyed tools answer 401 and are left out of the documents and the MCP tool list. Such a service has nobody to give a
 key to, so it serves everyone the keyed numbers of the table below, has no daily cap for clients and leaves `q` open.
+
+#### Portal sign-in (key store only)
+
+Free key: sign in with EVE Online at https://data.eve-cyno.dev/account (identity only, no scopes). Create, list and revoke
+keys there; at most 3 active keys, 10 creations a day, 10,000 requests a day per key. Discord `/apikey` still works and the
+same person has the same limits. Keys made earlier from ai.eve-cyno.dev keep working and show up on the same account.
+Delete account (it needs a sign-in from the last 10 minutes; an account with a Discord login is deleted from the AI chat's
+settings) removes your keys and their history, and so also resets the day's creation count. A service runs the sign-in
+when `DATAAPI_EVE_SSO_CLIENT_ID` and `DATAAPI_EVE_SSO_CLIENT_SECRET` are both set and the key store is open (see
+[Configuration](#configuration)); without them `/account` answers 404.
 
 #### Admin API (key store only)
 
@@ -366,6 +378,9 @@ Read from the process environment; the commands do not read a `.env` file.
 | `DATAAPI_ADMIN_TOKEN` | dataapi | bearer token of the admin API (at least 32 characters; never logged). Unset: no admin listener |
 | `DATAAPI_ADMIN_ADDR` | dataapi | admin listen address, default `127.0.0.1:8093`; served only when the key store and the token are both set |
 | `DATAAPI_PUBLIC_URL` | dataapi | the public origin, e.g. `https://data.eve-cyno.dev` (https, no path or query; invalid is a startup error). Makes the OpenAPI `servers` entry and the `llms*.txt` links absolute, which ChatGPT Actions need; unset keeps them relative |
+| `DATAAPI_EVE_SSO_CLIENT_ID` | dataapi | client id of the EVE SSO application (Authentication Only, no scopes) behind the [portal sign-in](#portal-sign-in-key-store-only) at `/account`; the sign-in is on only with the secret set too and `DATAAPI_KEYS_DB` open. One of the two without the other, or a malformed value, is a startup error; with no key store or no callback URL the sign-in stays off with a startup warning. Unset: `/account` is 404 |
+| `DATAAPI_EVE_SSO_CLIENT_SECRET` | dataapi | secret of that application (never logged) |
+| `DATAAPI_EVE_SSO_REDIRECT_URL` | dataapi | optional: the callback registered with the application, default `DATAAPI_PUBLIC_URL` + `/auth/eve/callback`. An explicit URL works without `DATAAPI_PUBLIC_URL`; it must be https (http on a loopback host for a local run) and end in `/auth/eve/callback` |
 | `DATAAPI_SDE_ONLY` | dataapi | `true` runs without the fit corpus, see [SDE-only mode](#quick-start-sde-only-no-other-services) |
 | `MCP_EXPOSE_ALL` (or `-all`) | mcp | register every tool, for your own machine and keys |
 | `MCP_SDE_ONLY` (or `-sde-only`) | mcp | `true` runs without the fit corpus, as `DATAAPI_SDE_ONLY` does |
