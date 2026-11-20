@@ -55,6 +55,7 @@ The Go standard library and toolchain are BSD-3-Clause (The Go Authors, https://
 | File | Version | Licence (SPDX) | Copyright holder | Notes |
 |---|---|---|---|---|
 | `dataapi/portal/static/three.min.js` | three.js r128 | MIT | three.js authors (2010-2021) | served unchanged from the portal's own origin for the home page's 3D scene (the CSP allows scripts from `self` only); `TestPortal_ThreeIsR128` pins its sha256. The MIT licence text must travel with a redistribution of the file: take it from the three.js repository at tag r128 |
+| `dataapi/portal/static/*.woff2` (Space Grotesk, JetBrains Mono) | `@fontsource` 5.3.0 | OFL-1.1 | see `LICENSE-space-grotesk.txt` and `LICENSE-jetbrains-mono.txt` | self-hosted so no page requests a font host (the CSP allows fonts from `self` only); unmodified, source and sha256 in `dataapi/portal/static/FONTS.md`, which `TestPortal_FontsAreSelfHosted` checks. The licence texts are served beside the fonts |
 
 ## Redistribution
 

@@ -40,10 +40,11 @@ var portalTemplates embed.FS
 var portalStatic embed.FS
 
 // portalCSP is the Content-Security-Policy of the portal and docs pages: scripts only from
-// this origin (no inline script runs; the search index is a JSON data block), the design's
-// Google Fonts, inline style attributes only (the icon sprite carries one).
-const portalCSP = "default-src 'none'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; " +
-	"style-src-attr 'unsafe-inline'; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; " +
+// this origin (no inline script runs; the search index is a JSON data block), styles and fonts
+// only from this origin (Space Grotesk and JetBrains Mono are self-hosted, see
+// portal/static/FONTS.md), inline style attributes only (the icon sprite carries one).
+const portalCSP = "default-src 'none'; script-src 'self'; style-src 'self'; " +
+	"style-src-attr 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self'; " +
 	"base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
 
 // portalExampleTool is the tool the landing page and "Getting started" show a call of.
@@ -917,6 +918,12 @@ func loadPortalAssets() (map[string]portalAsset, string, error) {
 			ct = "image/svg+xml"
 		case ".png":
 			ct = "image/png"
+		case ".woff2":
+			ct = "font/woff2"
+		case ".txt":
+			ct = "text/plain; charset=utf-8"
+		case ".md":
+			ct = "text/markdown; charset=utf-8"
 		default:
 			return nil, "", fmt.Errorf("portal asset %s: unknown type", e.Name())
 		}
