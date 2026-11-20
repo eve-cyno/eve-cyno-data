@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"net/http"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
@@ -46,13 +47,25 @@ func TestPortal_FontsAreSelfHosted(t *testing.T) {
 	require.Contains(t, css.Body.String(), "unicode-range:")
 	urls := fontURLRE.FindAllStringSubmatch(css.Body.String(), -1)
 	require.Len(t, urls, 16)
+	referenced := map[string]bool{}
 	for _, m := range urls {
+		referenced[m[1]] = true
 		rec := do(api, http.MethodGet, base+"/"+m[1], "")
 		require.Equal(t, http.StatusOK, rec.Code, m[1])
 		require.Equal(t, "font/woff2", rec.Header().Get("Content-Type"), m[1])
 		require.Equal(t, "public, max-age=31536000, immutable", rec.Header().Get("Cache-Control"), m[1])
 		sum := sha256.Sum256(rec.Body.Bytes())
 		require.Equal(t, pin[m[1]], hex.EncodeToString(sum[:]), "%s differs from its FONTS.md pin", m[1])
+	}
+
+	// No font file may sit in the static directory unpinned or unreferenced.
+	files, err := filepath.Glob("portal/static/*.woff2")
+	require.NoError(t, err)
+	require.Len(t, files, 16)
+	for _, f := range files {
+		name := filepath.Base(f)
+		require.Contains(t, pin, name, "%s is not pinned in FONTS.md", name)
+		require.True(t, referenced[name], "%s is not referenced by fonts.css", name)
 	}
 
 	for _, lic := range []string{"LICENSE-space-grotesk.txt", "LICENSE-jetbrains-mono.txt"} {

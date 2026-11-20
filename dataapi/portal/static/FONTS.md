@@ -13,7 +13,7 @@ upstream projects are https://github.com/floriankarsten/space-grotesk and https:
 
 Subsets: `latin` and `latin-ext`, normal style, weights 400, 500, 600, 700 (Space Grotesk: all four are used by the design; JetBrains
 Mono: 400, 500 and 600 as the design's font link asked, 700 for `.btn.primary`). The `unicode-range` of each subset is the one in the
-package's `unicode.json`; `fonts.css` was generated once from the generator `sdk/site/lib/fonts.mjs` of the plugins repo and is committed (the font urls name the files beside it). `TestPortal_FontsAreSelfHosted` serves every file and checks it against the sha256 below.
+package's `unicode.json`; `fonts.css` was generated once from the generator `sdk/site/lib/fonts.mjs` in `eve-cyno/plugins` and is committed. The generator writes `url("fonts/...")`; the urls were adapted to name the files beside `fonts.css`. `TestPortal_FontsAreSelfHosted` serves every file and checks it against the sha256 below.
 
 | File | sha256 |
 |---|---|

@@ -72,7 +72,7 @@ func TestPortal_AccountPagesGolden(t *testing.T) {
 }
 
 // Each account page carries the Fenris Creations notice, loads only its own origin's scripts and styles and runs no
-// inline script, so the portal CSP (script-src 'self', style-src 'self' and the fonts host) holds.
+// inline script, so the portal CSP (script-src 'self', style-src 'self') holds.
 func TestPortal_AccountPagesHonourTheCSP(t *testing.T) {
 	f := newAcctFix(t, func(c *dataapi.Config) { c.Docs = true })
 	home := do(f.api, http.MethodGet, "/", "").Body.String()
