@@ -617,12 +617,12 @@ func TestTerms_NameFenrisCreations(t *testing.T) {
 	require.Equal(t, 1, strings.Count(md, "CCP"), "CCP only as the former name")
 }
 
-// The hosted "how to get a key" copy (Discord /apikey, ai.eve-cyno.dev, 3 keys) is shown
+// The hosted "how to get a key" copy (Discord /apikey, the account page, 3 keys) is shown
 // only when the self-serve key store is wired; a key-file-only service says the operator
-// issues keys.
+// issues keys. Keys are no longer made in the chat's settings, and no page says they will move.
 func TestPortal_HostedKeyCopyNeedsSelfServe(t *testing.T) {
 	pages := []string{"/", "/docs/access", "/docs/tools", "/docs/mcp", "/docs/rest", "/docs/terms"}
-	hosted := []string{"/apikey", "ai.eve-cyno.dev", "3 active keys", "Data API keys", "An account only if you create"}
+	hosted := []string{"/apikey", "sign in with EVE Online on data.eve-cyno.dev/account", "3 active keys", "An account only if you create"}
 	body := func(selfServe bool) string {
 		cfg := publicConfig()
 		cfg.PublicURL = "https://data.example.test"
@@ -640,6 +640,9 @@ func TestPortal_HostedKeyCopyNeedsSelfServe(t *testing.T) {
 	for _, h := range hosted {
 		require.Contains(t, with, h)
 		require.NotContains(t, without, h)
+	}
+	for _, stale := range []string{"Settings → Data API keys", "Free keys move", "from Discord or ai.eve-cyno.dev", "Discord or ai.eve-cyno.dev sign-in"} {
+		require.NotContains(t, with, stale)
 	}
 	require.Contains(t, without, "issued by the operator of this service")
 	require.Contains(t, without, "Keyed callers are rate limited per key.")

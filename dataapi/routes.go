@@ -26,7 +26,7 @@ type Surface struct {
 	// available and documented.
 	Auth bool
 	// SelfServe is true when this service runs the key store behind self-serve issuance
-	// (Discord /apikey and the ai.eve-cyno.dev settings): only then do the pages show the
+	// (Discord /apikey and the account page at /account): only then do the pages show the
 	// hosted "how to get a key" copy. Auth alone (a key file) says keys are issued by the
 	// operator.
 	SelfServe bool
