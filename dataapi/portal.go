@@ -225,6 +225,7 @@ type pageData struct {
 	Health             string
 	Auth               bool
 	SelfServe          bool
+	SignIn             bool   // the EVE sign-in and the account page at /account are served (Surface.SignIn)
 	KeysRaise          bool   // an API key raises the per-minute limit of at least one route
 	KeyCap             string // daily cap of a new key as "10,000"; "" unless keys are on and the cap is above 0
 	AnonCap            string // daily cap of a caller without a key as "200"; "" unless keys are on and the cap is above 0
@@ -467,6 +468,7 @@ func newPageData(in portalInput, assetVersion string) pageData {
 		Health:        health,
 		Auth:          s.Auth,
 		SelfServe:     s.Auth && s.SelfServe,
+		SignIn:        s.Auth && s.SelfServe && s.SignIn,
 		KeysRaise:     s.Auth && s.keysRaise(),
 		KeyCap:        keyCap(s),
 		AnonCap:       anonCap(s),

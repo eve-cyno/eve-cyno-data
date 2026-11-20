@@ -260,7 +260,7 @@
       <thead><tr><th scope="col">Tier</th><th scope="col">Who can call</th><th scope="col" class="num">Tools</th></tr></thead>
       <tbody>
         <tr><td><span class="badge" data-tier="public">public</span></td><td>anyone, no key (trial limits)</td><td class="num">32</td></tr>
-        <tr><td><span class="badge" data-tier="keyed">keyed</span></td><td>a valid API key: <code>Authorization: Bearer &lt;key&gt;</code> or <code>X-API-Key: &lt;key&gt;</code> (free: from data.eve-cyno.dev/account or Discord, see <a href="#access-keys">API keys</a>); also for free-text fit search, <code>q</code> on <code>/v1/fits/search</code> (the filters need no key)</td><td class="num">1</td></tr>
+        <tr><td><span class="badge" data-tier="keyed">keyed</span></td><td>a valid API key: <code>Authorization: Bearer &lt;key&gt;</code> or <code>X-API-Key: &lt;key&gt;</code> (free: from Discord, see <a href="#access-keys">API keys</a>); also for free-text fit search, <code>q</code> on <code>/v1/fits/search</code> (the filters need no key)</td><td class="num">1</td></tr>
         <tr><td><span class="badge badge-plain">disabled</span></td><td>not offered on this service</td><td class="num">1</td></tr>
       </tbody>
     </table></div>
@@ -302,13 +302,13 @@
     <h2 id="access-keys">API keys<a class="h-anchor" href="#access-keys" aria-label="Link to this section">#</a></h2>
     <p>Without a key the API is for trying it out. A free key is for connecting it to Claude Code, your own model or a bot, and it lets the operator see who sends what. API keys are free. They are personal to you, are not to be shared or resold, and may be revoked at any time, for example for abuse.</p>
     <dl class="facts">
-      <dt>Get a key</dt><dd>Sign in with EVE Online on <a href="/account">data.eve-cyno.dev/account</a> (identity only, no scopes) and press <b>Create key</b>, or run <code>/apikey create</code> in our <a href="https://discord.gg/XZzkH38dt9">Discord server</a>.</dd>
+      <dt>Get a key</dt><dd>Run <code>/apikey create</code> in our <a href="https://discord.gg/XZzkH38dt9">Discord server</a>.</dd>
       <dt>How many</dt><dd>At most 3 active keys per person and 10 new keys a day. A key belongs to one person across the portal and Discord: the same account has the same limits.</dd>
       <dt>The secret</dt><dd><code>ecd_</code> followed by 64 hex characters, shown once, when you create the key. Copy it then: it cannot be shown again.</dd>
       <dt>What it unlocks</dt><dd>The keyed tool <code>analyze_battle</code>, free-text fit search (<code>q</code> on <code>/v1/fits/search</code>) and the higher limits for daily use.</dd>
       <dt>Limits</dt><dd>The per-minute route limits in the "With a key" column above, and a daily cap of 10,000 requests per key (UTC day, resets at 00:00 UTC).</dd>
       <dt>Live tools</dt><dd>5 calls per minute per caller without a key, 10 with one, counted across every live tool: the upstream budgets are shared.</dd>
-      <dt>Revoking</dt><dd>Use Revoke on your <a href="/account">account page</a>, or run <code>/apikey revoke</code> in Discord, at any time. A revoked key stops working at once.</dd>
+      <dt>Revoking</dt><dd>Run <code>/apikey revoke</code> in Discord, at any time. A revoked key stops working at once.</dd>
     </dl>
     <p>Send the key in the <code>Authorization</code> header, or as <code>X-API-Key: ecd_...</code>:</p>
     <div class="code" data-copy-scope>

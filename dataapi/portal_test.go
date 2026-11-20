@@ -617,17 +617,16 @@ func TestTerms_NameFenrisCreations(t *testing.T) {
 	require.Equal(t, 1, strings.Count(md, "CCP"), "CCP only as the former name")
 }
 
-// The hosted "how to get a key" copy (Discord /apikey, the account page, 3 keys) is shown
-// only when the self-serve key store is wired; a key-file-only service says the operator
-// issues keys. Keys are no longer made in the chat's settings, and no page says they will move.
+// The hosted "how to get a key" copy (Discord /apikey, 3 keys) is shown only when the self-serve
+// key store is wired; a key-file-only service says the operator issues keys. The account page is
+// offered only while the EVE sign-in is on: with it off (the rollback without a redeploy) the pages
+// send key seekers to Discord alone, never to a /account that answers 404. Keys are no longer made
+// in the chat's settings, and no page says they will move.
 func TestPortal_HostedKeyCopyNeedsSelfServe(t *testing.T) {
 	pages := []string{"/", "/docs/access", "/docs/tools", "/docs/mcp", "/docs/rest", "/docs/terms"}
-	hosted := []string{"/apikey", "sign in with EVE Online on data.eve-cyno.dev/account", "3 active keys", "An account only if you create"}
-	body := func(selfServe bool) string {
-		cfg := publicConfig()
-		cfg.PublicURL = "https://data.example.test"
-		cfg.SelfServe = selfServe
-		api := newAPI(t, cfg)
+	hosted := []string{"/apikey create", "3 active keys", "An account only if you create"}
+	account := []string{"sign in with EVE Online on data.eve-cyno.dev/account", `href="/account"`, "data.eve-cyno.dev/account or Discord"}
+	body := func(api http.Handler) string {
 		var all strings.Builder
 		for _, p := range pages {
 			rec := do(api, http.MethodGet, p, "")
@@ -636,13 +635,35 @@ func TestPortal_HostedKeyCopyNeedsSelfServe(t *testing.T) {
 		}
 		return all.String()
 	}
-	with, without := body(true), body(false)
+	selfServe := func(on bool) http.Handler {
+		cfg := publicConfig()
+		cfg.PublicURL = "https://data.example.test"
+		cfg.SelfServe = on
+		return newAPI(t, cfg)
+	}
+	signIn := newAcctFix(t, func(c *dataapi.Config) { c.Docs = true })
+	require.Equal(t, http.StatusOK, do(signIn.api, http.MethodGet, "/account", "").Code)
+	withSignIn, withoutSignIn, without := body(signIn.api), body(selfServe(true)), body(selfServe(false))
+	require.Equal(t, http.StatusNotFound, do(selfServe(true), http.MethodGet, "/account", "").Code)
+
 	for _, h := range hosted {
-		require.Contains(t, with, h)
+		require.Contains(t, withSignIn, h)
+		require.Contains(t, withoutSignIn, h)
 		require.NotContains(t, without, h)
 	}
+	for _, a := range account {
+		require.Contains(t, withSignIn, a)
+		require.NotContains(t, withoutSignIn, a, "no account page while the sign-in is off")
+		require.NotContains(t, without, a)
+	}
+	require.NotContains(t, withoutSignIn, "account page")
+	require.Contains(t, withoutSignIn, "(free: from Discord, see")
+	require.Contains(t, withoutSignIn, "<dd>Run <code>/apikey create</code> in our")
+	require.Contains(t, withoutSignIn, "<dd>Run <code>/apikey revoke</code> in Discord")
+	require.Contains(t, withoutSignIn, "A free key (/apikey in Discord) connects it")
 	for _, stale := range []string{"Settings → Data API keys", "Free keys move", "from Discord or ai.eve-cyno.dev", "Discord or ai.eve-cyno.dev sign-in"} {
-		require.NotContains(t, with, stale)
+		require.NotContains(t, withSignIn, stale)
+		require.NotContains(t, withoutSignIn, stale)
 	}
 	require.Contains(t, without, "issued by the operator of this service")
 	require.Contains(t, without, "Keyed callers are rate limited per key.")
