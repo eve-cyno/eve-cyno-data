@@ -87,3 +87,14 @@ func TestPortal_NoFontHostAndFontsCSSFirst(t *testing.T) {
 		require.Less(t, link[0], first+len(`rel="stylesheet"`), "%s: fonts.css is not the first stylesheet", p)
 	}
 }
+
+// The footer of the design of 2026-11-20: no owner byline, a fan-project note with the donations line.
+func TestPortal_FooterHasNoByline(t *testing.T) {
+	api := portalAPI(t)
+	for _, p := range []string{"/", "/docs/", "/docs/mcp", "/docs/rest", "/docs/tools", "/docs/access", "/docs/attribution", "/docs/terms", "/docs/claude-code", "/docs/tools/get_fits"} {
+		body := do(api, http.MethodGet, p, "").Body.String()
+		require.NotContains(t, body, "Hobby-run by Bythlak", p)
+		require.NotContains(t, body, "Deterministic EVE Online data for tools and AI agents", p)
+		require.Contains(t, body, "<p>Free tools for EVE pilots. Not an official EVE Online or Fenris Creations service.</p><p>A free, non-commercial fan project. Donations are voluntary and unlock nothing.</p>", p)
+	}
+}
