@@ -9,7 +9,7 @@
 # -- Build stage ---------------------------------------------------------------------------
 # Bases are pinned by index digest, so a rebuild of the same commit gives the same base; Dependabot's
 # docker group bumps tag and digest together.
-FROM golang:1.27.4-trixie@sha256:b54b2639de8c1bfe538ec5ffc45f29b1932235ac5f6d63c059853646677112d9 AS build
+FROM golang:1.27.4-trixie@sha256:f18c3d73a184fb0582828510722e723b63a93f7188d11dd223d9be6f6880e65d AS build
 WORKDIR /src
 
 # Cache module downloads on go.mod / go.sum only (the common edit case is code).
@@ -33,7 +33,7 @@ RUN CGO_ENABLED=0 go build -trimpath \
 RUN mkdir -p /out/keys
 
 # -- Runtime stage (distroless static: no shell, no libc; CA bundle for the SDE download) --
-FROM gcr.io/distroless/static-debian13:nonroot@sha256:25ac8f0c3b2334a9eb05452266bd4697864a8c8ef0ef71e5e6480d7f92868329 AS runtime
+FROM gcr.io/distroless/static-debian13:nonroot@sha256:8ce6dd87e9823c5b48dcfb2c8604714ccb351ce59607327bcc4957448da279b5 AS runtime
 COPY --from=build /out/dataapi /dataapi
 COPY --from=build /out/sde /sde
 COPY --from=build --chown=65532:65532 /out/keys /data/keys
