@@ -103,6 +103,10 @@ type Request struct {
 	TargetHull int
 	// DamagePattern is the incoming damage EHP is worked against (fit.StatsOpts).
 	DamagePattern string
+	// DamageWeights is a custom incoming damage split instead of DamagePattern (see
+	// fit.StatsOpts.DamageWeights). Invalid weights, or both fields set, fail the solve
+	// before any evaluation.
+	DamageWeights *fit.DamagePattern
 	// Prices are the ISK prices the caller holds (spec 15: the open fit's items only). A
 	// candidate with a line that has no price ties on price.
 	Prices map[int]float64
@@ -398,7 +402,7 @@ func solve(ctx context.Context, c *Catalog, ev Evaluator, r Request, h *hooks) (
 	res := &Result{Changes: []LineChange{}, Warnings: []Warning{}, Policy: s.pol}
 
 	// Baselines: B1 under all V without implants, B2 under the pilot on the fit's own hull.
-	b1opts := fit.StatsOpts{DamagePattern: r.DamagePattern}
+	b1opts := fit.StatsOpts{DamagePattern: r.DamagePattern, DamageWeights: r.DamageWeights}
 	reqs := []gofa.Request{{Fit: r.Fit, Opts: b1opts}}
 	same := r.Skills == nil && len(r.Implants) == 0
 	if !same {
@@ -556,6 +560,9 @@ func (s *search) setup() error {
 	default:
 		return fmt.Errorf("solve: unknown kind %q", r.Kind)
 	}
+	if _, err := fit.ResolveDamagePattern(r.DamagePattern, r.DamageWeights); err != nil {
+		return fmt.Errorf("solve: %w", err)
+	}
 	if !s.cat.isShip(r.Fit.HullID) {
 		return fmt.Errorf("solve: hull %d is not a ship of the subset", r.Fit.HullID)
 	}
@@ -585,7 +592,7 @@ func (s *search) setup() error {
 		}
 	}
 	s.pol = p
-	s.pilot = fit.StatsOpts{Skills: r.Skills, MissingAsZero: r.Skills != nil, AbsentHullSkillAtI: r.Skills != nil && r.AbsentHullSkillAtI, Implants: r.Implants, DamagePattern: r.DamagePattern}
+	s.pilot = fit.StatsOpts{Skills: r.Skills, MissingAsZero: r.Skills != nil, AbsentHullSkillAtI: r.Skills != nil && r.AbsentHullSkillAtI, Implants: r.Implants, DamagePattern: r.DamagePattern, DamageWeights: r.DamageWeights}
 	s.cap = r.MaxEvaluations
 	if s.cap <= 0 {
 		s.cap = CapInteractive

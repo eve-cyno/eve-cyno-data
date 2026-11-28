@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	"math"
 	"os"
 	"testing"
 
@@ -114,5 +115,44 @@ func TestDamagePatterns_IdsMatchAPI(t *testing.T) {
 		require.Equal(t, shared.Categories[p.ID], p.Category, p.ID)
 		require.Contains(t, []string{"general", "pve", "abyss", "pvp"}, p.Category, p.ID)
 		require.InDelta(t, 1.0, p.EM+p.Therm+p.Kin+p.Exp, 1e-12, p.ID)
+	}
+}
+
+// TestDamageWeights_EqualsPreset: custom weights equal to a preset's split give the
+// preset's EHP, to the last bit, and weights are normalised by their sum. Every invalid
+// case is an error.
+func TestDamageWeights_EqualsPreset(t *testing.T) {
+	s := openRealSDE(t)
+	defer s.Close()
+	eng := New(s)
+	f := fitNamed(t, s, "caracal-missile")
+	want := statsOf(t, eng, f, fit.StatsOpts{DamagePattern: "guristas"})
+	require.NotEqual(t, statsOf(t, eng, f, fit.StatsOpts{}).Tank.TotalEHP, want.Tank.TotalEHP, "the pattern must move EHP for this test to mean anything")
+	for name, w := range map[string]fit.DamagePattern{
+		"as a split":            {Therm: 0.24, Kin: 0.76},
+		"in percent":            {Therm: 24, Kin: 76},
+		"normalised by the sum": {Therm: 48, Kin: 152},
+	} {
+		got := statsOf(t, eng, f, fit.StatsOpts{DamageWeights: &w})
+		require.Equal(t, want.Tank, got.Tank, name)
+		require.Equal(t, want.DPS, got.DPS, name)
+	}
+	// The weights are not changed in place.
+	w := fit.DamagePattern{Therm: 48, Kin: 152}
+	statsOf(t, eng, f, fit.StatsOpts{DamageWeights: &w})
+	require.Equal(t, fit.DamagePattern{Therm: 48, Kin: 152}, w)
+
+	nan, inf := math.NaN(), math.Inf(1)
+	for name, o := range map[string]fit.StatsOpts{
+		"negative":            {DamageWeights: &fit.DamagePattern{EM: -1, Kin: 2}},
+		"NaN":                 {DamageWeights: &fit.DamagePattern{EM: nan, Kin: 1}},
+		"infinite":            {DamageWeights: &fit.DamagePattern{EM: inf}},
+		"negative infinite":   {DamageWeights: &fit.DamagePattern{Kin: math.Inf(-1), Exp: 1}},
+		"sum of zero":         {DamageWeights: &fit.DamagePattern{}},
+		"pattern and weights": {DamagePattern: "guristas", DamageWeights: &fit.DamagePattern{Kin: 1}},
+		"uniform and weights": {DamagePattern: "uniform", DamageWeights: &fit.DamagePattern{Kin: 1}},
+	} {
+		_, err := eng.Stats(t.Context(), f, o)
+		require.Error(t, err, name)
 	}
 }

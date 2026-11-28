@@ -678,9 +678,9 @@ func applyDroneDamageModifiers(s SDE, items []*Item) {
 // booster lists UnmodelledChargeFedCap in Unmodelled: their capacitor draw is a
 // no-charges figure (see CapSummary).
 func (e *Engine) Stats(ctx context.Context, f fit.Fit, opts fit.StatsOpts) (fit.FitStats, error) {
-	pattern, ok := fit.LookupDamagePattern(opts.DamagePattern)
-	if !ok {
-		return fit.FitStats{}, fmt.Errorf("unknown damage pattern %q", opts.DamagePattern)
+	pattern, err := fit.ResolveDamagePattern(opts.DamagePattern, opts.DamageWeights)
+	if err != nil {
+		return fit.FitStats{}, err
 	}
 	estimated := false
 	if e.defaultAmmo {

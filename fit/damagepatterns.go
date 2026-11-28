@@ -1,5 +1,11 @@
 package fit
 
+import (
+	"errors"
+	"fmt"
+	"math"
+)
+
 // Damage patterns for effective hit points (E8).
 //
 // Source: the formula is plain arithmetic over the SDE resonances. A layer's effective
@@ -158,4 +164,40 @@ func LookupDamagePattern(id string) (DamagePattern, bool) {
 		}
 	}
 	return DamagePattern{}, false
+}
+
+// DamagePatternCustom is the ID of a split built from custom weights; it is not a preset.
+const DamagePatternCustom = "custom"
+
+// NormalizeDamageWeights turns custom weights into a split that sums to 1. A negative or
+// non-finite weight, or a sum of 0, is an error. The result's ID is DamagePatternCustom (an empty ID means the uniform path), with no Name or Category.
+func NormalizeDamageWeights(w DamagePattern) (DamagePattern, error) {
+	v := [4]float64{w.EM, w.Therm, w.Kin, w.Exp}
+	sum := 0.0
+	for _, x := range v {
+		if math.IsNaN(x) || math.IsInf(x, 0) || x < 0 {
+			return DamagePattern{}, fmt.Errorf("damage weight %v is not a finite number of at least 0", x)
+		}
+		sum += x
+	}
+	if sum <= 0 || math.IsInf(sum, 0) {
+		return DamagePattern{}, errors.New("damage weights must sum to more than 0")
+	}
+	return DamagePattern{ID: DamagePatternCustom, EM: w.EM / sum, Therm: w.Therm / sum, Kin: w.Kin / sum, Exp: w.Exp / sum}, nil
+}
+
+// ResolveDamagePattern is the split a request works against: the custom weights when set
+// (normalised), else the preset named by id (empty is uniform). Both set is an error.
+func ResolveDamagePattern(id string, weights *DamagePattern) (DamagePattern, error) {
+	if weights != nil {
+		if id != "" {
+			return DamagePattern{}, fmt.Errorf("damage pattern %q and custom damage weights are both set; use one", id)
+		}
+		return NormalizeDamageWeights(*weights)
+	}
+	p, ok := LookupDamagePattern(id)
+	if !ok {
+		return DamagePattern{}, fmt.Errorf("unknown damage pattern %q", id)
+	}
+	return p, nil
 }

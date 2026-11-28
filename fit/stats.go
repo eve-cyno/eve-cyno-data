@@ -43,6 +43,12 @@ type StatsOpts struct {
 	// DamagePattern is the id of the incoming damage split EHP is worked against (E8, see
 	// DamagePatterns). Empty is uniform, today's figure; an unknown id is an error.
 	DamagePattern string
+	// DamageWeights is a custom incoming damage split, used instead of a preset: the four
+	// weights are normalised by their sum, so 24/76 and 48/152 are the same split, and the
+	// pointed-to value is never changed. An error: a negative or non-finite (NaN, infinite)
+	// weight, a sum of 0, or DamagePattern also set (a request names a preset or weights,
+	// not both). The weights' own ID and Name are ignored. nil is no custom weights.
+	DamageWeights *DamagePattern
 	Target        TargetProfile
 	// ActiveDroneTypeIDs, when non-nil, is the priority list of drone typeIDs the
 	// user has launched. The engine launches them in order within bandwidth + the
