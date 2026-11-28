@@ -26,6 +26,11 @@ var (
 		URL:     "https://wiki.eveuniversity.org/Ice_harvesting",
 		License: "CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/); credit EVE University; the dataset stays CC BY-SA",
 	}
+	sourcePathfinder = Source{
+		Name:    "Pathfinder J-system statics (2019)",
+		URL:     "https://github.com/exodus4d/pathfinder/blob/d45fa9b527bc81b28960ca3744264e7441fe6484/export/csv/system_static.csv",
+		License: "MIT, Copyright (c) 2017 Mark Friedrich (Pathfinder); data from 2019, may miss shattered systems",
+	}
 	sourceEveScout = Source{
 		Name:    "EvE-Scout / Signal Cartel",
 		URL:     "https://www.eve-scout.com/",
@@ -114,7 +119,7 @@ var toolAttribution = map[string][]Source{
 	"get_systems_in_region":  {sourceSDE},
 	"get_npc_stations":       {sourceSDE},
 	"find_systems":           {sourceSDE, sourceEVEUniversityIce},
-	"get_system_info":        {sourceSDE, sourceEVEUniversityIce},
+	"get_system_info":        {sourceSDE, sourceEVEUniversityIce, sourcePathfinder},
 	"get_reprocessing_yield": {sourceSDE},
 	"get_required_skills":    {sourceSDE},
 	"find_canonical_module":  {sourceSDE},

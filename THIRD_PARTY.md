@@ -1,7 +1,7 @@
 # Third-party software
 
 Go module dependencies of `eve-cyno.dev/go/data` (every package in this repository, including the binaries under `cmd/`).
-The attributions for EVE Online data, the EVE University Wiki and the Pyfa test oracle are in [`NOTICE`](NOTICE).
+The attributions for EVE Online data, the EVE University Wiki, the Pathfinder statics data and the Pyfa test oracle are in [`NOTICE`](NOTICE).
 
 Checked with Go 1.27.3 from:
 

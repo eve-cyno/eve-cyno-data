@@ -432,6 +432,9 @@ Read this before you show answers to other people.
   shortened and combined with other material and is not endorsed by EVE University; derived text stays CC BY-SA 4.0.
   The ice-belt list `icebelts/ice_systems.json` is extracted from four of its pages and stays CC BY-SA 4.0 (it is not
   covered by the MIT licence); results that use it name the source.
+- **Pathfinder.** The J-system statics in `whstatics/statics.json` come from Pathfinder's `system_static.csv` (2019, MIT,
+  Copyright (c) 2017 Mark Friedrich); the licence text is `whstatics/LICENSE-pathfinder`. `get_system_info` names it in its
+  sources and marks the data as from 2019.
 - **Community fits.** Fits belong to their authors and sites. Every hit carries an `attribution` object (`source`,
   `source_url`, `author` when known, `license`, and `credit` / `license_url` when the terms require them): keep the link back
   wherever you show a fit. A search returns at most 24 fits, ranked, with no paging: the service is not a way to dump a site's

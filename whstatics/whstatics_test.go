@@ -16,7 +16,7 @@ func TestLoad_ProvenanceAndLookup(t *testing.T) {
 	require.Contains(t, d.Note, "shattered")
 	require.Len(t, d.Systems, 2604)
 
-	// J100001 (id 31000001... see the CSV) has at least one static; an unknown ID has none.
+	// The first entry is found by ID; an unknown ID (Jita) has none.
 	first := d.Systems[0]
 	got, ok := d.ByID(first.SystemID)
 	require.True(t, ok)

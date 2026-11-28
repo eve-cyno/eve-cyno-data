@@ -224,6 +224,11 @@
         "name": "EVE University Wiki (ice belt systems)",
         "url": "https://wiki.eveuniversity.org/Ice_harvesting",
         "license": "CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/); credit EVE University; the dataset stays CC BY-SA"
+      },
+      {
+        "name": "Pathfinder J-system statics (2019)",
+        "url": "https://github.com/exodus4d/pathfinder/blob/d45fa9b527bc81b28960ca3744264e7441fe6484/export/csv/system_static.csv",
+        "license": "MIT, Copyright (c) 2017 Mark Friedrich (Pathfinder); data from 2019, may miss shattered systems"
       }
     ]
   }

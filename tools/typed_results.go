@@ -824,7 +824,7 @@ type SystemInfo struct {
 	// WormholeEffect is the system effect of a wormhole system (for example "Pulsar"); null for none.
 	WormholeEffect *string `json:"wormhole_effect"`
 	// WormholeStatics lists the static wormholes a J-system spawns, from Pathfinder's MIT file of 2019;
-	// null when the file has no entry (known space, Thera, shattered systems it misses).
+	// null when the file has no entry (known space, shattered systems it misses).
 	WormholeStatics *WormholeStatics `json:"wormhole_statics"`
 	// Neighbours lists the systems the stargates lead to, sorted by name.
 	Neighbours []string `json:"neighbours"`
@@ -853,7 +853,7 @@ type WormholeStatics struct {
 	Codes []string `json:"codes"`
 	// DataDate is the date of the source file (YYYY-MM-DD); the data may be out of date.
 	DataDate string `json:"data_date"`
-	// Source names the file and its licence holder.
+	// Source names the file; the copyright holder is in the Sources line and NOTICE.
 	Source string `json:"source"`
 	// License is the licence of the data ("MIT").
 	License string `json:"license"`

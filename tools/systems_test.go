@@ -1,6 +1,7 @@
 package tools
 
 import (
+	"eve-cyno.dev/go/data/whstatics"
 	"strings"
 	"testing"
 
@@ -253,6 +254,7 @@ func TestSystemInfo_JitaTheraAndUnknown(t *testing.T) {
 	require.Contains(t, lines[1], " · 18 NPC stations · ice: none listed")
 	require.Contains(t, lines[2], "ice: Clear Icicle")
 	require.Contains(t, lines[3], " · Thera")
+	require.Contains(t, lines[3], ", statics ") // Pathfinder's file has Thera
 	require.Contains(t, lines[4], " · wormhole C3, effect Pulsar")
 	require.Equal(t, "Unknown systems: Nope99.", lines[5])
 	require.Equal(t, []string{"Nope99"}, list.Unresolved)
@@ -525,4 +527,21 @@ func TestFindSystems_HugeNumbersAnswerTheRangeLine(t *testing.T) {
 	text, got = findSystems(s, map[string]any{"near": map[string]any{"origin": "Jita", "max_jumps": 1e30}})
 	require.Nil(t, got)
 	require.True(t, strings.HasPrefix(text, "near.max_jumps: 1 to 30 (got "), text)
+}
+
+// Every type ID in the statics file must resolve to an SDE name "Wormhole <code>", or the
+// answer would print an empty or wrong list after an SDE rename.
+func TestWormholeStatics_EveryTypeResolves(t *testing.T) {
+	s := testDeps(t).SDE
+	d, err := whstatics.Load()
+	require.NoError(t, err)
+	for _, sys := range d.Systems {
+		got := wormholeStatics(s, d, sys)
+		require.Len(t, got.Codes, len(sys.Statics), sys.SystemID)
+		for _, id := range sys.Statics {
+			n := s.GetTypeName(id)
+			require.NotNil(t, n, id)
+			require.True(t, strings.HasPrefix(*n, "Wormhole "), *n)
+		}
+	}
 }

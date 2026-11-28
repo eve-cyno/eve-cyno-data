@@ -90,7 +90,7 @@ func TestAttribution_NamesTheRightUpstreams(t *testing.T) {
 		"get_system_activity":   {"ESI (EVE Swagger Interface)", "EVE Static Data Export (via Fuzzwork)"},
 		"find_canonical_module": {"EVE Static Data Export (via Fuzzwork)"},
 		"find_systems":          {"EVE Static Data Export (via Fuzzwork)", "EVE University Wiki (ice belt systems)"},
-		"get_system_info":       {"EVE Static Data Export (via Fuzzwork)", "EVE University Wiki (ice belt systems)"},
+		"get_system_info":       {"EVE Static Data Export (via Fuzzwork)", "EVE University Wiki (ice belt systems)", "Pathfinder J-system statics (2019)"},
 		"get_thera_connections": {"EvE-Scout / Signal Cartel", "EVE Static Data Export (via Fuzzwork)"},
 		"get_recent_kills":      {"zKillboard", "ESI (EVE Swagger Interface)", "EVE Static Data Export (via Fuzzwork)"},
 	}

@@ -604,7 +604,7 @@ Facts about up to 50 solar systems in one call: security, region, constellation,
 - Arguments:
   - `systems` (array of string, required): Up to 50 solar system names, e.g. ['Jita', 'Erkinen']: one line each
 - Typed result (`result.data`): SystemInfoList with fields `systems`, `unresolved`, `not_enterable`
-- Sources: EVE Static Data Export (via Fuzzwork); EVE University Wiki (ice belt systems)
+- Sources: EVE Static Data Export (via Fuzzwork); EVE University Wiki (ice belt systems); Pathfinder J-system statics (2019)
 
 ### get_thera_connections
 
@@ -650,4 +650,5 @@ Sources behind the tool answers:
 - zKillboard (killmail counts) <https://zkillboard.com/>: Public R2Z2 API under zKillboard's usage etiquette; only per-system counts and ISK sums derived from it are published; killmails are Fenris Creations game data (EVE Developer License Agreement)
 - zKillboard (gate kill counts) <https://zkillboard.com/>: Public R2Z2 API under zKillboard's usage etiquette; only these values derived from it are published: per gate over the last 60 and 120 minutes the ship, pod and structure kill counts and the kill times, the camp state, the number of groups, the leading attacking alliances (alliance ids, names from ESI, kill counts), no_alliance_kills, the largest attacker count (max_attackers) and the dictor_hic and smartbomb flags; per-system counts; a 28-day per-hour gate profile with camp_days and kill_days; and the upload delay of zKillboard (delay_p50_s, delay_p90_s) and the newest killmail time; never a killmail, pilot or corporation; killmails are Fenris Creations game data (EVE Developer License Agreement)
 - EVE University Wiki (ice belt systems) <https://wiki.eveuniversity.org/Ice_harvesting>: CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/); credit EVE University; the dataset stays CC BY-SA
+- Pathfinder J-system statics (2019) <https://github.com/exodus4d/pathfinder/blob/d45fa9b527bc81b28960ca3744264e7441fe6484/export/csv/system_static.csv>: MIT, Copyright (c) 2017 Mark Friedrich (Pathfinder); data from 2019, may miss shattered systems
 - EvE-Scout / Signal Cartel <https://www.eve-scout.com/>: Public API without published terms, used with attribution; live scanning data by Signal Cartel

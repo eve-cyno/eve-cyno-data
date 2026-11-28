@@ -616,6 +616,14 @@ func wormholeStatics(s *sde.SDE, d *whstatics.Dataset, ws whstatics.System) *Wor
 	return &WormholeStatics{Codes: codes, DataDate: d.DataDate, Source: d.Source, License: d.License, Note: d.Note}
 }
 
+// staticsText is the statics suffix of a wormhole system line ("" without data).
+func staticsText(ws *WormholeStatics) string {
+	if ws == nil {
+		return ""
+	}
+	return ", statics " + strings.Join(ws.Codes, " ") + " (Pathfinder data " + ws.DataDate + ", may miss shattered systems)"
+}
+
 // wormholePart is the wormhole marker of a system line ("" for known space).
 func wormholePart(info SystemInfo) string {
 	if info.WormholeClass == nil {
@@ -627,16 +635,13 @@ func wormholePart(info SystemInfo) string {
 		if info.WormholeEffect != nil {
 			p += ", effect " + *info.WormholeEffect
 		}
-		if ws := info.WormholeStatics; ws != nil {
-			p += ", statics " + strings.Join(ws.Codes, " ") + " (Pathfinder data " + ws.DataDate + ", may miss shattered systems)"
-		}
-		return p
+		return p + staticsText(info.WormholeStatics)
 	case c == 12:
-		return " · Thera"
+		return " · Thera" + staticsText(info.WormholeStatics)
 	case c == 13:
-		return " · wormhole C13 (shattered)"
+		return " · wormhole C13 (shattered)" + staticsText(info.WormholeStatics)
 	case c >= 14 && c <= 18:
-		return " · Drifter wormhole"
+		return " · Drifter wormhole" + staticsText(info.WormholeStatics)
 	case c == 25:
 		return " · Pochven"
 	}

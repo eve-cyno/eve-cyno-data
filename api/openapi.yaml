@@ -2549,7 +2549,7 @@ paths:
       description: |-
         Facts about up to 50 solar systems in one call: security, region, constellation, faction, wormhole class and effect, the static wormholes of a J-system (Pathfinder file of 2019, may miss shattered systems), neighbouring systems (stargates), counts of asteroid belts, moons, planets by type and NPC stations, and the ice belt when EVE University lists one. One line per system.
 
-        Sources: EVE Static Data Export (via Fuzzwork); EVE University Wiki (ice belt systems). `result.data` is a `SystemInfoList` object when the call succeeds.
+        Sources: EVE Static Data Export (via Fuzzwork); EVE University Wiki (ice belt systems); Pathfinder J-system statics (2019). `result.data` is a `SystemInfoList` object when the call succeeds.
 
         Access tier: **public**. No key needed.
 
@@ -6576,7 +6576,7 @@ components:
             - "null"
           description: WormholeEffect is the system effect of a wormhole system (for example "Pulsar"); null for none.
         wormhole_statics:
-          description: WormholeStatics lists the static wormholes a J-system spawns, from Pathfinder's MIT file of 2019; null when the file has no entry (known space, Thera, shattered systems it misses).
+          description: WormholeStatics lists the static wormholes a J-system spawns, from Pathfinder's MIT file of 2019; null when the file has no entry (known space, shattered systems it misses).
           oneOf:
             - $ref: '#/components/schemas/WormholeStatics'
             - type: "null"
@@ -7336,7 +7336,7 @@ components:
           description: DataDate is the date of the source file (YYYY-MM-DD); the data may be out of date.
         source:
           type: string
-          description: Source names the file and its licence holder.
+          description: Source names the file; the copyright holder is in the Sources line and NOTICE.
         license:
           type: string
           description: License is the licence of the data ("MIT").
