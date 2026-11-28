@@ -1,4 +1,35 @@
 {
-  "note": "FitDamagePatternId of plugin-api, in fixed order; must equal fit.DamagePatternIDs()",
-  "ids": ["uniform", "em", "thermal", "kinetic", "explosive", "angel", "blood", "guristas", "sansha", "serpentis", "rogueDrones"]
+  "note": "FitDamagePatternId of plugin-api, in fixed order, and the category of each id; must equal fit.DamagePatternIDs() and the Category of fit.DamagePatterns()",
+  "ids": ["uniform", "em", "thermal", "kinetic", "explosive", "angel", "blood", "guristas", "sansha", "serpentis", "rogueDrones", "abyssTriglavian", "abyssDrifters", "abyssSleepers", "abyssRogueDrones", "abyssOvermind", "abyssSansha", "abyssAngel", "abyssConcord", "abyssEdencom", "pvpMultifrequency", "pvpScorch", "pvpAntimatter", "pvpVoid", "pvpEmp", "pvpPhasedPlasma", "pvpFusion", "pvpBarrage", "pvpBaryon"],
+  "categories": {
+    "uniform": "general",
+    "em": "general",
+    "thermal": "general",
+    "kinetic": "general",
+    "explosive": "general",
+    "angel": "pve",
+    "blood": "pve",
+    "guristas": "pve",
+    "sansha": "pve",
+    "serpentis": "pve",
+    "rogueDrones": "pve",
+    "abyssTriglavian": "abyss",
+    "abyssDrifters": "abyss",
+    "abyssSleepers": "abyss",
+    "abyssRogueDrones": "abyss",
+    "abyssOvermind": "abyss",
+    "abyssSansha": "abyss",
+    "abyssAngel": "abyss",
+    "abyssConcord": "abyss",
+    "abyssEdencom": "abyss",
+    "pvpMultifrequency": "pvp",
+    "pvpScorch": "pvp",
+    "pvpAntimatter": "pvp",
+    "pvpVoid": "pvp",
+    "pvpEmp": "pvp",
+    "pvpPhasedPlasma": "pvp",
+    "pvpFusion": "pvp",
+    "pvpBarrage": "pvp",
+    "pvpBaryon": "pvp"
+  }
 }

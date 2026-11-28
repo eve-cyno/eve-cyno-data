@@ -221,13 +221,28 @@ func TestNPCDamagePatterns_DerivedFromSDE(t *testing.T) {
 		armed[f]++
 	}
 
-	// Every preset after the five generic ones is checked here: a faction preset added
-	// without an entry in npcPresetFactions fails instead of shipping unchecked.
+	// Every preset after the five generic ones is covered by one of three derivation
+	// tables (this one, abyssPresets, pvpPresets): a preset added without an entry in one
+	// of them fails instead of shipping unchecked. The five generic ones are definitions.
 	wantIDs := []string{"uniform", "em", "thermal", "kinetic", "explosive"}
 	for _, f := range npcPresetFactions {
 		wantIDs = append(wantIDs, f.id)
 	}
+	for _, p := range abyssPresets {
+		wantIDs = append(wantIDs, p.id)
+	}
+	for _, p := range pvpPresets {
+		wantIDs = append(wantIDs, p.id)
+	}
 	require.Equal(t, wantIDs, fit.DamagePatternIDs())
+	for i, p := range fit.DamagePatterns() {
+		switch {
+		case i < 5:
+			require.Equal(t, "general", p.Category, p.ID)
+		case i < 5+len(npcPresetFactions):
+			require.Equal(t, "pve", p.Category, p.ID)
+		}
+	}
 
 	for _, f := range npcPresetFactions {
 		s := sums[f.id]
