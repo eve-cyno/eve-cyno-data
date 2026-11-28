@@ -597,7 +597,7 @@ Find solar systems by filters and rank them: security band, region, constellatio
 
 ### get_system_info
 
-Facts about up to 50 solar systems in one call: security, region, constellation, faction, wormhole class and effect, neighbouring systems (stargates), counts of asteroid belts, moons, planets by type and NPC stations, and the ice belt when EVE University lists one. One line per system.
+Facts about up to 50 solar systems in one call: security, region, constellation, faction, wormhole class and effect, the static wormholes of a J-system (Pathfinder file of 2019, may miss shattered systems), neighbouring systems (stargates), counts of asteroid belts, moons, planets by type and NPC stations, and the ice belt when EVE University lists one. One line per system.
 
 - Call: `POST /v1/tool/get_system_info` or MCP tool `get_system_info`
 - Access: public. No key needed.

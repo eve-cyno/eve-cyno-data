@@ -276,6 +276,15 @@ func TestSystemInfo_JitaTheraAndUnknown(t *testing.T) {
 	require.Equal(t, "Pulsar", *j.WormholeEffect)
 	require.Nil(t, j.Faction)
 	require.Equal(t, []string{}, j.Neighbours)
+	require.Nil(t, jita.WormholeStatics, "known space has no statics")
+
+	// A known J-system returns its statics with the data date label (J100009 is C3 in Pathfinder's file).
+	require.NotNil(t, j.WormholeStatics)
+	require.NotEmpty(t, j.WormholeStatics.Codes)
+	require.Equal(t, "2019-09-10", j.WormholeStatics.DataDate)
+	require.Equal(t, "MIT", j.WormholeStatics.License)
+	require.Contains(t, j.WormholeStatics.Note, "shattered")
+	require.Contains(t, lines[4], ", statics "+strings.Join(j.WormholeStatics.Codes, " ")+" (Pathfinder data 2019-09-10, may miss shattered systems)")
 }
 
 func TestSystemInfo_Caps(t *testing.T) {

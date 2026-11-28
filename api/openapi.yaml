@@ -2547,7 +2547,7 @@ paths:
         - tools
       summary: 'Facts about up to 50 solar systems in one call: security, region, constellation, faction, wormhole class and effect…'
       description: |-
-        Facts about up to 50 solar systems in one call: security, region, constellation, faction, wormhole class and effect, neighbouring systems (stargates), counts of asteroid belts, moons, planets by type and NPC stations, and the ice belt when EVE University lists one. One line per system.
+        Facts about up to 50 solar systems in one call: security, region, constellation, faction, wormhole class and effect, the static wormholes of a J-system (Pathfinder file of 2019, may miss shattered systems), neighbouring systems (stargates), counts of asteroid belts, moons, planets by type and NPC stations, and the ice belt when EVE University lists one. One line per system.
 
         Sources: EVE Static Data Export (via Fuzzwork); EVE University Wiki (ice belt systems). `result.data` is a `SystemInfoList` object when the call succeeds.
 
@@ -6575,6 +6575,11 @@ components:
             - string
             - "null"
           description: WormholeEffect is the system effect of a wormhole system (for example "Pulsar"); null for none.
+        wormhole_statics:
+          description: WormholeStatics lists the static wormholes a J-system spawns, from Pathfinder's MIT file of 2019; null when the file has no entry (known space, Thera, shattered systems it misses).
+          oneOf:
+            - $ref: '#/components/schemas/WormholeStatics'
+            - type: "null"
         neighbours:
           type: array
           description: Neighbours lists the systems the stargates lead to, sorted by name.
@@ -6621,6 +6626,7 @@ components:
         - faction
         - wormhole_class
         - wormhole_effect
+        - wormhole_statics
         - neighbours
         - gates
         - belts
@@ -7317,6 +7323,32 @@ components:
         - count
         - dps
         - default_ammo
+    WormholeStatics:
+      type: object
+      properties:
+        codes:
+          type: array
+          description: Codes are the wormhole type codes ("C247", "U574"), sorted.
+          items:
+            type: string
+        data_date:
+          type: string
+          description: DataDate is the date of the source file (YYYY-MM-DD); the data may be out of date.
+        source:
+          type: string
+          description: Source names the file and its licence holder.
+        license:
+          type: string
+          description: License is the licence of the data ("MIT").
+        note:
+          type: string
+          description: Note says what the data does not cover (shattered systems, later changes).
+      required:
+        - codes
+        - data_date
+        - source
+        - license
+        - note
   responses:
     BadRequest:
       description: 'The request is malformed: invalid JSON, or a missing or invalid parameter or header, or a tool call without a required argument (`invalid_request`, `invalid_arguments`).'

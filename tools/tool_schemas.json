@@ -1324,7 +1324,7 @@
     "type": "function",
     "function": {
       "name": "get_system_info",
-      "description": "Facts about up to 50 solar systems in one call: security, region, constellation, faction, wormhole class and effect, neighbouring systems (stargates), counts of asteroid belts, moons, planets by type and NPC stations, and the ice belt when EVE University lists one. One line per system.",
+      "description": "Facts about up to 50 solar systems in one call: security, region, constellation, faction, wormhole class and effect, the static wormholes of a J-system (Pathfinder file of 2019, may miss shattered systems), neighbouring systems (stargates), counts of asteroid belts, moons, planets by type and NPC stations, and the ice belt when EVE University lists one. One line per system.",
       "parameters": {
         "type": "object",
         "properties": {

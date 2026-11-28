@@ -64,6 +64,13 @@ checked against the SDE; the file stays under CC BY-SA 4.0 and is not covered by
 MIT licence. Tool results that use it (find_systems, get_system_info) name the source
 in their attribution.
 
+The wormhole-statics dataset whstatics/statics.json lists the static wormholes of each
+J-system. It is converted from Pathfinder's export/csv/system_static.csv
+(https://github.com/exodus4d/pathfinder, commit d45fa9b5 of 2019-09-10), Copyright (c) 2017
+Mark Friedrich, MIT licence (text in whstatics/LICENSE-pathfinder). The data is from 2019
+and may miss shattered systems and later changes; tool results that use it (get_system_info)
+carry the data date and say so.
+
 ------------------------------------------------------------------------------
 Community fit sources
 ------------------------------------------------------------------------------

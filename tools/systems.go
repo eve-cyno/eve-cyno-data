@@ -10,6 +10,7 @@ import (
 
 	"eve-cyno.dev/go/data/icebelts"
 	"eve-cyno.dev/go/data/sde"
+	"eve-cyno.dev/go/data/whstatics"
 )
 
 // iceCoverageNote closes every find_systems answer that used the ice filter.
@@ -498,6 +499,10 @@ func getSystemInfo(s *sde.SDE, systems []string) (string, *SystemInfoList) {
 	if err != nil {
 		return "Ice belt data unavailable: " + err.Error(), nil
 	}
+	whs, err := whstatics.Load()
+	if err != nil {
+		return "Wormhole statics data unavailable: " + err.Error(), nil
+	}
 	ids, names, unresolved := s.ResolveSystemNames(systems)
 
 	res := &SystemInfoList{Systems: []SystemInfo{}, Unresolved: unresolved, NotEnterable: []string{}}
@@ -534,6 +539,9 @@ func getSystemInfo(s *sde.SDE, systems []string) (string, *SystemInfoList) {
 		if sf.WormholeEffect != "" {
 			e := sf.WormholeEffect
 			info.WormholeEffect = &e
+		}
+		if ws, ok := whs.ByID(sf.ID); ok {
+			info.WormholeStatics = wormholeStatics(s, whs, ws)
 		}
 		for _, nid := range sf.Neighbours {
 			if p := s.GetSystemName(nid); p != nil {
@@ -596,6 +604,18 @@ func notEnterableText(names string) string {
 	return "Not enterable: " + names + " (Jove or market pseudo-space)."
 }
 
+// wormholeStatics builds the statics block of a J-system: the SDE type names "Wormhole C247" give the codes.
+func wormholeStatics(s *sde.SDE, d *whstatics.Dataset, ws whstatics.System) *WormholeStatics {
+	codes := make([]string, 0, len(ws.Statics))
+	for _, id := range ws.Statics {
+		if n := s.GetTypeName(id); n != nil {
+			codes = append(codes, strings.TrimPrefix(*n, "Wormhole "))
+		}
+	}
+	sort.Strings(codes)
+	return &WormholeStatics{Codes: codes, DataDate: d.DataDate, Source: d.Source, License: d.License, Note: d.Note}
+}
+
 // wormholePart is the wormhole marker of a system line ("" for known space).
 func wormholePart(info SystemInfo) string {
 	if info.WormholeClass == nil {
@@ -606,6 +626,9 @@ func wormholePart(info SystemInfo) string {
 		p := fmt.Sprintf(" · wormhole C%d", c)
 		if info.WormholeEffect != nil {
 			p += ", effect " + *info.WormholeEffect
+		}
+		if ws := info.WormholeStatics; ws != nil {
+			p += ", statics " + strings.Join(ws.Codes, " ") + " (Pathfinder data " + ws.DataDate + ", may miss shattered systems)"
 		}
 		return p
 	case c == 12:

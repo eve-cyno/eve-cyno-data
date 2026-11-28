@@ -823,6 +823,9 @@ type SystemInfo struct {
 	WormholeClass *int `json:"wormhole_class"`
 	// WormholeEffect is the system effect of a wormhole system (for example "Pulsar"); null for none.
 	WormholeEffect *string `json:"wormhole_effect"`
+	// WormholeStatics lists the static wormholes a J-system spawns, from Pathfinder's MIT file of 2019;
+	// null when the file has no entry (known space, Thera, shattered systems it misses).
+	WormholeStatics *WormholeStatics `json:"wormhole_statics"`
 	// Neighbours lists the systems the stargates lead to, sorted by name.
 	Neighbours []string `json:"neighbours"`
 	// Gates is the number of stargates.
@@ -842,6 +845,20 @@ type SystemInfo struct {
 	// IceBelt is the system's entry in EVE University's ice list; null when not listed
 	// (nullsec ice systems are not covered).
 	IceBelt *IceBelt `json:"ice_belt"`
+}
+
+// WormholeStatics is the static wormholes of one J-system with the provenance of the data.
+type WormholeStatics struct {
+	// Codes are the wormhole type codes ("C247", "U574"), sorted.
+	Codes []string `json:"codes"`
+	// DataDate is the date of the source file (YYYY-MM-DD); the data may be out of date.
+	DataDate string `json:"data_date"`
+	// Source names the file and its licence holder.
+	Source string `json:"source"`
+	// License is the licence of the data ("MIT").
+	License string `json:"license"`
+	// Note says what the data does not cover (shattered systems, later changes).
+	Note string `json:"note"`
 }
 
 // RecentKills is the result of get_recent_kills: the newest kills in one system, from
