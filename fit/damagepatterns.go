@@ -17,8 +17,10 @@ package fit
 //
 // The NPC faction presets (Angel Cartel, Blood Raiders, Guristas, Sansha's Nation,
 // Serpentis, Rogue Drones) are the split of the damage a faction's ships deal, derived
-// only from the SDE (build 3682781_20261110), so no third-party licence attaches to this
-// file. The rule, which TestNPCDamagePatterns_DerivedFromSDE re-runs against the SDE:
+// only from the SDE (build 3682781_20261110). No other source is used, so no licence
+// attaches to them beyond the EVE Developer License Agreement that covers SDE-derived
+// data (see NOTICE). The rule, which TestNPCDamagePatterns_DerivedFromSDE re-runs
+// against the SDE:
 //
 //   - A faction's ships are the types in the NPC groups (category 11) named
 //     "Asteroid <faction> <class>" or "Deadspace <faction> <class>" for frigates,
@@ -31,10 +33,11 @@ package fit
 //     rounded to whole percent by the largest-remainder rule.
 //
 // Limits: the SDE does not say which ships a site spawns or how often, so every ship
-// type counts once and a preset is a faction average, not the profile of one mission.
-// Turret and missile damage are added as if both always fire and hit. Guristas and Angel
-// Cartel shift with ship size (Guristas battleships deal about 89 % kinetic, cruisers
-// about 56 %), and Rogue Drones have no single profile: single drone types deal one or
+// type counts once and a preset is a DPS-weighted faction average (battleship types
+// carry nearly half of it), not the profile of one mission. Turret and missile damage
+// are added as if both always fire and hit. Guristas and Angel Cartel shift with ship
+// size (on that build Guristas battleships deal about 89 % kinetic, cruisers about
+// 56 %), and Rogue Drones have no single profile: most single drone types deal one or
 // two damage types, and their preset is close to "everything, EM least".
 //
 // A new SDE build can move a preset by a point. The test then fails and prints the new

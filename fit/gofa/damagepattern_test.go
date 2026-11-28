@@ -61,8 +61,9 @@ func TestEHP_PatternHandWorked(t *testing.T) {
 	require.Equal(t, 500.0, patternEHP(fit.DamagePattern{ID: "x", EM: 1}, 500, 0, 1, 1, 1))
 }
 
-// TestEHP_PatternOnShip: a Caracal fit with a pure kinetic pattern has, in every layer,
-// EHP = HP / (1 - kinetic resist), read off the resists the same call reports.
+// TestEHP_PatternOnShip: a Caracal fit under each pure pattern has, in every layer,
+// EHP = HP / (1 - that type's resist), read off the resists the same call reports; under
+// an NPC faction preset it is HP over the weighted resonance. An unknown id is an error.
 func TestEHP_PatternOnShip(t *testing.T) {
 	s := openRealSDE(t)
 	defer s.Close()

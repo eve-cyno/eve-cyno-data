@@ -221,6 +221,14 @@ func TestNPCDamagePatterns_DerivedFromSDE(t *testing.T) {
 		armed[f]++
 	}
 
+	// Every preset after the five generic ones is checked here: a faction preset added
+	// without an entry in npcPresetFactions fails instead of shipping unchecked.
+	wantIDs := []string{"uniform", "em", "thermal", "kinetic", "explosive"}
+	for _, f := range npcPresetFactions {
+		wantIDs = append(wantIDs, f.id)
+	}
+	require.Equal(t, wantIDs, fit.DamagePatternIDs())
+
 	for _, f := range npcPresetFactions {
 		s := sums[f.id]
 		require.NotNil(t, s, "no armed NPC type found for %s", f.id)
