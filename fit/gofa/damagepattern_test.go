@@ -97,8 +97,7 @@ func TestEHP_PatternOnShip(t *testing.T) {
 
 // TestDamagePatterns_IdsMatchAPI: the shipped ids equal the shared list the plugin API
 // type (FitDamagePatternId) is checked against, and each id's category equals the Go
-// preset's. The list is capped at 40: the 29 shipped ids leave room for a few more ammo
-// presets, and a runaway list (a generator gone wrong) still fails.
+// preset's.
 func TestDamagePatterns_IdsMatchAPI(t *testing.T) {
 	raw, err := os.ReadFile("../testdata/damagepattern_ids.json")
 	require.NoError(t, err)
@@ -109,7 +108,6 @@ func TestDamagePatterns_IdsMatchAPI(t *testing.T) {
 	require.NoError(t, json.Unmarshal(raw, &shared))
 	require.Equal(t, shared.IDs, fit.DamagePatternIDs())
 	require.Len(t, shared.IDs, 29)
-	require.LessOrEqual(t, len(shared.IDs), 40)
 	require.Len(t, shared.Categories, len(shared.IDs))
 	for _, p := range fit.DamagePatterns() {
 		require.Equal(t, shared.Categories[p.ID], p.Category, p.ID)

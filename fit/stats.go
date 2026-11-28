@@ -47,7 +47,7 @@ type StatsOpts struct {
 	// weights are normalised by their sum, so 24/76 and 48/152 are the same split, and the
 	// pointed-to value is never changed. An error: a negative or non-finite (NaN, infinite)
 	// weight, a sum of 0, or DamagePattern also set (a request names a preset or weights,
-	// not both). The weights' own ID and Name are ignored. nil is no custom weights.
+	// not both). The weights' own ID and Category are ignored. nil is no custom weights.
 	DamageWeights *DamagePattern
 	Target        TargetProfile
 	// ActiveDroneTypeIDs, when non-nil, is the priority list of drone typeIDs the

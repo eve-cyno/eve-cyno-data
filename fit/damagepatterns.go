@@ -59,7 +59,7 @@ import (
 //     left out: they scale all four damage types alike.
 //   - A fixed table groups the abyss package's families into nine factions: Triglavian
 //     (Damavik, Vila Damavik, Kikimora, Vedmak, Vila Vedmak, Drekavac, Leshak, Rodiva,
-//     Vila Swarmer), Drifters (Drifter, Ephialtes, Tyrannos), Sleepers (Lucid), Rogue
+//     Swarmer), Drifters (Drifter, Ephialtes, Tyrannos), Sleepers (Lucid), Rogue
 //     Drones (Tessella, Tessera), Abyssal Overmind, Sansha's Nation (Devoted), Angel
 //     Cartel (Lucifer), CONCORD and EDENCOM. The last two both carry the family name
 //     "Disparu Troop"; a type with the vorton effect is EDENCOM, one with missiles is
@@ -68,14 +68,17 @@ import (
 //     CC BY-SA 4.0, see NOTICE). No number comes from that page.
 //   - The split is the faction's summed damage per second per type over the total,
 //     rounded to whole percent by the largest-remainder rule.
-//   - Left out: Awoken Preserver and Igniting Swarmer, because that page names neither,
-//     so their faction is not verified. Tyrannos Typhon is grouped with the Drifters by
+//   - Left out: Awoken Preserver and Igniting Swarmer (the Swarmer family also holds Vila
+//     Swarmer, which counts), because that page names neither, so their faction is not
+//     verified. Tyrannos Typhon is grouped with the Drifters by
 //     its name only; it deals 25/25/25/25 and does not move the Drifter split.
 //
 // Limits of the Abyss presets: every type counts once, since the SDE does not say which
 // ships a pocket spawns; the Abyss Sansha and Angel presets are separate from the PvE
-// ones because the ships differ; a room of Tessellas or Tesseras of one kind deals one
-// damage type (named in the type), so the pure type fits it better than abyssRogueDrones;
+// ones because the ships differ; a room of Spark, Ember, Strike or Blast Tessellas or
+// Tesseras deals one damage type (EM, thermal, kinetic, explosive), so the pure type fits
+// it better than abyssRogueDrones (the Fogcaster, Gazedimmer, Snarecaster and Spotlighter
+// types deal all four alike);
 // weather changes resists, not the incoming split, and the SDE has no numbers for it.
 //
 // The PvP presets (ids starting "pvp") are the split of one named L-size charge: its damage
@@ -83,10 +86,14 @@ import (
 // TestPvPDamagePatterns_DerivedFromSDE checks the charge type id, its name and the split.
 // Lasers and hybrids deal a fixed pair of types; projectile and disintegrator ammo deals
 // different types per ammo, so the common ammos get one preset each. Missiles and combat
-// drones deal one type each, which the pure general presets cover. Other sizes and the
-// faction variants of an ammo share its split (checked for two of them); an ammo with no
-// preset (Conflagration, Gleam, Javelin, Null, Hail, Quake) is within a few points of one
-// that has. No fleet composition is modelled: a custom weight set covers a known enemy.
+// drones deal one type each, which the pure general presets cover. Laser, hybrid and
+// projectile ammo keep one split across sizes and faction variants; disintegrator ammo
+// moves with size (Baryon Exotic Plasma S is 58/42, M 61/39, L and XL 60/40, thermal over
+// explosive), and its preset uses the L size. An ammo with no preset (Conflagration,
+// Gleam, Javelin, Null, Hail, Quake) is 4 to 9 points from the nearest one in the L size:
+// Hail 4 from Fusion, Null 5 and Javelin 7 from Void, Conflagration and Gleam (both
+// 50/50 EM/thermal) 8 from Multifrequency, Quake (36/64 kinetic/explosive) 9 from
+// Barrage. No fleet composition is modelled: a custom weight set covers a known enemy.
 //
 // A new SDE build can move a preset by a point. The test then fails and prints the new
 // split; changing a preset is a visible change of the EHP figures, so do it on purpose.
@@ -170,7 +177,8 @@ func LookupDamagePattern(id string) (DamagePattern, bool) {
 const DamagePatternCustom = "custom"
 
 // NormalizeDamageWeights turns custom weights into a split that sums to 1. A negative or
-// non-finite weight, or a sum of 0, is an error. The result's ID is DamagePatternCustom (an empty ID means the uniform path), with no Name or Category.
+// non-finite weight, or a sum of 0, is an error. The result's ID is DamagePatternCustom
+// (an empty ID means the uniform path), with no Category.
 func NormalizeDamageWeights(w DamagePattern) (DamagePattern, error) {
 	v := [4]float64{w.EM, w.Therm, w.Kin, w.Exp}
 	sum := 0.0

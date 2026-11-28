@@ -29,8 +29,8 @@ const (
 // abyssPresets lists the Abyss presets in their fixed order, with the number of types
 // and of armed types the derivation must find for each (a drop means a type left the
 // list or lost its weapon, which moves the split silently). The unarmed types are
-// support ships with no weapon effect: Lucid Preserver, Lucifer Burst, and the Tessella
-// Fieldweaver and Plateforger.
+// support ships with no weapon effect (Lucid Preserver and the Tessella Fieldweaver and
+// Plateforger) or with a turret effect but no damage attributes (Lucifer Burst).
 var abyssPresets = []struct {
 	id    string
 	types int
@@ -48,7 +48,9 @@ var abyssPresets = []struct {
 }
 
 // abyssFamilyPreset maps the abyss package's family to a preset id. The Disparu Troop
-// family is CONCORD or EDENCOM by weapon: see abyssTypePreset.
+// family is CONCORD or EDENCOM by weapon: see abyssTypePreset. The grouping follows
+// EVE University, "Abyssal Deadspace" (https://wiki.eveuniversity.org/Abyssal_Deadspace,
+// CC BY-SA 4.0, see NOTICE); the Tyrannos type is grouped with the Drifters by its name only.
 var abyssFamilyPreset = map[string]string{
 	"Damavik": "abyssTriglavian", "Vila Damavik": "abyssTriglavian", "Kikimora": "abyssTriglavian",
 	"Vedmak": "abyssTriglavian", "Vila Vedmak": "abyssTriglavian", "Drekavac": "abyssTriglavian",

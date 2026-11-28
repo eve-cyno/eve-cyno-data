@@ -68,3 +68,18 @@ func TestSolve_InvalidDamageWeightsFailEarly(t *testing.T) {
 		require.Empty(t, ev.opts, name)
 	}
 }
+
+// TestCapBaselineTrain_DamageWeightsReachEvaluation: the capacitor baseline's own
+// evaluation carries the request's custom damage weights, not only the main solve.
+func TestCapBaselineTrain_DamageWeightsReachEvaluation(t *testing.T) {
+	c := NewCatalog(testSubset())
+	weights := &fit.DamagePattern{Therm: 24, Kin: 76}
+	r := Request{Kind: KindDowngrade, Fit: highFit(108, 108, 100), Skills: poor, DamageWeights: weights}
+	ev := &recordEval{Evaluator: capFake{minHigh: 2}}
+	_, _, err := capBaselineTrain(context.Background(), c, ev, r, capResult(BaselineFlown, true))
+	require.NoError(t, err)
+	require.NotEmpty(t, ev.opts)
+	for i, o := range ev.opts {
+		require.Equal(t, weights, o.DamageWeights, "evaluation %d", i)
+	}
+}

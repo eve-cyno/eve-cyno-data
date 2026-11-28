@@ -64,11 +64,12 @@ checked against the SDE; the file stays under CC BY-SA 4.0 and is not covered by
 MIT licence. Tool results that use it (find_systems, get_system_info) name the source
 in their attribution.
 
-The Abyss damage presets in fit/damagepatterns.go group the NPC families of the abyss
+The Abyss damage presets in fit/damagepatterns.go (the grouping table abyssFamilyPreset
+is in fit/damagepatterns_abyss_test.go) group the NPC families of the abyss
 package into factions. The faction names and which family belongs to which faction follow
 the EVE University Wiki page "Abyssal Deadspace" (https://wiki.eveuniversity.org/Abyssal_Deadspace),
-(c) EVE University and its wiki contributors, CC BY-SA 4.0. Only that grouping comes from
-the page; every number is derived from the SDE. The grouping stays under CC BY-SA 4.0.
+(c) EVE University and its wiki contributors, CC BY-SA 4.0. The Tyrannos type is grouped with the Drifters by its name only, which
+the page does not state. Only that grouping comes from the page; every number is derived from the SDE. The grouping stays under CC BY-SA 4.0.
 
 The wormhole-statics dataset whstatics/statics.json lists the static wormholes of each
 J-system. It is converted from Pathfinder's export/csv/system_static.csv
