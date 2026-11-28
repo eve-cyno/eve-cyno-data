@@ -44,11 +44,14 @@ func TestEHP_UniformUnchanged(t *testing.T) {
 //	kinetic:   0.8                          -> 1250
 //	explosive: 0.9                          -> 1111.111
 //	50 % EM + 50 % kinetic: 0.25 + 0.4 = 0.65 -> 1538.462
+//	guristas (24 % thermal, 76 % kinetic): 0.144 + 0.608 = 0.752 -> 1329.787
+//	angel (6 / 10 / 25 / 59): 0.03 + 0.06 + 0.2 + 0.531 = 0.821 -> 1218.027
 //
 // A degenerate weighted resonance of 0 returns the HP, like layerEHP.
 func TestEHP_PatternHandWorked(t *testing.T) {
 	ehp := func(p fit.DamagePattern) float64 { return patternEHP(p, 1000, 0.5, 0.6, 0.8, 0.9) }
-	want := map[string]float64{"uniform": 1428.5714, "em": 2000, "thermal": 1666.6667, "kinetic": 1250, "explosive": 1111.1111}
+	want := map[string]float64{"uniform": 1428.5714, "em": 2000, "thermal": 1666.6667, "kinetic": 1250, "explosive": 1111.1111,
+		"guristas": 1329.7872, "angel": 1218.0268}
 	for id, w := range want {
 		p, ok := fit.LookupDamagePattern(id)
 		require.True(t, ok, id)
@@ -76,8 +79,18 @@ func TestEHP_PatternOnShip(t *testing.T) {
 		require.Equal(t, uni.Tank.ShieldResists, tk.ShieldResists, "resists do not depend on the pattern")
 		require.Equal(t, uni.DPS, st.DPS)
 	}
-	_, err := eng.Stats(t.Context(), f, fit.StatsOpts{DamagePattern: "guristas"})
+	_, err := eng.Stats(t.Context(), f, fit.StatsOpts{DamagePattern: "no-such-pattern"})
 	require.Error(t, err)
+	// An NPC faction preset: every layer's EHP is its HP over the weighted resonance.
+	gur, ok := fit.LookupDamagePattern("guristas")
+	require.True(t, ok)
+	st := statsOf(t, eng, f, fit.StatsOpts{DamagePattern: "guristas"})
+	tk := st.Tank
+	layer := func(hp float64, r fit.ResistProfile) float64 {
+		return hp / (gur.EM*(1-r.EM) + gur.Therm*(1-r.Therm) + gur.Kin*(1-r.Kin) + gur.Exp*(1-r.Exp))
+	}
+	require.InEpsilon(t, layer(tk.ShieldHP, tk.ShieldResists)+layer(tk.ArmorHP, tk.ArmorResists)+layer(tk.HullHP, tk.HullResists), tk.TotalEHP, 1e-9)
+	require.Equal(t, uni.DPS, st.DPS)
 }
 
 // TestDamagePatterns_IdsMatchAPI: the shipped ids equal the shared list the plugin API
